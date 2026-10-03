@@ -794,7 +794,7 @@ if let neon = store as? NeonStore {
     do { try await neon.migrate() } catch { print("store: \(error)"); exit(1) }
 }
 Metrics.shared.set("live_events_total", [:], Double(await store.reportCount(sc: nil)))
-if !LLM.openAI { Metrics.shared.startLLMProbe(url: parser.ollamaURL) }
+if LLM.openAI { Metrics.shared.set("llm_up", [:], 1) } else { Metrics.shared.startLLMProbe(url: parser.ollamaURL) }
 let port = guardian.port ?? 8780
 let listener = listenTCP(host: guardian.host, port: port)
 print("rescue-server on http://\(guardian.host):\(port)/  - frontends (/app, /web, /out), live engine (/api/run/<scenario>), assessment (/api/assessment/<scenario>), field reports, Studio, /metrics")
