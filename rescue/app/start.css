@@ -1,0 +1,68 @@
+/* Start page (rescue/app/start.html): what Rescue Locator is, three entries, the 90 s tour. Paper look, colours only from tokens.css.
+   One red on the page: the tour button. */
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--rl-bg);color:var(--rl-ink);font:var(--rl-fs)/1.5 var(--rl-font);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;background:
+  radial-gradient(ellipse 900px 500px at 85% -10%,color-mix(in srgb,var(--rl-accent) 10%,transparent),transparent 70%),
+  repeating-radial-gradient(circle at 78% 30%,transparent 0 38px,color-mix(in srgb,var(--rl-ink) 5%,transparent) 38px 39px),
+  var(--rl-bg)}
+a{color:var(--rl-accent)}
+.st{max-width:1040px;margin:0 auto;padding:20px 16px 40px;display:flex;flex-direction:column;gap:22px}
+.st-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.st-brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:var(--rl-fs-l)}
+.st-brand .logo{width:36px;height:25px;fill:var(--rl-ink)}
+.st-brand .logo circle{fill:var(--rl-danger)}
+.st-srv{margin-left:auto;font:var(--rl-fs-xs)/1.3 var(--rl-mono);color:var(--rl-mute)}
+.st-srv i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--rl-ok);margin-right:6px;vertical-align:1px}
+.st-srv.off i{background:var(--rl-mute)}
+
+.st-hero{background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);padding:28px 28px 24px;backdrop-filter:blur(var(--rl-blur));-webkit-backdrop-filter:blur(var(--rl-blur))}
+.st-hero h1{font:700 clamp(30px,5vw,46px)/1.05 var(--rl-font);margin:0 0 12px;letter-spacing:-.01em}
+.st-lead{font-size:var(--rl-fs-l);max-width:760px;margin:0 0 8px;color:var(--rl-ink)}
+.st-en{font-size:var(--rl-fs-s);color:var(--rl-mute);margin:0 0 18px;max-width:760px}
+.st-cta{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.st-btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 22px;border-radius:24px;font-weight:700;font-size:var(--rl-fs-l);text-decoration:none}
+.st-primary{background:var(--rl-danger);color:var(--rl-on-danger)}
+.st-primary:hover{filter:brightness(1.08)}
+.st-primary:focus-visible,.st-role:focus-visible,.st-links a:focus-visible{outline:3px solid var(--rl-accent);outline-offset:3px}
+.st-cta-sub{color:var(--rl-ink-2);font-size:var(--rl-fs-s)}
+
+.st-roles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.st-role{display:flex;flex-direction:column;gap:6px;padding:18px 18px 20px;background:var(--rl-panel-solid);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);color:var(--rl-ink);text-decoration:none;transition:border-color .15s,transform .15s}
+.st-role:hover{border-color:var(--rl-accent);transform:translateY(-2px)}
+.st-role b{font-size:var(--rl-fs-xl);line-height:1.15}
+.st-role span:last-child{color:var(--rl-ink-2);font-size:var(--rl-fs-s)}
+.st-ico svg{width:30px;height:30px;fill:none;stroke:var(--rl-accent);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+.st-why{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;align-items:start}
+.st-why h2,.st-proof-h{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rl-mute);margin:0 0 6px}
+.st-why p{margin:0;color:var(--rl-ink-2)}
+.st-how{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:how}
+.st-how li{counter-increment:how;display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:baseline;background:var(--rl-card);border:1px solid var(--rl-line);border-radius:var(--rl-radius);padding:9px 12px}
+.st-how li::before{content:counter(how);grid-row:1/3;font:700 20px/1 var(--rl-font-num);color:var(--rl-accent)}
+.st-how b{font-size:var(--rl-fs)}
+.st-how span{color:var(--rl-ink-2);font-size:var(--rl-fs-s)}
+
+.st-proof{border-top:1px solid var(--rl-line-strong);padding-top:16px}
+.st-nums{display:flex;gap:28px;flex-wrap:wrap;margin:6px 0}
+.st-num{display:flex;align-items:baseline;gap:8px}
+.st-num b{font:700 34px/1 var(--rl-font-num);font-variant-numeric:tabular-nums;color:var(--rl-ink-2)}
+.st-num-1 b{color:var(--rl-ink)}
+.st-num span{color:var(--rl-ink-2);font-size:var(--rl-fs-s);max-width:170px;line-height:1.25}
+.st-note{margin:4px 0 0;font-size:var(--rl-fs-xs);color:var(--rl-mute)}
+
+.st-links{display:flex;gap:8px 20px;flex-wrap:wrap;font-weight:600}
+.st-links a{text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--rl-accent) 35%,transparent)}
+.st-foot{font-size:var(--rl-fs-xs);color:var(--rl-mute);border-top:1px solid var(--rl-line);padding-top:12px;max-width:760px}
+
+@media (max-width:760px){
+  .st{gap:16px;padding-top:14px}
+  .st-hero{padding:20px 16px}
+  .st-lead{font-size:var(--rl-fs)}
+  .st-btn{width:100%;justify-content:center}
+  .st-roles{grid-template-columns:1fr;gap:10px}
+  .st-role{padding:14px 16px}
+  .st-role b{font-size:var(--rl-fs-l)}
+  .st-why{grid-template-columns:1fr;gap:12px}
+  .st-nums{gap:14px;flex-direction:column}
+}

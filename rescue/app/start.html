@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rescue Locator - gdzie szukać najpierw</title>
+<meta name="description" content="Narzędzie dla kierownika akcji GOPR/TOPR/WOPR: z niepewnych wskazówek jedna mapa i kolejność przeszukiwania.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="start.css">
+</head>
+<body>
+<main class="st">
+  <header class="st-top">
+    <div class="st-brand"><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</div>
+    <span id="srv" class="st-srv" role="status"></span>
+  </header>
+
+  <section class="st-hero">
+    <h1>Gdzie szukać najpierw.</h1>
+    <p class="st-lead">Rescue Locator to narzędzie dla kierownika akcji GOPR, TOPR i WOPR: z kilku niepewnych wskazówek robi jedną mapę i mówi, które sektory przeszukać najpierw. Każda nowa wskazówka, także „przeszukane, nic”, przelicza mapę i plan zespołów w kilka sekund.</p>
+    <p class="st-en" lang="en">Where to search first: a search-planning tool that turns uncertain clues into one map and a search order for mountain and water rescue leaders.</p>
+    <div class="st-cta">
+      <a class="st-btn st-primary" href="./?sc=zawrat&amp;role=operator&amp;time=hist&amp;tour=1">Pokaż w 90 sekund <span aria-hidden="true">▶</span></a>
+      <span class="st-cta-sub">Przewodnik po jednej akcji: Zawrat, sobota 17:40, mgła i zmrok.</span>
+    </div>
+  </section>
+
+  <section class="st-roles" aria-label="Wejdź do aplikacji">
+    <a class="st-role" href="./?role=operator">
+      <span class="st-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>
+      <b>Kierownik akcji</b>
+      <span>Laptop: mapa wskazówek, kolejność sektorów, plan zespołów, meldunki z terenu.</span>
+    </a>
+    <a class="st-role" href="./?role=ratownik">
+      <span class="st-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg></span>
+      <b>Ratownik (telefon)</b>
+      <span>Jeden ekran: moje zadanie, kierunek i odległość, meldunek zwykłym zdaniem.</span>
+    </a>
+    <a class="st-role" href="centrum.html">
+      <span class="st-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="M8 8.5l2.5 6.5M16 8.5l-2.5 6.5M8.5 7h7"/></svg></span>
+      <b>Centrum</b>
+      <span>Wszystkie akcje naraz na jednej mapie i wspólna pula zespołów.</span>
+    </a>
+  </section>
+
+  <section class="st-why">
+    <div>
+      <h2>Dlaczego</h2>
+      <p>Sobota 17:40. Mąż nie wrócił z Zawratu, mgła, zaraz zmrok. Kierownik akcji ma tylko okruchy: auto na parkingu, „szedł przez Pięć Stawów”, lokalizację z 112 z dokładnością półtora kilometra. Dziś łączy to w głowie, na papierowej mapie.</p>
+    </div>
+    <ol class="st-how">
+      <li><b>Wskazówki</b><span>świadek, telefon, auto, pogoda, przeszukane sektory</span></li>
+      <li><b>Mapa</b><span>statystyka zaginięć i prawdziwy teren, przelicza się z każdą wskazówką</span></li>
+      <li><b>Zespoły</b><span>kto, dokąd, za ile minut; na lód tylko zespół z liną</span></li>
+    </ol>
+  </section>
+
+  <section class="st-proof" aria-label="Wyniki symulacji">
+    <p class="st-proof-h">Właściwy sektor w pierwszej trójce, 1000 symulowanych zaginięć:</p>
+    <div class="st-nums">
+      <div class="st-num st-num-1"><b>66%</b><span>Rescue Locator</span></div>
+      <div class="st-num"><b>56%</b><span>doświadczony kierownik (heurystyka)</span></div>
+      <div class="st-num"><b>43%</b><span>od ostatniego punktu</span></div>
+    </div>
+    <p class="st-note">Symulacja, nie prawdziwe akcje. Szczegóły w aplikacji: Więcej, Walidacja.</p>
+  </section>
+
+  <nav class="st-links" aria-label="Więcej">
+    <a href="./?role=operator&amp;help=1">Instrukcja</a>
+    <a href="./?role=operator&amp;mode=walidacja">Walidacja</a>
+    <a href="./?role=operator&amp;sc=sniardwy">Woda i dryf (Śniardwy)</a>
+    <a href="centrum.html">Wiele akcji naraz</a>
+  </nav>
+
+  <footer class="st-foot">
+    Wszystkie scenariusze są fikcyjne, a liczby z walidacji pochodzą z symulacji, nie z prawdziwych akcji. Bez śledzenia ludzi; decyzję zawsze podejmuje kierownik akcji. HackYeah 2026.
+  </footer>
+</main>
+<script src="start.js" defer></script>
+<script src="../web/version.js" defer></script>
+</body>
+</html>
