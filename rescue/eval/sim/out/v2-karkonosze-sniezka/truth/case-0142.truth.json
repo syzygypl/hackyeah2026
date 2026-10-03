@@ -1,0 +1,73 @@
+{
+ "find": [
+  50.741727,
+  15.76265
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "wrong_trail",
+ "lostAt": [
+  50.739076,
+  15.767997
+ ],
+ "lostClock": "15:14",
+ "stopReason": "injury",
+ "reportClock": "20:18",
+ "path": [
+  [
+   50.741991,
+   15.777713,
+   "14:49"
+  ],
+  [
+   50.740907,
+   15.775494,
+   "14:54"
+  ],
+  [
+   50.739159,
+   15.773357,
+   "14:59"
+  ],
+  [
+   50.73761,
+   15.77115,
+   "15:05"
+  ],
+  [
+   50.73974,
+   15.76709,
+   "15:10"
+  ],
+  [
+   50.73974,
+   15.76709,
+   "15:15"
+  ],
+  [
+   50.74173,
+   15.76318,
+   "15:21"
+  ]
+ ],
+ "distKmFromIpp": 1.066,
+ "trackOffsetM": 0,
+ "elevChangeM": 71,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": false,
+   "note": "inna osoba"
+  },
+  {
+   "event": 4,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 1679
+  }
+ ],
+ "case": "case-0142",
+ "region": "karkonosze-sniezka",
+ "seed": 2
+}

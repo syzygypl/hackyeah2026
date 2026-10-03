@@ -1,0 +1,592 @@
+{
+ "incident": "Symulacja 0175: turysta pieszy, góry (przypadek fikcyjny)",
+ "date": "2026-07-18",
+ "startClock": "17:56",
+ "blind": true,
+ "subject": {
+  "name": "Osoba fikcyjna 0175",
+  "age": 19,
+  "category": "hiker",
+  "note": "Zgłoszenie o 17:56.",
+  "lastContact": "09:44"
+ },
+ "bbox": {
+  "south": 49.1716,
+  "west": 20.02595,
+  "north": 49.2256,
+  "east": 20.10845
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: szlak czerwony (ostatni kontakt)",
+  "at": [
+   49.199936,
+   20.068358
+  ],
+  "seenAt": "09:44"
+ },
+ "terrain": {
+  "trails": [
+   {
+    "name": "Niebieski: dojscie od Palenicy Bialczanskiej",
+    "points": [
+     [
+      49.2297,
+      20.0999
+     ],
+     [
+      49.2151,
+      20.0944
+     ],
+     [
+      49.205,
+      20.082
+     ],
+     [
+      49.1986,
+      20.0672
+     ]
+    ]
+   },
+   {
+    "name": "Czarny/Czerwony: Morskie Oko - Czarny Staw pod Rysami",
+    "points": [
+     [
+      49.1986,
+      20.0672
+     ],
+     [
+      49.195,
+      20.074
+     ],
+     [
+      49.1928,
+      20.0813
+     ]
+    ]
+   },
+   {
+    "name": "Spacerowy wokol jeziora",
+    "points": [
+     [
+      49.1986,
+      20.0672
+     ],
+     [
+      49.201,
+      20.062
+     ],
+     [
+      49.203,
+      20.069
+     ],
+     [
+      49.1986,
+      20.0672
+     ]
+    ]
+   }
+  ],
+  "streams": [
+   {
+    "name": "Wyplyw z Morskiego Oka (potok Roztoka)",
+    "points": [
+     [
+      49.1986,
+      20.0672
+     ],
+     [
+      49.2,
+      20.064
+     ],
+     [
+      49.202,
+      20.06
+     ]
+    ]
+   }
+  ],
+  "ridges": [],
+  "lakes": [
+   {
+    "name": "Morskie Oko",
+    "center": [
+     49.1986,
+     20.0672
+    ],
+    "radiusM": 500
+   },
+   {
+    "name": "Czarny Staw pod Rysami",
+    "center": [
+     49.1928,
+     20.0813
+    ],
+    "radiusM": 220
+   }
+  ],
+  "huts": [
+   {
+    "name": "Schronisko PTTK nad Morskim Okiem",
+    "at": [
+     49.1986,
+     20.0672
+    ]
+   }
+  ]
+ },
+ "segments": [
+  {
+   "id": "M1",
+   "name": "Brzeg wschodni jeziora (plaza piknikowa)",
+   "seed": [
+    49.1998,
+    20.0735
+   ]
+  },
+  {
+   "id": "M2",
+   "name": "Brzeg zachodni jeziora",
+   "seed": [
+    49.198,
+    20.063
+   ]
+  },
+  {
+   "id": "M3",
+   "name": "Las przy wyplywie potoku",
+   "seed": [
+    49.203,
+    20.0725
+   ]
+  },
+  {
+   "id": "M4",
+   "name": "Scierzka widokowa nad jeziorem",
+   "seed": [
+    49.201,
+    20.066
+   ]
+  },
+  {
+   "id": "M5",
+   "name": "Teren schroniska i parking rowerowy",
+   "seed": [
+    49.199,
+    20.068
+   ]
+  },
+  {
+   "id": "M6",
+   "name": "Szlak w strone Czarnego Stawu (dolny odcinek)",
+   "seed": [
+    49.196,
+    20.075
+   ]
+  },
+  {
+   "id": "M7",
+   "name": "Las poludniowy nad brzegiem",
+   "seed": [
+    49.1945,
+    20.0725
+   ]
+  },
+  {
+   "id": "M8",
+   "name": "Szlak powrotny do Palenicy (gorny odcinek)",
+   "seed": [
+    49.212,
+    20.083
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "gopr-a",
+   "name": "Patrol GOPR A (schronisko)",
+   "type": "ground",
+   "base": [
+    49.2015,
+    20.0713
+   ],
+   "readyAt": "14:00"
+  },
+  {
+   "id": "gopr-b",
+   "name": "Patrol GOPR B (parking Palenica)",
+   "type": "ground",
+   "base": [
+    49.2297,
+    20.0999
+   ],
+   "readyAt": "14:20"
+  },
+  {
+   "id": "dog",
+   "name": "Zespol z psem tropiacym",
+   "type": "dog",
+   "base": [
+    49.2015,
+    20.0713
+   ],
+   "readyAt": "14:10"
+  },
+  {
+   "id": "drone",
+   "name": "Dron termowizyjny",
+   "type": "drone",
+   "base": [
+    49.2015,
+    20.0713
+   ],
+   "readyAt": "14:30"
+  },
+  {
+   "id": "heli",
+   "name": "Smiglowiec TOPR",
+   "type": "heli",
+   "base": [
+    49.293,
+    19.964
+   ],
+   "readyAt": "14:15"
+  }
+ ],
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "17:56",
+   "title": "Teren: szlaki, potoki, schroniska",
+   "detail": "Dane OSM i DEM.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "17:56",
+   "title": "Koester: turysta pieszy, góry",
+   "detail": "Pierścienie odległości od IPP dla kategorii (wartości przybliżone, publiczne).",
+   "point": [
+    49.199936,
+    20.068358
+   ],
+   "quantilesKm": [
+    1.1,
+    3.0,
+    5.8,
+    11.5
+   ]
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "17:56",
+   "title": "Warunki: widzialność 2000 m, wiatr 9 m/s, -2°C",
+   "detail": "Pomiar w rejonie akcji.",
+   "visibilityM": 2000,
+   "windMs": 9,
+   "tempC": -2,
+   "precip": "none",
+   "dark": false,
+   "ice": true
+  },
+  {
+   "provider": "TripPlan",
+   "at": "18:02",
+   "title": "Plan od rodziny",
+   "detail": "Relacja rodziny o planowanej trasie.",
+   "points": [
+    [
+     49.199936,
+     20.068358
+    ],
+    [
+     49.19884,
+     20.06779
+    ],
+    [
+     49.197744,
+     20.067222
+    ],
+    [
+     49.19671,
+     20.06654
+    ],
+    [
+     49.19579,
+     20.065403
+    ],
+    [
+     49.194515,
+     20.06584
+    ],
+    [
+     49.194013,
+     20.067414
+    ],
+    [
+     49.19359,
+     20.06902
+    ],
+    [
+     49.193216,
+     20.070528
+    ],
+    [
+     49.192,
+     20.07112
+    ],
+    [
+     49.19132,
+     20.07257
+    ],
+    [
+     49.19037,
+     20.0737
+    ],
+    [
+     49.190986,
+     20.075076
+    ],
+    [
+     49.191125,
+     20.076805
+    ],
+    [
+     49.190301,
+     20.078054
+    ],
+    [
+     49.18937,
+     20.07906
+    ],
+    [
+     49.188186,
+     20.079532
+    ],
+    [
+     49.187027,
+     20.079103
+    ],
+    [
+     49.18591,
+     20.07896
+    ],
+    [
+     49.18467,
+     20.07964
+    ],
+    [
+     49.183645,
+     20.078885
+    ],
+    [
+     49.18262,
+     20.07813
+    ],
+    [
+     49.18148,
+     20.078155
+    ],
+    [
+     49.180713,
+     20.079677
+    ],
+    [
+     49.181315,
+     20.08145
+    ],
+    [
+     49.18124,
+     20.08304
+    ],
+    [
+     49.180977,
+     20.084293
+    ],
+    [
+     49.180356,
+     20.084844
+    ],
+    [
+     49.180208,
+     20.086492
+    ],
+    [
+     49.18006,
+     20.08814
+    ],
+    [
+     49.178797,
+     20.08785
+    ],
+    [
+     49.17759,
+     20.08822
+    ],
+    [
+     49.17664,
+     20.08929
+    ],
+    [
+     49.17714,
+     20.08917
+    ],
+    [
+     49.178152,
+     20.08795
+    ],
+    [
+     49.17934,
+     20.08817
+    ],
+    [
+     49.180134,
+     20.087316
+    ],
+    [
+     49.180282,
+     20.085668
+    ],
+    [
+     49.18043,
+     20.08402
+    ],
+    [
+     49.18138,
+     20.08414
+    ],
+    [
+     49.18159,
+     20.082165
+    ],
+    [
+     49.18103,
+     20.08066
+    ],
+    [
+     49.18084,
+     20.07887
+    ],
+    [
+     49.182087,
+     20.077997
+    ],
+    [
+     49.183132,
+     20.078508
+    ],
+    [
+     49.184157,
+     20.079263
+    ],
+    [
+     49.18529,
+     20.0793
+    ],
+    [
+     49.186463,
+     20.078933
+    ],
+    [
+     49.187603,
+     20.079467
+    ],
+    [
+     49.188778,
+     20.079296
+    ],
+    [
+     49.189836,
+     20.078557
+    ],
+    [
+     49.190767,
+     20.077551
+    ],
+    [
+     49.191195,
+     20.075865
+    ],
+    [
+     49.190678,
+     20.074388
+    ],
+    [
+     49.19071,
+     20.07274
+    ],
+    [
+     49.19136,
+     20.07158
+    ],
+    [
+     49.192608,
+     20.070824
+    ],
+    [
+     49.193543,
+     20.069927
+    ],
+    [
+     49.193801,
+     20.068217
+    ],
+    [
+     49.194224,
+     20.066611
+    ],
+    [
+     49.19519,
+     20.06521
+    ],
+    [
+     49.196297,
+     20.065847
+    ],
+    [
+     49.197217,
+     20.0669
+    ],
+    [
+     49.198292,
+     20.067506
+    ],
+    [
+     49.199388,
+     20.068074
+    ]
+   ],
+   "radiusM": 300
+  },
+  {
+   "provider": "Clue",
+   "at": "18:16",
+   "title": "Świadek: widziany/a około 13:50",
+   "detail": "Relacja innych turystów, pewność miejsca średnia.",
+   "point": [
+    49.181402,
+    20.086593
+   ],
+   "radiusM": 250,
+   "seenAt": "13:50"
+  },
+  {
+   "provider": "Cell112Fix",
+   "at": "18:26",
+   "title": "CPR 112: ostatni sektor BTS 14:33",
+   "detail": "Lokalizacja sieciowa operatora.",
+   "point": [
+    49.185646,
+    20.081011
+   ],
+   "radiusM": 1500
+  },
+  {
+   "provider": "Weather",
+   "at": "18:46",
+   "title": "IMGW: zachód słońca 18:30",
+   "detail": "Prognoza dla rejonu.",
+   "factor": 1.0
+  }
+ ]
+}

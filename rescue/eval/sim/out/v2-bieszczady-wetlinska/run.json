@@ -1,0 +1,40 @@
+{
+ "region": "bieszczady-wetlinska",
+ "seed": 2,
+ "n": 200,
+ "tries": 304,
+ "dropped": {
+  "no_route": 57,
+  "out_of_grid": 47
+ },
+ "commit": "1ab467f",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "wrong_plan": 0.15,
+  "false_item": 0.1,
+  "no_bts": 0.3
+ },
+ "categories": {
+  "child": 27,
+  "dementia": 43,
+  "gatherer": 37,
+  "hiker": 93
+ },
+ "behaviours": {
+  "backtrack": 8,
+  "direction_travel": 20,
+  "follow_drainage": 49,
+  "route_sampling": 9,
+  "stay_put": 35,
+  "view_enhance": 11,
+  "wrong_trail": 68
+ },
+ "stopReasons": {
+  "blocked": 17,
+  "dark": 2,
+  "exhausted": 97,
+  "injury": 38,
+  "stay_put": 46
+ }
+}

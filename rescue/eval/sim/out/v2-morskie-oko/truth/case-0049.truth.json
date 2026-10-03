@@ -1,0 +1,35 @@
+{
+ "find": [
+  49.199388,
+  20.068074
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.199388,
+  20.068074
+ ],
+ "lostClock": "09:57",
+ "stopReason": "stay_put",
+ "reportClock": "19:22",
+ "path": [
+  [
+   49.20158,
+   20.07096,
+   "09:50"
+  ],
+  [
+   49.20021,
+   20.0685,
+   "09:55"
+  ]
+ ],
+ "distKmFromIpp": 0.328,
+ "trackOffsetM": 0,
+ "elevChangeM": -12,
+ "clues": [],
+ "case": "case-0049",
+ "region": "morskie-oko",
+ "seed": 2
+}

@@ -1,0 +1,68 @@
+{
+ "find": [
+  49.220635,
+  19.970075
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  49.220175,
+  19.97243
+ ],
+ "lostClock": "11:24",
+ "stopReason": "blocked",
+ "reportClock": "16:36",
+ "path": [
+  [
+   49.222326,
+   19.962152,
+   "11:02"
+  ],
+  [
+   49.221812,
+   19.965365,
+   "11:09"
+  ],
+  [
+   49.22093,
+   19.969543,
+   "11:14"
+  ],
+  [
+   49.219914,
+   19.973714,
+   "11:20"
+  ],
+  [
+   49.220175,
+   19.972017,
+   "11:25"
+  ],
+  [
+   49.220366,
+   19.970075,
+   "11:30"
+  ]
+ ],
+ "distKmFromIpp": 0.609,
+ "trackOffsetM": 16,
+ "elevChangeM": 32,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": false,
+   "note": "inna osoba"
+  },
+  {
+   "event": 4,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 2016
+  }
+ ],
+ "case": "case-0028",
+ "region": "kasprowy",
+ "seed": 2
+}

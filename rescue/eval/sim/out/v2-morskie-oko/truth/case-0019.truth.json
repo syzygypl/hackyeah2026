@@ -1,0 +1,58 @@
+{
+ "find": [
+  49.176476,
+  20.089199
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.17645,
+  20.08961
+ ],
+ "lostClock": "11:47",
+ "stopReason": "stay_put",
+ "reportClock": "19:31",
+ "path": [
+  [
+   49.174577,
+   20.0872,
+   "11:30"
+  ],
+  [
+   49.175365,
+   20.088115,
+   "11:36"
+  ],
+  [
+   49.17599,
+   20.08923,
+   "11:43"
+  ],
+  [
+   49.176476,
+   20.089199,
+   "11:49"
+  ]
+ ],
+ "distKmFromIpp": 0.264,
+ "trackOffsetM": 19,
+ "elevChangeM": 106,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 4,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 368
+  }
+ ],
+ "case": "case-0019",
+ "region": "morskie-oko",
+ "seed": 2
+}

@@ -1,0 +1,569 @@
+{
+ "incident": "Symulacja 0120: turysta pieszy, góry (przypadek fikcyjny)",
+ "date": "2026-02-14",
+ "startClock": "17:06",
+ "blind": true,
+ "subject": {
+  "name": "Osoba fikcyjna 0120",
+  "age": 59,
+  "category": "hiker",
+  "note": "Zgłoszenie o 17:06.",
+  "lastContact": "12:11"
+ },
+ "bbox": {
+  "south": 49.2055,
+  "west": 19.94015,
+  "north": 49.2595,
+  "east": 20.02265
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: szlak zielony (ostatni kontakt)",
+  "at": [
+   49.226287,
+   19.992523
+  ],
+  "seenAt": "12:11"
+ },
+ "terrain": {
+  "trails": [
+   {
+    "name": "Czerwony: Kuznice - Kasprowy Wierch",
+    "points": [
+     [
+      49.2516,
+      19.9793
+     ],
+     [
+      49.2459,
+      19.9833
+     ],
+     [
+      49.239,
+      19.982
+     ],
+     [
+      49.2324,
+      19.9814
+     ]
+    ]
+   },
+   {
+    "name": "Zolty: Kasprowy - Goryczkowa Czuba",
+    "points": [
+     [
+      49.2324,
+      19.9814
+     ],
+     [
+      49.2367,
+      19.976
+     ],
+     [
+      49.239,
+      19.97
+     ]
+    ]
+   },
+   {
+    "name": "Niebieski: Hala Gasienicowa - Murowaniec",
+    "points": [
+     [
+      49.2459,
+      19.9961
+     ],
+     [
+      49.2434,
+      20.0
+     ],
+     [
+      49.2434,
+      20.0072
+     ]
+    ]
+   }
+  ],
+  "streams": [
+   {
+    "name": "Potok Bystra",
+    "points": [
+     [
+      49.245,
+      19.97
+     ],
+     [
+      49.24,
+      19.965
+     ],
+     [
+      49.234,
+      19.96
+     ]
+    ]
+   }
+  ],
+  "ridges": [
+   {
+    "name": "Grzbiet Goryczkowej Czuby",
+    "points": [
+     [
+      49.2367,
+      19.976
+     ],
+     [
+      49.239,
+      19.97
+     ],
+     [
+      49.241,
+      19.965
+     ]
+    ]
+   }
+  ],
+  "lakes": [],
+  "huts": [
+   {
+    "name": "Schronisko Murowaniec",
+    "at": [
+     49.2434,
+     20.0072
+    ]
+   }
+  ]
+ },
+ "segments": [
+  {
+   "id": "K1",
+   "name": "Kuznice (dol)",
+   "seed": [
+    49.259,
+    19.974
+   ]
+  },
+  {
+   "id": "K2",
+   "name": "Goryczkowa Czuba",
+   "seed": [
+    49.2367,
+    19.976
+   ]
+  },
+  {
+   "id": "K3",
+   "name": "Zachodnia stok Goryczkowej (poza trasa)",
+   "seed": [
+    49.239,
+    19.97
+   ]
+  },
+  {
+   "id": "K4",
+   "name": "Dolina Bystrej",
+   "seed": [
+    49.24,
+    19.965
+   ]
+  },
+  {
+   "id": "K5",
+   "name": "Hala Gasienicowa",
+   "seed": [
+    49.244,
+    20.001
+   ]
+  },
+  {
+   "id": "K6",
+   "name": "Murowaniec / Czarny Staw Gasienicowy",
+   "seed": [
+    49.2434,
+    20.0072
+   ]
+  },
+  {
+   "id": "K7",
+   "name": "Myslenickie Turnie",
+   "seed": [
+    49.2517,
+    19.9742
+   ]
+  },
+  {
+   "id": "K8",
+   "name": "Kondratowa Dolina",
+   "seed": [
+    49.2485,
+    19.953
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "gopr-a",
+   "name": "Patrol GOPR A (4 os.)",
+   "type": "ground",
+   "base": [
+    49.2516,
+    19.9793
+   ],
+   "readyAt": "15:20"
+  },
+  {
+   "id": "gopr-b",
+   "name": "Patrol GOPR B (stacja gorna)",
+   "type": "ground",
+   "base": [
+    49.2324,
+    19.9814
+   ],
+   "readyAt": "15:00"
+  },
+  {
+   "id": "dog",
+   "name": "Zespol z psem lawinowym",
+   "type": "dog",
+   "base": [
+    49.2516,
+    19.9793
+   ],
+   "readyAt": "15:40"
+  },
+  {
+   "id": "drone",
+   "name": "Dron termowizyjny",
+   "type": "drone",
+   "base": [
+    49.2324,
+    19.9814
+   ],
+   "readyAt": "15:15"
+  },
+  {
+   "id": "heli",
+   "name": "Smiglowiec TOPR",
+   "type": "heli",
+   "base": [
+    49.293,
+    19.964
+   ],
+   "readyAt": "14:55"
+  }
+ ],
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "17:06",
+   "title": "Teren: szlaki, potoki, schroniska",
+   "detail": "Dane OSM i DEM.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "17:06",
+   "title": "Koester: turysta pieszy, góry",
+   "detail": "Pierścienie odległości od IPP dla kategorii (wartości przybliżone, publiczne).",
+   "point": [
+    49.226287,
+    19.992523
+   ],
+   "quantilesKm": [
+    1.1,
+    3.0,
+    5.8,
+    11.5
+   ]
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "17:06",
+   "title": "Warunki: widzialność 80 m, wiatr 14 m/s, 12°C",
+   "detail": "Pomiar w rejonie akcji.",
+   "visibilityM": 80,
+   "windMs": 14,
+   "tempC": 12,
+   "precip": "snow",
+   "dark": false,
+   "ice": false
+  },
+  {
+   "provider": "TripPlan",
+   "at": "17:12",
+   "title": "Plan od rodziny",
+   "detail": "Relacja rodziny o planowanej trasie.",
+   "points": [
+    [
+     49.226287,
+     19.992523
+    ],
+    [
+     49.22519,
+     19.99254
+    ],
+    [
+     49.225951,
+     19.990821
+    ],
+    [
+     49.22682,
+     19.98953
+    ],
+    [
+     49.227804,
+     19.988722
+    ],
+    [
+     49.228782,
+     19.98756
+    ],
+    [
+     49.229567,
+     19.986113
+    ],
+    [
+     49.23016,
+     19.9845
+    ],
+    [
+     49.23099,
+     19.98304
+    ],
+    [
+     49.2323,
+     19.98263
+    ],
+    [
+     49.23245,
+     19.98131
+    ],
+    [
+     49.233451,
+     19.980467
+    ],
+    [
+     49.234497,
+     19.980016
+    ],
+    [
+     49.235383,
+     19.97935
+    ],
+    [
+     49.23644,
+     19.978535
+    ],
+    [
+     49.23736,
+     19.97794
+    ],
+    [
+     49.23784,
+     19.97743
+    ],
+    [
+     49.23902,
+     19.97764
+    ],
+    [
+     49.23851,
+     19.97626
+    ],
+    [
+     49.239477,
+     19.977173
+    ],
+    [
+     49.24041,
+     19.97677
+    ],
+    [
+     49.24161,
+     19.9759
+    ],
+    [
+     49.24285,
+     19.97661
+    ],
+    [
+     49.243917,
+     19.976883
+    ],
+    [
+     49.2449,
+     19.97639
+    ],
+    [
+     49.24566,
+     19.97562
+    ],
+    [
+     49.246605,
+     19.976283
+    ],
+    [
+     49.247785,
+     19.975977
+    ],
+    [
+     49.24886,
+     19.97639
+    ],
+    [
+     49.25008,
+     19.97622
+    ],
+    [
+     49.25066,
+     19.97574
+    ],
+    [
+     49.24948,
+     19.976437
+    ],
+    [
+     49.24834,
+     19.976063
+    ],
+    [
+     49.247195,
+     19.97613
+    ],
+    [
+     49.246093,
+     19.976113
+    ],
+    [
+     49.24519,
+     19.9758
+    ],
+    [
+     49.24412,
+     19.97635
+    ],
+    [
+     49.24331,
+     19.97715
+    ],
+    [
+     49.242283,
+     19.976193
+    ],
+    [
+     49.24099,
+     19.97615
+    ],
+    [
+     49.23996,
+     19.97763
+    ],
+    [
+     49.238993,
+     19.976717
+    ],
+    [
+     49.23862,
+     19.976873
+    ],
+    [
+     49.238365,
+     19.97715
+    ],
+    [
+     49.237375,
+     19.977495
+    ],
+    [
+     49.23685,
+     19.97786
+    ],
+    [
+     49.23603,
+     19.97921
+    ],
+    [
+     49.23502,
+     19.97979
+    ],
+    [
+     49.233974,
+     19.980241
+    ],
+    [
+     49.232943,
+     19.980823
+    ],
+    [
+     49.232525,
+     19.982265
+    ],
+    [
+     49.231603,
+     19.982673
+    ],
+    [
+     49.230575,
+     19.98377
+    ],
+    [
+     49.229863,
+     19.985307
+    ],
+    [
+     49.22927,
+     19.98692
+    ],
+    [
+     49.228294,
+     19.9882
+    ],
+    [
+     49.227312,
+     19.989126
+    ],
+    [
+     49.226386,
+     19.990176
+    ],
+    [
+     49.225517,
+     19.991467
+    ],
+    [
+     49.225739,
+     19.992531
+    ]
+   ],
+   "radiusM": 300
+  },
+  {
+   "provider": "Clue",
+   "at": "17:26",
+   "title": "Świadek: widziany/a około 13:01",
+   "detail": "Relacja innych turystów, pewność miejsca średnia.",
+   "point": [
+    49.233111,
+    19.983212
+   ],
+   "radiusM": 250,
+   "seenAt": "13:01"
+  },
+  {
+   "provider": "Cell112Fix",
+   "at": "17:36",
+   "title": "CPR 112: ostatni sektor BTS 14:19",
+   "detail": "Lokalizacja sieciowa operatora.",
+   "point": [
+    49.235232,
+    19.985098
+   ],
+   "radiusM": 2000
+  },
+  {
+   "provider": "Weather",
+   "at": "17:56",
+   "title": "IMGW: zachód słońca 18:30",
+   "detail": "Prognoza dla rejonu.",
+   "factor": 1.2
+  }
+ ]
+}

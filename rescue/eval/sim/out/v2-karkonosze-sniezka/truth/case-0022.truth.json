@@ -1,0 +1,83 @@
+{
+ "find": [
+  50.76327,
+  15.766663
+ ],
+ "inGrid": true,
+ "category": "gatherer",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  50.7584,
+  15.762125
+ ],
+ "lostClock": "09:59",
+ "stopReason": "blocked",
+ "reportClock": "20:00",
+ "path": [
+  [
+   50.76135,
+   15.76685,
+   "09:43"
+  ],
+  [
+   50.759994,
+   15.76811,
+   "09:49"
+  ],
+  [
+   50.75936,
+   15.76481,
+   "09:54"
+  ],
+  [
+   50.758669,
+   15.762125,
+   "10:00"
+  ],
+  [
+   50.760319,
+   15.763028,
+   "10:06"
+  ],
+  [
+   50.76116,
+   15.764607,
+   "10:11"
+  ],
+  [
+   50.762001,
+   15.765936,
+   "10:18"
+  ],
+  [
+   50.763079,
+   15.766362,
+   "10:24"
+  ]
+ ],
+ "distKmFromIpp": 0.214,
+ "trackOffsetM": 148,
+ "elevChangeM": -36,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 571
+  }
+ ],
+ "case": "case-0022",
+ "region": "karkonosze-sniezka",
+ "seed": 2
+}

@@ -1,0 +1,53 @@
+{
+ "find": [
+  49.196963,
+  20.06672
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "direction_travel",
+ "lostAt": [
+  49.196963,
+  20.06672
+ ],
+ "lostClock": "12:42",
+ "stopReason": "blocked",
+ "reportClock": "19:11",
+ "path": [
+  [
+   49.20216,
+   20.070624,
+   "12:30"
+  ],
+  [
+   49.20021,
+   20.0685,
+   "12:35"
+  ],
+  [
+   49.197744,
+   20.067222,
+   "12:41"
+  ]
+ ],
+ "distKmFromIpp": 0.639,
+ "trackOffsetM": 0,
+ "elevChangeM": 1,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 1473
+  },
+  {
+   "event": 4,
+   "kind": "item",
+   "truthful": false,
+   "note": "cudza czapka"
+  }
+ ],
+ "case": "case-0099",
+ "region": "morskie-oko",
+ "seed": 2
+}

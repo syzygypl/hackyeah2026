@@ -1,0 +1,93 @@
+{
+ "find": [
+  49.1685,
+  22.518484
+ ],
+ "inGrid": true,
+ "category": "gatherer",
+ "behaviour": "wrong_trail",
+ "lostAt": [
+  49.16598,
+  22.522548
+ ],
+ "lostClock": "11:09",
+ "stopReason": "injury",
+ "reportClock": "17:17",
+ "path": [
+  [
+   49.1737,
+   22.514935,
+   "10:46"
+  ],
+  [
+   49.171717,
+   22.516873,
+   "10:51"
+  ],
+  [
+   49.169973,
+   22.51804,
+   "10:56"
+  ],
+  [
+   49.167453,
+   22.51861,
+   "11:02"
+  ],
+  [
+   49.16629,
+   22.520801,
+   "11:07"
+  ],
+  [
+   49.16665,
+   22.519529,
+   "11:13"
+  ],
+  [
+   49.169314,
+   22.5183,
+   "11:18"
+  ],
+  [
+   49.171105,
+   22.517133,
+   "11:23"
+  ],
+  [
+   49.16914,
+   22.5184,
+   "11:28"
+  ],
+  [
+   49.16742,
+   22.51842,
+   "11:34"
+  ]
+ ],
+ "distKmFromIpp": 0.634,
+ "trackOffsetM": 0,
+ "elevChangeM": 98,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 558
+  }
+ ],
+ "case": "case-0087",
+ "region": "bieszczady-wetlinska",
+ "seed": 2
+}

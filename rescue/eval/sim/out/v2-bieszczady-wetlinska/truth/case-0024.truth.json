@@ -1,0 +1,83 @@
+{
+ "find": [
+  49.16627,
+  22.52821
+ ],
+ "inGrid": true,
+ "category": "hiker",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.16627,
+  22.52821
+ ],
+ "lostClock": "09:48",
+ "stopReason": "stay_put",
+ "reportClock": "20:24",
+ "path": [
+  [
+   49.155142,
+   22.554076,
+   "09:11"
+  ],
+  [
+   49.15713,
+   22.552038,
+   "09:17"
+  ],
+  [
+   49.159161,
+   22.5484,
+   "09:22"
+  ],
+  [
+   49.160805,
+   22.5434,
+   "09:27"
+  ],
+  [
+   49.162462,
+   22.539548,
+   "09:32"
+  ],
+  [
+   49.16413,
+   22.53558,
+   "09:37"
+  ],
+  [
+   49.16548,
+   22.532465,
+   "09:43"
+  ],
+  [
+   49.166243,
+   22.52862,
+   "09:48"
+  ]
+ ],
+ "distKmFromIpp": 2.254,
+ "trackOffsetM": 0,
+ "elevChangeM": 32,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 5,
+   "kind": "item",
+   "truthful": false,
+   "note": "cudza czapka"
+  }
+ ],
+ "case": "case-0024",
+ "region": "bieszczady-wetlinska",
+ "seed": 2
+}

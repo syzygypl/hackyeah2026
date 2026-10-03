@@ -1,0 +1,40 @@
+{
+ "region": "kasprowy",
+ "seed": 2,
+ "n": 200,
+ "tries": 268,
+ "dropped": {
+  "no_route": 39,
+  "out_of_grid": 29
+ },
+ "commit": "1ab467f",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "wrong_plan": 0.15,
+  "false_item": 0.1,
+  "no_bts": 0.3
+ },
+ "categories": {
+  "child": 27,
+  "dementia": 32,
+  "gatherer": 48,
+  "hiker": 93
+ },
+ "behaviours": {
+  "backtrack": 7,
+  "direction_travel": 48,
+  "follow_drainage": 39,
+  "route_sampling": 9,
+  "stay_put": 30,
+  "view_enhance": 11,
+  "wrong_trail": 56
+ },
+ "stopReasons": {
+  "blocked": 17,
+  "dark": 2,
+  "exhausted": 113,
+  "injury": 27,
+  "stay_put": 41
+ }
+}

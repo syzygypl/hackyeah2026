@@ -1,0 +1,47 @@
+{
+ "find": [
+  50.740033,
+  15.774426
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  50.740033,
+  15.774426
+ ],
+ "lostClock": "11:11",
+ "stopReason": "stay_put",
+ "reportClock": "16:30",
+ "path": [
+  [
+   50.741991,
+   15.777713,
+   "11:00"
+  ],
+  [
+   50.740907,
+   15.775494,
+   "11:05"
+  ],
+  [
+   50.739596,
+   15.773891,
+   "11:10"
+  ]
+ ],
+ "distKmFromIpp": 0.318,
+ "trackOffsetM": 0,
+ "elevChangeM": 55,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 1813
+  }
+ ],
+ "case": "case-0002",
+ "region": "karkonosze-sniezka",
+ "seed": 2
+}

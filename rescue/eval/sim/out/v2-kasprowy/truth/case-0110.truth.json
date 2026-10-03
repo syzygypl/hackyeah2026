@@ -1,0 +1,37 @@
+{
+ "find": [
+  49.222069,
+  19.963758
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.222069,
+  19.963758
+ ],
+ "lostClock": "12:03",
+ "stopReason": "stay_put",
+ "reportClock": "19:43",
+ "path": [
+  [
+   49.222326,
+   19.962152,
+   "12:00"
+  ]
+ ],
+ "distKmFromIpp": 0.128,
+ "trackOffsetM": 0,
+ "elevChangeM": 19,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 390
+  }
+ ],
+ "case": "case-0110",
+ "region": "kasprowy",
+ "seed": 2
+}

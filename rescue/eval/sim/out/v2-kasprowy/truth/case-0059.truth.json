@@ -1,0 +1,73 @@
+{
+ "find": [
+  49.220556,
+  19.970196
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  49.220175,
+  19.97243
+ ],
+ "lostClock": "12:45",
+ "stopReason": "blocked",
+ "reportClock": "17:47",
+ "path": [
+  [
+   49.222326,
+   19.962152,
+   "12:24"
+  ],
+  [
+   49.221941,
+   19.964562,
+   "12:30"
+  ],
+  [
+   49.221603,
+   19.967063,
+   "12:36"
+  ],
+  [
+   49.22077,
+   19.969917,
+   "12:41"
+  ],
+  [
+   49.220175,
+   19.972017,
+   "12:46"
+  ],
+  [
+   49.220826,
+   19.969783,
+   "12:52"
+  ],
+  [
+   49.220287,
+   19.970196,
+   "12:57"
+  ]
+ ],
+ "distKmFromIpp": 0.623,
+ "trackOffsetM": 9,
+ "elevChangeM": 32,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 4,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 1238
+  }
+ ],
+ "case": "case-0059",
+ "region": "kasprowy",
+ "seed": 2
+}

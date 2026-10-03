@@ -1,0 +1,40 @@
+{
+ "region": "karkonosze-sniezka",
+ "seed": 2,
+ "n": 200,
+ "tries": 272,
+ "dropped": {
+  "no_route": 38,
+  "out_of_grid": 34
+ },
+ "commit": "1ab467f",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "wrong_plan": 0.15,
+  "false_item": 0.1,
+  "no_bts": 0.3
+ },
+ "categories": {
+  "child": 29,
+  "dementia": 30,
+  "gatherer": 50,
+  "hiker": 91
+ },
+ "behaviours": {
+  "backtrack": 4,
+  "direction_travel": 27,
+  "follow_drainage": 52,
+  "route_sampling": 15,
+  "stay_put": 34,
+  "view_enhance": 18,
+  "wrong_trail": 50
+ },
+ "stopReasons": {
+  "blocked": 35,
+  "dark": 2,
+  "exhausted": 87,
+  "injury": 24,
+  "stay_put": 52
+ }
+}

@@ -1,0 +1,77 @@
+{
+ "find": [
+  50.739275,
+  15.727695
+ ],
+ "inGrid": true,
+ "category": "hiker",
+ "behaviour": "wrong_trail",
+ "lostAt": [
+  50.73868,
+  15.73059
+ ],
+ "lostClock": "11:14",
+ "stopReason": "injury",
+ "reportClock": "20:08",
+ "path": [
+  [
+   50.745942,
+   15.706685,
+   "10:41"
+  ],
+  [
+   50.74352,
+   15.7052,
+   "10:46"
+  ],
+  [
+   50.74115,
+   15.70644,
+   "10:52"
+  ],
+  [
+   50.741772,
+   15.711747,
+   "10:57"
+  ],
+  [
+   50.741328,
+   15.717867,
+   "11:02"
+  ],
+  [
+   50.740509,
+   15.723824,
+   "11:07"
+  ],
+  [
+   50.73922,
+   15.72908,
+   "11:12"
+  ],
+  [
+   50.73871,
+   15.73054,
+   "11:17"
+  ]
+ ],
+ "distKmFromIpp": 1.656,
+ "trackOffsetM": 0,
+ "elevChangeM": 34,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  }
+ ],
+ "case": "case-0106",
+ "region": "karkonosze-sniezka",
+ "seed": 2
+}

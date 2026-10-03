@@ -1,0 +1,312 @@
+{
+ "incident": "Symulacja 0002: osoba z demencją (przypadek fikcyjny)",
+ "date": "2026-07-18",
+ "startClock": "04:43",
+ "blind": true,
+ "subject": {
+  "name": "Osoba fikcyjna 0002",
+  "age": 76,
+  "category": "dementia",
+  "note": "Zgłoszenie o 04:43.",
+  "lastContact": "14:59"
+ },
+ "bbox": {
+  "south": 49.1716,
+  "west": 20.02595,
+  "north": 49.2256,
+  "east": 20.10845
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: Schronisko PTTK Morskie Oko (ostatnio widziany/a przez obsługę)",
+  "at": [
+   49.20146,
+   20.07128
+  ],
+  "seenAt": "14:59"
+ },
+ "terrain": {
+  "trails": [
+   {
+    "name": "Niebieski: dojscie od Palenicy Bialczanskiej",
+    "points": [
+     [
+      49.2297,
+      20.0999
+     ],
+     [
+      49.2151,
+      20.0944
+     ],
+     [
+      49.205,
+      20.082
+     ],
+     [
+      49.1986,
+      20.0672
+     ]
+    ]
+   },
+   {
+    "name": "Czarny/Czerwony: Morskie Oko - Czarny Staw pod Rysami",
+    "points": [
+     [
+      49.1986,
+      20.0672
+     ],
+     [
+      49.195,
+      20.074
+     ],
+     [
+      49.1928,
+      20.0813
+     ]
+    ]
+   },
+   {
+    "name": "Spacerowy wokol jeziora",
+    "points": [
+     [
+      49.1986,
+      20.0672
+     ],
+     [
+      49.201,
+      20.062
+     ],
+     [
+      49.203,
+      20.069
+     ],
+     [
+      49.1986,
+      20.0672
+     ]
+    ]
+   }
+  ],
+  "streams": [
+   {
+    "name": "Wyplyw z Morskiego Oka (potok Roztoka)",
+    "points": [
+     [
+      49.1986,
+      20.0672
+     ],
+     [
+      49.2,
+      20.064
+     ],
+     [
+      49.202,
+      20.06
+     ]
+    ]
+   }
+  ],
+  "ridges": [],
+  "lakes": [
+   {
+    "name": "Morskie Oko",
+    "center": [
+     49.1986,
+     20.0672
+    ],
+    "radiusM": 500
+   },
+   {
+    "name": "Czarny Staw pod Rysami",
+    "center": [
+     49.1928,
+     20.0813
+    ],
+    "radiusM": 220
+   }
+  ],
+  "huts": [
+   {
+    "name": "Schronisko PTTK nad Morskim Okiem",
+    "at": [
+     49.1986,
+     20.0672
+    ]
+   }
+  ]
+ },
+ "segments": [
+  {
+   "id": "M1",
+   "name": "Brzeg wschodni jeziora (plaza piknikowa)",
+   "seed": [
+    49.1998,
+    20.0735
+   ]
+  },
+  {
+   "id": "M2",
+   "name": "Brzeg zachodni jeziora",
+   "seed": [
+    49.198,
+    20.063
+   ]
+  },
+  {
+   "id": "M3",
+   "name": "Las przy wyplywie potoku",
+   "seed": [
+    49.203,
+    20.0725
+   ]
+  },
+  {
+   "id": "M4",
+   "name": "Scierzka widokowa nad jeziorem",
+   "seed": [
+    49.201,
+    20.066
+   ]
+  },
+  {
+   "id": "M5",
+   "name": "Teren schroniska i parking rowerowy",
+   "seed": [
+    49.199,
+    20.068
+   ]
+  },
+  {
+   "id": "M6",
+   "name": "Szlak w strone Czarnego Stawu (dolny odcinek)",
+   "seed": [
+    49.196,
+    20.075
+   ]
+  },
+  {
+   "id": "M7",
+   "name": "Las poludniowy nad brzegiem",
+   "seed": [
+    49.1945,
+    20.0725
+   ]
+  },
+  {
+   "id": "M8",
+   "name": "Szlak powrotny do Palenicy (gorny odcinek)",
+   "seed": [
+    49.212,
+    20.083
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "gopr-a",
+   "name": "Patrol GOPR A (schronisko)",
+   "type": "ground",
+   "base": [
+    49.2015,
+    20.0713
+   ],
+   "readyAt": "14:00"
+  },
+  {
+   "id": "gopr-b",
+   "name": "Patrol GOPR B (parking Palenica)",
+   "type": "ground",
+   "base": [
+    49.2297,
+    20.0999
+   ],
+   "readyAt": "14:20"
+  },
+  {
+   "id": "dog",
+   "name": "Zespol z psem tropiacym",
+   "type": "dog",
+   "base": [
+    49.2015,
+    20.0713
+   ],
+   "readyAt": "14:10"
+  },
+  {
+   "id": "drone",
+   "name": "Dron termowizyjny",
+   "type": "drone",
+   "base": [
+    49.2015,
+    20.0713
+   ],
+   "readyAt": "14:30"
+  },
+  {
+   "id": "heli",
+   "name": "Smiglowiec TOPR",
+   "type": "heli",
+   "base": [
+    49.293,
+    19.964
+   ],
+   "readyAt": "14:15"
+  }
+ ],
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "04:43",
+   "title": "Teren: szlaki, potoki, schroniska",
+   "detail": "Dane OSM i DEM.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "04:43",
+   "title": "Koester: osoba z demencją",
+   "detail": "Pierścienie odległości od IPP dla kategorii (wartości przybliżone, publiczne).",
+   "point": [
+    49.20146,
+    20.07128
+   ],
+   "quantilesKm": [
+    0.3,
+    0.8,
+    1.9,
+    4.3
+   ]
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "04:43",
+   "title": "Warunki: widzialność 40 m, wiatr 2 m/s, -2°C",
+   "detail": "Pomiar w rejonie akcji.",
+   "visibilityM": 40,
+   "windMs": 2,
+   "tempC": -2,
+   "precip": "drizzle",
+   "dark": true,
+   "ice": true
+  },
+  {
+   "provider": "Clue",
+   "at": "05:03",
+   "title": "Świadek: widziany/a około 15:47",
+   "detail": "Relacja innych turystów, pewność miejsca średnia.",
+   "point": [
+    49.211722,
+    20.066889
+   ],
+   "radiusM": 250,
+   "seenAt": "15:47"
+  },
+  {
+   "provider": "Weather",
+   "at": "05:33",
+   "title": "IMGW: zachód słońca 18:30",
+   "detail": "Prognoza dla rejonu.",
+   "factor": 1.2
+  }
+ ]
+}

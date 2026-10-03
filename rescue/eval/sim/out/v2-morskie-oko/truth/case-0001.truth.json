@@ -1,0 +1,83 @@
+{
+ "find": [
+  49.198167,
+  20.074672
+ ],
+ "inGrid": true,
+ "category": "hiker",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.198025,
+  20.074012
+ ],
+ "lostClock": "11:09",
+ "stopReason": "stay_put",
+ "reportClock": "18:30",
+ "path": [
+  [
+   49.20606,
+   20.073727,
+   "10:34"
+  ],
+  [
+   49.204033,
+   20.071843,
+   "10:39"
+  ],
+  [
+   49.202913,
+   20.070318,
+   "10:45"
+  ],
+  [
+   49.20102,
+   20.07119,
+   "10:50"
+  ],
+  [
+   49.20074,
+   20.07308,
+   "10:56"
+  ],
+  [
+   49.19946,
+   20.07397,
+   "11:01"
+  ],
+  [
+   49.19914,
+   20.07377,
+   "11:07"
+  ],
+  [
+   49.198167,
+   20.074672,
+   "11:14"
+  ]
+ ],
+ "distKmFromIpp": 0.881,
+ "trackOffsetM": 50,
+ "elevChangeM": 25,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 626
+  }
+ ],
+ "case": "case-0001",
+ "region": "morskie-oko",
+ "seed": 2
+}

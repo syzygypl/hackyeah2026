@@ -1,0 +1,47 @@
+{
+ "find": [
+  49.161059,
+  22.541803
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.161322,
+  22.54192
+ ],
+ "lostClock": "09:41",
+ "stopReason": "stay_put",
+ "reportClock": "20:26",
+ "path": [
+  [
+   49.15793,
+   22.55128,
+   "09:31"
+  ],
+  [
+   49.15993,
+   22.5466,
+   "09:36"
+  ],
+  [
+   49.161322,
+   22.54192,
+   "09:41"
+  ]
+ ],
+ "distKmFromIpp": 0.764,
+ "trackOffsetM": 30,
+ "elevChangeM": -48,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 1696
+  }
+ ],
+ "case": "case-0056",
+ "region": "bieszczady-wetlinska",
+ "seed": 2
+}

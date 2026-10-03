@@ -1,0 +1,93 @@
+{
+ "find": [
+  50.744083,
+  15.70046
+ ],
+ "inGrid": true,
+ "category": "hiker",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  50.742972,
+  15.705196
+ ],
+ "lostClock": "11:02",
+ "stopReason": "injury",
+ "reportClock": "17:37",
+ "path": [
+  [
+   50.738424,
+   15.739673,
+   "10:20"
+  ],
+  [
+   50.73772,
+   15.736781,
+   "10:26"
+  ],
+  [
+   50.737372,
+   15.733372,
+   "10:32"
+  ],
+  [
+   50.73922,
+   15.72908,
+   "10:37"
+  ],
+  [
+   50.740567,
+   15.723399,
+   "10:42"
+  ],
+  [
+   50.741152,
+   15.719143,
+   "10:47"
+  ],
+  [
+   50.741854,
+   15.714037,
+   "10:52"
+  ],
+  [
+   50.741306,
+   15.707782,
+   "10:58"
+  ],
+  [
+   50.743432,
+   15.704895,
+   "11:03"
+  ],
+  [
+   50.743892,
+   15.702464,
+   "11:09"
+  ]
+ ],
+ "distKmFromIpp": 2.833,
+ "trackOffsetM": 221,
+ "elevChangeM": -134,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 5,
+   "kind": "item",
+   "truthful": false,
+   "note": "cudza czapka"
+  }
+ ],
+ "case": "case-0044",
+ "region": "karkonosze-sniezka",
+ "seed": 2
+}

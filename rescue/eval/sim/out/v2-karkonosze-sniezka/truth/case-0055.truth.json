@@ -1,0 +1,42 @@
+{
+ "find": [
+  50.741801,
+  15.774234
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "stay_put",
+ "lostAt": [
+  50.742308,
+  15.773988
+ ],
+ "lostClock": "08:56",
+ "stopReason": "stay_put",
+ "reportClock": "18:20",
+ "path": [
+  [
+   50.741991,
+   15.777713,
+   "08:48"
+  ],
+  [
+   50.74244,
+   15.77526,
+   "08:54"
+  ]
+ ],
+ "distKmFromIpp": 0.25,
+ "trackOffsetM": 59,
+ "elevChangeM": 63,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 441
+  }
+ ],
+ "case": "case-0055",
+ "region": "karkonosze-sniezka",
+ "seed": 2
+}

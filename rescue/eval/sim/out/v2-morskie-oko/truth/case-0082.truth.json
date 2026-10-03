@@ -1,0 +1,47 @@
+{
+ "find": [
+  49.19747,
+  20.06708
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "direction_travel",
+ "lostAt": [
+  49.19747,
+  20.06708
+ ],
+ "lostClock": "08:57",
+ "stopReason": "blocked",
+ "reportClock": "18:20",
+ "path": [
+  [
+   49.20216,
+   20.070624,
+   "08:46"
+  ],
+  [
+   49.20021,
+   20.0685,
+   "08:52"
+  ],
+  [
+   49.197744,
+   20.067222,
+   "08:57"
+  ]
+ ],
+ "distKmFromIpp": 0.577,
+ "trackOffsetM": 0,
+ "elevChangeM": -1,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 462
+  }
+ ],
+ "case": "case-0082",
+ "region": "morskie-oko",
+ "seed": 2
+}

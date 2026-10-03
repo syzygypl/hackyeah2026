@@ -1,0 +1,64 @@
+{
+ "find": [
+  49.221433,
+  19.96644
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.221812,
+  19.965365
+ ],
+ "lostClock": "12:59",
+ "stopReason": "stay_put",
+ "reportClock": "18:07",
+ "path": [
+  [
+   49.222326,
+   19.962152,
+   "12:44"
+  ],
+  [
+   49.221941,
+   19.964562,
+   "12:49"
+  ],
+  [
+   49.221603,
+   19.967063,
+   "12:55"
+  ],
+  [
+   49.221552,
+   19.96607,
+   "13:00"
+  ]
+ ],
+ "distKmFromIpp": 0.331,
+ "trackOffsetM": 23,
+ "elevChangeM": 22,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 4,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 1317
+  },
+  {
+   "event": 5,
+   "kind": "item",
+   "truthful": false,
+   "note": "cudza czapka"
+  }
+ ],
+ "case": "case-0030",
+ "region": "kasprowy",
+ "seed": 2
+}

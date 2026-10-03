@@ -1,0 +1,89 @@
+{
+ "find": [
+  49.158765,
+  22.547933
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "direction_travel",
+ "lostAt": [
+  49.15335,
+  22.5558
+ ],
+ "lostClock": "10:33",
+ "stopReason": "exhausted",
+ "reportClock": "18:19",
+ "path": [
+  [
+   49.15793,
+   22.55128,
+   "10:21"
+  ],
+  [
+   49.15577,
+   22.55386,
+   "10:26"
+  ],
+  [
+   49.15385,
+   22.55537,
+   "10:32"
+  ],
+  [
+   49.154001,
+   22.555217,
+   "10:37"
+  ],
+  [
+   49.154763,
+   22.554052,
+   "10:42"
+  ],
+  [
+   49.155716,
+   22.552595,
+   "10:48"
+  ],
+  [
+   49.156668,
+   22.551138,
+   "10:54"
+  ],
+  [
+   49.157812,
+   22.54939,
+   "11:00"
+  ],
+  [
+   49.158765,
+   22.547933,
+   "11:05"
+  ]
+ ],
+ "distKmFromIpp": 0.253,
+ "trackOffsetM": 56,
+ "elevChangeM": -35,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 4,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 731
+  },
+  {
+   "event": 5,
+   "kind": "item",
+   "truthful": false,
+   "note": "cudza czapka"
+  }
+ ],
+ "case": "case-0080",
+ "region": "bieszczady-wetlinska",
+ "seed": 2
+}

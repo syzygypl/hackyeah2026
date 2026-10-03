@@ -1,0 +1,62 @@
+{
+ "find": [
+  49.152098,
+  22.555225
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.151879,
+  22.555507
+ ],
+ "lostClock": "09:49",
+ "stopReason": "stay_put",
+ "reportClock": "20:01",
+ "path": [
+  [
+   49.15793,
+   22.55128,
+   "09:28"
+  ],
+  [
+   49.15577,
+   22.55386,
+   "09:33"
+  ],
+  [
+   49.15385,
+   22.55537,
+   "09:38"
+  ],
+  [
+   49.15239,
+   22.55521,
+   "09:45"
+  ],
+  [
+   49.15212,
+   22.555325,
+   "09:54"
+  ],
+  [
+   49.152363,
+   22.555145,
+   "10:00"
+  ]
+ ],
+ "distKmFromIpp": 0.723,
+ "trackOffsetM": 11,
+ "elevChangeM": -148,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  }
+ ],
+ "case": "case-0132",
+ "region": "bieszczady-wetlinska",
+ "seed": 2
+}

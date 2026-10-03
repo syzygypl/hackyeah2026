@@ -1,0 +1,35 @@
+{
+ "find": [
+  49.155868,
+  22.552869
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.156023,
+  22.55361
+ ],
+ "lostClock": "11:09",
+ "stopReason": "stay_put",
+ "reportClock": "19:08",
+ "path": [
+  [
+   49.15793,
+   22.55128,
+   "11:06"
+  ],
+  [
+   49.156135,
+   22.552809,
+   "11:11"
+  ]
+ ],
+ "distKmFromIpp": 0.27,
+ "trackOffsetM": 57,
+ "elevChangeM": -33,
+ "clues": [],
+ "case": "case-0067",
+ "region": "bieszczady-wetlinska",
+ "seed": 2
+}

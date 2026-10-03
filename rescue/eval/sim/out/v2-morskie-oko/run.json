@@ -1,0 +1,40 @@
+{
+ "region": "morskie-oko",
+ "seed": 2,
+ "n": 200,
+ "tries": 242,
+ "dropped": {
+  "out_of_grid": 9,
+  "no_route": 33
+ },
+ "commit": "1ab467f",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "wrong_plan": 0.15,
+  "false_item": 0.1,
+  "no_bts": 0.3
+ },
+ "categories": {
+  "child": 36,
+  "dementia": 30,
+  "gatherer": 33,
+  "hiker": 101
+ },
+ "behaviours": {
+  "backtrack": 7,
+  "direction_travel": 58,
+  "follow_drainage": 43,
+  "route_sampling": 4,
+  "stay_put": 35,
+  "view_enhance": 11,
+  "wrong_trail": 42
+ },
+ "stopReasons": {
+  "blocked": 32,
+  "dark": 19,
+  "exhausted": 92,
+  "injury": 13,
+  "stay_put": 44
+ }
+}

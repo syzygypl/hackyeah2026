@@ -1,0 +1,64 @@
+{
+ "find": [
+  49.211742,
+  20.102688
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  49.212774,
+  20.1031
+ ],
+ "lostClock": "11:21",
+ "stopReason": "blocked",
+ "reportClock": "20:12",
+ "path": [
+  [
+   49.20668,
+   20.10843,
+   "11:07"
+  ],
+  [
+   49.209911,
+   20.106777,
+   "11:12"
+  ],
+  [
+   49.211545,
+   20.10384,
+   "11:17"
+  ],
+  [
+   49.212202,
+   20.102808,
+   "11:23"
+  ]
+ ],
+ "distKmFromIpp": 2.054,
+ "trackOffsetM": 24,
+ "elevChangeM": -984,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": false,
+   "note": "inna osoba"
+  },
+  {
+   "event": 4,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 621
+  },
+  {
+   "event": 5,
+   "kind": "item",
+   "truthful": false,
+   "note": "cudza czapka"
+  }
+ ],
+ "case": "case-0147",
+ "region": "morskie-oko",
+ "seed": 2
+}
