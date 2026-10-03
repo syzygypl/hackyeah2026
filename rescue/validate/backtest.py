@@ -143,19 +143,39 @@ def main():
             f"{v['areaFused'] * 100:.2f}% | {v['areaRings'] * 100:.1f}% | {terrain} |"
         )
 
-    top3 = sum(1 for r in ok_rows if r["value"]["rankFused"] <= 3)
-    n = len(ok_rows)
-    avg_area = sum(r["value"]["areaFused"] for r in ok_rows) / n * 100 if n else 0
-    avg_area_rings = sum(r["value"]["areaRings"] for r in ok_rows) / n * 100 if n else 0
+    # Aggregate per SCENARIO (not per POD variant), per AI Mateusza's request: a scenario
+    # with two drone-POD variants counts once, as its worst (most conservative) case.
+    by_scenario = {}
+    for r in ok_rows:
+        by_scenario.setdefault(r["name"], []).append(r)
+    scenario_names = sorted(by_scenario)
+    n = len(scenario_names)
+    top3 = 0
+    area_fused_per_scenario = []
+    area_rings_per_scenario = []
+    for name in scenario_names:
+        variants = by_scenario[name]
+        worst_rank = max(v["value"]["rankFused"] for v in variants)
+        if worst_rank <= 3:
+            top3 += 1
+        area_fused_per_scenario.append(max(v["value"]["areaFused"] for v in variants))
+        area_rings_per_scenario.append(
+            sum(v["value"]["areaRings"] for v in variants) / len(variants)
+        )
+    avg_area = sum(area_fused_per_scenario) / n * 100 if n else 0
+    avg_area_rings = sum(area_rings_per_scenario) / n * 100 if n else 0
+    metric_name = "% obszaru przeszukanego w kolejnosci POA do miejsca odnalezienia"
     lines += [
         "",
         "## Liczba do pitchu",
         "",
-        f"Miejsce odnalezienia w top 3 segmentow po fuzji w **{top3}/{n}** przypadkach "
-        f"(obie wersje POD drona, wszystkie scenariusze). "
-        f"Srednio trzeba przeszukac **{avg_area:.2f}%** obszaru w kolejnosci POA zanim dojdzie sie "
-        f"do miejsca odnalezienia, wobec **{avg_area_rings:.1f}%** gdybysmy uzyli tylko pierscieni "
-        "Koestera (bez fuzji pozostalych dowodow).",
+        f"N = {n} scenariusze fikcyjne (nie warianty POD drona - scenariusz z dwiema wersjami POD "
+        "liczy sie raz, po gorszym z dwoch wynikow).",
+        "",
+        f"Miejsce odnalezienia w top 3 segmentow po fuzji w **{top3}/{n} scenariuszach**. "
+        f"Metryka: {metric_name}. Srednio **{avg_area:.2f}%** po fuzji wszystkich dowodow, "
+        f"wobec **{avg_area_rings:.1f}%** gdybysmy uzyli tylko pierscieni Koestera "
+        "(bez fuzji pozostalych dowodow).",
         "",
         "Uwaga: liczby zalezne od terenu - scenariusze bez jeszcze wygenerowanego prawdziwego terenu "
         "(OSM+DEM, AI Marcina) uzywaja reczne narysowanego fallbacku ze scenariusza i moga sie zmienic "

@@ -16,6 +16,8 @@ scenario includes a thermal-drone pass, both POD assumptions used in the demo se
 
 ## Liczba do pitchu
 
-Miejsce odnalezienia w top 3 segmentow po fuzji w **5/5** przypadkach (obie wersje POD drona, wszystkie scenariusze). Srednio trzeba przeszukac **1.07%** obszaru w kolejnosci POA zanim dojdzie sie do miejsca odnalezienia, wobec **17.3%** gdybysmy uzyli tylko pierscieni Koestera (bez fuzji pozostalych dowodow).
+N = 3 scenariusze fikcyjne (nie warianty POD drona - scenariusz z dwiema wersjami POD liczy sie raz, po gorszym z dwoch wynikow).
+
+Miejsce odnalezienia w top 3 segmentow po fuzji w **3/3 scenariuszach**. Metryka: % obszaru przeszukanego w kolejnosci POA do miejsca odnalezienia. Srednio **1.73%** po fuzji wszystkich dowodow, wobec **15.2%** gdybysmy uzyli tylko pierscieni Koestera (bez fuzji pozostalych dowodow).
 
 Uwaga: liczby zalezne od terenu - scenariusze bez jeszcze wygenerowanego prawdziwego terenu (OSM+DEM, AI Marcina) uzywaja reczne narysowanego fallbacku ze scenariusza i moga sie zmienic po dolozeniu <nazwa>-terrain.json (tak jak dla zawrat: ranga #1 -> #2).
