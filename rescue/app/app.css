@@ -294,3 +294,14 @@ header #firstRun{position:absolute;top:calc(100% + 8px);right:0;max-width:560px;
 #validation-summary>*{background:var(--rl-panel-solid)!important;border:1px solid var(--rl-line)!important;border-radius:14px!important;box-shadow:none!important}
 #validation-summary:empty{display:none}
 #validation-summary~#val{padding-top:12px}
+/* Ratownik: one screen - the patrol view (sector, direction, report buttons) under a slim team bar; the app's own task
+   card and map would repeat what the patrol view already shows */
+body.role-ratownik header{flex-wrap:nowrap;min-height:56px}
+body.role-ratownik header #status{display:none}
+body.role-ratownik header #roleBtn{margin-left:auto}
+body.role-ratownik #rescuer{top:56px;padding:0;gap:0}
+body.role-ratownik #rTask,body.role-ratownik #rSurv,body.role-ratownik #rMapHost,body.role-ratownik #rCenter{display:none!important}
+body.role-ratownik .rbar{padding:8px 12px;background:var(--rl-panel-solid);border-bottom:1px solid var(--rl-line)}
+body.role-ratownik .rbar select{flex:1;min-height:44px;font-weight:600}
+body.role-ratownik #rClock{font-family:var(--rl-mono);font-weight:700;color:var(--rl-ink)}
+body.role-ratownik #frameRescuer{flex:1;min-height:0;border-radius:0}
