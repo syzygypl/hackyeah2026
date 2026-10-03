@@ -15,6 +15,7 @@ import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js
 import { colorFor, gradientCSS, STOPS } from '../scale.js'; // shared heat scale (decision S2), same as 2D
 import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
 import { createTimeline3D } from './timeline3d.js';
+import { createCoverage3D } from './coverage3d.js';
 
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
@@ -568,7 +569,8 @@ const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x00
 heatU.uSunMask = { value: sunMask }; heatU.uSunMask2 = { value: sunBake.tex() }; heatU.uSunMaskT = { value: 0 }; // crossfaded on a re-bake
 // fx3d: close-up detail, POA heat layer, baked + near sun shadow, drifting cloud shadows, snow glints
 heatU.uSnowCover = heatU.uSnowCover || { value: 0 };
-applyFx(terrainMat, [FX.terrainDetail(), FX.snowCover(heatU), FX.poaHeat(heatU), FX.bakedSun(heatU), FX.cloudShadows(heatU), FX.snowGlints(heatU)]);
+const POD3D = R.timeline?.actors?.length ? createCoverage3D({ THREE, rows: R.rows, cols: R.cols, rect: heatU.uHeatRect }) : null;
+applyFx(terrainMat, [FX.terrainDetail(), FX.snowCover(heatU), POD3D?.effect, FX.poaHeat(heatU), FX.bakedSun(heatU), FX.cloudShadows(heatU), FX.snowGlints(heatU)]);
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
@@ -657,14 +659,6 @@ function compose() {
     g.save(); g.clip(); g.strokeStyle = 'rgba(70, 84, 104, 0.35)'; g.lineWidth = 1.4;
     for (let x = -TH; x < TW; x += 9) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + TH, TH); g.stroke(); }
     g.restore();
-  }
-  // Engine's sparse cumulative POD: actual swept cells, independent of the old whole-segment wash.
-  for (const [k, pod] of TL_COV) {
-    const row = Math.floor(k / R.cols), col = k % R.cols;
-    const [x, y] = llToTex(R.bbox.north - row * (R.bbox.north - R.bbox.south) / R.rows,
-      R.bbox.west + col * (R.bbox.east - R.bbox.west) / R.cols);
-    const w = (R.bbox.east - R.bbox.west) / R.cols / stLon * TS, h = (R.bbox.north - R.bbox.south) / R.rows / stLat * TS;
-    g.fillStyle = `rgba(75, 160, 165, ${0.55 * pod})`; g.fillRect(x, y, w, h);
   }
   compTex.needsUpdate = true;
 }
@@ -1741,6 +1735,7 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
   onFrame: (f, minute) => {
     if (G.phase !== 'off') return;
     TL_COV = f?.cov || [];
+    POD3D?.set(f?.cov, minute);
     if (!f) {
       let i = 0; R.steps.forEach((s, k) => { if (s.minute <= minute) i = k; });
       setStep(i, false, true); return;
@@ -1799,6 +1794,7 @@ function lockTimeline(on) { document.body.classList.toggle('searching', on && G.
 function startGame() {
   if (G.phase !== 'off') return endGame();
   TL3D?.setVisible(false);
+  POD3D?.setVisible(false);
   const base = Q.has('blindStep') ? +Q.get('blindStep') : R.value?.beforePing ?? STEP;
   if (STEP !== base) setStep(base);
   Object.assign(G, { phase: 'hide', base, target: null, salt: null, key: null, commit: null, patrols: [], attempts: new Map(), searched: new Set(), found: false });
@@ -1905,6 +1901,7 @@ async function finish(found) {
 }
 function endGame() {
   TL3D?.setVisible(true);
+  POD3D?.setVisible(true);
   G.phase = 'off'; G.auto = false; disposeGroup(dyn.game);
   $('game').hidden = true; $('btn-game').textContent = 'Test na ślepo';
   document.body.classList.remove('hiding', 'searching'); lockTimeline(false);
@@ -2040,6 +2037,7 @@ function frame() {
   fitShadow(performance.now());
   if ((!CINE.on || fly) && !TL3D?.following) controls.update();
   const timelineMoving = TL3D?.tick(dt);
+  const coverageMoving = POD3D?.tick(dt);
   let oneShot = false;
   for (let i = movers.length - 1; i >= 0; i--) {
     const m = movers[i];
@@ -2056,7 +2054,7 @@ function frame() {
   if (snowNear.visible) snowNearMat.uniforms.uPx.value = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360));
   flushLines();
   const moved = cameraMoved();
-  const active = moved || fly || CINE.on || timelineMoving || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
+  const active = moved || fly || CINE.on || timelineMoving || coverageMoving || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
   if (!active && now - lastRender < 1000 / 31) return; // ambient only: 30 fps
   const interval = now - lastRender; lastRender = now;
   if (active) adaptResolution(now, interval);
@@ -2078,7 +2076,7 @@ function frame() {
 }
 
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, coverage: POD3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));

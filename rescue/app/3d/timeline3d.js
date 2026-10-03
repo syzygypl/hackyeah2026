@@ -139,7 +139,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     if (!Number.isFinite(minute)) return;
     const previous = target;
     target = Math.min(timeline.endMinute, minute); from = shown ?? target;
-    blend = animate && previous != null && Math.abs(target - previous) <= 2 ? 0 : 1;
+    blend = animate && previous != null && target >= previous && target - previous <= 2 ? 0 : 1;
     if (blend === 1) shown = target;
     const frame = suppliedFrame || earlierFrame(timeline.frames, target);
     const clock = t || timelineClock(timeline, target);
