@@ -124,6 +124,8 @@ if (document.body.classList.contains('embed')) {
 // is missing, ask the same origin's GET /api/run/<sc> before giving up (blind tests are never served there).
 const API_RUN = `/api/run/${SC}`;
 const loadRun = async () => {
+  // runInline (1f20792): inside /app the shell already holds this exact run as text (app.js api()); parse it instead of a second GET
+  try { const c = parent !== window && parent.__rescueRunText; if (c && c.url === new URL(P.run, location.href).href) return JSON.parse(c.text); } catch (e) {}
   try { return await getJSON(P.run); }
   catch (e) {
     if (!Q.get('run') && !P.reveal && /^404 /.test(e.message)) { try { const r = await getJSON(API_RUN); P.run = API_RUN; return r; } catch {} }
