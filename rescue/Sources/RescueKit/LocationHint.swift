@@ -19,6 +19,9 @@ public struct LocationHint: Sendable {
         /// Inferred travel corridor (e.g. last known point -> later BTS sector along trails). Weaker than a told plan:
         /// cells on the corridor get up to 1/floor times the weight of cells far from it.
         case corridor(points: [Coord], sigmaM: Double, floor: Double)
+        /// Lost the trail in fog / darkness: off-trail cells just below passes and trail forks get more weight,
+        /// most where they lead downhill into gullies / scree. strength 0..1 from visibility.
+        case lostTrail(points: [Coord], strength: Double)
         /// Coarse cell-sector fix from the 112 centre.
         case sector(center: Coord, radiusM: Double)
         /// Precise point fix (Ratunek / AML) with accuracy radius.
@@ -71,6 +74,7 @@ public struct LocationHint: Sendable {
         case .terrainCost: "cost"
         case .route: "route"
         case .corridor: "corridor"
+        case .lostTrail: "lostTrail"
         case .sector: "sector"
         case .point: "point"
         case .found: "found"

@@ -28,6 +28,9 @@ public struct TrailGraph: Sendable {
         self.adj = adj
     }
 
+    /// Junctions where 3+ trail segments meet.
+    public var forks: [Coord] { nodes.indices.filter { Set(adj[$0].map(\.0)).count >= 3 }.map { nodes[$0] } }
+
     public func nearest(_ p: Coord) -> Int? { nodes.indices.min { Geo.meters(nodes[$0], p) < Geo.meters(nodes[$1], p) } }
 
     /// Node path from a to b (nil if not connected).

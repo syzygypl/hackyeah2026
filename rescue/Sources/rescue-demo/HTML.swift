@@ -23,6 +23,7 @@ func hintJSON(_ h: LocationHint, _ f: [Double]) -> [String: Any] {
     case let .containment(p, r, f): g = ["points": p.map(ll), "radius": r, "factor": f]
     case let .weather(b): g = ["boost": b]
     case .terrainFeatures, .terrainCost, .difficulty: break
+    case let .lostTrail(p, st): g = ["points": p.map(ll), "strength": st]
     case let .conditions(c): g = ["visibilityM": c.visibilityM, "windMs": c.windMs]
     }
     if let m = h.marker { g["marker"] = ll(m) }

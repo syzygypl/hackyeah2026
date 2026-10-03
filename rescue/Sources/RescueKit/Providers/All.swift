@@ -9,6 +9,7 @@ public func allProviders(_ s: Scenario) -> [any HintProvider] {
         TrailheadCarProvider(s),
         Cell112FixProvider(s),
         WeatherProvider(s),
+        LostTrailProvider(s),
         SegmentSearchedProvider(s),
         DronePassEmptyProvider(s),
         ClueProvider(s),

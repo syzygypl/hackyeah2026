@@ -130,6 +130,22 @@ public final class ProbabilityGrid {
                 let d = Geo.toLine(p, points)
                 return 0.25 + exp(-d * d / (2 * sigma * sigma))
             }
+        case let .lostTrail(points, strength):
+            guard !points.isEmpty else { return [Double](repeating: 1, count: n) }
+            let ridgeAt = points.map { p in dRidge[cellIndex(p)] }
+            return (0..<n).map { i in
+                guard dTrail[i] > 60, difficulty[i] != .water, difficulty[i] != .cliff else { return 1 }
+                var best = 1.0
+                for (k, p) in points.enumerated() {
+                    let d = Geo.meters(centers[i], p)
+                    guard d < 800 else { continue }
+                    // going down = moving away from the ridge the decision point sits on (no elevation model: proxy)
+                    let downhill = dRidge[i] > ridgeAt[k] + 50 ? 1.0 : 0.3
+                    let gully = dStream[i] < 150 || difficulty[i] == .scree || difficulty[i] == .slab ? 1.5 : 1.0
+                    best = max(best, 1 + strength * exp(-d / 300) * downhill * gully)
+                }
+                return best
+            }
         case let .corridor(points, sigma, fl):
             return centers.map { p in
                 let d = Geo.toLine(p, points)

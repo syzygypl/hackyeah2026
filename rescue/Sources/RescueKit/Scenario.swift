@@ -90,6 +90,9 @@ public struct Scenario: Codable, Sendable {
     public let startClock: String
     public let subject: Subject
     public var bbox: BBox
+    /// true = add the "lost the trail in fog" layer (LostTrailProvider). Off by default: on our 3 scenarios with a known
+    /// find spot it made the map slightly worse (see README), so it is an opt-in hypothesis until validated.
+    public var lostTrail: Bool? = nil
     /// true = never auto-expand the grid to cover evidence (only warn).
     public var fixedBbox: Bool? = nil
     /// Set when the grid was auto-expanded: the scenario's own bbox.
