@@ -1,7 +1,5 @@
 /* Co zmienia jedna relacja (porownanie.html). Colours only from tokens.css (--rl-*). */
 *{box-sizing:border-box}
-/* --rl-mute is 4.15:1 on the paper ground; one step darker passes WCAG AA (5.3:1) for the 13px notes */
-:root:not([data-theme=dark]){--rl-mute:#5d6165}
 html,body{margin:0;background:var(--rl-bg);color:var(--rl-ink);font:var(--rl-fs)/1.45 var(--rl-font)}
 header{position:sticky;top:0;z-index:10;display:flex;gap:12px;align-items:center;padding:8px 16px;background:var(--rl-panel);backdrop-filter:blur(var(--rl-blur));border-bottom:1px solid var(--rl-line)}
 header h1{font-size:var(--rl-fs-l);margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}

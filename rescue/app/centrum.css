@@ -102,7 +102,6 @@ body.dragging .grp{border-color:var(--rl-line-strong)}
   .maplibregl-ctrl-group button{width:40px;height:40px}
   .maplibregl-ctrl-bottom-right{bottom:auto;top:0}   /* zoom buttons sat on the southern labels (Bieszczady, Zawrat) */
 }
-:root:not([data-theme=dark]){--rl-mute:#5d6165}
 
 /* current vs ended incidents + "Akcja zakończona" banner (AI Michała for AI Mateusza) */
 .cgrp{font-size:var(--rl-fs-s);text-transform:uppercase;letter-spacing:.6px;color:var(--rl-mute);margin:6px 2px 8px;display:flex;gap:6px;align-items:center}

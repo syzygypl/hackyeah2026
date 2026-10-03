@@ -22,4 +22,3 @@ h2 .mute{text-transform:none;letter-spacing:0;font-weight:400}
 @media (max-width:600px){#bar h1{display:none}.grid{grid-template-columns:1fr}}
 /* QA mobile: 40+ px controls in the bar on touch screens, AA muted text */
 @media (max-width:600px),(pointer:coarse){#bar select,#bar input,#bar button{min-height:40px;padding:6px 10px}#bar a{min-height:40px;display:inline-flex;align-items:center}}
-:root:not([data-theme=dark]){--rl-mute:#5d6165}
