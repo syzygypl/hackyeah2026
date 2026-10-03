@@ -156,6 +156,8 @@ def main():
         # step 2 (as in Akcja): the sector list shows the place and the sector, no map-weight percentages
         check("sectors_without_weight_pct", c.js("[...document.querySelectorAll('#pSegs li')].every(l=>!/\\d%/.test(l.innerText))") is True,
               (c.js("document.querySelector('#pSegs li').innerText") or "")[:60])
+        # step 2: teams are the Zasoby unit cards (unitcard.js), without inventory action buttons
+        check("team_unit_cards", c.js("document.querySelectorAll('#pTeams li[data-team] .unit').length===document.querySelectorAll('#pTeams li[data-team]').length && !document.querySelector('#pTeams .acts')") is True)
         check("event_list_with_kinds", bool(c.js("document.querySelectorAll('#pFeed li[data-seq] > i').length")))
         team = c.js("(()=>{const li=document.querySelector('#pTeams li.free');if(!li)return null;li.click();return li.dataset.team})()")
         check("team_marked", bool(team) and bool(c.until(f"[...document.querySelectorAll('#pTeams li.sel')].some(l=>l.dataset.team==={json.dumps(team)})", 5)), str(team))
@@ -180,7 +182,7 @@ def main():
         check("decision_on_map_without_reload", bool(kept) and c.js(MAP_READY) == t_first, f"confirmed={bool(kept)}, same frame={c.js(MAP_READY) == t_first}")
         t_after = c.js(MAP_READY)
         # B: the map chip names the team ("Patrol GOPR B" -> "Patrol B"), not just the kind
-        tname = c.js(f"(document.querySelector('#pTeams li[data-team={json.dumps(team)}] .nm')||{{}}).innerText||''")
+        tname = c.js(f"(document.querySelector('#pTeams li[data-team={json.dumps(team)}] .unit h3')||{{}}).innerText||''")
         letter = (tname or "").strip().split("\n")[0].split()[-1:] or [""]
         chip = c.until(f"(()=>{{try{{return [...{MAP}.document.querySelectorAll('.chip')].map(x=>x.innerText).find(t=>/ {letter[0]}\\b/.test(t))||''}}catch(e){{return ''}}}})()", 5) if len(letter[0]) <= 2 else "n/a"
         check("map_chip_names_team", bool(chip), f"{tname!r} -> {chip!r}")

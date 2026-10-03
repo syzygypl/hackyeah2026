@@ -1,6 +1,7 @@
 // Rescue Locator - Ćwiczenia (training mode). API: CONTRACT.md "Exercise mode" (/api/exercises, /api/exercise/<sid>/...).
 // The page never sees the truth until the server says the exercise is over. Map = the 2D view (web/) embedded like in the app.
 import { evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML } from "./dock.js";   // the operator app's dock (dock.css)
+import { unitCard } from "./unitcard.js";   // the Zasoby unit card (unitcard.css)
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
@@ -120,13 +121,16 @@ $("tl").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse")
 $("tl").addEventListener("click", (e) => { const j = dockIndexAt(e.clientX), g = G.dock && G.dock.Gs[j - 1]; if (g) previewEvent(g.ks[g.ks.length - 1]); });
 $("ticker").onclick = (e) => { const t = e.target.closest("[data-step]"); if (t) previewEvent(+t.dataset.step); };
 $("pFeed").onclick = (e) => { const li = e.target.closest("li[data-seq]"); if (!li || !G.dock) return; const k = G.dock.D.R.steps.findIndex((x) => String(x.seq) === li.dataset.seq) + 1; if (k) previewEvent(k); };
+// team = the Zasoby unit card (unitcard.js): kind, status chip, where; the exercise has no condition / GPS data and no inventory events
+const UNIT_KIND = { ground: "pieszy", dog: "pies", drone: "dron", heli: "smiglowiec", boat: "lodz", diver: "nurkowie" };
 function teamHTML(t, pick) {
-  const st = t.status.replace(" ", "-");
-  const free = pick && t.status === "wolny";
-  const extra = t.segmentId ? `${esc(t.segmentId)} do ${esc(t.busyUntil)}` : t.status === "niedostępny" ? esc(t.reason) : "";
+  const free = pick && t.status === "wolny", busy = t.status === "szuka" || t.status === "w drodze", off = t.status === "niedostępny";
   const sel = pick && G.team === t.id, sent = pick && !sel && G.sent && G.sent.team === t.id && t.segmentId === G.sent.seg;
-  return `<li class="${free ? "free" : ""}${sel ? " sel" : ""}${sent ? " sent" : ""}" data-team="${esc(t.id)}"${sel ? ' aria-selected="true"' : ""}><span class="st ${esc(st)}">${esc(t.status)}</span>
-    <span class="nm">${esc(short(t.name))}<div class="why">${extra}</div></span>${sel ? '<span class="tag">wybrany</span>' : sent ? '<span class="tag">wysłany</span>' : ""}</li>`;
+  const u = { id: t.id, name: short(t.name), kind: UNIT_KIND[t.type] || t.type, status: busy ? "w akcji" : t.status, sc: busy ? `${t.status} do ${t.busyUntil}` : "",
+              segmentId: t.segmentId || "", level: off ? "amber" : busy ? "" : "ok", warnings: off ? [{ level: "amber", text: t.reason || "niedostępny" }] : [], feeds: [] };
+  return `<li class="cardli${free ? " free" : ""}${sel ? " sel" : ""}${sent ? " sent" : ""}" data-team="${esc(t.id)}"${sel ? ' aria-selected="true"' : ""}>` +
+    unitCard(u, { acts: false, title: free ? "Kliknij: wybierz zespół, potem sektor" : `${short(t.name)}: ${t.status}` }) +
+    `${sel ? '<span class="tag">wybrany</span>' : sent ? '<span class="tag">wysłany</span>' : ""}</li>`;
 }
 
 // ---------- 3. play

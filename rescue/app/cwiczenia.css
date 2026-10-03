@@ -37,11 +37,6 @@ ul.feed,ul.teamlist,ul.seglist,ul.declist{list-style:none;margin:0;padding:0}
 .feed li.clue,.feed li.info{color:var(--rl-accent);font-weight:600}
 .feed li.searched{color:var(--rl-ink-2)}
 .teamlist li{display:flex;gap:8px;align-items:center;padding:4px 6px;border-radius:var(--rl-radius-s);border:1px solid transparent;font-size:var(--rl-fs-s)}
-.teamlist .st{font-size:var(--rl-fs-xs);font-weight:700;border-radius:9px;padding:0 7px;border:1px solid var(--rl-line-strong);color:var(--rl-ink-2);flex:none}
-.teamlist .st.wolny{color:var(--rl-on-ok);background:var(--rl-ok);border-color:var(--rl-ok)}
-.teamlist .st.szuka,.teamlist .st.w-drodze{color:var(--rl-accent);border-color:var(--rl-accent)}
-.teamlist .nm{flex:1;min-width:0}
-.teamlist .why{color:var(--rl-mute);font-size:var(--rl-fs-xs)}
 .teamlist.pick li.free{cursor:pointer;background:var(--rl-card);border-color:var(--rl-line)}
 .teamlist.pick li.free:hover{border-color:var(--rl-accent)}
 .teamlist .tag{flex:none;font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
@@ -110,3 +105,15 @@ ul.feed,ul.teamlist,ul.seglist,ul.declist{list-style:none;margin:0;padding:0}
 .feed li[data-seq]{cursor:pointer;align-items:baseline}
 .feed li > i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--rl-accent));flex:none;align-self:center}
 .feed li.cur{background:var(--rl-panel-2);border-radius:var(--rl-radius-s)}
+
+/* team cards (AI Marcina): the Zasoby unit card (unitcard.css) inside the pick list; selection and "wysłany" on the card */
+.teamlist li.cardli{display:block;position:relative;padding:0;border:0;margin-bottom:6px}
+.teamlist.pick li.cardli.free{background:none}
+.teamlist li.cardli .unit{padding:7px 10px}
+.teamlist li.cardli .u-sub{margin-bottom:0}
+.teamlist li.cardli:not(.free) .unit{cursor:default}
+.teamlist.pick li.cardli.sel .unit,.teamlist.pick li.cardli.sent .unit{outline:2px solid var(--rl-accent);border-color:var(--rl-accent)}
+.teamlist li.cardli .tag{position:absolute;right:10px;bottom:7px}
+.teamlist .u-top h3{text-transform:none;letter-spacing:normal;color:var(--rl-ink)}   /* this page's section h3 style must not reach the card */
+.teamlist.pick li.cardli.sel,.teamlist.pick li.cardli.sent{background:none;box-shadow:none;border:0}
+.teamlist.pick li.cardli .tag{color:var(--rl-accent)}
