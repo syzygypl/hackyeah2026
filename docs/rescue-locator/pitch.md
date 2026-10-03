@@ -2,6 +2,8 @@
 
 Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research.md). All demo data is mocked and fictitious. Numbers come from `rescue/README.md` (demo numbers) and `rescue/validate/backtest.md` (4262ffe). **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** They come from scenarios we wrote ourselves, so they only show the engine works as designed. The validation method is the blind test below.
 
+Blind test log and story for materials: [`blind-test/log.md`](blind-test/log.md), [`blind-test/story.md`](blind-test/story.md).
+
 ## Demo script
 
 Scenario `rescue/scenarios/zawrat.json` (fictional), on real OSM + DEM terrain.
