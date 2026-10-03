@@ -517,3 +517,25 @@ body.time-live .tlfill{background:var(--rl-danger)}
 .cw b{font-family:var(--rl-mono,ui-monospace,monospace);color:var(--rl-ink,inherit);min-width:28px}
 .cw .cwm{font-size:10px;border:1px solid var(--rl-line,#2a3540);border-radius:8px;padding:0 5px}
 .cw button{min-height:22px;min-width:22px;padding:0 6px;font-size:12px;line-height:1;border-radius:11px;cursor:pointer}
+/* header at 1500-1800 px with the Klucz field (public deploy): the bar was ~120 px too wide, the live head shrank to 0 and its
+   badge spilled over the Na żywo / Historia switch. The switch + scenario picker already name the mode and the incident, so
+   the live head goes under 1800 px, the key field gets compact, and nothing may overflow its own box any more */
+header .livehead{overflow:hidden}
+@media (min-width:901px) and (max-width:1799px){
+  header .livehead{display:none}
+  #pinbox{font-size:13px;gap:4px}
+  #pinbox input{width:64px;min-width:0}
+  #centrumLink{font-size:0;padding:0 14px}
+  #centrumLink::after{content:"Centrum";font-size:14px}
+}
+/* 901-1399 px with the key field: still ~105 px too wide at 1280 - shorter "+ Akcja", the key field without its label
+   (placeholder "klucz"), a narrower role button */
+@media (min-width:901px) and (max-width:1399px){
+  #newActionBtn{font-size:0;padding:0 14px}
+  #newActionBtn::after{content:"+ Akcja";font-size:14px}
+  #pinbox{font-size:0}
+  #pinbox input{font-size:13px}
+  #roleBtn{max-width:100px}
+  header .scenlbl select{max-width:120px}
+  body.float header{column-gap:8px!important}
+}
