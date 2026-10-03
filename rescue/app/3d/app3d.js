@@ -1,4 +1,5 @@
-// Rescue Locator 3D - terrain diorama of the POA timeline, its source signals, and a blind test game.
+// Rescue Locator 3D - terrain scene of the POA timeline, its source signals, and a blind test game, shown inside /app
+// (iframe, ?embed=scene): the shell owns the step card, signal list, ranking, team plan and timeline.
 // Reads the same offline files as the 2D screen: out/run.json (rescue-run/1), scenarios/<sc>.json,
 // scenarios/<sc>-terrain.json, tools/terrain/data/<sc>-dem.json and out/live-events.json.
 // The timeline is computed by the Swift engine; the page draws it. Only the blind test game
@@ -11,7 +12,7 @@ import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
-import { colorFor, gradientCSS, STOPS } from '../../app/scale.js'; // shared heat scale (decision S2), same as 2D
+import { colorFor, gradientCSS, STOPS } from '../scale.js'; // shared heat scale (decision S2), same as 2D
 import { FX, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
 
 // ---------- config ----------
@@ -27,6 +28,7 @@ const SCENS = {
 // the wide backdrop or aerial photo. Blind tests only through their SCENS entries.
 const REGIONS = { 'bieszczady-wetlinska': 'Bieszczady - Połonina Wetlińska', 'karkonosze-sniezka': 'Karkonosze - Śnieżka', sniardwy: 'Śniardwy', morzycko: 'Morzycko', miedzyzdroje: 'Międzyzdroje (Bałtyk)' };
 const addScen = (id) => { if (!SCENS[id] && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id)) SCENS[id] = { name: REGIONS[id] || id, run: `../../out/${id}.run.json`, region: true }; };
+SCENS['blind-01-replay'] = SCENS['blind-01']; // the shell's id for the round 1 replay
 if (Q.get('sc')) addScen(Q.get('sc'));
 const SC = SCENS[Q.get('sc')] ? Q.get('sc') : 'zawrat';
 const P = {
@@ -38,9 +40,7 @@ const P = {
   live: Q.get('live') || '../../out/live-events.json',
 };
 const EX = Number(Q.get('exag')) || 1.6; // vertical exaggeration
-const PLAY_MS = Number(Q.get('playMs')) || 2600;
 const KM = 111.32;
-const KIND = { terrain: 'Teren', cost: 'Koszt terenu', difficulty: 'Trudność', conditions: 'Warunki', rings: 'Statystyka', route: 'Trasa', containment: 'Auto', sector: 'BTS', weather: 'Pogoda', searched: 'Przeszukano', point: 'Znaleziono', clue: 'Ślad' };
 // source signals: [badge, colour, plain-language name]
 const SIG = {
   Terrain: ['T', '#6b705c', 'Teren (OSM + DEM)'],
@@ -64,19 +64,6 @@ const TEAM_COL = { heli: '#1f4e79', ground: '#b8860b', dog: '#8d5524', drone: '#
 const $ = (id) => document.getElementById(id);
 const nf = (x, d) => Number(x).toLocaleString('pl-PL', { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (p, d) => (d != null ? nf(p * 100, d) : p >= 0.095 ? nf(p * 100, 0) : nf(p * 100, 1)) + '%';
-const pp = (x) => (x >= 0 ? '+' : '-') + nf(Math.abs(x * 100), 1) + ' pp';
-const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')} min` : `${Math.round(m)} min`);
-const PRECIP = { none: 'bez opadu', rain: 'deszcz', snow: 'śnieg' };
-// same task hints as the 2D ranking (rescue/web/app.js taskFor)
-function taskFor(name) {
-  const n = name.toLowerCase();
-  if (n.includes('żleb') || n.includes('potok') || n.includes('roztok')) return 'Zespół + pies: zejście wzdłuż żlebu / cieku, sprawdzić progi';
-  if (n.includes('szlak') || n.includes('droga')) return 'Zespół szybki: przejście szlakiem, nawoływanie, światło';
-  if (n.includes('staw')) return 'Dron termowizyjny + obejście brzegu';
-  if (n.includes('grań') || n.includes('perć') || n.includes('wierch') || n.includes('przełęcz')) return 'Zespół wspinaczkowy / śmigłowiec: ściany pod granią';
-  if (n.includes('schronisko') || n.includes('hala') || n.includes('murowaniec')) return 'Sprawdzić schronisko, wypytać obsługę i turystów';
-  return 'Zespół: przeszukanie segmentu wzdłuż linii terenu';
-}
 const DIFF_COLORS = ['#e6dfc8', '#9cc47a', '#3f7a3a', '#b8a78a', '#8f80a6', '#4b3f4a', '#4a8fd1']; // same as 2D
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -125,7 +112,7 @@ if (EMB === 'bare') document.body.classList.add('embed-bare');
 if (EMB === 'scene') document.body.classList.add('embed-scene'); // 3D buttons, no timeline (the shell has its own)
 if (document.body.classList.contains('embed')) {
   // decision S1: embedded views use the shell's tokens (dark operational theme, light via ?theme=light)
-  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../../app/tokens.css'; document.head.appendChild(l);
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../tokens.css'; document.head.appendChild(l);
   if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.dataset.theme = Q.get('theme');
 }
 // rescue-server computes runs live and the generated out/<sc>.run.json files are not committed: when the static file
@@ -153,11 +140,10 @@ try {
   const missingRun = /^404 /.test(e.message) && e.message.includes('.run.json');
   document.body.dataset.state = 'error';
   $('loadmsg').innerHTML = missingRun
-    ? `Brak wyniku silnika dla scenariusza <b>${esc(SC)}</b> (<code>${esc(P.run)}</code>, ani <code>${esc(API_RUN)}</code> na tym serwerze).<br>Uruchom <code>cd rescue && swift run rescue-server</code> i otwórz :8780/web/3d/, albo wygeneruj plik: <code>cd rescue && swift run rescue-demo --fast scenarios/${esc(SC)}.json</code><br><a href="?sc=zawrat">Otwórz Zawrat</a>`
-    : `Nie udało się wczytać danych: ${esc(e.message)}.<br>Uruchom serwer w katalogu rescue/ (<code>python3 -m http.server 8000</code>) i otwórz /web/3d/. <a href="?sc=zawrat">Otwórz Zawrat</a>`;
+    ? `Brak wyniku silnika dla scenariusza <b>${esc(SC)}</b> (<code>${esc(P.run)}</code>, ani <code>${esc(API_RUN)}</code> na tym serwerze).<br>Uruchom <code>cd rescue && swift run rescue-server</code> i otwórz :8780/app/, albo wygeneruj plik: <code>cd rescue && swift run rescue-demo --fast scenarios/${esc(SC)}.json</code><br><a href="?sc=zawrat">Otwórz Zawrat</a>`
+    : `Nie udało się wczytać danych: ${esc(e.message)}.<br>Uruchom serwer w katalogu rescue/ (<code>python3 -m http.server 8000</code>) i otwórz /app/. <a href="?sc=zawrat">Otwórz Zawrat</a>`;
   throw e;
 }
-$('incident').textContent = (R.incident || '') + (R.synthetic ? ' · brak run.json z silnika: bez mapy POA, segmenty przybliżone' : '');
 
 // ---------- geo ----------
 const stLon = DEM.step, stLat = DEM.stepLat || DEM.step;
@@ -197,20 +183,11 @@ const cellOf = (lat, lon) => {
 
 // scenario events (signals) and their timeline steps (matched by title == step label, as in 2D)
 const EVENTS = (SCN?.events || []).map((e) => ({ ...e, step: R.steps.findIndex((s) => s.label === e.title) }));
-const evByLabel = new Map(EVENTS.map((e) => [e.title, e]));
 const resources = new Map((SCN?.resources || []).map((r) => [r.id, r]));
 const isFound = (e) => e.found || e.provider === 'Found' || /ZNALEZIONO/i.test(e.title || '');
 const foundEv = EVENTS.find((e) => isFound(e) && e.step >= 0);
 const foundStep = foundEv ? foundEv.step : -1;
 const foundAt = foundEv?.point || SCN?.truth?.at;
-function influence(k) {
-  if (k <= 0) return null;
-  const prev = new Map(R.steps[k - 1].segments.map((s) => [s.id, s.poa]));
-  let best = null;
-  for (const s of R.steps[k].segments) { const d = s.poa - (prev.get(s.id) ?? 0); if (!best || d > best.d) best = { d, name: s.name }; }
-  return best && best.d > 0.004 ? best : null;
-}
-
 // ---------- evidence toggle ("uwzględnij"), same model as 2D compute() ----------
 // A hint's layer is recovered as poaGrid[k] / poaGrid[k-1] (uniform prior for k = 0); switching a hint off divides the
 // current map by its layer and renormalises. Exact for the engine's multiplicative model up to run.json rounding.
@@ -230,22 +207,6 @@ function gridFor(i) {
   let sum = 0; for (const v of p) sum += v; for (let c = 0; c < p.length; c++) p[c] /= sum;
   return p;
 }
-
-// ---------- operation progress (from the timeline, nothing new is computed about the person) ----------
-const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
-const PROG = (() => {
-  const t0 = toMin(R.steps[0].t), area = new Map(R.steps[0].segments.map((s) => [s.id, s.areaPct]));
-  const seen = new Set(); let pos = 0, last = t0;
-  return R.steps.map((s, k) => {
-    let m = toMin(s.t); if (m < last - 600) m += 1440; last = m; // after midnight
-    for (const e of EVENTS) if (e.step === k && e.segments?.length) {
-      const prev = new Map(R.steps[Math.max(0, k - 1)].segments.map((x) => [x.id, x.poa]));
-      for (const id of e.segments) { pos += (prev.get(id) || 0) * (e.pod ?? 0.7); seen.add(id); }
-    }
-    const lead = Math.max(...s.segments.map((x) => x.poa));
-    return { k, min: m - t0, lead, pos: Math.min(pos, 1), area: [...seen].reduce((a, id) => a + (area.get(id) || 0), 0) / 100, searched: seen.size, teams: (s.assignments || []).length, found: EVENTS.some((e) => e.step === k && isFound(e)) };
-  });
-})();
 
 // ---------- renderer / scene ----------
 const host = $('scene');
@@ -766,29 +727,6 @@ function drawSignal(e, isCur) {
   const short = e.title.length > 40 ? e.title.slice(0, 38) + '…' : e.title;
   G.add(pin(a[0], a[1], col, isCur ? 0.34 : 0.2, `<span class="d" style="background:${col}"></span><b>${esc(e.at)}</b> ${esc(isCur ? short : badge)}`, 'sig' + (isCur ? ' cur' : ''), isCur ? 0.022 : 0.015));
 }
-function renderSignals(i) {
-  const list = $('signals');
-  if (!EVENTS.length) { list.innerHTML = R.steps.map((s, k) => `<li class="${k > i ? 'future' : k === i ? 'cur' : ''}" data-step="${k}"><span class="ic" style="background:#6b6f72">${k + 1}</span><div><div class="tt">${esc(s.label)}</div><div class="meta"><span class="t">${s.t}</span>${esc(s.source || '')}</div></div></li>`).join(''); return; }
-  list.innerHTML = EVENTS.map((e, k) => {
-    const [badge, col, name] = sigOf(e), inf = e.step >= 0 ? influence(e.step) : null;
-    const cls = e.step < 0 || e.step > i ? 'future' : e.step === i ? 'cur' : '';
-    const ctl = e.step >= 0 ? `<div class="use"><label><input type="checkbox" data-off="${e.step}" ${OFF.has(e.step) ? '' : 'checked'}> uwzględnij</label><button class="lnk" data-go="${Math.max(0, e.step - 1)}">Przed</button><button class="lnk" data-go="${e.step}">Po</button></div>` : '';
-    return `<li class="${cls}${OFF.has(e.step) ? ' off' : ''}" data-ev="${k}"><span class="ic" style="background:${col}">${esc(badge)}</span><div><div class="tt">${esc(e.title)}</div><div class="meta"><span class="t">${esc(e.at)}</span>${esc(name)}${e.wave ? ` · fala ${e.wave}` : ''}${e.pod ? ` · POD ${Math.round(e.pod * 100)}%` : ''}${e.step < 0 ? ' · poza osią czasu' : ''}</div>${inf ? `<div class="inf">wpływ: ${esc(inf.name)} ${pp(inf.d)}</div>` : ''}${ctl}</div></li>`;
-  }).join('');
-  list.querySelector('li.cur')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-}
-$('signals').addEventListener('click', (ev) => {
-  if (G.phase !== 'off') return;
-  const cb = ev.target.closest('input[data-off]');
-  if (cb) { setEvidence(+cb.dataset.off, cb.checked, true); ev.stopPropagation(); return; }
-  if (ev.target.closest('label')) return; // label click is forwarded to the checkbox
-  const go = ev.target.closest('[data-go]');
-  if (go) { stopPlay(); setStep(+go.dataset.go); return; }
-  const li = ev.target.closest('li'); if (!li) return;
-  if (li.dataset.step) { stopPlay(); setStep(+li.dataset.step); return; }
-  const e = EVENTS[+li.dataset.ev]; if (e.step >= 0) { stopPlay(); setStep(e.step); }
-  const a = anchorOf(e) || e.point; if (a && inside(a)) flyTo(v3(a[0], a[1]), e.points?.length > 20 ? 4.2 : 2.6);
-});
 
 // ---------- step state ----------
 let STEP = -1;
@@ -807,7 +745,6 @@ function renderOffBanner(i) {
   const short = (t) => (t.length > 34 ? t.slice(0, 33) + '…' : t);
   el.innerHTML = `Widok przeliczony w przeglądarce bez: ${off.map((k) => `<b>${esc(short(R.steps[k].label))}</b>`).join(', ')} <button class="btn sm" id="resetoff">Przywróć</button>`;
   $('resetoff').onclick = () => { setEvidence('*', true); toParent({ type: 'evidence', id: '*', on: true }); };
-  $('rank-scope').textContent = `Przeliczony w przeglądarce bez ${off.length} ${off.length === 1 ? 'sygnału' : 'sygnałów'} (silnik: krok ${i + 1})`;
 }
 const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
 function drawTop(ranked) {
@@ -837,11 +774,10 @@ function setStep(i, animate = true) {
   if (foundPin) foundPin.visible = foundStep >= 0 && i >= foundStep;
   if (revealPin) revealPin.visible = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1);
   labelsDirty = true; wake();
+  // blind-01 replay: the hider's story appears with the reveal pin (the shell's step card does not know it)
+  if (REV) { const at = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1); if (at) gamePanel(`<h3>Odsłonięcie (${esc(REV.round || '')})</h3><p>${esc(REV.story || '')}${REV.state ? ` <i>(${esc(REV.state)})</i>` : ''}</p>`); else $('game').hidden = true; }
   setMood(s.weather);
-  renderUI(i, ranked, searched, prev);
-  renderSignals(i);
   renderOffBanner(i);
-  if (SEL) document.querySelectorAll('#ranklist li').forEach((li) => li.classList.toggle('sel', li.dataset.seg === SEL));
   if (prev !== i && !fromParent) toParent({ type: 'step', i, t: s.t });
 }
 function drawTeams(s) {
@@ -873,159 +809,15 @@ function drawTeams(s) {
   }
 }
 
-// ---------- UI ----------
-function renderUI(i, ranked, searched, prev) {
-  const s = R.steps[i];
-  $('sc-clock').textContent = s.t;
-  const kind = $('sc-kind'); kind.className = 'kind k-' + s.kind; kind.textContent = KIND[s.kind] || s.kind;
-  $('sc-label').textContent = s.label;
-  const lead = ranked[0];
-  let html = `Najbardziej prawdopodobne: <b>${esc(lead.name)}</b> <span class="pct">${pct(lead.poa)}</span>`;
-  if (prev >= 0 && prev !== i) { const pl = rankedOf(R.steps[prev].segments)[0]; if (pl.id !== lead.id) html += `<br>Zmiana lidera (było: ${esc(pl.name)})`; }
-  const fSeg = R.value?.findSeg ?? R.value?.truthSeg;
-  if (foundStep >= 0 && i >= foundStep && fSeg) {
-    const rank = rankedOf(R.steps[Math.max(0, foundStep - 1)].segments).findIndex((x) => x.id === fSeg) + 1;
-    html += `<br>Znaleziony w: <b>${esc(R.value.findSegName || segs.get(fSeg)?.name || fSeg)}</b>${rank ? ` (#${rank} w rankingu tuż przed)` : ''}`;
-  }
-  // "Zmiana": the three biggest segment moves against the previous step, as in 2D
-  if (i > 0) {
-    const pm = new Map(R.steps[i - 1].segments.map((x) => [x.id, x.poa]));
-    const mv = s.segments.map((x) => ({ id: x.id, d: x.poa - (pm.get(x.id) || 0) })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3).filter((x) => Math.abs(x.d) >= 0.001);
-    if (mv.length) html += `<div class="sc-effect">Zmiana: ${mv.map((x) => `<span class="${x.d >= 0 ? 'up' : 'down'}">${esc(x.id)} ${pp(x.d)}</span>`).join(' ')}</div>`;
-  }
-  if (REV && i >= (foundStep >= 0 ? foundStep : R.steps.length - 1)) html += `<br><br><b>Odsłonięcie (${esc(REV.round)}):</b> ${esc(REV.story || '')}${REV.state ? ` <i>(${esc(REV.state)})</i>` : ''}`;
-  if (R.synthetic) html = `<span class="pct">Brak run.json z silnika</span>: mapa POA pojawi się, gdy plik trafi do repo.<br>` + html.replace(/^Najbardziej[^<]*<b>[^<]*<\/b> <span class="pct">[^<]*<\/span>/, '');
-  $('sc-lead').innerHTML = html;
-  const w = s.weather || {}, chips = [];
-  if (w.visibilityM != null) chips.push([`widoczność ${w.visibilityM >= 1000 ? (w.visibilityM / 1000).toFixed(1) + ' km' : w.visibilityM + ' m'}`, w.visibilityM < 200 ? 'warn' : '']);
-  if (w.windMs != null) chips.push([`wiatr ${w.windMs} m/s`, w.windMs >= 12 ? 'warn' : '']);
-  if (w.tempC != null) chips.push([`${w.tempC > 0 ? '+' : ''}${w.tempC}°C`, '']);
-  if (w.precip && w.precip !== 'none') chips.push([PRECIP[w.precip] || w.precip, '']);
-  if (w.dark) chips.push(['ciemno', 'night']);
-  if (w.ice) chips.push(['oblodzenie', 'warn']);
-  const sv = w.survival || {};
-  if (sv.level) chips.push([`hipotermia: ${sv.level}`, 'surv lv-' + String(sv.level).replace(/[^a-ząćęłńóśźż]/gi, ''), sv.text]);
-  $('weather').innerHTML = chips.map(([t, c, title]) => `<span class="wchip ${c}"${title ? ` title="${esc(title)}"` : ''}>${esc(t)}</span>`).join('');
-  const n = s.hintsActive?.length || i + 1;
-  renderRanking(ranked, searched, foundStep >= 0 && i >= foundStep ? (R.value?.findSeg ?? R.value?.truthSeg) : null, `Łącznie ${n} ${n === 1 ? 'sygnał' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'sygnały' : 'sygnałów'} do ${s.t}, nie tylko ostatni`);
-  renderPlan(s);
-  $('slider').value = i;
-  $('stepno').innerHTML = `<b>${i + 1}</b>/${R.steps.length}`; $('prev').disabled = i === 0; $('next').disabled = i === R.steps.length - 1;
-  renderValue();
-  document.querySelectorAll('.tick').forEach((t, k) => { t.classList.toggle('cur', k === i); t.classList.toggle('past', k < i); });
-  renderProgress(i);
-  const l2 = document.querySelector('a.pill.link'); if (l2) l2.href = `../?sc=${encodeURIComponent({ 'blind-01': 'blind-01-replay' }[SC] || SC)}&step=${i}`; // 2D scenario ids
-}
-function renderProgress(i) {
-  const P = PROG, cur = P[i], W = 300, H = 74, maxMin = Math.max(1, P[P.length - 1].min);
-  const X = (m) => 6 + (m / maxMin) * (W - 12), Y = (v) => H - 6 - v * (H - 14);
-  const path = (f, upto = P.length - 1) => P.slice(0, upto + 1).map((p, k) => `${k ? 'L' : 'M'}${X(p.min).toFixed(1)},${Y(f(p)).toFixed(1)}`).join('');
-  const ghost = (f, c) => `<path d="${path(f)}" fill="none" stroke="${c}" stroke-width="1.2" opacity="0.25"/>`;
-  const live = (f, c) => `<path d="${path(f, i)}" fill="none" stroke="${c}" stroke-width="2.2"/>`;
-  const evdots = P.filter((p) => EVENTS.some((e) => e.step === p.k)).map((p) => `<circle cx="${X(p.min)}" cy="${H - 3}" r="${p.found ? 3.5 : 1.8}" fill="${p.found ? '#2d6a4f' : p.k <= i ? '#555b61' : '#c8c8c8'}"/>`).join('');
-  const hh = Math.floor(cur.min / 60), mm = String(cur.min % 60).padStart(2, '0');
-  $('progress').innerHTML = `<div class="pg-head"><b>Przebieg akcji</b><span>${hh} h ${mm} min od zgłoszenia</span></div>
-    <div class="pg-kpi"><div><b>${cur.searched}</b><span>segm. przeszukane</span></div><div><b>${(cur.area * 100).toFixed(0)}%</b><span>obszaru</span></div><div><b style="color:#1f4e79">${(cur.pos * 100).toFixed(0)}%</b><span>szansa znalezienia dotąd</span></div><div><b style="color:#b8322a">${pct(cur.lead)}</b><span>lider mapy</span></div></div>
-    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" aria-label="Wykres przebiegu akcji">
-      ${ghost((p) => p.lead, '#b8322a')}${ghost((p) => p.pos, '#1f4e79')}${ghost((p) => p.area, '#6b6f72')}
-      ${live((p) => p.area, '#6b6f72')}${live((p) => p.pos, '#1f4e79')}${live((p) => p.lead, '#b8322a')}
-      <line x1="${X(cur.min)}" x2="${X(cur.min)}" y1="4" y2="${H - 6}" stroke="#23272a" stroke-dasharray="2 2" opacity="0.5"/>${evdots}
-    </svg>
-    <div class="pg-leg"><i style="background:#b8322a"></i>lider mapy <i style="background:#1f4e79"></i>szansa znalezienia (Σ POA×POD) <i style="background:#6b6f72"></i>przeszukany obszar</div>`;
-}
-function renderPlan(s) {
-  const res = new Map((s.resources || []).map((r) => [r.id, r]));
-  const items = (s.assignments || []).map((a) => {
-    const r = res.get(a.resourceId) || resources.get(a.resourceId) || { name: a.resourceId }, t = r.type || resources.get(a.resourceId)?.type;
-    return `<li data-seg="${esc(a.segmentId)}"><div class="as-h"><span class="dot" style="background:${TEAM_COL[t] || '#555'}"></span><span>${esc(String(r.name).split(' (')[0])} → <b>${esc(a.segmentId)}</b> ${esc(a.segmentName || '')}</span></div>
-      <div class="as-m">ETA <b>${fmtMin(a.etaMin)}</b> · szansa znalezienia <b>${pct(a.expectedFind, 1)}</b> · POD ${pct(a.pod)}</div>
-      ${a.reason ? `<div class="as-r">${esc(a.reason)}</div>` : ''}${(a.safety || []).map((x) => `<div class="as-safe">${esc(x)}</div>`).join('')}</li>`;
-  }).join('');
-  const down = (s.resources || []).filter((r) => r.available === false).map((r) => `<li class="down"><span>${esc(r.name)}</span> - ${esc(r.reason || 'niedostępny')}</li>`).join('');
-  $('teams').innerHTML = (items || '<li class="none">Brak dostępnych zespołów w tym kroku.</li>') + down;
-}
-function renderValue() {
-  const v = R.value, el = $('value'); if (!el) return;
-  if (!v || v.top3poa == null) { el.hidden = true; return; }
-  const at = R.steps[v.beforePing] || R.steps[R.steps.length - 1], seg = v.truthSeg ?? v.findSeg;
-  el.hidden = false;
-  el.innerHTML = `<h2>Wartość <span class="mode">silnik, ${esc(at.t)}</span></h2>
-    <div class="v-big">${pct(v.top3poa, 0)} <span>wagi mapy w <b>${pct(v.top3area, 0)}</b> obszaru (top 3)</span></div>
-    ${v.rankFused != null ? `<div class="v-row"><b class="ok">#${v.rankFused}</b> vs <b>#${v.rankRings}</b> <span>miejsce odnalezienia (${esc(seg)}): po fuzji vs same pierścienie Koestera</span></div>` : ''}
-    ${v.areaFused != null ? `<div class="v-row"><b class="ok">${pct(v.areaFused, 1)}</b> vs <b>${pct(v.areaRings, 1)}</b> <span>obszaru do przeszukania, zanim zespół trafi</span></div>` : ''}
-    ${v.pos2hPlanned != null && v.pos2hNaive != null ? `<div class="v-row"><b class="ok">${pct(v.pos2hPlanned, 0)}</b> vs <b>${pct(v.pos2hNaive, 0)}</b> <span>szansa znalezienia w 2 h: przydział silnika vs „największe POA najpierw”</span></div>` : ''}
-    <button class="btn sm" id="gobp">Pokaż krok ${esc(at.t)}</button>`;
-  $('gobp').onclick = () => { stopPlay(); setStep(v.beforePing); };
-}
-function renderRanking(ranked, searched, foundSeg, scope) {
-  $('rank-scope').textContent = R.synthetic && G.phase === 'off' ? '\u00a0' : scope;
-  if (R.synthetic && G.phase === 'off') { $('ranklist').innerHTML = '<li class="none" style="cursor:default;color:var(--mute);font-size:12.5px">Ranking pojawi się z plikiem run.json silnika.</li>'; return; }
-  const mx = ranked[0].poa || 1;
-  $('ranklist').innerHTML = ranked.slice(0, 8).map((sg) => {
-    const cls = [searched.has(sg.id) ? 'searched' : '', sg.id === foundSeg ? 'found' : ''].join(' ');
-    const k = ranked.indexOf(sg), area = sg.areaPct ?? segs.get(sg.id)?.areaPct;
-    return `<li class="${cls}" data-seg="${sg.id}"><div class="row"><span class="nm"><i>${sg.id}</i>${esc(sg.name)}</span><span class="pv">${pct(sg.poa)}</span></div><div class="bar"><i style="width:${(sg.poa / mx) * 100}%"></i></div><div class="meta">${area != null ? `${nf(area, 1)}% obszaru` : ''}</div>${k < 3 && G.phase === 'off' ? `<div class="task">${esc(taskFor(sg.name))}</div>` : ''}<div class="act">Wyślij tu patrol</div></li>`;
-  }).join('');
-}
-$('ranklist').addEventListener('click', (e) => {
-  const li = e.target.closest('li'); if (!li) return;
-  if (G.phase === 'search') return sendPatrol(li.dataset.seg);
-  selectSeg(li.dataset.seg);
-});
-
-function buildTimeline() {
-  const n = R.steps.length, el = $('ticks');
-  $('slider').max = n - 1;
-  el.innerHTML = R.steps.map((s, k) => `<div class="tick k-${s.kind}${k === 0 || s.t !== R.steps[k - 1].t ? ' lbl' : ''}" style="left:${n > 1 ? (k / (n - 1)) * 100 : 50}%" title="${esc(s.t + ' · ' + s.label)}"><b></b><span>${s.t}</span></div>`).join('');
-  el.querySelectorAll('.tick').forEach((t, k) => t.addEventListener('click', () => { stopPlay(); setStep(k); }));
-  $('slider').addEventListener('input', (e) => { stopPlay(); setStep(+e.target.value); });
-}
-let playTimer = null;
-const stopPlay = () => { clearInterval(playTimer); playTimer = null; $('play').classList.remove('on'); };
-function togglePlay() {
-  if (G.phase !== 'off') return;
-  if (playTimer) return stopPlay();
-  if (STEP >= R.steps.length - 1) setStep(0);
-  $('play').classList.add('on');
-  playTimer = setInterval(() => { if (STEP >= R.steps.length - 1) return stopPlay(); setStep(STEP + 1); }, PLAY_MS);
-}
-$('play').addEventListener('click', togglePlay);
-$('prev').addEventListener('click', () => { stopPlay(); setStep(STEP - 1); });
-$('next').addEventListener('click', () => { stopPlay(); setStep(STEP + 1); });
-addEventListener('keydown', (e) => {
-  if (e.target.closest('select,input') || G.phase !== 'off') return;
-  if (e.key === 'ArrowRight') { stopPlay(); setStep(STEP + 1); }
-  else if (e.key === 'ArrowLeft') { stopPlay(); setStep(STEP - 1); }
-  else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
-  else if (e.key === 'Home') { stopPlay(); setStep(0); }
-  else if (e.key === 'End') { stopPlay(); setStep(R.steps.length - 1); }
-});
-(async () => {
-  const sel = $('scensel');
-  const api = await getJSON('/api/scenarios', true); // rescue-server: these run live even without a static run.json
-  const live = new Set((api?.scenarios || []).map((s) => (typeof s === 'string' ? s : s.name || s.id)));
-  // scenarios the server knows that have a DEM in the repo (static servers: the known regions)
-  const extra = [...new Set([...live, ...Object.keys(REGIONS)])].filter((id) => !SCENS[id] && !/blind/.test(id));
-  await Promise.all(extra.map(async (id) => { try { const r = await fetch(`../../tools/terrain/data/${id}-dem.json`, { method: 'HEAD' }); if (r.ok) addScen(id); } catch {} }));
-  for (const [id, s] of Object.entries(SCENS)) {
-    const o = document.createElement('option'); o.value = id; o.textContent = s.name; o.selected = id === SC;
-    if (id !== SC && !live.has(id)) { try { const r = await fetch(s.run, { method: 'HEAD', headers: runPin(s.run) }); if (!r.ok) throw 0; } catch { o.disabled = true; o.textContent += ' (brak run.json)'; } }
-    sel.appendChild(o);
-  }
-  sel.addEventListener('change', () => { const u = new URL(location.href); u.searchParams.set('sc', sel.value); u.searchParams.delete('run'); location.href = u.toString(); });
-})();
-
 // ---------- legend (shared scale) ----------
-const LEGEND_HEAT = `<span>Prawdopodobieństwo × średnia komórka</span><i class="ramp" style="background:${gradientCSS()}"></i><span class="stops">${STOPS.map((x) => `<b>${x.label}</b>`).join('')}</span>`;
-document.querySelector('.legend').innerHTML = LEGEND_HEAT;
+const LEGEND_HEAT = `<div class="lg-title">Prawdopodobieństwo × średnia komórka</div><i class="ramp" style="background:${gradientCSS()}"></i>
+    <div class="stops">${STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
+    <div class="lg-note">1× = średnio ${nf(100 / (R.rows * R.cols), 3)}% na komórkę 100 x 100 m; poniżej 0,5× bez koloru</div>
+    <div class="lg-keys"><span><i class="k-top"></i>top 3</span><span><i class="k-srch"></i>przeszukany</span></div>`;
+const LEGEND_DIFF = `<div class="lg-title">Trudność terenu (silnik)</div><div class="lg-diff">${(R.difficultyClasses || []).map((c) => `<span><i style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`;
 // embed=scene: legend box top-left and controls top-right, laid out like the 2D screen's #legend / #mapctl
 if (EMB === 'scene') {
-  const avg = 100 / (R.rows * R.cols), el = $('sceneLegend');
-  el.hidden = false;
-  el.innerHTML = `<div class="lg-title">Prawdopodobieństwo × średnia komórka</div><i class="ramp" style="background:${gradientCSS()}"></i>
-    <div class="stops">${STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
-    <div class="lg-note">1× = średnio ${nf(avg, 3)}% na komórkę 100 x 100 m; poniżej 0,5× bez koloru</div>
-    <div class="lg-keys"><span><i class="k-top"></i>top 3</span><span><i class="k-srch"></i>przeszukany</span></div>`;
+  $('sceneLegend').hidden = false; $('sceneLegend').innerHTML = LEGEND_HEAT;
   // control box like 2D #mapctl: segmented group, checkbox row, full-width button; it drives the regular HUD buttons
   const ctl = document.createElement('div'); ctl.id = 'sceneCtl'; ctl.className = 'floating';
   ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button></div>
@@ -1073,9 +865,7 @@ if (!(Array.isArray(R.difficulty) && R.difficulty.length === R.rows * R.cols)) $
 $('btn-diff').addEventListener('click', () => {
   SHOW_DIFF = !SHOW_DIFF; $('btn-diff').classList.toggle('on', SHOW_DIFF); compose();
   const dc = $('btn-diff').querySelector('input'); if (dc) dc.checked = SHOW_DIFF;
-  document.querySelector('.legend').innerHTML = SHOW_DIFF
-    ? `<span>Trudność terenu (silnik)</span><div class="lg-diff">${(R.difficultyClasses || []).map((c) => `<span><i style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`
-    : LEGEND_HEAT;
+  $('sceneLegend').innerHTML = SHOW_DIFF ? LEGEND_DIFF : LEGEND_HEAT;
 });
 $('btn-trees').addEventListener('click', () => { forest.visible = !forest.visible; $('btn-trees').classList.toggle('on', forest.visible); });
 
@@ -1102,7 +892,7 @@ function cineShot(i) {
 function cinema(on) {
   CINE.on = on; document.body.classList.toggle('cinema', on); $('btn-cine').classList.toggle('on', on);
   toParent({ type: 'cinema', on }); // /app hides its floating panels while Kino runs
-  if (on) { stopPlay(); CINE.prevRot = autoRot; cineShot(Q.has('step') ? STEP : 0); }
+  if (on) { CINE.prevRot = autoRot; cineShot(Q.has('step') ? STEP : 0); }
   else { CINE.shot = null; overview(1.6); }
 }
 $('btn-cine').addEventListener('click', () => cinema(!CINE.on));
@@ -1155,7 +945,9 @@ cv.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const h = pick(e); if (!h) return;
   if (G.phase === 'hide') return hideAt(toLat(h.point.z), toLon(h.point.x));
-  const k = cellOf(toLat(h.point.z), toLon(h.point.x)); if (k >= 0 && G.phase === 'off') selectSeg(R.segOf[k], { fly: false });
+  const k = cellOf(toLat(h.point.z), toLon(h.point.x)); if (k < 0) return;
+  if (G.phase === 'off') selectSeg(R.segOf[k], { fly: false });
+  else if (G.phase === 'search') sendPatrol(R.segOf[k]); // the patrol goes to the clicked segment
 });
 cv.addEventListener('dblclick', (e) => { const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
 function hover() {
@@ -1193,17 +985,13 @@ function segPoa(grid) {
   return [...segs.values()].map((g) => ({ id: g.id, name: g.name, areaPct: g.areaPct, poa: g.cells.reduce((a, i) => a + grid[i], 0) }));
 }
 function gamePanel(html) { const p = $('game'); p.hidden = false; p.innerHTML = html; }
-function lockTimeline(on) {
-  stopPlay(); $('play').disabled = on; $('slider').disabled = on;
-  document.body.classList.toggle('searching', on && G.phase === 'search');
-}
+function lockTimeline(on) { document.body.classList.toggle('searching', on && G.phase === 'search'); }
 function startGame() {
   if (G.phase !== 'off') return endGame();
   const base = Q.has('blindStep') ? +Q.get('blindStep') : R.value?.beforePing ?? STEP;
   if (STEP !== base) setStep(base);
   Object.assign(G, { phase: 'hide', base, target: null, salt: null, key: null, commit: null, patrols: [], attempts: new Map(), searched: new Set(), found: false });
   disposeGroup(dyn.teams); movers.length = 0; if (foundPin) foundPin.visible = false; if (revealPin) revealPin.visible = false;
-  $('teams').innerHTML = '<li class="none">W teście patrole wysyłasz Ty (z IPP), POD ' + (R.steps[base].weather?.dark ? '60' : '75') + '%.</li>';
   lockTimeline(true); document.body.classList.add('hiding'); $('btn-game').textContent = 'Zakończ test';
   gamePanel(`<h3>Test na ślepo: ukryj zaginionego</h3>
     <p>Kliknij w teren, żeby schować osobę. Mapa zostaje taka, jak policzył ją silnik o <b>${esc(R.steps[base].t)}</b> (${esc(R.steps[base].label)}) i nie wie, gdzie kliknąłeś. Spróbuj ją przechytrzyć.</p>
@@ -1226,7 +1014,6 @@ function refreshGame(msg = '') {
   G.ranked = rankedOf(segPoa(G.grid));
   showHeat(heatCanvasGrid(G.grid));
   drawTop(G.ranked);
-  renderRanking(G.ranked, G.searched, G.found ? G.seg : null, `Mapa z ${R.steps[G.base].t} po ${G.patrols.length} ${G.patrols.length === 1 ? 'patrolu' : 'patrolach'} w teście`);
   disposeGroup(dyn.searched);
   for (const id of G.searched) { const g = segs.get(id); if (g) drapeRuns(ringLL(g.polygon), 0.018, { color: '#555b61', width: 1.8, opacity: 0.9, dashed: true, dash: 0.035, gap: 0.03 }, dyn.searched); }
   const area = [...G.searched].reduce((a, id) => a + (segs.get(id)?.areaPct || 0), 0);
@@ -1236,7 +1023,7 @@ function refreshGame(msg = '') {
   if (G.phase === 'search') {
     gamePanel(`<h3>Szukaj</h3>
       <p>Zobowiązanie (SHA-256 miejsca i soli): <code>${G.commit.slice(0, 24)}…</code></p>
-      <p>Wyślij patrol do lidera albo kliknij segment w rankingu. Puste przeszukanie obniża prawdopodobieństwo segmentu (POA × (1 − POD)) i mapa się przelicza.</p>
+      <p>Wyślij patrol do lidera albo kliknij segment na mapie (POD ${Math.round((R.steps[G.base].weather?.dark ? 0.6 : 0.75) * 100)}%). Puste przeszukanie obniża prawdopodobieństwo segmentu (POA × (1 − POD)) i mapa się przelicza.</p>
       ${stats}${msg ? `<p>${msg}</p>` : ''}${log}
       <div class="row"><button class="btn red" id="g-lead">Patrol do lidera</button><button class="btn" id="g-auto">${G.auto ? 'Stop' : 'Szukaj automatycznie'}</button><button class="btn" id="g-reveal">Odsłoń</button></div>`);
     $('g-lead').onclick = () => sendPatrol(G.ranked[0].id);
@@ -1328,17 +1115,7 @@ async function pollLive() {
   }
   setTimeout(pollLive, 4000);
 }
-const liveList = [];
-function renderLive() {
-  const el = $('live'); if (!el) return;
-  el.hidden = !liveList.length;
-  el.innerHTML = `<h2>Meldunki z terenu <span class="mode">${liveList.length}</span></h2><ol>${liveList.slice().reverse().map((e) => {
-    const kinds = (e.hints || []).map((h) => (h.type === 'clue' ? 'ślad' : h.type === 'segmentSearched' ? 'przeszukany ' + (h.segmentId || '') : h.type)).join(', ');
-    return `<li><span class="t">${esc(e.at || '')}</span> ${esc(e.text)}<div class="meta">${esc(kinds || 'bez wskazówek')} · ${esc(e.parsedBy || '')}${e.latencyMs != null ? ` · ${e.latencyMs} ms` : ''} · <b>${R.steps.some((s) => s.label === e.text) ? 'w silniku' : 'czeka na przeliczenie'}</b></div></li>`;
-  }).join('')}</ol>`;
-}
 function toast(e) {
-  liveList.push(e); renderLive();
   const el = document.createElement('div'); el.className = 'toast';
   el.innerHTML = `<span class="t">${esc(e.at || '')} meldunek</span>${esc(e.text)}`;
   const feed = $('feed'); feed.prepend(el);
@@ -1356,7 +1133,6 @@ function selectSeg(id, { fly: doFly = true, notify = true } = {}) {
   SEL = id; disposeGroup(dyn.sel);
   const selCol = getComputedStyle(document.documentElement).getPropertyValue('--rl-select').trim() || '#1f4e79';
   drapeRuns(ringLL(g.polygon), 0.026, { color: selCol, width: 4, opacity: 0.95 }, dyn.sel);
-  document.querySelectorAll('#ranklist li').forEach((li) => li.classList.toggle('sel', li.dataset.seg === id));
   if (doFly) flyTo(v3(g.center[0], g.center[1]), 2.4);
   if (notify && !fromParent) toParent({ type: 'select', segmentId: id });
 }
@@ -1365,7 +1141,7 @@ addEventListener('message', (e) => {
   if (e.origin !== location.origin || e.source !== window.parent || !e.data || typeof e.data !== 'object') return;
   const m = e.data; fromParent = true;
   try {
-    if (m.type === 'step' && Number.isInteger(m.i)) { stopPlay(); setStep(m.i); }
+    if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
     else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
     else if (m.type === 'evidence' && (typeof m.id === 'string' || Number.isInteger(m.id))) setEvidence(m.id, m.on !== false);
@@ -1473,7 +1249,6 @@ function frame() {
 }
 
 // ---------- start ----------
-buildTimeline();
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 for (let k = 0; k < 60; k++) stepMood(0.1);
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));

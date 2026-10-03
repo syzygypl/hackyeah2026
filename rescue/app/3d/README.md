@@ -1,26 +1,27 @@
 # Rescue Locator 3D
 
-Terrain diorama of the same engine output as the 2D screen: the POA timeline on the real DEM, every source signal pinned on the map, team plans, and a playable blind test. No build step, no CDN, works offline (three.js r170 vendored in `../vendor/three/`, MIT).
+Terrain diorama of the same engine output as the 2D screen: the POA timeline on the real DEM, every source signal pinned on the map, team plans, and a playable blind test. It is a view of the app: `/app` shows it in an iframe (`?embed=scene`) and owns the step card, signal list, ranking, team plan and timeline; a direct visit to `app/3d/` (or the old `web/3d/`) opens `/app` on the same scenario and step. No build step, no CDN, works offline (three.js r170 vendored in `../../web/vendor/three/`, MIT). Shader effects live in `fx3d.js`.
 
 ```sh
 cd rescue
 python3 -m http.server 8000
-# open http://localhost:8000/web/3d/            (Zawrat)
-# open http://localhost:8000/web/3d/?sc=blind-01   (blind test round 1 replay)
+# open http://localhost:8000/app/?mode=akcja&view=3d                      (Zawrat)
+# open http://localhost:8000/app/?mode=akcja&view=3d&sc=blind-01-replay   (blind test round 1 replay)
+# open http://localhost:8000/app/3d/?embed=scene&stats=1                  (the view alone, with fps / draw calls)
 ```
 
 ## What is on the screen
 - **Terrain:** Copernicus DEM (`tools/terrain/data/<sc>-dem.json`), 1.5x vertical exaggeration (`?exag=`), topo tint, hillshade, 50/250 m contours; OSM trails (marked colours), streams, lakes and huts from `scenarios/<sc>-terrain.json`.
 - **Probability:** the engine's `poaGrid` for the selected step, draped on the terrain; top 3 segments outlined and labelled; searched segments dashed.
-- **Source signals (left):** every scenario event with its plain-language source, time, POD/wave and "wpływ" = the segment that gained most when the signal was added (from consecutive run.json steps). Click to jump to the step and fly to the signal. On the map: Koester rings, trip route, car corridor, BTS circle, witness, patrol pins, find.
+- **Source signals:** every scenario event pinned where it happened (the list itself is in the shell). On the map: Koester rings, trip route, car corridor, BTS circle, witness, patrol pins, find.
 - **Weather:** fog and dusk follow the step's `weather` (button "Pogoda" turns it off).
 - **Teams:** `steps[].assignments` as arcs from each resource's base to its segment.
 
 ## Blind test (button "Test na ślepo")
-You hide the person by clicking the terrain (or "Losuj"). The map keeps the engine's POA from the start step and does not know the spot; a SHA-256 commitment of spot + salt is shown first. Each patrol finds the person with probability POD (0.75, 0.6 at night) if they are in that segment; the draw is HMAC(salt, segment|attempt), so outcomes are fixed in advance. After an empty patrol the browser applies the Koopman update (segment POA x (1 - POD), renormalised) - the only computation done in the browser. The result compares with a naive search (segments by distance from the IPP, same draws) and verifies the commitment.
+You hide the person by clicking the terrain (or "Losuj"); patrols go to the leader or to the segment you click. The map keeps the engine's POA from the start step and does not know the spot; a SHA-256 commitment of spot + salt is shown first. Each patrol finds the person with probability POD (0.75, 0.6 at night) if they are in that segment; the draw is HMAC(salt, segment|attempt), so outcomes are fixed in advance. After an empty patrol the browser applies the Koopman update (segment POA x (1 - POD), renormalised) - the only computation done in the browser. The result compares with a naive search (segments by distance from the IPP, same draws) and verifies the commitment.
 
 ## blind-01 replay
-`?sc=blind-01` reads `scenarios/blind-01-replay.json` and the reveal `blindtest/blind-01.reveal.json` (true spot pinned at the end, hider's story in the step card). It needs `out/blind-01-replay.run.json` from `swift run rescue-demo --fast scenarios/blind-01-replay.json` for the probability map; without it the page shows signals and patrols only and says so.
+In the app's scenario list as "Test na ślepo: runda 1 (replay)" (`sc=blind-01-replay`, alias `blind-01`): reads `scenarios/blind-01-replay.json` and the reveal `blindtest/blind-01.reveal.json` (true spot pinned at the end, hider's story in the panel). It needs `out/blind-01-replay.run.json` from `swift run rescue-demo --fast scenarios/blind-01-replay.json` for the probability map; without it the page shows signals and patrols only and says so.
 
 ## Look and camera
 - **Rendering:** sun disk and halo in the sky, ACES tone mapping; slope-aware colouring (rock on steep ground, spruce/dwarf-pine/meadow belts by elevation, snow high up). Shading uses an object-space normal map from the full-resolution DEM (the wide mesh is averaged 2x2). Ambient occlusion and the terrain's own sun shadow are baked once at load from the DEM (horizon scan, ray march to the sun); a sun shadow map is fitted around the orbit target when zoomed in and re-rendered only when the view settles, so near trees cast shadows. Light from the sky dome (PMREM environment, re-baked when the weather mood changes), height fog in the valleys plus blue aerial perspective (patched fog chunks), procedural close-up detail (meadow grain, cliff strata), wind in the trees from the step's `windMs`, rippling reflective lakes, snow glints, soft CSS vignette. No post-processing pass: EffectComposer with MSAA on half-float targets broke on the Asahi GPU driver.
@@ -48,4 +49,4 @@ For the combined app (`rescue/app/`). Same origin only: messages from other orig
 | 3D -> parent | `{source: 'rescue3d', type: 'select', segmentId}` | user clicked a segment (ranking or terrain) |
 | 3D -> parent | `{source: 'rescue3d', type: 'evidence', id, on}` | user toggled a signal (`id` = hintId; `'*'` = Przywróć) |
 
-`?embed=1` hides the 3D header, signal list/detail and ranking (the shell has its own); `?embed=scene` keeps the 3D buttons (Kino, Trudność, Las...) but drops the timeline and progress panel; `?embed=bare` also hides the buttons, leaving only the scene. Before the contract settles, `?sc=`, `?run=<url>` and `?step=i` work as URL parameters too.
+`?embed=scene` (what the shell uses) shows the scene with the legend box and the control box (Kino, Lider, Obrót, trudność, las, pogoda, Cały obszar, Test na ślepo); `?embed=bare` leaves only the scene. `?sc=`, `?run=<url>` and `?step=i` work as URL parameters too. Diagnostics: `?stats=1` (fps, CPU split, draw calls; `&gpu=1` adds GPU time), `?fx=-name` switches a shader effect off, `?dpr=auto` adaptive resolution.

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* The 3D view lives inside /app (iframe, ?embed=scene). A direct visit opens the app on the same scenario and step. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (window.top !== window || q.has('embed')) return;
+  var a = new URLSearchParams({ mode: 'akcja', view: '3d' });
+  if (q.get('sc')) a.set('sc', q.get('sc'));
+  if (q.get('step')) a.set('step', q.get('step'));
+  location.replace('../?' + a);
+})();
+</script>
+<title>Rescue Locator 3D</title>
+<link rel="stylesheet" href="style3d.css">
+<link rel="icon" href="data:,">
+<script type="importmap">
+{ "imports": {
+  "three": "../../web/vendor/three/three.module.min.js",
+  "three/addons/": "../../web/vendor/three/addons/"
+} }
+</script>
+</head>
+<body data-state="loading">
+<div id="scene"></div>
+
+<section id="game" class="panel" hidden></section>
+<div id="offbanner" class="panel" hidden></div>
+<section id="feed" aria-live="polite"></section>
+
+<div id="sceneLegend" class="floating" hidden></div>
+<div id="hud"> <!-- hidden in /app: #sceneCtl drives these buttons -->
+  <button id="btn-game" class="btn red" title="Ukryj zaginionego i sprawdź, czy silnik go znajdzie">Test na ślepo</button>
+  <button id="btn-cine" class="btn red" title="Kino: automatyczny przelot przez całą akcję (Esc kończy)">Kino</button>
+  <button id="btn-diff" class="btn" title="Warstwa trudności terenu z silnika zamiast prawdopodobieństwa">Trudność</button>
+  <button id="btn-trees" class="btn on" title="Lasy i kosodrzewina">Las</button>
+  <button id="btn-ortho" class="btn" hidden title="Zdjęcie satelitarne Sentinel-2 (EOX, 2016) zamiast mapy topograficznej">Zdjęcie</button>
+  <button id="btn-top" class="btn" title="Przelot do najbardziej prawdopodobnego segmentu">Lider</button>
+  <button id="btn-all" class="btn" title="Cały obszar">Cały obszar</button>
+  <button id="btn-rot" class="btn" title="Powolny obrót kamery">Obrót</button>
+  <button id="btn-fog" class="btn on" title="Mgła i zmrok wg warunków z kroku">Pogoda</button>
+</div>
+
+<div id="bars" aria-hidden="true"><i></i><i></i></div>
+<div id="caption" aria-live="polite"></div>
+<div id="tip" class="tip" hidden></div>
+<div id="loading"><div class="spinner"></div><p id="loadmsg">Wczytywanie modelu terenu (Copernicus DEM)...</p></div>
+
+<script type="module" src="app3d.js"></script>
+</body>
+</html>

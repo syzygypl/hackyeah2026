@@ -294,7 +294,7 @@ One process serves every frontend as static files and the live API. The engine r
 | `GET /modules`, `GET/POST /story`, `GET /story/scenario`, `POST /story/new|event|edit|narrate|save` | Story Studio (as `rescue-studio`) |
 | `GET /scenarios/*.json`, `/tools/terrain/data/*.json` | read-only JSON for the 3D view (never blind-test files) |
 
-Screens on the live engine: `http://127.0.0.1:8780/web/?run=/api/run/zawrat` and `http://127.0.0.1:8780/web/3d/?run=/api/run/zawrat`. Both already read `?run=<url>`, so no change to their code was needed.
+Screens on the live engine: `http://127.0.0.1:8780/web/?run=/api/run/zawrat` and the 3D view in the app, `http://127.0.0.1:8780/app/?mode=akcja&view=3d&sc=zawrat` (it loads `/api/run/zawrat` itself). Both already read `?run=<url>`, so no change to their code was needed.
 
 Guard: as before, loopback needs no PIN. With `--host` beyond loopback, every API call needs `X-Rescue-Pin` (or JSON `pin`); pages and static assets stay open, and `/metrics` from real loopback is open for Prometheus. Limits: `/report` 4 KB, 500 characters, 10/min per LAN IP; other bodies 64 KB; `POST /api/run` up to 4 MB.
 

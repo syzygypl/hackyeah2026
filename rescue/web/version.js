@@ -1,4 +1,4 @@
-/* Version stamp, bottom-right corner, the same in 2D (web/), 3D (web/3d/) and the app shell (app/).
+/* Version stamp, bottom-right corner, the same in 2D (web/), 3D (app/3d/, embedded) and the app shell (app/).
    Reads rescue/version.json ({commit, date, subject}, written by tools/version-json.sh after a pull);
    without it falls back to the Last-Modified time of this file. Not shown inside an iframe with ?embed=,
    so the shell shows one stamp, not one per view. Adds body.has-version so a page can keep its bottom bar clear. Classic script: <script src=".../web/version.js" defer></script>. */

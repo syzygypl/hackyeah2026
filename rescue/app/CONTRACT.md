@@ -8,13 +8,13 @@ cd rescue && swift run rescue-studio          # then http://127.0.0.1:8771/app/ 
 
 The shell owns the state (story/run, current step, selected segment). Embedded views draw it and report **user** actions back.
 
-Shared look: `rescue/app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default, `[data-theme=light]` paper variant). Shared heat colours: `rescue/app/scale.js` (DECISION S2, "x average cell" log scale, stops 0.5x/1x/2x/5x/10x/25x+, `legendHTML()`). Relative paths: from `web/3d/` they are `../../app/tokens.css` and `../../app/scale.js`; from `web/` they are `../app/...`; from `out/` also `../app/...`.
+Shared look: `rescue/app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default, `[data-theme=light]` paper variant). Shared heat colours: `rescue/app/scale.js` (DECISION S2, "x average cell" log scale, stops 0.5x/1x/2x/5x/10x/25x+, `legendHTML()`). Relative paths: from `app/3d/` they are `../tokens.css` and `../scale.js`; from `web/` they are `../app/...`; from `out/` also `../app/...`.
 
 ## Modes (top tabs, one URL `/app/`, `?mode=akcja|edycja|teren|monitoring|walidacja&view=...`)
 
 | Mode | Content |
 |---|---|
-| Akcja | 2D analysis screen (`web/`, embed) / 3D (`web/3d/`, embed) / Podział; shared panels: top segments, team plan + "dlaczego", Ocena sytuacji, progress, alerts, timeline |
+| Akcja | 2D analysis screen (`web/`, embed) / 3D (`app/3d/`, embed) / Podział; shared panels: top segments, team plan + "dlaczego", Ocena sytuacji, progress, alerts, timeline |
 | Edycja | Story Studio drag-and-drop on the app's own MapLibre map (switches to the live Studio story); "Mapa + 3D" split |
 | Teren | `web/patrol/` (patrol phone, `?api=http://<host>:8770&run=<run url>`) and `http://<host>:8770/field.html` (field report entry) |
 | Monitoring | `http://<host>:8770/ops.html` (live `/metrics` of rescue-field) |
@@ -54,7 +54,7 @@ After `ready` the shell sends the current `step` and `select` (and `run` if it c
 
 | View | URL |
 |---|---|
-| 3D | `../web/3d/index.html?embed=scene&sc=<sc>&run=<url>&step=<i>` - the shell uses `embed=scene` (3D buttons Kino/Trudność/Las..., no timeline, no progress panel). `embed=1` hides header and side panels, `embed=bare` leaves only the scene; `runInline=1` = run from sessionStorage |
+| 3D | `3d/index.html?embed=scene&sc=<sc>&run=<url>&step=<i>` - the shell uses `embed=scene` (3D buttons Kino/Trudność/Las..., no timeline, no progress panel). `embed=1` hides header and side panels, `embed=bare` leaves only the scene; `runInline=1` = run from sessionStorage |
 | Patrol (Teren, role Ratownik) | `../web/patrol/index.html?embed=1&api=<origin>&run=<run url>&team=<id>` |
 | 2D | `../web/index.html?embed=scene&sc=<sc>&parentOrigin=<origin>&run=<url>&step=<i>` - the shell uses `embed=scene` (map, legend, map controls; no step card, no timeline). `embed=1` = previous embed with side panels |
 

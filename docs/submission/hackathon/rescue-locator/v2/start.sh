@@ -67,7 +67,7 @@ cat <<EOF
 
 Rescue Locator is up. URLs:
   App, operator (2D / 3D / split, all modes)                   http://127.0.0.1:8780/app/?role=operator&sc=zawrat
-  3D view                                                      http://127.0.0.1:8780/web/3d/?sc=zawrat
+  3D view                                                      http://127.0.0.1:8780/app/?mode=akcja&view=3d&sc=zawrat
   Patrol phone view (team TOPR A)                              http://127.0.0.1:8780/web/patrol/?team=topr-a
   Monitoring                                                   http://127.0.0.1:8780/out/ops.html
   2D screen on the static server                               http://127.0.0.1:8000/web/

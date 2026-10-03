@@ -54,7 +54,7 @@ When `rescue-field` runs on the LAN (`serve --host 0.0.0.0 --pin NNNN`), its end
 
 ## Embedding (iframe + postMessage)
 
-For the combined app (`rescue/app/`). It uses the same contract as the 3D view (`web/3d/README.md`), and our messages are tagged `source: 'rescue2d'`.
+For the combined app (`rescue/app/`). It uses the same contract as the 3D view (`app/3d/README.md`), and our messages are tagged `source: 'rescue2d'`.
 - **Incoming messages:** accepted only from `window.parent` and only from `PARENT_ORIGIN`: the page's own origin by default, or `?parentOrigin=<origin>`. Anything else, malformed messages and unknown types are ignored. Nothing is ever evaluated.
 - **Replies:** sent to `PARENT_ORIGIN`.
 - **Early messages:** messages that arrive before the map is ready are queued and applied after `ready`.

@@ -247,7 +247,7 @@ class Show:
         b = self.base
         print("Screens:")
         print(f"  operator   {b}/app/?role=operator&sc=studio&mode=teren   (Akcja for the map/3D, Teren > Przegląd zespołów for reports)")
-        print(f"  3D         {b}/web/3d/?run=/story&scenario=/story/scenario&sc=zawrat&standalone=1   (laptop/second screen, reload after changes)")
+        print(f"  3D         {b}/app/?mode=akcja&view=3d&sc=studio   (laptop/second screen, reload after changes)")
         print(f"  ops        {b}/out/ops.html")
         print(f"  phones     {b}/web/patrol/?team=topr-a&api={b}&run=../../out/run.json   (topr-b, dog)")
         if a.ready:

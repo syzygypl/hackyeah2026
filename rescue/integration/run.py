@@ -364,7 +364,7 @@ def suite(srv, B, live, llm, tmp):
 
     # ---------------- frontends
     print("frontends")
-    pages = ["/app/", "/app/?role=operator", "/app/?role=ratownik&team=topr-a", "/web/", "/web/3d/", "/web/patrol/", "/out/ops.html", "/out/field.html", "/"]
+    pages = ["/app/", "/app/?role=operator", "/app/?role=ratownik&team=topr-a", "/web/", "/app/3d/?embed=scene", "/web/patrol/", "/out/ops.html", "/out/field.html", "/"]
     for page in pages:
         @check("frontend", "load " + page)
         def _(page=page):
@@ -422,7 +422,7 @@ def suite(srv, B, live, llm, tmp):
         probes = {
             "web/patrol/index.html": r"fetch\(RUN\)",                      # run = /api/run/<sc> or /story when embedded by the app
             "web/app.js": r"fetch\(url, \{ cache: 'no-store' \}\)",        # fetchJSON(CFG.run)
-            "web/3d/app3d.js": r"fetch\(u, \{ cache: 'no-cache' \}\)",     # run loader
+            "app/3d/app3d.js": r"fetch\(u, \{ cache: 'no-cache' \}\)",     # run loader
         }
         hits = []
         for f, rx in probes.items():

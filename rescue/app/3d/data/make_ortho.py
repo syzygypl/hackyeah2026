@@ -2,7 +2,7 @@
 """Build the 3D view's aerial photo layer for a DEM cut: Sentinel-2 cloudless 2016 by EOX (CC BY 4.0),
 fetched as WebMercator tiles, mosaicked and resampled onto the DEM's lat/lon grid, saved as one JPEG.
 
-  python3 rescue/web/3d/data/make_ortho.py rescue/web/3d/data/zawrat-dem-wide.json rescue/web/3d/data/zawrat-ortho-wide.jpg
+  python3 rescue/app/3d/data/make_ortho.py rescue/app/3d/data/zawrat-dem-wide.json rescue/app/3d/data/zawrat-ortho-wide.jpg
 
 Attribution (shown in the page): EOxCloudless https://cloudless.eox.at by EOX IT Services GmbH
 (Contains modified Copernicus Sentinel data 2016), CC BY 4.0. Needs Pillow.

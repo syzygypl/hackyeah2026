@@ -42,7 +42,7 @@ HackYeah 2026 - DEFENCE (zadanie otwarte) - Zespół [UZUPEŁNIJ]
 
 ## 6. Demo: puste przeszukania prowadzą do znaleziska
 
-Zrzut: widok 3D, krok 19:45 (`http://127.0.0.1:8780/web/3d/?sc=zawrat`).
+Zrzut: widok 3D, krok 19:45 (`http://127.0.0.1:8780/app/?mode=akcja&view=3d&sc=zawrat`).
 
 - Top 3 segmenty to ok. 7% obszaru. Sektory i dron wracają puste, a Żleb pod Zawratem (S7) jest #1 od 19:35.
 - 19:45: wiatr uziemia drona i plan wysyła śmigłowiec TOPR do S7.

@@ -13,7 +13,7 @@ One laptop is the server; phones and screens join **our own phone hotspot**, nev
    (or drive an already running `swift run rescue-server 8790 --host 0.0.0.0 --pin 4821` with `--server http://127.0.0.1:8790 --pin 4821`; start it with `RESCUE_SILENT_SECONDS=45` so the silent team turns red during the show). Use a PIN without a leading zero.
 4. Screens (laptop ones are loopback, no PIN):
    - Laptop (projector): `http://127.0.0.1:8790/app/?role=operator&sc=studio` - Akcja for map/3D, Teren > Przegląd zespołów for team cards and reports.
-   - Second screen on the laptop: `http://127.0.0.1:8790/web/3d/?run=/story&scenario=/story/scenario&sc=zawrat&standalone=1` and `http://127.0.0.1:8790/out/ops.html`.
+   - Second screen on the laptop: `http://127.0.0.1:8790/app/?mode=akcja&view=3d&sc=studio` and `http://127.0.0.1:8790/out/ops.html`.
    - Phones: `http://IP:8790/web/patrol/?team=topr-a&api=http://IP:8790&run=../../out/run.json` (also `team=topr-b`, `team=dog`). Type the URL or make a QR from it with any QR app; the first report asks for the PIN once.
    - Tablet (optional): `http://IP:8790/out/ops.html` (asks for the PIN).
    Why not `/app/?role=ratownik` and 3D on the tablet: today the embedded map/patrol and the 3D fetch the run without the PIN and get 401 on LAN (see `rescue/integration/report.md`). The task card works; use the patrol URL above until fixed.

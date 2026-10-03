@@ -45,6 +45,7 @@ window.rescueStore = store;   // debugging / tests
 const STATIC = Object.fromEntries([["zawrat", "Zawrat (Tatry)"], ["morskie-oko", "Morskie Oko"], ["kasprowy", "Kasprowy"], ["bieszczady-wetlinska", "Bieszczady - Połonina Wetlińska"],
   ["karkonosze-sniezka", "Karkonosze - Śnieżka"], ["sniardwy", "Śniardwy"], ["morzycko", "Morzycko"], ["miedzyzdroje", "Międzyzdroje (Bałtyk)"]]
   .map(([id, name]) => [id, { name, run: id === "zawrat" ? "../out/run.json" : `../out/${id}.run.json` }]));
+STATIC["blind-01-replay"] = { name: "Test na ślepo: runda 1 (replay)", run: "../out/blind-01-replay.run.json" };
 async function detect() {
   const a = await tryJSON("/api/scenarios");
   const m = await tryJSON("/modules");
@@ -54,10 +55,12 @@ async function detect() {
   FIELD = store.hasApi ? "" : `${location.protocol}//${location.hostname}:8770`;
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
-  if (!a) await Promise.all(Object.entries(STATIC).map(async ([id, s]) => {
+  if (!a) await Promise.all(Object.entries(STATIC).filter(([id]) => !/blind/.test(id)).map(async ([id, s]) => {
     let ok = false; try { const r = await fetch(s.run, { cache: "no-store" }); ok = r.ok; r.body && r.body.cancel(); } catch (e) {}   // GET: the Studio server has no HEAD
     list.push({ id, name: s.name + (ok ? "" : " (brak run.json)"), static: true, disabled: !ok });
   }));
+  // blind test round 1 replay (the 3D view shows the hider's story and the true spot at the end); only when its run is there
+  try { const r = await fetch(STATIC["blind-01-replay"].run, { cache: "no-store" }); if (r.ok) list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true }); r.body && r.body.cancel(); } catch (e) {}
   $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}" ${s.disabled ? "disabled" : ""}>${esc(s.name)}</option>`).join("");
   store.scenList = list;
 }
@@ -547,7 +550,7 @@ $("save").onclick = async () => {
   } catch (e) { toast(plErr(e), 4000); }
 };
 
-// ---------- embedded views (CONTRACT.md): 3D (web/3d, source "rescue3d") and the analysis 2D screen (web/, source "rescue2d")
+// ---------- embedded views (CONTRACT.md): 3D (app/3d, source "rescue3d") and the analysis 2D screen (web/, source "rescue2d")
 // Before a view says "ready" it is driven by reloading its URL; after "ready" by postMessage (run as URL, step, select).
 const FRAMES = {
   "3d": { el: $("frame3d"), note: $("note3d"), src: "", ready: false, dirty: true, source: "rescue3d", visible: () => (store.mode === "akcja" && (store.view === "3d" || store.view === "split")) || (store.mode === "edycja" && store.view === "split") },
@@ -592,9 +595,9 @@ function frameURL(k) {
 }
 function frameURLBase(k, i, sc, ru, po) {
   if (k === "3d") {
-    if (store.backend === "studio") return `../web/3d/index.html?embed=scene&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
-    if (store.backend === "api") return `../web/3d/index.html?embed=scene&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
-    return `../web/3d/index.html?embed=scene&sc=${sc}&step=${i}`;
+    if (store.backend === "studio") return `3d/index.html?embed=scene&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
+    if (store.backend === "api") return `3d/index.html?embed=scene&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
+    return `3d/index.html?embed=scene&sc=${sc}&step=${i}`;
   }
   if (store.backend === "studio") return `../web/index.html?embed=scene&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
   if (store.backend === "api") return `../web/index.html?embed=scene&sc=${sc}&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/scenarios/" + store.scenario + ".json")}&step=${i}`;
