@@ -38,10 +38,12 @@ For the combined app (`rescue/app/`). Same origin only: messages from other orig
 |---|---|---|
 | parent -> 3D | `{type: 'step', i}` | jump to step `i` |
 | parent -> 3D | `{type: 'select', segmentId}` | outline the segment in blue, highlight it in the ranking, fly to it |
+| parent -> 3D | `{type: 'evidence', id, on}` | switch a signal on/off (id = step `hintId`, or the step index; `'*'` + `on: true` restores all), map recomputed as with the checkbox |
 | parent -> 3D | `{type: 'run', url}` | reload with `?run=<url>` |
 | parent -> 3D | `{type: 'run', run}` | reload with this run object (parked in `sessionStorage`, `?runInline=1`) |
 | 3D -> parent | `{source: 'rescue3d', type: 'ready', scenario, steps, step}` | page loaded |
 | 3D -> parent | `{source: 'rescue3d', type: 'step', i, t}` | user changed the step (not echoed for parent-driven changes) |
 | 3D -> parent | `{source: 'rescue3d', type: 'select', segmentId}` | user clicked a segment (ranking or terrain) |
+| 3D -> parent | `{source: 'rescue3d', type: 'evidence', id, on}` | user toggled a signal (`id` = hintId; `'*'` = Przywróć) |
 
-`?embed=1` hides the 3D header, signal list/detail and ranking (the shell has its own); `?embed=bare` also hides the timeline, progress panel and buttons, leaving only the scene. Before the contract settles, `?sc=`, `?run=<url>` and `?step=i` work as URL parameters too.
+`?embed=1` hides the 3D header, signal list/detail and ranking (the shell has its own); `?embed=scene` keeps the 3D buttons (Kino, Trudność, Las...) but drops the timeline and progress panel; `?embed=bare` also hides the buttons, leaving only the scene. Before the contract settles, `?sc=`, `?run=<url>` and `?step=i` work as URL parameters too.

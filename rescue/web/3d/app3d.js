@@ -109,8 +109,10 @@ function decimate(D, k) {
 // ---------- load ----------
 // Embed: a parent page can hand a run object over postMessage; it is parked in sessionStorage and the page reloads.
 const inlineRun = (() => { if (!Q.has('runInline')) return null; try { return JSON.parse(sessionStorage.getItem('rescue3d-run')); } catch { return null; } })();
-if (Q.get('embed') === '1' || Q.get('embed') === 'bare') document.body.classList.add('embed');
-if (Q.get('embed') === 'bare') document.body.classList.add('embed-bare');
+const EMB = Q.get('embed');
+if (EMB === '1' || EMB === 'bare' || EMB === 'scene') document.body.classList.add('embed');
+if (EMB === 'bare') document.body.classList.add('embed-bare');
+if (EMB === 'scene') document.body.classList.add('embed-scene'); // 3D buttons, no timeline (the shell has its own)
 if (document.body.classList.contains('embed')) {
   // decision S1: embedded views use the shell's tokens (dark operational theme, light via ?theme=light)
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../../app/tokens.css'; document.head.appendChild(l);
@@ -629,7 +631,7 @@ function renderSignals(i) {
 $('signals').addEventListener('click', (ev) => {
   if (G.phase !== 'off') return;
   const cb = ev.target.closest('input[data-off]');
-  if (cb) { const k = +cb.dataset.off; if (cb.checked) OFF.delete(k); else OFF.add(k); const cur = STEP; STEP = -1; setStep(cur, false); ev.stopPropagation(); return; }
+  if (cb) { setEvidence(+cb.dataset.off, cb.checked, true); ev.stopPropagation(); return; }
   if (ev.target.closest('label')) return; // label click is forwarded to the checkbox
   const go = ev.target.closest('[data-go]');
   if (go) { stopPlay(); setStep(+go.dataset.go); return; }
@@ -642,13 +644,20 @@ $('signals').addEventListener('click', (ev) => {
 // ---------- step state ----------
 let STEP = -1;
 const searchedUpTo = (i) => { const s = new Set(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) (e.segments || []).forEach((id) => s.add(id)); }); return s; };
+// evidence id = step's hintId (string) or step index; '*' with on:true restores all
+const stepOfEvidence = (id) => (Number.isInteger(id) ? id : R.steps.findIndex((s) => s.hintId === id));
+function setEvidence(id, on, notify = false) {
+  if (id === '*') { if (on) OFF.clear(); }
+  else { const k = stepOfEvidence(id); if (k < 0 || k >= R.steps.length) return; if (on) OFF.delete(k); else OFF.add(k); if (notify) toParent({ type: 'evidence', id: R.steps[k].hintId ?? k, on }); }
+  const cur = STEP; STEP = -1; setStep(Math.max(0, cur), false);
+}
 function renderOffBanner(i) {
   const off = [...OFF].filter((k) => k <= i).sort((a, b) => a - b), el = $('offbanner');
   el.hidden = !off.length;
   if (!off.length) return;
   const short = (t) => (t.length > 34 ? t.slice(0, 33) + '…' : t);
   el.innerHTML = `Widok przeliczony w przeglądarce bez: ${off.map((k) => `<b>${esc(short(R.steps[k].label))}</b>`).join(', ')} <button class="btn sm" id="resetoff">Przywróć</button>`;
-  $('resetoff').onclick = () => { OFF.clear(); const k = STEP; STEP = -1; setStep(k, false); };
+  $('resetoff').onclick = () => { setEvidence('*', true); toParent({ type: 'evidence', id: '*', on: true }); };
   $('rank-scope').textContent = `Przeliczony w przeglądarce bez ${off.length} ${off.length === 1 ? 'sygnału' : 'sygnałów'} (silnik: krok ${i + 1})`;
 }
 const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
@@ -1155,6 +1164,7 @@ addEventListener('message', (e) => {
   try {
     if (m.type === 'step' && Number.isInteger(m.i)) { stopPlay(); setStep(m.i); }
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
+    else if (m.type === 'evidence' && (typeof m.id === 'string' || Number.isInteger(m.id))) setEvidence(m.id, m.on !== false);
     else if (m.type === 'run' && m.run && typeof m.run === 'object') {
       sessionStorage.setItem('rescue3d-run', JSON.stringify(m.run));
       const u = new URL(location.href); u.searchParams.set('runInline', '1'); u.searchParams.delete('run'); location.replace(u);

@@ -268,3 +268,7 @@ body.embed .tip, body.embed .toast { background: var(--rl-panel, #151c22); color
 #signals .lnk { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; text-decoration: underline; }
 #signals li.off .tt { text-decoration: line-through; color: var(--mute); }
 @media (max-width: 1250px) { #offbanner { left: 364px; right: 12px; transform: none; max-width: none; } }
+
+/* ?embed=scene: keep the 3D buttons and banners, drop the timeline and progress (the shell has its own) */
+body.embed-scene #timeline, body.embed-scene #progress { display: none; }
+body.embed-scene #hud { bottom: 12px; }
