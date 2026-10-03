@@ -422,6 +422,7 @@ body.signals,body.mode-edycja{--dock-h:166px}
 #play{width:34px;height:34px;font-size:13px;box-shadow:none}
 #tlabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #clock{flex:0 1 300px;min-width:0;max-width:300px;font-size:12.5px}
+.dkstep{flex:none;font:500 12px/1 var(--rl-mono);color:var(--rl-mute);white-space:nowrap}.dkstep b{color:var(--rl-ink);font-weight:700}
 .advbox{display:contents}
 .advbox #advNextT{max-width:230px;order:2;flex:0 1 auto;min-width:0}
 .tl{order:1}.ticker{order:3}#evReset,#sigBtn{order:4}

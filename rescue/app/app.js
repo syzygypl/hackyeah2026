@@ -217,7 +217,7 @@ function renderPanels() {
       ${a ? `<div>→ <b class="seglink" data-seg="${esc(a.segmentId)}" style="cursor:pointer">${esc(a.segmentId)} ${esc(a.segmentName)}</b>${a.by === "operator" ? ` <span class="pill">operator</span>` : ""}</div>${(a.safety || []).map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}
       <details><summary>Szczegóły</summary>${isFinite(a.travelMin) ? `<div>Dojście ok. ${Math.round(a.travelMin)} min.</div>` : ""}<div>${esc(a.reason || `Skuteczność przeszukania ${pct(a.pod)}, przeszukanie ok. ${Math.round(a.sweepMin || 0)} min.`)}</div></details>` : ""}</div>`; }).join("") || `<div class="help">Ten scenariusz nie ma jeszcze zespołów.</div>`;
   renderProgress(); renderEvents();
-  $("clock").textContent = S.t + " · " + S.label;
+  $("clock").textContent = S.label;   // the time sits in the k/n · HH:MM counter (#dkStep)
   $("slider").max = R.steps.length; $("slider").value = store.step;
   $("status").textContent = `${R.incident || ""}${store.backend !== "studio" ? " · tylko odczyt" : ""}`;
   document.body.classList.toggle("readonly", !store.editable);
@@ -834,6 +834,7 @@ async function advance(op) {
 }
 $("advNext").onclick = () => advance("next");
 // Historia: rewind the recording to its first event (local to this screen, nobody else sees it)
+$("stepPrev").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); setStep(store.step - 1); };   // ported from b069c21 (AI Andrzeja)
 $("histStart").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); setStep(1); };
 $("advStart").onclick = () => advance("start");
 $("tmode").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) setTime(b.dataset.t); };
@@ -863,7 +864,7 @@ function renderLiveHead() {
   // dock: Historia plays the recording; Na żywo holds the timeline at now
   const on = liveOn();
   // Na żywo: no replay; the operator moves the incident on for everyone (POST /api/advance), the server's liveCursor says what is next
-  $("slider").hidden = on; $("play").hidden = on; $("histStart").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
+  $("slider").hidden = on; $("play").hidden = on; $("histStart").hidden = on; $("stepPrev").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
   const lc = D() && D().liveCursor, nx = lc && lc.next;
   $("advNext").disabled = !!advance.busy || !liveNow() || !nx; $("advStart").disabled = !!advance.busy || !liveNow();
   $("advNextT").textContent = advance.busy ? advance.busy : !lc ? "" : nx ? `dalej ${nx.at} · ${shortEv(nx.title, evKind({ label: nx.title }))}` : "koniec nagranej akcji";
@@ -914,6 +915,9 @@ function renderDock() {
   const n = R.steps.length, S = curStep();
   $("tlMarks").innerHTML = R.steps.map((s, k) => `<i class="tlk k-${evKind(s)}${k + 1 === store.step ? " cur" : k + 1 > store.step ? " fut" : ""}" style="left:${n > 1 ? (k / (n - 1) * 100).toFixed(2) : 50}%${evKind(s) !== "found" && EV_COL[s.kind] ? `;--c:var(${EV_COL[s.kind]})` : ""}"></i>`).join("");
   if (S) $("clock").title = S.t + " · " + S.label;
+  // step counter "k/n · HH:MM" (ported from b069c21, AI Andrzeja); Na żywo: "teraz HH:MM"
+  if (S) $("dkStep").innerHTML = liveOn() ? `teraz <b>${esc(S.t)}</b>` : `<b>${store.step}</b>/${n} · ${esc(S.t)}`;
+  $("stepPrev").disabled = store.step <= 1;
   const byTitle = (t) => { const st = R.steps.find((s) => s.label === t); return st ? evKind(st) : /^ZNALEZIONO/i.test(t || "") ? "found" : "slad"; };
   const items = liveOn() && live.events.length
     ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title) }))
