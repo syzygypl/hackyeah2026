@@ -349,7 +349,8 @@ const compTex = new THREE.CanvasTexture(compCanvas); compTex.colorSpace = THREE.
 // contour edges at the 2x / 5x / 10x stops of the shared scale and a slow pulse on the hotspot
 const heatTex = () => { const t = new THREE.CanvasTexture(document.createElement('canvas')); t.colorSpace = THREE.SRGBColorSpace; return t; };
 const heatU = { uHeatFrom: { value: heatTex() }, uHeatTo: { value: heatTex() }, uHeatT: { value: 1 }, uHeatOn: { value: new THREE.Vector2() },
-  uHeatRect: { value: new THREE.Vector4() }, uHeatEdges: { value: new THREE.Vector3() }, uTime: { value: 0 }, uEmis: { value: 0 } };
+  uHeatRect: { value: new THREE.Vector4() }, uHeatEdges: { value: new THREE.Vector3() }, uTime: { value: 0 }, uEmis: { value: 0 },
+  uSnowY: { value: ((2350 - zMin) * EX) / 1000 }, uWind: { value: 0.03 } };
 
 const terrainGeo = new THREE.PlaneGeometry(WKM, HKM, DEM.cols - 1, DEM.rows - 1);
 terrainGeo.rotateX(-Math.PI / 2);
@@ -424,7 +425,7 @@ terrainMat.onBeforeCompile = (sh) => {
     .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDW = (modelMatrix * vec4(transformed, 1.0)).xyz; vDN = normal;');
   sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
     varying vec3 vDW; varying vec3 vDN;
-    uniform sampler2D uHeatFrom; uniform sampler2D uHeatTo; uniform float uHeatT; uniform vec2 uHeatOn; uniform vec4 uHeatRect; uniform vec3 uHeatEdges; uniform float uTime; uniform float uEmis; uniform sampler2D uSunMask;
+    uniform sampler2D uHeatFrom; uniform sampler2D uHeatTo; uniform float uHeatT; uniform vec2 uHeatOn; uniform vec4 uHeatRect; uniform vec3 uHeatEdges; uniform float uTime; uniform float uEmis; uniform sampler2D uSunMask; uniform float uSnowY;
     float dHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float dNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       return mix(mix(dHash(i), dHash(i + vec2(1, 0)), f.x), mix(dHash(i + vec2(0, 1)), dHash(i + vec2(1, 1)), f.x), f.y); }
@@ -462,14 +463,22 @@ terrainMat.onBeforeCompile = (sh) => {
         }
       }
     }`)
-    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n    totalEmissiveRadiance += heatEmit * uEmis;')
+    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+    totalEmissiveRadiance += heatEmit * uEmis;
+    { // snow glints: sparse sunlit cells on gentle snowfields near the camera, twinkling as the camera moves
+      float dist = length(vDW - cameraPosition), snow = smoothstep(uSnowY, uSnowY + 0.12, vDW.y) * smoothstep(0.55, 0.75, vDN.y);
+      if (snow > 0.0 && dist < 6.0) {
+        float g = dHash(floor(vDW.xz * 600.0) + floor(cameraPosition.xz * 40.0));
+        totalEmissiveRadiance += vec3(1.0, 0.97, 0.9) * step(0.986, g) * snow * bakedSun * (1.0 - smoothstep(2.0, 6.0, dist)) * 2.5;
+      }
+    }`)
     // the sun's shadow is the darker of the baked far cascade and the near shadow map (which is 1 outside its box)
     .replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin
       .replace('? getShadow( directionalShadowMap[ i ],', '? min( bakedSun, getShadow( directionalShadowMap[ i ],')
       .replace('vDirectionalShadowCoord[ i ] ) : 1.0;', 'vDirectionalShadowCoord[ i ] ) ) : bakedSun;'));
 };
 heatU.uSunMask = { value: sunMask };
-terrainMat.customProgramCacheKey = () => 'terrain-detail-heat-sun-1';
+terrainMat.customProgramCacheKey = () => 'terrain-detail-heat-sun-snow-1';
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
@@ -615,7 +624,20 @@ for (const t of TER?.trails || []) {
   drapeRuns(t.points, 0.014, { color: TRAIL_COL[key] || '#555', width: 2 }, statics);
 }
 for (const s of TER?.streams || []) drapeRuns(s.points, 0.008, { color: '#3a86c8', width: 1.3, opacity: 0.75 }, statics);
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x1f8fa6, emissive: 0x06303a, roughness: 0.12, metalness: 0.25 });
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x03181d, roughness: 0.14, metalness: 0.35 });
+// lake ripples: animated wave normals (stronger in wind), reflecting the sky environment map
+waterMat.onBeforeCompile = (sh) => {
+  sh.uniforms.uTime = heatU.uTime; sh.uniforms.uWind = heatU.uWind;
+  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWW;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWW; uniform float uTime; uniform float uWind;')
+    .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+    { vec2 p = vWW.xz * 260.0; float t = uTime, a = 0.25 + uWind * 6.0;
+      vec2 q = p + vec2(sin(p.y * 0.37 + t * 0.4), cos(p.x * 0.41 - t * 0.3)) * 2.2; // domain warp: no regular grid
+      vec3 nW = normalize(vec3((sin(q.x + t * 1.3) * 0.5 + sin((q.x * 0.6 + q.y) * 1.3 - t * 1.1) * 0.35) * a, 8.0, (sin(q.y * 0.9 + t * 0.9) * 0.5 + sin((q.x - q.y * 0.7) * 1.1 + t * 1.6) * 0.3) * a));
+      normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz); }`);
+};
+waterMat.customProgramCacheKey = () => 'water-ripples-1';
 for (const l of TER?.lakes || []) {
   const m = new THREE.Mesh(new THREE.CircleGeometry(l.radiusM / 1000, 48).rotateX(-Math.PI / 2), waterMat);
   m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
@@ -667,6 +689,21 @@ const forest = new THREE.Group(); scene.add(forest);
   }
   const pineGeo = new THREE.IcosahedronGeometry(0.5, 0); pineGeo.scale(1, 0.45, 1); pineGeo.translate(0, 0.18, 0);
   const treeMat = new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true });
+  // wind: the crown sways with the step's reported wind, phase from the instance position
+  treeMat.onBeforeCompile = (sh) => {
+    sh.uniforms.uTime = heatU.uTime; sh.uniforms.uWind = heatU.uWind;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime; uniform float uWind;')
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        vec2 ph = instanceMatrix[3].xz * 37.0;
+      #else
+        vec2 ph = vec2(0.0);
+      #endif
+      float bend = position.y * position.y * uWind;
+      transformed.x += bend * (sin(uTime * 1.7 + ph.x) * 0.6 + sin(uTime * 3.1 + ph.y) * 0.25);
+      transformed.z += bend * sin(uTime * 2.3 + ph.y) * 0.4;`);
+  };
+  treeMat.customProgramCacheKey = () => 'tree-wind-1';
   place(spruce, sprGeo, treeMat, 0.026, 0.044, '#2f5d34', '#4f7d40');
   place(pine, pineGeo, treeMat, 0.012, 0.02, '#4c7639', '#6d9346');
 }
@@ -687,7 +724,7 @@ const MOODS = {
   fog: { top: '#7f9bb8', bottom: '#ece5d8', fog: '#cdd6df', sun: '#fff5e8', sunI: 2.3, hs: '#dbe6f2', hg: '#6f6656', hI: 1.0, stars: 0, emis: 0, exp: 1.12 },
   night: { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#e3eaff', sunI: 2.9, hs: '#cad7f0', hg: '#5c5c68', hI: 1.65, stars: 0.6, emis: 0.25, exp: 1.2 },
 };
-const cur = { top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60 };
+const cur = { top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60, wind: 0.02 };
 let tgt = { ...cur }, weatherOn = true;
 function setMood(w) {
   const vis = w?.visibilityM ?? 10000, dark = !!w?.dark && weatherOn;
@@ -696,12 +733,14 @@ function setMood(w) {
     top: new THREE.Color(m.top), bottom: new THREE.Color(m.bottom), fog: new THREE.Color(m.fog), sun: new THREE.Color(m.sun), hs: new THREE.Color(m.hs), hg: new THREE.Color(m.hg),
     sunI: m.sunI, hI: m.hI, stars: m.stars * (vis >= 500 ? 1 : 0.1), emis: m.emis, exp: m.exp,
     near: !weatherOn ? 9 : vis <= 100 ? 5 : vis < 500 ? 6 : 9, far: !weatherOn ? 40 : vis <= 100 ? 22 : vis < 500 ? 28 : 40,
+    wind: clamp((weatherOn ? w?.windMs ?? 4 : 4) / 14, 0.15, 1.5) * 0.07,
   };
 }
 function stepMood(dt) {
   const k = 1 - Math.exp(-dt * 1.8);
   for (const c of ['top', 'bottom', 'fog', 'sun', 'hs', 'hg']) cur[c].lerp(tgt[c], k);
-  for (const n of ['sunI', 'hI', 'stars', 'emis', 'exp', 'near', 'far']) cur[n] += (tgt[n] - cur[n]) * k;
+  for (const n of ['sunI', 'hI', 'stars', 'emis', 'exp', 'near', 'far', 'wind']) cur[n] += (tgt[n] - cur[n]) * k;
+  heatU.uWind.value = cur.wind;
   skyMat.uniforms.top.value.copy(cur.top); skyMat.uniforms.bottom.value.copy(cur.bottom);
   scene.fog.color.copy(cur.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
   sun.color.copy(cur.sun); sun.intensity = cur.sunI; hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hI;
