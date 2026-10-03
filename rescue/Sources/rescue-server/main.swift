@@ -386,11 +386,18 @@ actor IncidentCache {
 }
 let incidentCache = IncidentCache()
 func fileSize(_ p: String) -> Int { (try? FileManager.default.attributesOfItem(atPath: p)[.size] as? Int) ?? 0 }
+/// size+mtime of scenarios/<sc>.json and its terrain: a story re-saved in Studio or pulled by tools/sync-stories.sh invalidates the caches
+func scenarioStamp(_ sc: String) -> String {
+    ["\(sc).json", "\(sc)-terrain.json"].map { f -> String in
+        let a = try? FileManager.default.attributesOfItem(atPath: scenariosDir.appendingPathComponent(f).path)
+        return "\((a?[.size] as? Int) ?? 0)@\((a?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0)"
+    }.joined(separator: ",")
+}
 func incidentsData() async -> Data {
     let feedSeq = await liveFeed.seq, rv = await roster.version, asg = await assignmentList()
     var out: [[String: Any]] = []
     for sc in scenarioNames() {
-        let key = "\(sc)|\(feedSeq)|\(rv)|\(fileSize(livePath))|\(fileSize(livePathFor(sc)))"
+        let key = "\(sc)|\(feedSeq)|\(rv)|\(fileSize(livePath))|\(fileSize(livePathFor(sc)))|\(scenarioStamp(sc))"
         var base = await incidentCache.get(key)
         if base == nil, let run = await runScenario(sc, live: true) {
             let d = jsonObject(run), all = (d["steps"] as? [[String: Any]]) ?? []
@@ -563,7 +570,7 @@ func handle(_ q: Req) async -> Data {
             guard validName(name) else { return jsonErr("400 Bad Request", "bad scenario name") }
             let liveSize = (try? FileManager.default.attributesOfItem(atPath: livePath)[.size] as? Int) ?? 0
             let llm = q.query["llm"] != "0"
-            let key = "\(name)|\(q.query["step"] ?? "last")|\(liveSize)|\(llm)"
+            let key = "\(name)|\(q.query["step"] ?? "last")|\(liveSize)|\(llm)|\(scenarioStamp(name))"
             if let c = await assessCache.get(key) { return response("200 OK", json, c) }
             guard let run = await runScenario(name, live: q.query["live"] != "0") else { return jsonErr("404 Not Found", "no scenario \(name)") }
             let step = q.query["step"].flatMap(Int.init)
