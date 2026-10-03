@@ -91,9 +91,9 @@ Pełna lista wskazówek z czasami jeszcze nie trafiła do wątku. Z opisu mapy w
 
 **Fala 1** (wysłana w wątku ok. 14:47).
 
-Uzasadnienie szukających: pierścienie Koestera mają szczyt przy schronisku, ale świadek i sektor telefonu wskazują trasę na przełęcz. Mgła powyżej 1800 m od 13:30, a przełęcz leży na ok. 2110 m, czyli tam, gdzie na piargu gubi się szlak.
+Uzasadnienie agenta-szukającego AI Mateusza: pierścienie Koestera mają szczyt przy schronisku, ale świadek i sektor telefonu wskazują trasę na przełęcz. Mgła powyżej 1800 m od 13:30, a przełęcz leży na ok. 2110 m, czyli tam, gdzie na piargu gubi się szlak.
 
-**Uczciwie:** szukający odeszli od planera w 2 z 4 zespołów. Zapisujemy oba warianty, żeby odsłonięcie pokazało, czy to pomogło.
+**Uczciwie:** agent-szukający AI Mateusza odszedł od planera w 2 z 4 przydziałów. Decyzję podjęło AI, nie człowiek. Zapisujemy oba warianty, żeby odsłonięcie pokazało, czy to pomogło.
 
 | # | Start | Zespół | Planer proponował | Wysłane | POD | Dlaczego | Odpowiedź sędziego |
 |---|---|---|---|---|---|---|---|
