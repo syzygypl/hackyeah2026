@@ -287,7 +287,7 @@ labels.setSize(innerWidth, innerHeight);
 Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
 host.appendChild(labels.domElement);
 
-installHeightFog(); // fx3d: valley haze + aerial perspective, before any material compiles
+const ATMO = installHeightFog(); // fx3d: aerial perspective, before any material compiles
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -320,6 +320,7 @@ applyInsets();
 const SUN_DIR = new THREE.Vector3(-0.72, 0.32, -0.38).normalize(); // low evening sun from the west
 const skyMat = FX.sky(SUN_DIR);
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16), skyMat));
+ATMO.uAtmoSun.value = SUN_DIR; // haze glows towards the sun
 const starGeo = new THREE.BufferGeometry();
 {
   const n = 900, pos = new Float32Array(n * 3);
@@ -906,6 +907,7 @@ const MOODS = {
 };
 const cur = { cloud: 0.35, rain: 0, snow: 0, top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60, wind: 0.02, cover: 0 };
 let tgt = { ...cur }, weatherOn = true;
+const C_HAZE = new THREE.Color(0.86, 0.94, 1.06), C_WHITE = new THREE.Color(1, 1, 1);
 function setMood(w) {
   const vis = w?.visibilityM ?? 10000, dark = !!w?.dark && weatherOn;
   const m = dark ? MOODS.night : weatherOn && vis < 500 ? MOODS.fog : MOODS.day;
@@ -941,6 +943,11 @@ function stepMood(dt) {
   starMat.opacity = cur.stars; heatU.uEmis.value = cur.emis; renderer.toneMappingExposure = cur.exp;
   skyMat.uniforms.sunCol.value.copy(cur.sun); skyMat.uniforms.sunAmt.value = clamp(1.4 - cur.stars * 1.6, 0.15, 1.2) * (cur.near < 7 ? 0.45 : 1);
   hemi.intensity = cur.hI * 0.45; // the sky environment map carries the rest of the ambient light
+  // the sky's horizon melts into the terrain haze; clouds: sun-lit tops, bases lit by the sky; haze warm towards the sun
+  skyMat.uniforms.uHaze.value.copy(cur.fog).multiply(C_HAZE);
+  skyMat.uniforms.uCloudLit.value.copy(C_WHITE).multiplyScalar(0.95).lerp(cur.sun, 0.25).multiplyScalar(clamp(1 - cur.stars * 1.2, 0.25, 1));
+  skyMat.uniforms.uCloudDark.value.copy(cur.bottom).lerp(cur.top, 0.35).multiplyScalar(0.92);
+  ATMO.uAtmoSunCol.value.copy(cur.sun).multiplyScalar(clamp(1 - cur.stars * 1.6, 0, 1) * (cur.near < 7 ? 0.5 : 1));
   if ((Math.abs(cur.top.r - tgt.top.r) + Math.abs(cur.bottom.g - tgt.bottom.g) + Math.abs(cur.fog.b - tgt.fog.b) > 0.004 && performance.now() - envAt > 250) || envAt < 0) updateEnv();
 }
 // image-based light from the sky dome: prefiltered with PMREM, re-baked only while the mood (day/fog/night) is changing
@@ -949,7 +956,9 @@ envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), envSkyMat));
 let envRT = null, envAt = -1;
 function updateEnv() {
   const u = envSkyMat.uniforms;
-  u.top.value.copy(cur.top); u.bottom.value.copy(cur.bottom).lerp(cur.hg, 0.55); u.sunDir.value.copy(SUN_DIR); u.sunCol.value.copy(cur.sun); u.sunAmt.value = skyMat.uniforms.sunAmt.value * 0.15; u.uCloud.value = cur.cloud;
+  const s = skyMat.uniforms;
+  for (const k in s) { const v = s[k].value; if (v?.copy) u[k].value.copy(v); else u[k].value = v; }
+  u.bottom.value.lerp(cur.hg, 0.55); u.sunAmt.value = s.sunAmt.value * 0.15; u.uFlash.value = 0;
   const rt = pmrem.fromScene(envScene, 0, 0.1, 50);
   scene.environment = rt.texture; envRT?.dispose(); envRT = rt; envAt = performance.now();
 }

@@ -42,8 +42,11 @@ export function declareUniforms(uniforms) {
   }).join('\n');
 }
 
+// effects every applyFx material gets (installHeightFog registers the atmosphere: valley fog, alpenglow, sun haze)
+export const FX_GLOBAL = [];
+
 export function applyFx(material, effects) {
-  const on = effects.filter((e) => e && !FX_OFF.has(e.name));
+  const on = [...effects, ...FX_GLOBAL].filter((e) => e && !FX_OFF.has(e.name));
   const list = on.filter((e) => (e.requires || []).every((r) => on.some((x) => x.name === r)));
   const uniforms = Object.assign({}, ...list.map((e) => e.uniforms || {}));
   const head = `${declareUniforms(uniforms)}\nvarying vec3 fxWorld; varying vec3 fxObjNormal;\n${FX_LIB}\n${list.map((e) => e.glsl || '').join('\n')}`;
@@ -82,28 +85,51 @@ export function fxShader({ uniforms = {}, vertex, fragment, ...opts }) {
   return new THREE.ShaderMaterial({ uniforms, vertexShader: head + vertex, fragmentShader: head + fragment, ...opts });
 }
 
-// ---------- global: height fog + aerial perspective ----------
-// three's fog chunks, replaced once before any material compiles. Valleys (low world y) fill with haze, denser in bad
-// weather (read from fogNear: 9 clear, 6 fog, 5 thick), and distance shifts towards blue. World y comes from the view
-// matrix's rotation rows (the camera is rigid), not a per-vertex inverse(viewMatrix).
+// ---------- global: aerial perspective ----------
+// three's fog chunks, replaced once before any material compiles. Every fogged material gets aerial perspective: clear-air
+// haze with an exponential height profile integrated along the view ray (thin up high, thick in the valleys), blue
+// scattered out first, denser in bad weather (read from fogNear: 9 clear, 6 fog, 5 thick); then the weather fog
+// (near / far). applyFx materials (terrain, trees, buildings, water) also get the atmosphere effect returned here: a warm
+// Mie lobe in the haze towards the sun. World position comes from the view matrix's rotation rows (the camera is rigid),
+// not a per-vertex inverse(viewMatrix).
 export function installHeightFog() {
-  THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float vFogDepth; varying float vFogY;\n#endif';
+  const U = { uAtmoSun: { value: new THREE.Vector3(0, 1, 0) }, uAtmoSunCol: { value: new THREE.Color(0, 0, 0) } };
+  FX_GLOBAL.push({ name: 'atmo', uniforms: U, glsl: '#define FX_ATMO 1' });
+  THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float vFogDepth; varying float vFogY; varying vec3 vFogW;\n#endif';
   THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
  vFogDepth = - mvPosition.z;
+ vFogW = vec3( dot( viewMatrix[0].xyz, mvPosition.xyz ), dot( viewMatrix[1].xyz, mvPosition.xyz ), dot( viewMatrix[2].xyz, mvPosition.xyz ) ); // R^T . view = world offset from the camera
  vFogY = dot(viewMatrix[1].xyz, mvPosition.xyz - viewMatrix[3].xyz); // world y = column 1 of R . (view - t)
 #endif`;
-  THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float vFogDepth; varying float vFogY;\n #ifdef FOG_EXP2\n uniform float fogDensity;\n #else\n uniform float fogNear; uniform float fogFar;\n #endif\n#endif';
+  THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float vFogDepth; varying float vFogY; varying vec3 vFogW;\n #ifdef FOG_EXP2\n uniform float fogDensity;\n #else\n uniform float fogNear; uniform float fogFar;\n #endif\n#endif';
   THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
+  {
+  float fogDist = length( vFogW ), fogCamY = vFogY - vFogW.y;
+  vec3 fogV = vFogW / max( fogDist, 1e-5 );
+  #ifdef FX_ATMO
+    vec3 fogSunD = uAtmoSun, fogSunC = uAtmoSunCol;
+  #else
+    vec3 fogSunD = vec3( 0.0, 1.0, 0.0 ), fogSunC = vec3( 0.0 );
+  #endif
+  #ifdef FOG_EXP2
+    float hzK = 1.0;
+  #else
+    float hzK = clamp( ( 14.0 - fogNear ) / 5.0, 1.0, 1.9 );
+  #endif
+  // aerial perspective: density a * exp(-b y), integrated from the camera to the pixel
+  float hzB = 0.45, hzF = abs( vFogW.y ) > 1e-3 ? ( exp( - hzB * fogCamY ) - exp( - hzB * vFogY ) ) / ( hzB * vFogW.y ) : exp( - hzB * vFogY );
+  vec3 hzT = exp( - 0.065 * hzK * fogDist * hzF * vec3( 0.45, 0.68, 1.0 ) );
+  vec3 hzSun = fogSunC * ( 0.009 / pow( 1.49 - 1.4 * dot( fogV, fogSunD ), 1.5 ) ); // Henyey-Greenstein g = 0.7
+  gl_FragColor.rgb = gl_FragColor.rgb * hzT + ( fogColor * vec3( 0.86, 0.94, 1.06 ) + hzSun ) * ( 1.0 - hzT );
   #ifdef FOG_EXP2
     float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
   #else
     float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
-    float valley = clamp( ( 12.0 - fogNear ) / 6.0, 0.5, 1.0 ) * exp( - max( vFogY - 0.15, 0.0 ) * 1.7 ) * smoothstep( 0.4, 6.0, vFogDepth );
-    fogFactor = clamp( fogFactor + ( 1.0 - fogFactor ) * valley * 0.7, 0.0, 1.0 );
-    gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor * vec3( 0.84, 0.92, 1.07 ), smoothstep( 2.0, 30.0, vFogDepth ) * 0.38 );
   #endif
-  gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor + hzSun * 0.6, fogFactor );
+  }
 #endif`;
+  return U;
 }
 
 // ---------- shared water shading (lakes and sea) ----------
@@ -151,26 +177,63 @@ const WATER_GLITTER = `
 // ---------- effects ----------
 // U: shared uniforms owned by the page (time, wind, heat textures...), so one value drives every material using it
 export const FX = {
-  // gradient sky with sun disk and halo (full custom shader, rendered on the inside of a sphere)
-  // plus a cloud layer drifting with the wind (uCloudOff), its cover from the step's weather (uCloud 0..1)
+  // sky dome (full custom shader on the inside of a sphere), cheap analytic scattering instead of lookup tables:
+  // zenith -> horizon gradient (top / bottom from the time-of-day palette), Rayleigh (1 + mu^2) brightness, a warm
+  // horizon glow under the sun while it is low, the pink belt of Venus over the blue earth shadow opposite it at dusk,
+  // sun disk with a Mie halo (Henyey-Greenstein), the moon, and the horizon melting into the aerial-perspective haze
+  // (uHaze = the terrain fog colour), so far ridges and sky meet in one colour.
+  // Clouds: a high streaky layer that keeps the light longest at dusk and a main layer drifting with the wind
+  // (uCloudOff), cover from the step's weather (uCloud 0..1); lit by a second density tap towards the sun (bright tops,
+  // self-shadowed bases), silver lining near the sun, orange undersides at sunset; uFlash = lightning in the clouds.
   sky: (sunDir) => fxShader({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() }, sunDir: { value: sunDir }, sunCol: { value: new THREE.Color('#ffd9a0') }, sunAmt: { value: 1 },
-      uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() } },
+    uniforms: { top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() }, uHaze: { value: new THREE.Color('#c9d8e6') }, sunDir: { value: sunDir },
+      sunCol: { value: new THREE.Color('#ffd9a0') }, sunAmt: { value: 1 }, uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() },
+      uCloudLit: { value: new THREE.Color(0.9, 0.9, 0.92) }, uCloudDark: { value: new THREE.Color(0.5, 0.55, 0.62) },
+      uMoonDir: { value: new THREE.Vector3(0, 1, 0) }, uMoon: { value: 0 }, uFlash: { value: 0 } },
     vertex: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragment: `varying vec3 vP;
+    float cloudN(vec2 uv, float lod) { return fxFbm(uv * 1.4, lod) + 0.22 * fxNoise(uv * 7.0); }
     void main(){
-      float h = clamp(vP.y*1.5+0.1,0.0,1.0);
-      vec3 c = mix(bottom, top, pow(h,0.75));
-      float d = max(dot(normalize(vP), sunDir), 0.0);
-      c += sunCol * (pow(d, 900.0) * 6.0 + pow(d, 60.0) * 0.45 + pow(d, 6.0) * 0.18) * sunAmt;
-      if (vP.y > 0.0 && uCloud > 0.01) {
-        vec2 uv = vP.xz / (vP.y + 0.12) * 1.3 + uCloudOff;
-        float n = fxFbm(uv * 1.4, 0.0) + 0.25 * fxNoise(uv * 7.0);
-        float cov = smoothstep(0.78 - uCloud * 0.42, 0.98 - uCloud * 0.3, n) * smoothstep(0.0, 0.16, vP.y);
-        vec3 lit = mix(vec3(0.93, 0.94, 0.96), sunCol, 0.28) * (0.62 + 0.45 * smoothstep(0.5, 1.1, n + d * 0.3));
-        c = mix(c, mix(lit * mix(0.35, 1.0, clamp(sunAmt, 0.0, 1.0)), bottom, 0.25 * (1.0 - vP.y)), cov * 0.92);
+      vec3 v = normalize(vP);
+      float y = v.y, yy = max(y, 0.0), mu = dot(v, sunDir), sy = sunDir.y;
+      vec3 c = mix(bottom, top, pow(clamp(y * 1.5 + 0.1, 0.0, 1.0), 0.75));
+      c *= 0.93 + 0.09 * mu * mu; // Rayleigh phase
+      vec2 sh = normalize(sunDir.xz + 1e-5);
+      float az = dot(normalize(v.xz + 1e-5), sh) * 0.5 + 0.5; // 1 under the sun, 0 opposite
+      float tw = smoothstep(0.42, 0.02, sy) * smoothstep(-0.24, -0.03, sy); // sun near the horizon
+      float band = exp(-yy * mix(9.0, 3.5, pow(az, 6.0)));
+      c += sunCol * band * tw * (0.08 + 0.92 * pow(az, 5.0)) * sunAmt;
+      float dusk = smoothstep(0.1, -0.01, sy) * smoothstep(-0.22, -0.05, sy) * pow(1.0 - az, 2.0);
+      c = mix(c, vec3(0.9, 0.58, 0.64) * (0.35 + 0.8 * dot(bottom, vec3(0.33))), dusk * smoothstep(0.02, 0.09, y) * (1.0 - smoothstep(0.12, 0.32, y)) * 0.55 * sunAmt);
+      c = mix(c, c * vec3(0.7, 0.77, 0.95), dusk * (1.0 - smoothstep(0.0, 0.07, y)) * sunAmt);
+      float up = smoothstep(-0.1, 0.02, sy);
+      float halo = (0.4224 / pow(1.5776 - 1.52 * mu, 1.5) * 0.016 + pow(max(mu, 0.0), 6.0) * 0.12) * sunAmt * up;
+      c = mix(c, sunCol * 1.15, clamp(halo, 0.0, 0.85)); // blended, not added: no green where yellow meets blue
+      c += (sunCol * 1.6 + 0.5) * smoothstep(0.99976, 0.99986, mu) * smoothstep(-0.01, 0.01, y) * sunAmt * up;
+      float md = dot(v, uMoonDir);
+      c += vec3(0.82, 0.88, 1.0) * (smoothstep(0.99975, 0.99988, md) * 1.5 + pow(max(md, 0.0), 400.0) * 0.2 + pow(max(md, 0.0), 24.0) * 0.05) * uMoon;
+      c = mix(c, uHaze, 0.45 * exp(-yy * 14.0));
+      c = mix(c, uHaze, smoothstep(0.0, -0.1, y));
+      if (y > -0.02 && uCloud > 0.01) {
+        float yc = max(y, 0.0), lod = 1.0 - smoothstep(0.03, 0.3, yc);
+        vec2 uv = v.xz / (yc + 0.12) * 1.3 + uCloudOff;
+        vec2 cu = uv * 0.45 + uCloudOff * 0.3;
+        float ci = fxNoise(vec2(cu.x * 0.7 + cu.y * 0.5, (cu.y - cu.x * 0.3) * 4.0)) * fxNoise(cu * 1.7 + 3.1);
+        float cir = smoothstep(0.3, 0.68, ci) * smoothstep(0.03, 0.22, yc) * (0.35 + 0.5 * uCloud) * (1.0 - smoothstep(0.6, 0.9, uCloud));
+        c = mix(c, uCloudLit + sunCol * tw * 0.45 * sunAmt, cir * 0.4);
+        float n = cloudN(uv, lod);
+        float cov = smoothstep(0.78 - uCloud * 0.42, 0.98 - uCloud * 0.3, n) * smoothstep(-0.02, 0.12, y);
+        if (cov > 0.002) {
+          float lit = clamp(0.62 + (n - cloudN(uv + sh * 0.09, lod)) * 5.0, 0.0, 1.0);
+          float thick = smoothstep(0.6, 1.25, n + uCloud * 0.25);
+          vec3 cc = mix(uCloudDark, uCloudLit, lit * (1.0 - thick * 0.55));
+          cc += sunCol * (pow(max(mu, 0.0), 10.0) * (1.0 - cov) * 2.2 * up + tw * band * 0.55 * (1.0 - lit * 0.5)) * sunAmt;
+          cc = mix(cc, uHaze, (1.0 - smoothstep(0.0, 0.22, yc)) * 0.55);
+          c = mix(c, cc, cov * 0.95);
+        }
       }
+      c += vec3(0.75, 0.8, 1.0) * uFlash * (0.2 + 0.8 * uCloud) * smoothstep(-0.05, 0.3, y);
       gl_FragColor = vec4(c, 1.0);
     }`,
   }),
@@ -291,11 +354,12 @@ export const FX = {
       vec3 nW = normalize(vec3((sin(q.x + t * 1.3) * 0.5 + sin((q.x * 0.6 + q.y) * 1.3 - t * 1.1) * 0.35) * a, 8.0, (sin(q.y * 0.9 + t * 0.9) * 0.5 + sin((q.x - q.y * 0.7) * 1.1 + t * 1.6) * 0.3) * a));
       normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz); }` } }),
 
-  // cloud shadows: the drifting cloud layer dims the direct sun on the terrain (needs the baked sun term)
-  cloudShadows: (U) => ({ name: 'clouds', requires: ['sun'], uniforms: { uCloud: U.uCloud, uCloudOff: U.uCloudOff },
+  // cloud shadows: the drifting cloud layer dims the direct sun on the terrain (needs the baked sun term); same cover and
+  // drift as the sky layer, cast from a deck ~1.2 km up along the light, so a low sun throws them far
+  cloudShadows: (U) => ({ name: 'clouds', requires: ['sun'], uniforms: { uCloud: U.uCloud, uCloudOff: U.uCloudOff, uSunDir: U.uSunDir },
     hooks: { color: `
     {
-      vec2 cp = fxWorld.xz * 0.32 + uCloudOff * 4.0;
+      vec2 cp = (fxWorld.xz + uSunDir.xz / max(uSunDir.y, 0.2) * 1.2) * 0.32 + uCloudOff * 4.0;
       float n = fxNoise(cp) * 0.62 + fxNoise(cp * 2.3 + 7.1) * 0.38;
       bakedSun *= 1.0 - uCloud * 0.6 * smoothstep(0.5 - uCloud * 0.2, 0.72 - uCloud * 0.15, n);
     }` } }),
