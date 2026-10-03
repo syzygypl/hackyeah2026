@@ -823,6 +823,8 @@ async function advance(op) {
   catch (e) { toast(plErr(e), 4500); renderLiveHead(); }
 }
 $("advNext").onclick = () => advance("next");
+// Historia: rewind the recording to its first event (local to this screen, nobody else sees it)
+$("histStart").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); setStep(1); };
 $("advStart").onclick = () => advance("start");
 $("tmode").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) setTime(b.dataset.t); };
 // live-only header actions (+ Nowa akcja, Centrum): inactive in Historia, a click explains how to switch
@@ -851,7 +853,7 @@ function renderLiveHead() {
   // dock: Historia plays the recording; Na żywo holds the timeline at now
   const on = liveOn();
   // Na żywo: no replay; the operator moves the incident on for everyone (POST /api/advance), the server's liveCursor says what is next
-  $("slider").hidden = on; $("play").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
+  $("slider").hidden = on; $("play").hidden = on; $("histStart").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
   const lc = D() && D().liveCursor, nx = lc && lc.next;
   $("advNext").disabled = !liveNow() || !nx; $("advStart").disabled = !liveNow();
   $("advNextT").textContent = !lc ? "" : nx ? `dalej: ${nx.at} ${nx.title}` : "koniec nagranej akcji";

@@ -410,3 +410,5 @@ body.role-ratownik::before,body.role-ratownik::after{display:none}
 .advbox{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 .advbox #advNextT{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--rl-fs-s)}
 .advbox button{flex:none}
+.advbox[hidden],#bottom [hidden]{display:none!important}   /* display:flex would beat the hidden attribute */
+#histStart{flex:none;width:40px;height:40px;min-height:0;padding:0;border-radius:50%}
