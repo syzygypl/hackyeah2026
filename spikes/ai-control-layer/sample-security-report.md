@@ -1,6 +1,6 @@
 # AI Control Layer - Security Report
 
-Generated 2026-10-03 12:22:09 - policy `a06aa07b1b` (enforce mode), signature feed 2026-10-03.2 (16 signatures)
+Generated 2026-10-03 12:28:41 - policy `8cbea5873d` (enforce mode), signature feed 2026-10-03.2 (16 signatures)
 
 ## Management summary
 
@@ -13,9 +13,9 @@ Generated 2026-10-03 12:22:09 - policy `a06aa07b1b` (enforce mode), signature fe
 | Human approvals | 4 (approved 3, rejected 1) |
 | Sensitive values redacted | 12 |
 | Risk score | 100/100 |
-| Budget used (sess-treasury-01) | 29 calls, 521 tok, $0.0049, 8403.0 ms compute |
-| Audit chain | VERIFIED (29 records, head `e45ac3e1c2b5b772`) |
-| Benchmark | p50 72.0 us, p99 89.2 us added per call, 11,404 checks/s on 1 core |
+| Budget used (sess-treasury-01) | 29 calls, 521 tok, $0.0049, 7877.3 ms compute |
+| Audit chain | VERIFIED (29 records, head `417af9abca92c507`) |
+| Benchmark | p50 73.9 us, p99 145.8 us added per call, 10,851 checks/s on 1 core |
 
 ## Guardrail activity
 
@@ -41,18 +41,18 @@ Generated 2026-10-03 12:22:09 - policy `a06aa07b1b` (enforce mode), signature fe
 
 | Check | p50 | p95 | p99 | n |
 |---|---|---|---|---|
-| _total_overhead | 104168.5 | 1063225.0 | 1451737.8 | 29 |
-| attack_signatures | 34.0 | 111.7 | 287.5 | 25 |
-| budget | 7.0 | 44.5 | 140.4 | 21 |
-| business_rules | 5.2 | 193.1 | 193.1 | 16 |
-| dlp_input | 34.2 | 154.1 | 154.1 | 18 |
-| loop_detection | 5.2 | 81.1 | 81.1 | 20 |
-| output_scan | 94774.6 | 955883.1 | 955883.1 | 10 |
-| semantic | 113650.6 | 1451522.1 | 1451522.1 | 17 |
-| semantic_heuristic | 52.9 | 249.4 | 249.4 | 17 |
-| semantic_judge | 747156.3 | 1333588.8 | 1333588.8 | 7 |
-| semantic_prefilter | 132652.8 | 286255.2 | 286255.2 | 17 |
-| tool_authz | 4.5 | 20.4 | 33.2 | 23 |
+| _total_overhead | 101339.9 | 981740.4 | 1040092.6 | 29 |
+| attack_signatures | 38.9 | 127.0 | 344.6 | 25 |
+| budget | 8.0 | 83.2 | 148.9 | 21 |
+| business_rules | 6.4 | 220.4 | 220.4 | 16 |
+| dlp_input | 30.0 | 176.5 | 176.5 | 18 |
+| loop_detection | 6.7 | 73.9 | 73.9 | 20 |
+| output_scan | 111718.0 | 941568.4 | 941568.4 | 10 |
+| semantic | 114197.9 | 882110.6 | 882110.6 | 17 |
+| semantic_heuristic | 52.3 | 304.2 | 304.2 | 17 |
+| semantic_judge | 762192.5 | 768001.7 | 768001.7 | 7 |
+| semantic_prefilter | 131318.5 | 289346.5 | 289346.5 | 17 |
+| tool_authz | 4.7 | 22.3 | 52.0 | 23 |
 
 ## Blocked and flagged events (security team)
 
@@ -95,7 +95,7 @@ Generated 2026-10-03 12:22:09 - policy `a06aa07b1b` (enforce mode), signature fe
 
 ## Self-test suite
 
-138/138 test cases passed.
+145/145 test cases passed.
 
 | Category | Passed |
 |---|---|
@@ -105,8 +105,8 @@ Generated 2026-10-03 12:22:09 - policy `a06aa07b1b` (enforce mode), signature fe
 | concurrency (gateway) | 2/2 |
 | detection plan B1-B5 block / A1-A5 allow | 11/11 |
 | encoding evasion (url, hex, html, \u, base64) | 6/6 |
-| guard consensus (parallel votes) | 8/8 |
-| injection not hidden behind PII | 3/3 |
+| guard consensus (parallel votes) | 14/14 |
+| injection not hidden behind PII | 4/4 |
 | judge live model (skips w/o granite) | 2/2 |
 | negative: attack_signatures | 13/13 |
 | negative: authz | 6/6 |

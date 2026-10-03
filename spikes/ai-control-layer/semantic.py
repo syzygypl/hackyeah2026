@@ -242,7 +242,7 @@ class SemanticGuard:
             return out
         raise StageUnavailable(f"{name}: {'; '.join(errors)}")
 
-    def score(self, text, cfg, high_risk=False, allowed=None, context=None):
+    def score(self, text, cfg, high_risk=False, allowed=None, context=None, risk="medium", phase="prompt"):
         """-> dict(score, backend, signals, heuristic_score, stages, flags, timings_us, fail, error)."""
         t = time.perf_counter_ns()
         h, signals = self.heuristic.score(text)
@@ -253,7 +253,7 @@ class SemanticGuard:
             return self._done(res)
         self._refresh(cfg.get("ollama_url", "http://localhost:11434"))
         if cfg.get("mode", "tiered") == "consensus":
-            return self._done(self._consensus(text, cfg, high_risk, allowed, context, res))
+            return self._done(self._consensus(text, cfg, high_risk, allowed, context, res, risk, phase))
         used = []
         pf = cfg.get("prefilter") or {}
         pre = []
@@ -312,7 +312,48 @@ class SemanticGuard:
         v["latency_ms"] = round((time.perf_counter_ns() - t) / 1e6, 1)
         out[i] = v
 
-    def _consensus(self, text, cfg, high_risk, allowed, context, res):
+    @staticmethod
+    def _weight(guard_cfg):
+        p = min(max(float(guard_cfg.get("accuracy", 0.75)), 0.501), 0.999)
+        return round(math.log(p / (1 - p)), 3)
+
+    def _resolve_disagreement(self, cfg, cc, votes, guards, risk, phase, allowed, text, context):
+        """Andrzej's rule: arbiter first, then log-odds weighted votes, then the tier fallback. Never a human by default."""
+        action = (cc.get("on_disagreement") or {}).get(risk, "allow_flag")
+        steps = []
+        if action.startswith("arbiter"):
+            arb = cc.get("arbiter") or {}
+            crits = (arb.get("criteria_by_phase") or {}).get(phase) or arb.get("criteria") or [None]
+            prior = next((v for v in votes if v["model"] == arb.get("model") and v["vote"] != "unknown"
+                          and v.get("criterion") in crits), None)
+            if prior is None and arb.get("model"):
+                out = [None]
+                self._vote(cfg, dict(arb, criteria=crits), allowed, text, context, out, 0)
+                prior = out[0]
+                prior["role"] = "arbiter"
+                votes.append(prior)
+            if prior and prior["vote"] in ("safe", "unsafe"):
+                return {"by": "arbiter", "model": prior["model"], "verdict": prior["vote"], "action": action, "risk": risk,
+                        "steps": steps + [f"arbiter {prior['model']} ({prior.get('criterion')}) = {prior['vote']}"]}
+            steps.append(f"arbiter unavailable ({(prior or {}).get('error') or 'not configured'})")
+        wcfg = {g["model"]: g for g in guards}
+        wcfg.update({(cc.get("arbiter") or {}).get("model"): cc.get("arbiter") or {}})
+        total = 0.0
+        for v in votes:
+            if v["vote"] in ("safe", "unsafe"):
+                v["weight"] = self._weight(wcfg.get(v["model"]) or {})
+                total += v["weight"] if v["vote"] == "unsafe" else -v["weight"]
+        total = round(total, 3)
+        margin = cc.get("weighted_margin", 0.5)
+        steps.append(f"weighted log-odds sum {total:+} (margin {margin})")
+        if abs(total) >= margin:
+            return {"by": "weighted", "verdict": "unsafe" if total > 0 else "safe", "score": total, "action": action,
+                    "risk": risk, "steps": steps}
+        fallback = action.split("_then_")[-1] if "_then_" in action else action
+        steps.append(f"unresolved -> {fallback} ({risk} risk)")
+        return {"by": "fallback", "verdict": "unresolved", "score": total, "action": fallback, "risk": risk, "steps": steps}
+
+    def _consensus(self, text, cfg, high_risk, allowed, context, res, risk="medium", phase="prompt"):
         cc = cfg.get("consensus") or {}
         guards = list(cc.get("guards", [])) + (list(cc.get("high_risk_guards", [])) if high_risk else [])
         votes = [None] * len(guards)
@@ -346,7 +387,15 @@ class SemanticGuard:
         if outcome == "unsafe":
             res["score"] = max(res["score"], 1.0)
         elif outcome == "disagreement":
-            res["fail"] = "disagree"  # never a silent allow: the caller routes this to a human
+            r = self._resolve_disagreement(cfg, cc, votes, guards, risk, phase, allowed, text, context)
+            res["resolution"] = r
+            if r["verdict"] == "unsafe":
+                res["fail"] = "disagree_deny"
+            elif r["verdict"] == "safe":
+                res["fail"] = "disagree_resolved_safe"
+            else:
+                res["fail"] = {"deny": "disagree_deny", "allow_flag": "disagree_allow_flag",
+                               "require_approval": "disagree_approve"}.get(r["action"], "disagree_deny")
         elif outcome == "no_quorum":
             res["flags"].append("semantic=unavailable:consensus")
             act = cc.get("on_no_quorum", "heuristic")

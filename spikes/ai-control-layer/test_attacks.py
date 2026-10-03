@@ -704,15 +704,69 @@ class GuardConsensus(unittest.TestCase):
         self.assertEqual(r["event"]["semantic"]["outcome"], "unsafe")
         self.assertIn("semantic_safety", r["event"]["guardrails"])
 
-    def test_split_vote_goes_to_human_never_silent_allow(self):
-        layer, s, _ = self._env({QWEN: UNSAFE[QWEN], LLAMA: SAFE[LLAMA]})
-        r = layer.check_prompt(s, "borderline text")
-        self.assertEqual(r["decision"], DENY)  # prompts have no approval UI: held for review
-        self.assertIn("guard_disagreement", r["event"]["guardrails"])
-        self.assertEqual(r["event"]["semantic"]["agreement"], 0.5)
+    SPLIT = {QWEN: UNSAFE[QWEN], LLAMA: SAFE[LLAMA]}
+
+    def _res(self, r):
+        return r["event"]["semantic"]["consensus"][-1]["resolution"]
+
+    def test_split_weighted_vote_resolves_unsafe(self):
+        layer, s, _ = self._env(self.SPLIT)  # qwen w 1.73 unsafe vs llama w 0.41 safe -> +1.32
         r = layer.call(s, "search_kb", {"query": "borderline query"})
-        self.assertEqual(r["decision"], DENY)  # tool call -> approval required, test approver says no
+        self.assertEqual(r["decision"], DENY)
+        self.assertEqual((self._res(r)["by"], self._res(r)["verdict"]), ("weighted", "unsafe"))
         self.assertIn("guard_disagreement", r["event"]["guardrails"])
+
+    def test_split_weighted_vote_resolves_safe(self):
+        layer, s, _ = self._env({QWEN: SAFE[QWEN], LLAMA: UNSAFE[LLAMA]},
+                                guards=[{"model": QWEN, "accuracy": 0.85}, {"model": LLAMA, "accuracy": 0.6}])
+        r = layer.call(s, "search_kb", {"query": "borderline query"})
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertEqual(self._res(r)["verdict"], "safe")
+        self.assertIn("guard_disagreement", r["event"]["guardrails"])  # still visible in audit/report
+
+    def test_unresolved_low_risk_allowed_and_flagged(self):
+        layer, s, env = self._env(self.SPLIT, guards=[{"model": QWEN, "accuracy": 0.8}, {"model": LLAMA, "accuracy": 0.8}])
+        r = layer.call(s, "search_kb", {"query": "borderline query"})
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertEqual((self._res(r)["by"], self._res(r)["action"]), ("fallback", "allow_flag"))
+        self.assertIn("guard_disagreement", r["event"]["guardrails"])
+        env.edit(lambda p: p["controls"]["semantic"]["consensus"]["on_disagreement"].update(low="deny"))  # live edit
+        self.assertEqual(layer.call(s, "search_kb", {"query": "borderline query 2"})["decision"], DENY)
+
+    def test_high_risk_arbiter_reuses_granite_vote(self):
+        layer, s, _ = self._env({QWEN: UNSAFE[QWEN], LLAMA: SAFE[LLAMA], GRANITE: SAFE[GRANITE]})
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})
+        self.assertEqual(r["decision"], ALLOW)
+        res = self._res(r)
+        self.assertEqual((res["by"], res["model"], res["verdict"]), ("arbiter", GRANITE, "safe"))
+        self.assertEqual(sum(v["model"] == GRANITE for v in r["event"]["semantic"]["consensus"][0]["votes"]), 1)  # no 2nd call
+
+    def test_high_risk_unresolved_fails_closed(self):
+        self.fake = FakeOllama({QWEN: "q", LLAMA: "l"}, reply=self.SPLIT)  # arbiter model not installed
+        def edit(p):
+            semantic_env(self.fake.url, mode="consensus")(p)
+            p["controls"]["semantic"]["consensus"].update(guards=[{"model": QWEN, "accuracy": 0.8}, {"model": LLAMA, "accuracy": 0.8}])
+        layer, s, _ = fresh(approve=False, edit=edit)
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})
+        self.assertEqual(r["decision"], DENY)
+        self.assertEqual((self._res(r)["by"], self._res(r)["action"]), ("fallback", "deny"))
+        self.assertTrue(any("arbiter unavailable" in x for x in self._res(r)["steps"]))
+
+    def test_arbiter_called_with_phase_criterion(self):
+        layer, s, _ = self._env({**self.SPLIT, GRANITE: UNSAFE[GRANITE]},
+                                on_disagreement={"medium": "arbiter_then_allow_flag"},
+                                guards=[{"model": QWEN, "accuracy": 0.8}, {"model": LLAMA, "accuracy": 0.8}])
+        r = layer.check_prompt(s, "borderline text")
+        arb = [v for v in r["event"]["semantic"]["consensus"][-1]["votes"] if v.get("role") == "arbiter"]
+        self.assertEqual((arb[0]["model"], arb[0]["criterion"], arb[0]["vote"]), (GRANITE, "jailbreak", "unsafe"))
+        self.assertEqual(r["decision"], DENY)
+
+    def test_human_approval_only_when_explicitly_configured(self):
+        layer, s, _ = self._env(self.SPLIT, on_disagreement={"low": "require_approval"},
+                                guards=[{"model": QWEN, "accuracy": 0.8}, {"model": LLAMA, "accuracy": 0.8}])
+        r = layer.call(s, "search_kb", {"query": "borderline query"})
+        self.assertEqual(r["decision"], DENY)  # approval required, test approver says no
+        self.assertIn("human_approval", r["event"]["guardrails"])
 
     def test_one_guard_down_does_not_vote(self):
         layer, s, _ = self._env(SAFE, delay={LLAMA: 1.0}, guards=[{"model": QWEN, "timeout_ms": 1500}, {"model": LLAMA, "timeout_ms": 200}])
@@ -747,6 +801,7 @@ class GuardConsensus(unittest.TestCase):
         layer.check_prompt(s, "borderline text")
         m = layer.metrics([s])
         self.assertEqual(m["guard_consensus"]["guard_disagreement"], 1)
+        self.assertEqual(m["guard_consensus"]["resolved_by_weight"], 1)
         self.assertIn("where guards disagreed", security_report(layer, [s]))
 
 

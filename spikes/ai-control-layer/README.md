@@ -96,10 +96,15 @@ Tests: `SemanticFailModes` runs everywhere against a fake Ollama. It covers time
 
 Several guards from **different model families** vote in parallel threads: qwen3guard (Qwen), llama-guard (Llama), plus granite-guardian (Granite) on high-risk tools.
 - **Votes:** each vote is normalized to safe, unsafe or unknown. A timeout, error, missing model, digest mismatch or low-confidence verdict counts as unknown and doesn't vote.
-- **Outcome:** all safe passes; all unsafe takes the configured action; anything else is a disagreement, which goes to human approval, never a silent allow.
+- **Outcome:** all safe passes; all unsafe takes the configured action. A **disagreement is resolved per risk tier** (Andrzej's design), with tiers from `tools.<name>.risk`; prompts use `prompt_risk`, default medium. Steps:
+  1. **Arbiter**, if the tier's action is `arbiter_then_*`: granite-guardian decides, with criterion `unethical_behavior` for tool calls and `jailbreak` for prompts and outputs. An existing granite vote is reused, not asked twice.
+  2. **Weighted vote:** w = log(p/(1-p)) from each guard's measured accuracy (swarm-math §5). The defaults are granite 0.9 (w 2.2), qwen3guard 0.85 (w 1.73) and llama-guard 0.6 (w 0.41), measured on our small labelled sets (n of about 10-20) and editable per guard. The vote decides when |sum| >= `weighted_margin`.
+  3. **Still unresolved:** `on_disagreement` default `{low: allow_flag, medium: allow_flag, high: arbiter_then_deny, critical: arbiter_then_deny}`. allow_flag means ALLOW plus a `guard_disagreement` flag in audit and report; deny means fail-closed.
+  - Human approval happens only if a tier is explicitly set to `require_approval`, never by default.
+  - Live: the out-of-task 9k payment gets qwen safe and granite unsafe, so the arbiter denies it with no human involved.
 - **Policy knobs:** `min_votes` (quorum; `on_no_quorum`: heuristic | require_approval | deny) and `agreement_threshold` (1.0 = unanimity, 0.66 = 2 of 3).
 - **Confidence gate:** per-guard `min_confidence` makes low-confidence "unsafe" verdicts abstain. llama-guard3:1b needs 0.9: it scored 0.73-0.82 on legit tool calls versus 0.977 on real laundering.
-- **Recording:** every phase (prompt / tool_args / tool_output) records per-guard votes, digests, latency and an agreement score in the audit event. `/metrics.guard_consensus` counts `guard_disagreement`, unanimous outcomes and per-guard votes, and the report has a "where guards disagreed" section.
+- **Recording:** every phase (prompt / document / tool_args / tool_output) records the risk tier, per-guard votes (weight, digest, latency), the agreement score and the resolution (by, verdict, action, steps) in the audit event. `/metrics.guard_consensus` counts `guard_disagreement`, `resolved_by_arbiter`, `resolved_by_weight`, `unresolved_allowed_flagged` and `unresolved_denied`, plus per-guard votes. The report's "where guards disagreed" table shows the risk tier and resolution.
 
 Measured on this Mac:
 - **Concurrency:** Ollama runs different models concurrently. Two small guards take 0.16 s wall (sequential: about 0.3 s warm); adding granite makes it 1.07-1.35 s wall, which is granite's own latency, not the sum.

@@ -100,18 +100,23 @@
       "on_flag": "require_approval",
       "on_detect": "taint",
       "prompt_on_detect": "block",
+      "prompt_risk": "medium",
       "taint_escalates": ["high", "critical"],
       "scan_tool_args": true,
       "mode": "tiered",
       "consensus": {
-        "_doc": "mode=consensus: every guard below votes IN PARALLEL (Ollama runs different models concurrently: 2 small guards 0.16 s wall, + granite 1.35 s wall = the slowest guard, not the sum). Each vote is normalized to safe / unsafe / unknown (timeout, error, not installed, digest mismatch = unknown, does not vote). Outcome: voters < min_votes -> no quorum (on_no_quorum: heuristic | require_approval | deny); unsafe share >= agreement_threshold -> unsafe (prompts blocked, tool calls per on_flag, outputs taint); safe share >= agreement_threshold -> pass; anything else = disagreement -> human approval, never a silent allow. agreement_threshold 1.0 = unanimity; 0.66 lets 2 of 3 decide. min_confidence per guard: an unsafe verdict below it abstains (unknown) instead of voting - llama-guard3:1b gives false positives at P(unsafe) 0.73-0.82 on legit tool calls (S1) vs 0.977 on real money laundering, so it needs 0.9. Guards are deliberately from different model families (Qwen, Llama, Granite): correlated errors shrink the effective number of independent judges, N_eff = N / (1 + (N - 1) * rho).",
+        "_doc": "mode=consensus: every guard below votes IN PARALLEL (Ollama runs different models concurrently: 2 small guards 0.16 s wall, + granite 1.35 s wall = the slowest guard, not the sum). Each vote is normalized to safe / unsafe / unknown (timeout, error, not installed, digest mismatch = unknown, does not vote). Outcome: voters < min_votes -> no quorum (on_no_quorum: heuristic | require_approval | deny); unsafe share >= agreement_threshold -> unsafe (prompts blocked, tool calls per on_flag, outputs taint); safe share >= agreement_threshold -> pass; anything else = disagreement, resolved per tool risk tier (tools.<name>.risk; prompts = prompt_risk, default medium) by on_disagreement (Andrzej, policy owner): arbiter_then_X = ask the arbiter (granite, criterion by phase) and use its verdict; otherwise / if the arbiter is unavailable, a weighted vote with w = log(p/(1-p)) from each guard's measured accuracy (docs/research/swarm-math.md section 5) decides when |sum| >= weighted_margin; still unresolved -> X: allow_flag (ALLOW + guard_disagreement flag in audit/report) or deny (fail-closed). require_approval is available only as an explicit choice, never the default. Accuracy defaults are measured on our small labelled sets (n ~ 10-20): granite 0.9 (w 2.2), qwen3guard 0.85 (w 1.73), llama-guard 0.6 (w 0.41). agreement_threshold 1.0 = unanimity; 0.66 lets 2 of 3 decide. min_confidence per guard: an unsafe verdict below it abstains (unknown) instead of voting - llama-guard3:1b gives false positives at P(unsafe) 0.73-0.82 on legit tool calls (S1) vs 0.977 on real money laundering, so it needs 0.9. Guards are deliberately from different model families (Qwen, Llama, Granite): correlated errors shrink the effective number of independent judges, N_eff = N / (1 + (N - 1) * rho).",
         "guards": [
-          {"model": "sileader/qwen3guard:0.6b", "timeout_ms": 1500},
-          {"model": "llama-guard3:1b", "timeout_ms": 1500, "min_confidence": 0.9}
+          {"model": "sileader/qwen3guard:0.6b", "timeout_ms": 1500, "accuracy": 0.85},
+          {"model": "llama-guard3:1b", "timeout_ms": 1500, "min_confidence": 0.9, "accuracy": 0.6}
         ],
         "high_risk_guards": [
-          {"model": "ibm/granite3.3-guardian:8b", "criteria": ["unethical_behavior"], "timeout_ms": 2500}
+          {"model": "ibm/granite3.3-guardian:8b", "criteria": ["unethical_behavior"], "timeout_ms": 2500, "accuracy": 0.9}
         ],
+        "on_disagreement": {"low": "allow_flag", "medium": "allow_flag", "high": "arbiter_then_deny", "critical": "arbiter_then_deny"},
+        "arbiter": {"model": "ibm/granite3.3-guardian:8b", "timeout_ms": 2500, "accuracy": 0.9,
+                    "criteria_by_phase": {"tool_args": ["unethical_behavior"], "prompt": ["jailbreak"], "document": ["jailbreak"], "tool_output": ["jailbreak"]}},
+        "weighted_margin": 0.5,
         "min_votes": 1,
         "agreement_threshold": 1.0,
         "on_no_quorum": "heuristic"
