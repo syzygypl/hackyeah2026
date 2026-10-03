@@ -6,7 +6,7 @@ Demo machine status: `ollama --version` reports client 0.31.1, but **the server 
 
 ## Recommendation
 
-1. **Primary semantic guard: `ibm/granite3.3-guardian:8b`** (6.7 GB, Apache-2.0, official IBM namespace on Ollama). One model covers `harm`, `jailbreak` and `function_calling` (is this tool call valid for this request?), with a plain `<score> yes|no </score>` output. Its licence has no Llama/EU caveats.
+1. **Primary semantic guard: `ibm/granite3.3-guardian:8b`** (6.7 GB, Apache-2.0, official IBM namespace on Ollama). One model covers `harm`, `jailbreak` and `unethical_behavior` (the criterion verified in bf5f273: 5/5 attacks, 0 false positives), with a plain `<score> yes|no </score>` output. Its licence has no Llama/EU caveats.
 2. **Injection classifier: Qwen3Guard-Gen 0.6B** (`sileader/qwen3guard:0.6b`, 484 MB, Apache-2.0). It is fast (~0.1-0.3 s, est.) and has an explicit input-side `Jailbreak` category, so it runs on every prompt and every tool output. Granite runs only on high-risk calls or when Qwen3Guard says `Controversial`.
 3. **Stretch:** Llama Prompt Guard 2 86M (best dedicated injection classifier), only if we accept a `transformers` + `torch` sidecar and get the gated HF access approved in time.
 
@@ -22,7 +22,7 @@ That is about 11 GB on disk; all four fit in RAM at the same time.
 
 | Model | Ollama tag (size) | Licence / OK for demo? | Classifies | Latency, warm (est.) | Verdict |
 |---|---|---|---|---|---|
-| Granite Guardian 3.3 8B | `ibm/granite3.3-guardian:8b` (6.7 GB) | Apache-2.0 / yes | criteria per call via system msg: harm, jailbreak, social_bias, violence, profanity, sexual_content, unethical_behavior, groundedness, relevance, **function_calling** | 0.6-1.5 s | **use (primary)** |
+| Granite Guardian 3.3 8B | `ibm/granite3.3-guardian:8b` (6.7 GB) | Apache-2.0 / yes | criteria per call via system msg: harm, jailbreak, social_bias, violence, profanity, sexual_content, unethical_behavior, groundedness, relevance, function_call (hallucinated tool arguments, not safety) | 0.6-1.5 s | **use (primary)** |
 | Granite Guardian 4.1 8B | `gabegoodhart/granite4.1-guardian:8b` (6.9 GB), community upload, 4 pulls | Apache-2.0 / yes | as 3.3 plus custom criteria (released 2026-04) | 0.6-1.5 s | maybe (newer, but unofficial packaging) |
 | Granite Guardian 3.0 | `granite3-guardian:2b` (2.7 GB) / `:8b` (5.8 GB) | Apache-2.0 / yes | as above, older | 0.3-1.5 s | skip (superseded) |
 | Qwen3Guard-Gen 0.6B | `sileader/qwen3guard:0.6b` (484 MB), community; or `hf.co/mradermacher/Qwen3Guard-Gen-0.6B-GGUF` | Apache-2.0 / yes | Safe / Unsafe / Controversial + 9 categories incl. **Jailbreak** (input only), PII, violent, illegal acts; 119 languages incl. Polish | 0.1-0.3 s | **use (injection pre-filter)** |
@@ -48,7 +48,7 @@ This closes the "F2.2 semantic AI controls" and "F1 allowed LLM models" gaps in 
 request -> resolve tool (unknown = deny) -> rules/allowlists -> DLP + gitleaks signatures + regex injection
         -> [deny? stop here, 0 model calls]
         -> SEMANTIC: Qwen3Guard on prompt / tool args            (every call, ~0.1-0.3 s est.)
-                     Granite jailbreak + function_calling        (high-risk tools or Qwen "Controversial")
+                     Granite unethical_behavior + jailbreak      (high-risk tools or Qwen "Controversial")
         -> budget/loop -> execute tool
         -> output scan: redaction (deterministic) + Qwen3Guard on the tool output -> taint session on Jailbreak
         -> audit (verdict, model tag, latency_ms, cache hit, policy version)
@@ -74,7 +74,7 @@ fail_mode       = "open"       # open = allow + audit flag "semantic=unavailable
 
 [semantic.judge]               # high-risk tools only, or prefilter score in (0, 1)
 model           = "ibm/granite3.3-guardian:8b"
-criteria        = ["jailbreak", "function_calling"]
+criteria        = ["unethical_behavior", "jailbreak"]
 timeout_ms      = 2500
 fail_mode       = "closed"     # closed = require_approval (not deny, so the demo keeps moving)
 high_risk_tools = ["transfer_funds", "send_email", "http_post", "delete_records"]
@@ -119,7 +119,7 @@ def semantic_verdict(stage, text, policy, criteria=None):   # stage = policy["se
     return "allow", out
 ```
 
-- **Granite:** `system` is the criteria name (`"jailbreak"`, `"harm"`, `"function_calling"`), temperature must be 0, and the answer is `<score> yes </score>` for risky. `think=False` keeps it to a few tokens. Free-text custom criteria are documented for 4.1. For 3.3, test them before relying on them.
+- **Granite:** `system` is the criteria name (`"jailbreak"`, `"harm"`, `"unethical_behavior"`), temperature must be 0, and the answer is `<score> yes </score>` for risky. `think=False` keeps it to a few tokens. Free-text custom criteria are documented for 4.1. For 3.3, test them before relying on them.
 - **Qwen3Guard:** no system prompt. Parse `Safety: (Safe|Unsafe|Controversial)` and `Categories: ...`.
 - **Qwen3 4B second opinion:** pass `"format": {JSON schema}` and `"think": false`, and ask for `{"verdict": "allow|flag", "reason": "..."}`. The reason is good material for the security report.
 - **Timeouts and fail policy** come from `policy.toml`: the 0.6B pre-filter fails open (with an audit flag), the 8B judge on high-risk tools fails closed to `require_approval`. Unknown tools are already denied deterministically. Record the deterministic and semantic latency separately, since `acl-gap.md` asks for the split.
@@ -142,3 +142,5 @@ def semantic_verdict(stage, text, policy, criteria=None):   # stage = policy["se
 - Llama 4 EU multimodal clause: https://github.com/meta-llama/llama-models/blob/main/models/llama4/USE_POLICY.md, https://www.zansara.dev/posts/2025-05-16-llama-eu-ban/
 - ProtectAI injection model: https://huggingface.co/protectai/deberta-v3-base-prompt-injection-v2
 - M4 Pro Ollama throughput: https://www.heyuan110.com/posts/ai/2026-04-14-mac-apple-silicon-ai-workstation/
+
+> **Correction (12:10):** an earlier version named a Granite `function_calling` safety criterion. It does not exist as a safety check: `function_call` detects hallucinated tool arguments. Use `unethical_behavior` (verified in `bf5f273`, ~1.4 s p50 / 1.9 s max warm).
