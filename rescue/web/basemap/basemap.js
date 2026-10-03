@@ -68,7 +68,7 @@ export function offlineStyle({ flavor = "light", lang = "pl", file = "tatry.pmti
   return {
     version: 8,
     glyphs: BASE + "fonts/{fontstack}/{range}.pbf",
-    sprite: BASE + "sprites/" + (flavor === "dark" ? "dark" : "light"),
+    sprite: BASE + "sprites/light",   // only the light sprite is bundled offline; icons read fine on the dark flavor too
     sources: {
       protomaps: { type: "vector", url: "pmtiles://" + BASE + file, attribution: ATTRIBUTION },
     },

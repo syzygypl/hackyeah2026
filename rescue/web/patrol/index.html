@@ -6,77 +6,108 @@
 <meta name="theme-color" content="#b3261e">
 <title>Patrol - Rescue Locator</title>
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
+<link rel="stylesheet" href="../../app/tokens.css">
 <style>
-  :root { --bg: #f4f1ec; --card: #fff; --ink: #1b1b1b; --muted: #5f5a52; --line: #ddd5c8; --red: #b3261e; --green: #1e7a3a; --amber: #a15c00; --blue: #1f4e79; }
+  /* One screen for a rescuer with gloves: map on top, my sector + direction + big report buttons at the bottom.
+     Colours from app/tokens.css (dark by default for night, ☀ = light for daylight). */
+  :root { --green: var(--rl-ok); --red: var(--rl-danger); }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  header { position: sticky; top: 0; z-index: 5; background: var(--red); color: #fff; padding: 10px 14px calc(10px) 14px; display: flex; align-items: center; gap: 10px; }
-  header h1 { font-size: 16px; margin: 0; }
-  header select { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 8px; border: 0; flex: 1; min-width: 0; }
-  .net { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.2); white-space: nowrap; }
-  .net.off { background: #ffd54f; color: #3b2f00; font-weight: 700; }
-  main { padding: 12px 12px 120px; display: grid; gap: 12px; max-width: 640px; margin: 0 auto; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
-  .task-seg { font-size: 22px; font-weight: 750; margin: 2px 0 6px; }
-  .task-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 14px; }
-  .task-meta b { color: var(--ink); }
-  .flag { display: inline-block; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: #fde7e5; color: var(--red); font-weight: 650; font-size: 14px; }
-  .warn { background: #fff4e0; color: var(--amber); }
-  #map { height: 46vh; min-height: 260px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  button { font: inherit; border: 0; border-radius: 14px; padding: 16px 10px; font-weight: 700; font-size: 17px; cursor: pointer; min-height: 64px; color: #fff; }
-  button:active { transform: scale(.98); }
-  .b-done { background: var(--green); } .b-part { background: #4f7f5c; } .b-clue { background: var(--red); grid-column: span 2; font-size: 19px; }
-  .b-wx { background: var(--blue); } .b-status { background: #6b5b45; }
+  html, body { margin: 0; height: 100%; background: var(--rl-bg); color: var(--rl-ink); font: 16px/1.3 var(--rl-font); }
+  body { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); height: 100dvh; overflow: hidden; }
+  header { z-index: 5; background: var(--rl-panel); border-bottom: 1px solid var(--rl-line); padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top));
+           display: flex; align-items: center; gap: 8px; }
+  header h1 { font-size: 15px; margin: 0; color: var(--rl-danger); letter-spacing: .4px; text-transform: uppercase; }
+  header select { font: inherit; font-size: 15px; padding: 8px; border-radius: var(--rl-radius); border: 1px solid var(--rl-line); background: var(--rl-panel-2); color: var(--rl-ink); flex: 1; min-width: 0; }
+  .net { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: var(--rl-panel-2); color: var(--rl-ok); white-space: nowrap; border: 1px solid var(--rl-line); }
+  .net.off { background: var(--rl-warn); color: #1d1600; font-weight: 700; }
+  .theme { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); min-height: 36px; min-width: 40px; padding: 0 8px; font-size: 18px; border-radius: var(--rl-radius); }
+  #map { min-height: 0; }
+  #sheet { min-width: 0; background: var(--rl-panel); border-top: 1px solid var(--rl-line); border-radius: 18px 18px 0 0; margin-top: -18px; z-index: 4; position: relative;
+           padding: 12px 12px max(12px, env(safe-area-inset-bottom)); display: grid; gap: 10px; box-shadow: var(--rl-shadow); }
+  .task { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
+  .task-label { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--rl-mute); }
+  .task-seg { font-size: 22px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+  .task-seg .id { color: var(--rl-select); margin-right: 6px; }
+  .from-op { display: inline-block; margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--rl-on-accent); background: var(--rl-accent); padding: 2px 8px; border-radius: 999px; }
+  .dir { grid-row: span 2; text-align: center; min-width: 86px; }
+  .dir .arrow { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 2px; background: var(--rl-panel-2); border: 2px solid var(--rl-select); display: grid; place-items: center; }
+  .dir .arrow svg { width: 30px; height: 30px; transition: transform .4s; fill: var(--rl-select); }
+  .dir .km { font-size: 17px; font-weight: 800; }
+  .dir .sub2 { font-size: 12px; color: var(--rl-mute); }
+  .dir.inside .arrow { background: var(--rl-ok); border-color: var(--rl-ok); }
+  .dir.inside .arrow svg { fill: var(--rl-bg); }
+  .flags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .flag { padding: 4px 8px; border-radius: 8px; background: var(--rl-danger); color: var(--rl-on-danger); font-weight: 650; font-size: 12px; line-height: 1.25; max-width: 100%; overflow-wrap: anywhere; }
+  .flag.warn { background: var(--rl-warn); color: #1d1600; }
+  details { color: var(--rl-ink-2); font-size: 14px; }
+  details summary { cursor: pointer; color: var(--rl-mute); font-size: 13px; padding: 2px 0; }
+  .task-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+  .task-meta b { color: var(--rl-ink); }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  button { font: inherit; border: 0; border-radius: var(--rl-radius-l); padding: 12px 10px; font-weight: 800; font-size: 18px; cursor: pointer; min-height: 68px; color: #fff; }
+  button:active { transform: scale(.98); filter: brightness(1.15); }
+  .b-done { background: #2d6a4f; } .b-part { background: #3f5f52; }
+  .b-clue { background: var(--rl-danger); color: var(--rl-on-danger); grid-column: span 2; font-size: 21px; min-height: 72px; letter-spacing: .5px; }
+  .b-more { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); grid-column: span 2; min-height: 48px; font-size: 16px; font-weight: 700; }
+  .b-wx { background: #1f4e79; } .b-status { background: #6b5b45; }
   .sub { font-size: 12px; font-weight: 500; display: block; opacity: .9; margin-top: 2px; }
-  textarea, input[type=text] { width: 100%; font: inherit; font-size: 17px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+  textarea, input[type=text] { width: 100%; font: inherit; font-size: 17px; padding: 12px; border-radius: 12px; border: 1px solid var(--rl-line); background: var(--rl-panel-2); color: var(--rl-ink); }
   .row { display: flex; gap: 8px; margin-top: 8px; }
   .row button { flex: 1; min-height: 52px; font-size: 16px; }
-  .b-send { background: var(--ink); }
-  .b-ghost { background: #e9e3d9; color: var(--ink); }
+  .b-send { background: var(--rl-accent); color: var(--rl-on-accent); }
+  .b-ghost { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .chip { background: #e9e3d9; color: var(--ink); min-height: 44px; padding: 8px 12px; font-size: 15px; font-weight: 600; border-radius: 999px; }
-  .chip.on { background: var(--blue); color: #fff; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 0 0 8px; }
+  .chip { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); min-height: 48px; padding: 8px 14px; font-size: 16px; font-weight: 650; border-radius: 999px; }
+  .chip.on { background: var(--rl-accent); color: var(--rl-on-accent); border-color: var(--rl-accent); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--rl-mute); margin: 0 0 8px; }
   .log { display: grid; gap: 8px; }
-  .item { border-left: 4px solid var(--line); padding: 4px 0 4px 10px; font-size: 14px; }
-  .item.mine { border-color: var(--green); } .item.queued { border-color: #ffb300; } .item.err { border-color: var(--red); }
-  .item small { color: var(--muted); display: block; }
-  .hint { display: inline-block; font-size: 12px; background: #eef3f8; color: var(--blue); border-radius: 6px; padding: 1px 6px; margin: 2px 4px 0 0; }
-  #toast { position: fixed; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 10; max-width: 616px; margin: 0 auto; background: var(--ink); color: #fff; border-radius: 12px; padding: 12px 14px; font-size: 15px; display: none; }
-  dialog { border: 0; border-radius: 16px; padding: 16px; width: min(92vw, 520px); }
-  dialog::backdrop { background: rgba(0,0,0,.45); }
-  .muted { color: var(--muted); font-size: 13px; }
+  .item { border-left: 4px solid var(--rl-line); padding: 4px 0 4px 10px; font-size: 14px; }
+  .item.mine { border-color: var(--rl-ok); } .item.queued { border-color: var(--rl-warn); } .item.err { border-color: var(--rl-danger); }
+  .item small { color: var(--rl-mute); display: block; }
+  .hint { display: inline-block; font-size: 12px; background: var(--rl-panel-2); color: var(--rl-accent); border-radius: 6px; padding: 1px 6px; margin: 2px 4px 0 0; }
+  .last { font-size: 13px; color: var(--rl-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #toast { position: fixed; left: 12px; right: 12px; top: calc(64px + env(safe-area-inset-top)); z-index: 10; max-width: 616px; margin: 0 auto; background: var(--rl-ink); color: var(--rl-bg); border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 600; display: none; box-shadow: var(--rl-shadow); }
+  dialog { border: 1px solid var(--rl-line); border-radius: 18px; padding: 16px; width: min(94vw, 520px); background: var(--rl-panel); color: var(--rl-ink); max-height: 86dvh; }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  .muted { color: var(--rl-mute); font-size: 13px; }
+  .maplibregl-ctrl-attrib { font-size: 10px; }
   body.embed header h1, body.embed header select { display: none; }
   body.embed header { justify-content: flex-end; padding: 6px 12px; }
+  @media (min-width: 700px) { #sheet { max-width: 640px; width: 100%; margin: -18px auto 0; } }
 </style>
 </head>
 <body>
 <header>
   <h1>Patrol</h1>
   <select id="team" aria-label="Zespół"></select>
-  <span class="net" id="net">online</span>
+  <span class="net" id="net">łączność…</span>
+  <button class="theme" id="theme" aria-label="Jasny / ciemny ekran" title="Jasny / ciemny ekran">☀</button>
 </header>
-<main>
-  <section class="card" id="task" aria-live="polite"><span class="muted">Wczytuję przydział…</span></section>
-  <div id="map" role="img" aria-label="Mapa przydzielonego segmentu"></div>
-  <section class="grid">
+<div id="map" role="img" aria-label="Mapa przydzielonego segmentu"></div>
+<section id="sheet">
+  <div id="task" aria-live="polite"><span class="muted">Wczytuję przydział…</span></div>
+  <section class="grid" id="actions">
     <button class="b-done" data-act="done">Przeszukane<span class="sub">nic, pokrycie dobre</span></button>
     <button class="b-part" data-act="part">Częściowo<span class="sub">nic, słabe pokrycie</span></button>
     <button class="b-clue" data-act="clue">ŚLAD / ZNALEZIONO</button>
-    <button class="b-wx" data-act="wx">Pogoda</button>
-    <button class="b-status" data-act="status">Status zespołu</button>
+    <button class="b-more" data-act="more">Pogoda · status · meldunek <span id="qcount"></span></button>
   </section>
-  <section class="card">
-    <h2>Meldunek własnymi słowami</h2>
-    <textarea id="free" rows="2" placeholder="np. przeszukaliśmy żleb do progu, nic, widoczność 20 m"></textarea>
-    <div class="row"><button class="b-send" id="sendFree">Wyślij meldunek</button></div>
-    <p class="muted" style="margin:8px 0 0">Meldunek czyta lokalny model na laptopie kierownika akcji (bez internetu). Bez zasięgu meldunki czekają w kolejce na telefonie.</p>
-  </section>
-  <section class="card"><h2>Meldunki <span id="qcount"></span></h2><div class="log" id="log"></div></section>
-</main>
+  <div class="last" id="last"></div>
+</section>
 <div id="toast" role="status"></div>
 
+<dialog id="more"><form method="dialog">
+  <h2>Meldunek</h2>
+  <section class="grid">
+    <button type="button" class="b-wx" data-act="wx">Pogoda</button>
+    <button type="button" class="b-status" data-act="status">Status zespołu</button>
+  </section>
+  <textarea id="free" rows="2" placeholder="własnymi słowami, np. przeszukaliśmy żleb do progu, nic, widoczność 20 m" style="margin-top:10px"></textarea>
+  <div class="row"><button type="button" class="b-send" id="sendFree">Wyślij meldunek</button></div>
+  <p class="muted" style="margin:8px 0 12px">Meldunek czyta lokalny model na laptopie kierownika akcji (bez internetu). Bez zasięgu czeka w kolejce na telefonie.</p>
+  <h2>Wysłane</h2><div class="log" id="log"></div>
+  <div class="row"><button value="close" class="b-ghost">Zamknij</button></div>
+</form></dialog>
 <dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
 
 <script type="module">
@@ -96,6 +127,12 @@
     get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
+
+  // Dark by default (night ops, same as the app); ☀ switches to light for daylight. Kept on this phone.
+  const THEME = qs.get("theme") || store.get("rescue-patrol-theme", "dark");
+  document.documentElement.dataset.theme = THEME;
+  $("theme").textContent = THEME === "light" ? "☾" : "☀";
+  $("theme").onclick = () => { store.set("rescue-patrol-theme", THEME === "light" ? "dark" : "light"); location.reload(); };
 
   let run, step, team, map, queue = store.get(QKEY, []), log = store.get(LKEY, []), online = true;
 
@@ -142,31 +179,67 @@
   function renderTask() {
     const a = assignment(), r = teams.find(t => t.id === team);
     if (!a) {
-      $("task").innerHTML = `<h2>Przydział</h2><div class="task-seg">Brak przydziału</div><div class="task-meta">${esc(r?.reason || "")}</div>`;
+      $("task").innerHTML = `<div class="task-label">Przydział</div><div class="task-seg">Czekaj na zadanie</div><div class="muted">${esc(r?.reason || "Kierownik akcji jeszcze nie przydzielił sektora.")}</div>`;
     } else {
-      $("task").innerHTML = `<h2>Twój segment</h2>
-        <div class="task-seg">${esc(a.segmentId)} · ${esc(a.segmentName)}</div>
-        <div class="task-meta"><span>Prawdopodob.: <b>${Math.round(a.poa * 100)}%</b></span>${a.travelMin != null ? `<span>Dojście: <b>${Math.round(a.travelMin)} min</b></span>` : ""}${a.sweepMin != null ? `<span>Przeszukanie: <b>${Math.round(a.sweepMin)} min</b></span>` : ""}</div>
-        <div class="task-meta" style="margin-top:4px">${a.fromOperator ? "<b>⇢ </b>" : ""}${esc(a.reason)}</div>
-        ${(a.safety || []).map(f => `<span class="flag">⚠ ${esc(f)}</span>`).join(" ")}
-        ${step.weather?.survival ? `<span class="flag warn">${esc(step.weather.survival.text)}</span>` : ""}`;
+      const flags = (a.safety || []).map(f => `<span class="flag">⚠ ${esc(f)}</span>`).join("");
+      $("task").innerHTML = `<div class="task">
+          <div><div class="task-label">Twój sektor</div>
+            <div class="task-seg"><span class="id">${esc(a.segmentId)}</span>${esc(a.segmentName)}</div>
+            ${a.fromOperator ? `<span class="from-op">Nowe od operatora${a.reason.match(/, (\d\d:\d\d)$/) ? " · " + a.reason.match(/, (\d\d:\d\d)$/)[1] : ""}</span>` : ""}</div>
+          <div class="dir" id="dir"></div>
+        </div>
+        ${flags ? `<div class="flags">${flags}</div>` : ""}
+        <details><summary>Szczegóły</summary>
+          <div class="task-meta"><span>Szansa w sektorze: <b>${Math.round(a.poa * 100)}%</b></span>${a.travelMin != null ? `<span>Dojście: <b>${Math.round(a.travelMin)} min</b></span>` : ""}${a.sweepMin != null ? `<span>Przeszukanie: <b>${Math.round(a.sweepMin)} min</b></span>` : ""}</div>
+          <div style="margin-top:4px">${esc(a.reason)}</div>
+          ${step.weather?.survival ? `<div class="flags" style="margin-top:6px"><span class="flag warn">${esc(step.weather.survival.text)}</span></div>` : ""}</details>`;
     }
+    renderDir();
     if (map && map.isStyleLoaded()) highlight();
+  }
+
+  // ---------- direction to my sector (phone GPS) ----------
+  let me = null;   // [lon, lat]
+  const polyOf = () => { const a = assignment(); return a && segById[a.segmentId] ? segById[a.segmentId].polygon : null; };
+  const centroid = poly => [poly.reduce((t, p) => t + p[0], 0) / poly.length, poly.reduce((t, p) => t + p[1], 0) / poly.length];
+  const inside = (pt, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const distM = (a, b) => { const kx = 111320 * Math.cos((a[1] + b[1]) / 2 * Math.PI / 180); return Math.hypot((a[0] - b[0]) * kx, (a[1] - b[1]) * 111320); };
+  const bearing = (a, b) => { const kx = Math.cos((a[1] + b[1]) / 2 * Math.PI / 180); return (Math.atan2((b[0] - a[0]) * kx, b[1] - a[1]) * 180 / Math.PI + 360) % 360; };
+  const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const PL = { N: "północ", NE: "płn.-wsch.", E: "wschód", SE: "płd.-wsch.", S: "południe", SW: "płd.-zach.", W: "zachód", NW: "płn.-zach." };
+  const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l7 18-7-4-7 4z"/></svg>`;
+  function renderDir() {
+    const el = $("dir"), poly = polyOf();
+    if (!el) return;
+    if (!poly) { el.innerHTML = ""; return; }
+    if (!me) { el.className = "dir"; el.innerHTML = `<div class="arrow">${ARROW}</div><div class="sub2">czekam na GPS</div>`; return; }
+    if (inside(me, poly)) { el.className = "dir inside"; el.innerHTML = `<div class="arrow">✓</div><div class="km">w sektorze</div>`; return; }
+    const c = centroid(poly), d = distM(me, c), b = bearing(me, c), k = COMPASS[Math.round(b / 45) % 8];
+    el.className = "dir";
+    el.innerHTML = `<div class="arrow"><svg viewBox="0 0 24 24" style="transform:rotate(${Math.round(b)}deg)" aria-hidden="true"><path d="M12 2l7 18-7-4-7 4z"/></svg></div>
+      <div class="km">${d < 1000 ? Math.round(d / 10) * 10 + " m" : (d / 1000).toFixed(1).replace(".", ",") + " km"}</div><div class="sub2">${PL[k]}</div>`;
+    if (map?.getSource("me-line")) map.getSource("me-line").setData({ type: "Feature", geometry: { type: "LineString", coordinates: [me, c] } });
   }
 
   // ---------- map ----------
   await loadBasemap(maplibregl);
-  map = new maplibregl.Map({ container: "map", style: offlineStyle(), bounds: ZAWRAT_BOUNDS, attributionControl: { compact: true } });
+  map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: THEME === "light" ? "light" : "dark" }), bounds: ZAWRAT_BOUNDS, attributionControl: { compact: true } });
   map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "top-right");
   map.on("load", () => {
     const fc = { type: "FeatureCollection", features: step.segments.map(s => ({ type: "Feature", properties: { id: s.id, name: s.name, poa: s.poa },
       geometry: { type: "Polygon", coordinates: [s.polygon.concat([s.polygon[0]])] } })) };
     map.addSource("segs", { type: "geojson", data: fc });
-    map.addLayer({ id: "segs-line", type: "line", source: "segs", paint: { "line-color": "#5f5a52", "line-width": 1, "line-opacity": 0.6 } });
-    map.addLayer({ id: "seg-mine", type: "fill", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "fill-color": "#b3261e", "fill-opacity": 0.25 } });
-    map.addLayer({ id: "seg-mine-line", type: "line", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "line-color": "#b3261e", "line-width": 3 } });
-    map.addLayer({ id: "segs-label", type: "symbol", source: "segs", layout: { "text-field": ["get", "id"], "text-font": ["Noto Sans Medium"], "text-size": 12 },
-      paint: { "text-color": "#5f5a52", "text-halo-color": "#fff", "text-halo-width": 1.5 } });
+    const SEL = getComputedStyle(document.documentElement).getPropertyValue("--rl-select").trim() || "#ffd84d";
+    const dark = THEME !== "light";
+    map.addLayer({ id: "segs-line", type: "line", source: "segs", paint: { "line-color": dark ? "#8797a4" : "#5f5a52", "line-width": 1, "line-opacity": 0.5 } });
+    map.addLayer({ id: "seg-mine", type: "fill", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "fill-color": SEL, "fill-opacity": 0.22 } });
+    map.addLayer({ id: "seg-mine-line", type: "line", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "line-color": SEL, "line-width": 4 } });
+    map.addLayer({ id: "segs-label", type: "symbol", source: "segs", layout: { "text-field": ["get", "id"], "text-font": ["Noto Sans Medium"], "text-size": 13 },
+      paint: { "text-color": dark ? "#eef2f5" : "#1d2327", "text-halo-color": dark ? "#0e1317" : "#fff", "text-halo-width": 1.5 } });
+    map.addSource("me-line", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "me-line", type: "line", source: "me-line", paint: { "line-color": SEL, "line-width": 3, "line-dasharray": [1.5, 1.5] } });
     highlight();
   });
   function highlight() {
@@ -176,8 +249,9 @@
     const s = segById[id];
     if (s) {
       const xs = s.polygon.map(p => p[0]), ys = s.polygon.map(p => p[1]);
-      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: 50, maxZoom: 15, duration: 600 });
+      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: { top: 40, bottom: 60, left: 40, right: 40 }, maxZoom: 15, duration: 600 });
     }
+    renderDir();
   }
   renderTask();
   if (EMBED) $("team").disabled = true;
@@ -243,6 +317,7 @@
 
   function renderLog() {
     $("qcount").textContent = queue.length ? `· ${queue.length} w kolejce` : "";
+    $("last").textContent = log[0] ? `Ostatni: ${log[0].at} ${log[0].text.replace(/^[^:]*: /, "")} · ${log[0].status === "sent" ? "wysłane ✓" : log[0].status === "queued" ? "w kolejce" : "wysyłam…"}` : "";
     $("log").innerHTML = log.slice(0, 12).map(e => `<div class="item ${e.status === "sent" ? "mine" : e.status === "queued" ? "queued" : ""}">
       ${esc(e.text)}<small>${esc(e.at)} · ${e.status === "sent" ? "wysłane" + (e.parsedBy ? " · " + esc(e.parsedBy.split(":")[0]) : "") : e.status === "queued" ? "w kolejce" : "wysyłam…"}</small>
       ${(e.hints || []).map(h => `<span class="hint">${esc(h.type)}${h.segmentId ? " " + esc(h.segmentId) : ""}${h.pod != null ? " POD " + h.pod : ""}</span>`).join("")}</div>`).join("") || `<span class="muted">Brak meldunków.</span>`;
@@ -261,9 +336,11 @@
   const chips = (name, opts) => `<div class="chips" data-name="${name}">${opts.map(o => `<button type="button" class="chip" data-v="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
   const val = (f, name) => f.querySelector(`.chips[data-name="${name}"]`)?.dataset.v;
 
-  document.querySelector(".grid").onclick = ev => {
+  document.addEventListener("click", ev => {
     const b = ev.target.closest("button[data-act]"); if (!b) return;
     const who = shortTeam();
+    if (b.dataset.act === "more") { $("more").showModal(); return; }
+    if (b.dataset.act === "wx" || b.dataset.act === "status") $("more").close();
     if (b.dataset.act === "done") report(`${who}: przeszukaliśmy ${seg()}, nic, pokrycie dobre`);
     if (b.dataset.act === "part") report(`${who}: przeszukaliśmy częściowo ${seg()}, nic, pokrycie słabe`);
     if (b.dataset.act === "clue") dialog(`<h2>Ślad w ${esc(seg())}</h2>${chips("what", ["but / odzież", "plecak", "głos / wołanie", "światło", "pies zaznaczył", "poszkodowany ZNALEZIONY"])}
@@ -280,7 +357,7 @@
     if (b.dataset.act === "status") dialog(`<h2>Status: ${esc(who)}</h2>${chips("st", ["wolni, gotowi do kolejnego zadania", "wracamy, zmęczenie", "potrzebujemy wsparcia", "kontuzja w zespole", "schodzimy - zagrożenie lawinowe"])}`, f => {
         const st = val(f, "st"); if (st) report(`${who}: ${st}`);
       });
-  };
+  });
   // Incoming from the shell (same origin only): {type: "assign", segmentId, team?, by?}
   window.addEventListener("message", ev => {
     if (ev.origin !== location.origin || !ev.data || ev.data.type !== "assign") return;
@@ -296,8 +373,12 @@
     } catch {}
   }
   setInterval(pollAssignments, 15000); pollAssignments();
-  $("sendFree").onclick = () => { const t = $("free").value.trim(); if (!t) return; report(`${shortTeam()}: ${t}`); $("free").value = ""; };
-  navigator.geolocation?.watchPosition(p => { window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`; }, () => {}, { enableHighAccuracy: true });
+  $("sendFree").onclick = () => { const t = $("free").value.trim(); if (!t) return; report(`${shortTeam()}: ${t}`); $("free").value = ""; $("more").close(); };
+  navigator.geolocation?.watchPosition(p => {
+    window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
+    me = [p.coords.longitude, p.coords.latitude]; renderDir();
+  }, () => {}, { enableHighAccuracy: true });
+  if (qs.get("me")) { me = qs.get("me").split(",").map(Number).reverse(); renderDir(); }   // ?me=lat,lon for demos without GPS
 </script>
 </body>
 </html>
