@@ -163,6 +163,7 @@ let isDefault = scenName == "zawrat"
 let file = out.appendingPathComponent(isDefault ? "index.html" : "\(scenName).html")
 let runFile = out.appendingPathComponent(isDefault ? "run.json" : "\(scenName).run.json")
 try writeRunJSON(to: runFile, scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
+htmlScenarioName = URL(fileURLWithPath: scenarioPath).deletingPathExtension().lastPathComponent
 let html = renderHTML(scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
 try html.write(to: file, atomically: true, encoding: .utf8)
 print("\nWrote \(file.path)  (open it in a browser)")

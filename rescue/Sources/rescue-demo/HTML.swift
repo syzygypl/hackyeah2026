@@ -31,6 +31,9 @@ func hintJSON(_ h: LocationHint, _ f: [Double]) -> [String: Any] {
     return d
 }
 
+/// scenario file name (zawrat, blind-01-replay...) for the live assessment panel when served by rescue-server
+nonisolated(unsafe) var htmlScenarioName = "zawrat"
+
 func renderHTML(scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], summary: [String: Any]) -> String {
     let data: [String: Any] = [
         "incident": s.incident, "date": s.date,
@@ -38,6 +41,7 @@ func renderHTML(scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHin
         "bbox": [s.bbox.south, s.bbox.west, s.bbox.north, s.bbox.east],
         "rows": grid.rows, "cols": grid.cols, "cellM": s.cellM,
         "ipp": ["name": s.ipp.name, "at": s.ipp.at],
+        "scenarioName": htmlScenarioName,
         "segments": s.segments.map { ["id": $0.id, "name": $0.name] },
         "segOf": grid.segmentOf,
         "trails": s.terrain.trails.map { ["name": $0.name, "points": $0.points] },
@@ -134,6 +138,8 @@ footer .tl{flex:1;display:flex;flex-direction:column}
 <div id="segs"></div>
 <h2>Przydział zespołów</h2><div id="surv" class="surv"></div><div id="teams"></div>
 <small>Prędkości, POD i progi pogodowe ilustracyjne, nie procedury TOPR/GOPR.</small>
+<div id="assessWrap" style="display:none"><h2>Ocena sytuacji (lokalny model)</h2>
+<button id="assessBtn">Oceń bieżący krok</button> <small>rescue-server, qwen3 lokalnie</small><div id="assess" class="value" style="display:none;border-color:#2a343d"></div></div>
 <h2>Backtest (fikcyjne miejsce odnalezienia)</h2><div id="bt"></div>
 <h2>Osoba</h2><div id="subj"></div></div>
 <footer><button id="play">Odtwórz</button><span id="clock"></span><div class="tl"><div id="wx"></div><input type="range" id="slider" min="1" step="1"></div><div><div id="stepinfo"></div><div id="wxnow"></div></div></footer>
@@ -317,6 +323,28 @@ document.getElementById('play').onclick=()=>{
   step=1; slider.value=1; render();
   timer=setInterval(()=>{ if(step>=H.length){clearInterval(timer);timer=null;return;} step++; slider.value=step; render(); },1800);
 };
+// optional: live assessment when this page is served by rescue-server (/api/assessment)
+
+function renderAssessment(el, d) {
+  const e = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  if (!d || d.error) { el.innerHTML = `<div class="help">Błąd: ${e(d && d.error)}</div>`; return; }
+  const a = d.assessment || {}, llm = String(d.source).startsWith("llm");
+  const ev = d.evidenceIndex || {};
+  const evs = (ids) => (ids || []).map((i) => `<span title="${e(ev[i])}" style="border:1px solid #556;border-radius:4px;padding:0 4px;font-size:11px;margin-right:3px">${e(i)}</span>`).join("");
+  el.innerHTML = `<div style="font-size:12px;margin-bottom:6px"><b style="color:${llm ? "#3ee08f" : "#f2b134"}">${llm ? "LLM lokalny" : "reguły"}</b> · ${e(llm ? d.source.replace("llm-local:", "") : "szablon deterministyczny")} · ${d.latencyMs} ms · krok ${d.step}/${d.steps} (${e(d.t)})${d.note ? ` · <span title="${e(d.note)}">${e(d.note.slice(0, 80))}</span>` : ""}</div>
+    <div style="margin-bottom:6px">${e(a.sytuacja)}</div>
+    ${(a.hipotezy || []).length ? `<div style="font-weight:700;margin-top:6px">Hipotezy</div>` + a.hipotezy.map((h, k) => `<div style="margin:3px 0">${k + 1}. <b>${e(h.segment)}</b> ${e(h.nazwa || "")}: ${e(h.opis)} ${evs(h.dowody)}</div>`).join("") : ""}
+    ${(a.rekomendacje || []).length ? `<div style="font-weight:700;margin-top:6px">Następna godzina</div>` + a.rekomendacje.map((r) => `<div style="margin:3px 0"><b>${e(r.zespol)}</b> -> ${e(r.segment)} ${r.zgodnie_z_planem ? '<span style="color:#3ee08f">zgodnie z planerem</span>' : `<span style="color:#f2b134">odstępstwo (planer: ${e(r.planer || "?")})</span>`}: ${e(r.dzialanie)}<br><span style="color:#93a1ad;font-size:12px">${e(r.uzasadnienie)}${r.uwaga ? " · " + e(r.uwaga) : ""}</span></div>`).join("") : ""}
+    ${(a.ryzyka || []).length ? `<div style="font-weight:700;margin-top:6px">Ryzyka</div>` + a.ryzyka.map((r) => `<div style="color:#ff8a65;font-size:13px">! ${e(r.typ)}: ${e(r.opis)}</div>`).join("") : ""}
+    ${(a.brakuje || []).length ? `<div style="font-weight:700;margin-top:6px">Czego brakuje</div>` + a.brakuje.map((b) => `<div style="font-size:13px">? ${e(b.informacja)} <span style="color:#93a1ad">- ${e(b.dlaczego)}</span></div>`).join("") : ""}
+    ${(d.dropped || []).length ? `<div style="color:#93a1ad;font-size:11px;margin-top:6px" title="${e(d.dropped.join("\n"))}">Weryfikacja odrzuciła/poprawiła ${d.dropped.length} element(y) (najedź, by zobaczyć)</div>` : ""}`;
+}
+
+if (location.protocol.startsWith('http')) fetch('/health').then(r=>r.json()).then(h=>{ if(h.server==='rescue-server'){
+  document.getElementById('assessWrap').style.display='block';
+  document.getElementById('assessBtn').onclick=async()=>{const el=document.getElementById('assess');el.style.display='block';el.textContent='lokalny model ocenia sytuację...';
+    try{const r=await fetch(`/api/assessment/${D.scenarioName}?step=${step}&live=0`);renderAssessment(el,await r.json());}catch(e){el.textContent='Ocena niedostępna: '+e;}};
+}}).catch(()=>{});
 render();
 </script>
 </body>
