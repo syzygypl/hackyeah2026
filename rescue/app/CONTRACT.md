@@ -219,6 +219,31 @@ Blind-test scenarios are never listed. Runs are cached per (sc, live version), s
 - Header: time switch **Na żywo / Historia** (whole app, `?time=live|hist`, remembered per device; join links / QR and the Ratownik role are always live) and the mode badge `LIVE` (TOPR red, pulsing dot) / `HISTORIA` (neutral) / `PLAN` (Plan mode or Studio story), next to the scenario title "<place> - <what>" (e.g. "Zawrat - zaginiony turysta"); a red (live, "NA ŻYWO") or navy (history, "HISTORIA · NAGRANIE") label tab sits at the top edge (no frame around the screen). **Historia** = the prerecorded scenario only (`GET /api/run/<sc>?live=0`), timeline and play; live functions (+ Ślad, Wyślij zespół, ACK, + Nowa akcja) stay visible but inactive (the Centrum link always works: it only shows live incidents), with a note and "Przełącz na żywo". **Na żywo** = `GET /api/run/<sc>` with field reports folded in, timeline held at the live moment. Ratownik: same badge + title in a bar above the team picker.
 - Akcja, right panel "Na żywo": last 8 feed events (time, who, what), "+ Ślad" (arm, click the 2D map, pick type + note -> `POST /api/clue` with `sc`), "Wyślij zespół" (team + segment -> `/story/assign` with `scenario`). Polls `/api/live?sc=` every 3 s; on a new seq it refetches the run (2D/3D reload via `{type:"run", url}`) and the assignments, and toasts events from others.
 
+## Advisor (Doradca: do several incidents share one common source?)
+
+`GET /api/advisor[?llm=1][&only=a,b,c][&skip=<prefix>]` (read; poll every 10 s, cached by scenario files + feed seq). Engine `RescueKit/Advisor.swift`, deterministic; catalogue `rescue/scenarios/hazards/hazards.json` (`rescue-hazards/1`, real public infrastructure from OSM via `tools/terrain/hazards.py`: dams with the downstream river polyline and places with their river km, large industrial sites). Input per listed incident: IPP, `date` + `subject.lastContact` (when it happened) / `startClock` (reported), category, texts (incident, subject note, scripted report events - not the Terrain/Weather/Koester setup - and the live feed notes of that `sc`), wind of its WeatherConditions (`windFromDeg`).
+
+```jsonc
+{ "schema": "rescue-advisor/1", "incidents": 17, "summary": "...", "method": "...", "computedAt": "...",
+  "positions": { "<sc>": { "at": [lat, lon], "time": "05:12", "status": "live|ended|replay" } },
+  "hypotheses": [ {                       // score >= 0.35, best first; [] = quiet day
+    "id": "H1", "kind": "dam|plume|flood|wildfire|storm|avalanche|cluster", "kindLabel": "awaria zapory / fala powodziowa",
+    "title": "Zapora w Solinie: fala na Sanie", "score": 0.97, "level": "alarm|ostrzezenie|obserwacja",   // >= 0.7 / 0.5
+    "source": { "id", "kind", "name", "at": [lat, lon], ... }, "altSources": [{ "id", "name", "score" }],   // e.g. the other dam of a cascade
+    "incidents": ["zapora-myczkowce", ...],
+    "evidence": [ { "id": "E1", "kind": "river|timing|keywords|time|wind|cluster|compact", "label", "text", "weight": 0.35, "value": 1.0, "contribution": 0.35, "incidents": [...] } ],
+    "explain": "E1 0,35×1,00 + ... = 0,97",          // score = sum of contributions (capped 0.97 / 0.75 for sourceless clusters)
+    "wave": { "speedMs": 2.43, "fitted": true, "startedAt": "04:28", "rmsMin": 3 },   // dam only
+    "predicted": { "text", "towns": [{ "name", "kind": "town|village", "at", "km", "eta": "09:42", "inMin": 71 }], "speedMs", "from" },
+    "geometry": { "river": [[lat, lon]...], "riverAhead": [...], "plume": [[lat, lon]...], "source": [lat, lon] },
+    "excluded": [{ "sc", "place", "reason": "4,9 km od koryta Sanu; brak sygnałów wody w zgłoszeniu" }],   // near in space/time, NOT linked
+    "actions": [{ "priority": 1, "safety": true, "text": "Bezpieczeństwo zespołów: ..." }, ...],              // safety first
+    "questions": ["Czy ktoś zgłosił gwałtowny wzrost poziomu wody ...?"] } ],
+  "narrative": { "by": "rules|llm-local|llm-openai", "summary", "questions": [...], "cites": ["E1", "E2"], "note"? } }   // top hypothesis only
+```
+
+Signals: dam = incidents within `corridorM` (1.5 km) of the river below the dam, densest 12 h window, >= 2; timing = least-squares fit of time vs river km (wave speed must fall in `waveSpeedMs` 0.8-5 m/s; two points get half credit); plume = >= 2 incidents within `plumeKm` of a site, in a ±30° downwind cone; cluster = DBSCAN 15 km / 3 h, >= 3 incidents, kind from shared words. `narrative` with `llm=1`: the model may cite only evidence ids of the hypothesis, otherwise (or with no model) the rules text with `note`. Fictional demo set: `zapora-*` (5 incidents downstream of Solina/Myczkowce staggered like a 2.4 m/s wave, plus `zapora-tlo-olszanica` and `zapora-tlo-tarnica`, unrelated). Checks: `python3 rescue/integration/test_advisor.py`. UI: Centrum panel "Doradca" (bottom, between the lists): level badge (TOPR red only for `alarm`), score with its breakdown bar, evidence, linked / not linked incidents, ETA table, actions, operator summary + questions; map draws the river (navy), the stretch ahead (red on alarm), plume, next towns with ETA; linked incidents ringed.
+
 ## Exercise mode (tryb ćwiczeń; rescue-server, page `app/cwiczenia.html`)
 
 A trainee picks up a fictional search mid-way, decides (team -> segment, wait), and gets a score. Sessions live in memory on the laptop; with a shared store (Vercel + Neon) each change is written as document `ex:<sid>` and read back per request, so any instance serves the next click (baselines are recomputed per instance). Separate from incidents: exercises are not listed by `/api/scenarios`, `/api/incidents` or the roster, and never write live files or assignments. PIN-guarded on LAN like the rest of `/api/*`; on the public deploy the exercise POSTs need no action key (a sandboxed training session, `isWrite` excludes `/api/exercise/`). Cap (so open `ex:*` rows cannot be flooded): at most 40 sessions started in the last 2 h (`POST /api/exercise/start` -> 429 over it; shared index doc `ex:index`), a session expires 2 h after its start (any route -> 410), at most 300 POSTs per session (-> 429).

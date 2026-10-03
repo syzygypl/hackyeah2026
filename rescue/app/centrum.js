@@ -165,6 +165,7 @@ function render() {
   const selectOpen = $("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT";   // renderTeams skips then: build again next poll
   if (!dragging) { renderCards(); renderTeams(); if (!selectOpen) shown = sig; }
   renderMarkers();
+  advApply();   // Doradca: re-mark linked incidents after the cards / markers were rebuilt
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
   $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
   $("src").textContent = (has.incidents ? "/api/incidents" : "/api/scenarios + /api/run (zapas)") + " · " + (has.teams ? "/api/teams" : "zespoły: makieta w pamięci");
@@ -319,6 +320,115 @@ function announceEnded(x) {
   el.innerHTML = `<b>Akcja zakończona: ${esc(short(x))}</b> - osoba odnaleziona${x.lastEventAt ? " o " + hhmm(x.lastEventAt) : ""}. Zespoły wróciły do puli wolnych. <span class="mute">(kliknij, aby zamknąć)</span>`;
   try { if ("Notification" in window && Notification.permission === "granted") new Notification("Akcja zakończona: " + short(x), { body: "Osoba odnaleziona. Zespoły wolne." }); } catch (e) {}
 }
+
+// ---------- Doradca (advisor): do several incidents share one common source? GET /api/advisor (CONTRACT.md "Advisor").
+// Rules answer first (fast, cached on the server), then once per new state the model's plain-Polish summary (?llm=1).
+// Map: river downstream of the source (navy), the stretch the wave has not reached yet (sand, TOPR red on alarm),
+// plume cone, next towns with ETA; linked incidents ringed on the map and in the list.
+let adv = null, advSel = 0, advOpen = true, advSig = "", advLlmFor = "", advNarr = null, advBusy = false, advMiss = 0;
+const advTowns = [];
+const num2 = (v) => (Math.round((v || 0) * 100) / 100).toFixed(2).replace(".", ",");
+const LEVEL = { alarm: "ALARM", ostrzezenie: "OSTRZEŻENIE", obserwacja: "DO OBSERWACJI" };
+try { advOpen = localStorage.getItem("rescue-advisor-open") !== "0"; } catch (e) {}
+async function advTick() {
+  if (advBusy || Date.now() < advMiss) return; advBusy = true;
+  try {
+    const a = await api("/api/advisor");
+    const sig = JSON.stringify((a.hypotheses || []).map((h) => [h.id, h.score, h.incidents, h.evidence.map((e) => e.text)]));
+    if (sig !== advSig) { advSig = sig; advNarr = null; if (advSel >= (a.hypotheses || []).length) advSel = 0; }
+    adv = a; advRender();
+    if ((a.hypotheses || []).length && advLlmFor !== sig) {   // the model's version, once per state, in the background
+      advLlmFor = sig;
+      api("/api/advisor?llm=1").then((b) => { if (advSig === sig && b.narrative) { advNarr = b.narrative; advRender(); } }).catch(() => {});
+    }
+  } catch (e) { if (e.status === 404) advMiss = Date.now() + 60000; console.warn("advisor", e); }
+  advBusy = false;
+}
+function advRender() {
+  const el = $("advisor"); if (!el || !adv) return;
+  const hs = adv.hypotheses || [], h = hs[advSel];
+  el.classList.toggle("alarm", !!hs.length && hs[0].level === "alarm");
+  el.classList.toggle("closed", !advOpen);
+  el.hidden = false;
+  const head = `<header class="advh"><h2>Doradca <span class="mute">wspólne źródło zdarzeń · ${adv.incidents} akcji</span></h2>
+    ${hs.length ? `<span class="lvl ${hs[0].level}">${LEVEL[hs[0].level]}</span>` : `<span class="lvl quiet">spokojnie</span>`}
+    <button class="advt" type="button" aria-expanded="${advOpen}" title="${advOpen ? "Zwiń" : "Rozwiń"} panel Doradcy">${advOpen ? "Zwiń" : "Rozwiń"}</button></header>`;
+  if (!hs.length) {
+    el.innerHTML = head + (advOpen ? `<p class="help">${esc(adv.summary)}</p><p class="help mono">${esc(adv.method || "")}</p>` : "");
+  } else {
+    const tabs = hs.length > 1 ? `<div class="advtabs">${hs.map((x, i) => `<button type="button" data-i="${i}" class="${i === advSel ? "on" : ""}">${esc(x.id)} · ${num2(x.score)}</button>`).join("")}</div>` : "";
+    const name = (sc) => { const x = incidents.find((i) => i.sc === sc); return x ? short(x) : sc; };
+    const bar = h.evidence.map((e) => `<i style="flex:${e.contribution}" title="${esc(e.id)} ${esc(e.label)}: ${num2(e.weight)} × ${num2(e.value)} = ${num2(e.contribution)}"></i>`).join("");
+    const narr = advNarr || adv.narrative || {};
+    const by = narr.by && narr.by !== "rules" ? `model (${esc(narr.by === "llm-openai" ? "chmura" : "lokalny")})` : "reguły";
+    const body = `
+      <div class="advtop"><div><div class="kind">${esc(h.kindLabel)}</div><h3>${esc(h.title)}</h3>
+        ${h.altSources && h.altSources.length ? `<div class="mute alt">albo: ${h.altSources.map((s) => esc(s.name)).join(", ")} - zgłoszenia leżą poniżej obu, z samych zgłoszeń nie da się ich rozróżnić</div>` : ""}</div>
+        <div class="score" title="${esc(h.explain)}"><b>${num2(h.score)}</b><span>wynik 0-1</span></div></div>
+      <button class="advfit" type="button">Pokaż na mapie</button>
+      <div class="sbar" aria-label="Skład wyniku">${bar}</div>
+      <div class="cols">
+        <section><h4>Dlaczego (dowody)</h4><ol class="ev">${h.evidence.map((e) => `<li><span class="eid mono">${esc(e.id)}</span><span><b>${esc(e.label)}</b> ${esc(e.text)}</span><span class="mono c">+${num2(e.contribution)}</span></li>`).join("")}</ol>
+          <div class="mono expl">${esc(h.explain)}</div>
+          <h4>Powiązane akcje <span class="mute">(${h.incidents.length})</span></h4><div class="chips">${h.incidents.map((sc) => `<a class="chip adv" data-sc="${esc(sc)}" href="${openURL(sc)}">${esc(name(sc))}</a>`).join("")}</div>
+          ${h.excluded && h.excluded.length ? `<h4>Nie powiązano</h4><ul class="exc">${h.excluded.map((x) => `<li data-sc="${esc(x.sc)}"><b>${esc(name(x.sc))}</b> - ${esc(x.reason)}</li>`).join("")}</ul>` : ""}</section>
+        <section>${h.predicted ? `<h4>Prognoza</h4><p class="pred">${esc(h.predicted.text)}</p>${(h.predicted.towns || []).length ? `<table class="eta"><tr><th>Miejscowość</th><th>km rzeki</th><th>fala ok.</th><th>za</th></tr>${h.predicted.towns.map((t) => `<tr class="${t.kind === "town" ? "town" : ""}"><td>${esc(t.name)}</td><td class="mono">${String(t.km).replace(".", ",")}</td><td class="mono">${esc(t.eta)}</td><td class="mono">${t.inMin} min</td></tr>`).join("")}</table><div class="help">Czas od ostatniego zgłoszenia (${esc(h.predicted.from || "")}); prędkość fali ${String(h.predicted.speedMs || "").replace(".", ",")} m/s${h.wave && !h.wave.fitted ? " (domyślna, nie dopasowana)" : " (dopasowana do zgłoszeń)"}.</div>` : ""}` : ""}
+          <h4>Zalecane działania</h4><ol class="act">${h.actions.map((a) => `<li class="${a.safety ? "safety" : ""}">${esc(a.text)}</li>`).join("")}</ol></section>
+      </div>
+      <section class="narr"><h4>Dla operatora <span class="mute">${by}</span></h4><p>${esc(narr.summary || "")}</p>
+        ${(narr.questions || []).length ? `<div class="qs"><b>Zapytaj:</b><ul>${narr.questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul></div>` : ""}
+        ${narr.note ? `<div class="help">${esc(narr.note)}</div>` : ""}<div class="help">To hipoteza do sprawdzenia, nie potwierdzenie. Decyzja należy do kierownika akcji.</div></section>`;
+    el.innerHTML = head + (advOpen ? tabs + body : `<p class="help one">${esc(h.title)} · wynik ${num2(h.score)} · ${h.incidents.length} akcji</p>`);
+    el.querySelectorAll(".advtabs button").forEach((b) => b.onclick = () => { advSel = +b.dataset.i; advRender(); advFit(); });
+    el.querySelectorAll("[data-sc]").forEach((c) => { c.onmouseenter = () => setHl(c.dataset.sc); c.onmouseleave = () => setHl(null); });
+    el.querySelector(".advfit").onclick = advFit;
+  }
+  el.querySelector(".advt").onclick = () => { advOpen = !advOpen; try { localStorage.setItem("rescue-advisor-open", advOpen ? "1" : "0"); } catch (e) {} advRender(); };
+  advApply(); advMap();
+}
+function advLinked() { const h = adv && (adv.hypotheses || [])[advSel]; return h ? new Set(h.incidents) : new Set(); }
+function advApply() {
+  const s = advLinked();
+  document.querySelectorAll("#cards .card").forEach((c) => c.classList.toggle("adv", s.has(c.dataset.sc)));
+  for (const [k, m] of markers) m.getElement().classList.toggle("adv", s.has(k));
+}
+const advEmpty = { type: "FeatureCollection", features: [] };
+const line = (pts) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: pts.map((p) => [p[1], p[0]]) } });
+function advMap() {
+  if (!mapReady) return;
+  if (!map.getSource("adv")) {
+    for (const id of ["adv-river", "adv-ahead", "adv-plume"]) map.addSource(id, { type: "geojson", data: advEmpty });
+    map.addLayer({ id: "adv-plume", type: "fill", source: "adv-plume", paint: { "fill-color": css("--rl-warn"), "fill-opacity": 0.35, "fill-outline-color": css("--rl-warn-ink") } });
+    map.addLayer({ id: "adv-river", type: "line", source: "adv-river", paint: { "line-color": css("--rl-accent"), "line-width": 3, "line-opacity": 0.75 } });
+    map.addLayer({ id: "adv-ahead", type: "line", source: "adv-ahead", paint: { "line-color": css("--rl-warn-ink"), "line-width": 5, "line-dasharray": [1.5, 1] } });
+    map.addSource("adv", { type: "geojson", data: advEmpty });
+  }
+  const h = adv && (adv.hypotheses || [])[advSel], g = (h && h.geometry) || {};
+  map.getSource("adv-river").setData(g.river ? line(g.river) : advEmpty);
+  map.getSource("adv-ahead").setData(g.riverAhead && g.riverAhead.length > 1 ? line(g.riverAhead) : advEmpty);
+  map.setPaintProperty("adv-ahead", "line-color", css(h && h.level === "alarm" ? "--rl-danger" : "--rl-warn-ink"));
+  map.getSource("adv-plume").setData(g.plume && g.plume.length > 2 ? { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [g.plume.map((p) => [p[1], p[0]])] } } : advEmpty);
+  while (advTowns.length) advTowns.pop().remove();
+  const pins = [];
+  if (h && h.source && h.source.at && h.source.kind !== "cluster") pins.push({ cls: "src", at: h.source.at, text: h.source.name });
+  for (const t of (h && h.predicted && h.predicted.towns) || []) pins.push({ cls: t.kind === "town" ? "town" : "", at: t.at, text: `${t.name} ~${t.eta}` });
+  for (const p of pins) {
+    const el = document.createElement("div"); el.className = "advpin " + p.cls; el.innerHTML = `<span class="d"></span><span class="t">${esc(p.text)}</span>`;
+    advTowns.push(new maplibregl.Marker({ element: el, anchor: "left" }).setLngLat([p.at[1], p.at[0]]).addTo(map));
+  }
+}
+function advFit() {
+  const h = adv && (adv.hypotheses || [])[advSel]; if (!h || !mapReady) return;
+  const pts = [...(h.geometry.river || []), ...(h.geometry.plume || []), ...h.incidents.map((sc) => meta[sc] && meta[sc].ipp).filter(Boolean)];
+  if (h.source && h.source.at) pts.push(h.source.at);
+  if (!pts.length) return;
+  const lons = pts.map((p) => p[1]), lats = pts.map((p) => p[0]);
+  const wide = innerWidth > 900;
+  map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: wide ? { left: 440, right: 340, top: 90, bottom: Math.round(innerHeight * 0.48) } : 30, maxZoom: 11, duration: 600 });
+}
+map.on("load", () => advMap());
+setInterval(advTick, 10000);
+advTick();
 
 // ---------- loop: every 5 s, never overlapping
 let busy = false;
