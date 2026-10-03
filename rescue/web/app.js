@@ -1137,8 +1137,11 @@
     const errs = checkRun(R);
     if (errs.length) return fatal('run.json nie spełnia kontraktu rescue-run/1: ' + errs.join('; '));
     const scen = await fetchJSON(CFG.scenario, true);
-    const sameBox = scen && scen.bbox && Math.abs(scen.bbox.north - R.bbox.north) < 1e-6 && Math.abs(scen.bbox.west - R.bbox.west) < 1e-6;
-    if (scen && !sameBox) warn('scenariusz ma inny bbox niż run.json - pomijam warstwy scenariusza');
+    // The engine may widen its grid beyond the scenario bbox (by design), so the scenario is usable when its bbox lies
+    // inside the run's bbox; overlays are drawn in lat/lon, independent of the grid.
+    const eps = 1e-6, sb = scen && scen.bbox;
+    const sameBox = !!(sb && sb.south >= R.bbox.south - eps && sb.north <= R.bbox.north + eps && sb.west >= R.bbox.west - eps && sb.east <= R.bbox.east + eps);
+    if (scen && !sameBox) warn('bbox scenariusza wychodzi poza bbox run.json - pomijam warstwy scenariusza');
     const scenOK = sameBox ? scen : null;
     const terrainURL = CFG.terrain || CFG.scenario.replace(/\.json$/, '-terrain.json');
     const terrain = scenOK ? await fetchJSON(terrainURL, true) : null;
