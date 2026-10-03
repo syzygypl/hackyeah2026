@@ -287,7 +287,7 @@ body.mode-edycja #sigBtn{display:none}
 .box.seg{padding:12px 12px 12px 52px}
 /* first-run hint floats under the bar instead of wrapping it */
 header{position:relative}
-header #firstRun{position:absolute;top:calc(100% + 8px);right:0;max-width:560px;z-index:30;background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid color-mix(in srgb,var(--rl-warn) 70%,transparent);box-shadow:var(--rl-shadow);padding:8px 8px 8px 14px}
+header #firstRun{position:absolute;top:calc(100% + 8px);left:0;right:auto;max-width:560px;z-index:30;background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid color-mix(in srgb,var(--rl-warn) 70%,transparent);box-shadow:var(--rl-shadow);padding:8px 8px 8px 14px}
 @media (min-width:901px){body.float header{z-index:11}}
 /* Walidacja: AI Marcina's summary card and AI Denisa's card read as one column */
 #validation-summary{max-width:1192px;margin:24px auto 0}
