@@ -44,7 +44,8 @@ Czas scenariusza / czas demo. Uzupełniane z wątku.
 | ... | ... | Wskazówki: start w schronisku (S3), świadek 13:40 (S5), ostatni sektor BTS (S12), mgła powyżej 1800 m od 13:30 | kierownik, oś czasu i mapa | |
 | 19:00 | ... | Mapa: S3 27,2%, S2 17,3%, S13 16,0%. Top 3 = 60% POA na 18% obszaru. Śmigłowiec uziemiony (widzialność 40 m), hipotermia wysoka | kierownik, panel top 3 | ~14:47 |
 | 19:00-19:15 | ... | Fala 1: TOPR A -> S5, S12 (planer: S2); dron -> S3; TOPR B -> S13, S12 (planer: S5 z Murowańca, 115 min); pies -> S4. Dlaczego: świadek + telefon wskazują drogę na przełęcz, a we mgle szlak gubi się na piargu | kierownik, przydział zespołów | ~14:47 |
-| ... | ... | Sędzia: nic / ZNALEZIONO (POD ...) | widok patrolu -> kierownik | |
+| fala 1 | ... | Sędzia: wszędzie "nic" (S5, S12, S3, S13, S4). Puste wróciły i przydziały planera, i odejścia od niego | widok patrolu -> kierownik | 14:48 |
+| 19:00 | ... | Kontrola: niezależny przebieg AI Denisa daje identyczne top 3 (silnik deterministyczny). Propozycja: S2 | kierownik | 14:48 |
 | ... | ... | Przeliczenie: top 3 = ... | kierownik, mapa | |
 | ... | ... | ... (kolejne fale) | | |
 | ... | ... | ZNALEZIONO albo koniec czasu | widok patrolu | |

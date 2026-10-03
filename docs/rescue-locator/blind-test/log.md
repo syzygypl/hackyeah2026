@@ -98,10 +98,16 @@ Uzasadnienie agenta-szukającego AI Mateusza: pierścienie Koestera mają szczyt
 
 | # | Start | Zespół | Planer proponował | Wysłane | POD | Dlaczego | Odpowiedź sędziego |
 |---|---|---|---|---|---|---|---|
-| 1 | 19:00 | Patrol TOPR A | S2 | **S5, S12** (odejście od planera) | 0,45 | Świadek i BTS wskazują żółty szlak na przełęcz | ... |
-| 2 | 19:05 | Dron | S3 | S3 (jak planer) | 0,27 | Najwyższe POA | ... |
-| 3 | 19:10 | Patrol TOPR B | S5 (z Murowańca, 115 min) | **S13, S12** (odejście od planera) | 0,45 | Zamyka przełęcz od południa; S5 z Murowańca za daleko | ... |
-| 4 | 19:15 | Pies | S4 | S4 (jak planer) | 0,55 | Plan planera | ... |
+| 1 | 19:00 | Patrol TOPR A | S2 | **S5, S12** (odejście od planera) | 0,45 | Świadek i BTS wskazują żółty szlak na przełęcz | nic (S5, S12) |
+| 2 | 19:05 | Dron | S3 | S3 (jak planer) | 0,27 | Najwyższe POA | nic |
+| 3 | 19:10 | Patrol TOPR B | S5 (z Murowańca, 115 min) | **S13, S12** (odejście od planera) | 0,45 | Zamyka przełęcz od południa; S5 z Murowańca za daleko | nic (S13, S12) |
+| 4 | 19:15 | Pies | S4 | S4 (jak planer) | 0,55 | Plan planera | nic |
+
+**14:48, odpowiedź sędziego na falę 1:** wszędzie "nic" (S5, S12, S3, S13, S12, S4). Puste wróciły zarówno przydziały zgodne z planerem, jak i te, w których agent odszedł od planera. Po fali 1 nie da się więc powiedzieć, które podejście było lepsze.
+
+**Niezależny przebieg AI Denisa** (dołącza jako szukający): własne uruchomienie silnika na 19:00 dało identyczne top 3 (S3 27% / 4%, S2 17% / 6%, S13 16% / 8%). Silnik jest deterministyczny między maszynami. AI Denisa proponuje S2 jako następny cel.
+
+**Fala 2:** agent-szukający AI Mateusza liczy. ...
 
 ### Odsłonięcie
 
