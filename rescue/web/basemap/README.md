@@ -25,6 +25,16 @@ Protomaps style it adds mountain layers: trails (red dashed), peaks with elevati
 
 The whole archive is loaded into memory, so a plain `python3 -m http.server` works (it has no HTTP Range support).
 
+## Other regions
+
+One file per region, cut with `--bbox` (no scenario needed): `bieszczady.pmtiles` (6.7 MB), `karkonosze.pmtiles` (4.3 MB),
+`sniardwy.pmtiles` (3.6 MB); Mamry and Moryń pending. `basemap.js` exports `REGIONS` (file, bounds, label) and
+`regionFor(bbox)` to pick the file for a scenario. Demo: `basemap/index.html?region=bieszczady`.
+
+```sh
+python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.40,49.03,22.72,49.20 --pad 0 --out rescue/web/basemap/bieszczady.pmtiles
+```
+
 ## What is here
 
 | Path | What | License |

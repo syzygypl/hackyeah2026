@@ -16,6 +16,24 @@ export const ATTRIBUTION =
 
 // tatry.pmtiles covers the union of all rescue/scenarios/*.json bboxes + 0.02° pad (see extract_pmtiles.py)
 export const TATRY_BOUNDS = [[19.92015, 49.1516], [20.12845, 49.2795]];
+// Other rescue regions, one PMTiles file each (extract_pmtiles.py --bbox ...). Usage:
+//   await loadBasemap(maplibregl, REGIONS.mamry.file); style: offlineStyle({ file: REGIONS.mamry.file }), bounds: REGIONS.mamry.bounds
+export const REGIONS = {
+  tatry:      { file: "tatry.pmtiles",      bounds: [[19.92015, 49.1516], [20.12845, 49.2795]], label: "Tatry (Zawrat, Morskie Oko, Kasprowy)" },
+  bieszczady: { file: "bieszczady.pmtiles", bounds: [[22.40, 49.03], [22.72, 49.20]], label: "Bieszczady (połoniny)" },
+  karkonosze: { file: "karkonosze.pmtiles", bounds: [[15.62, 50.69], [15.82, 50.79]], label: "Karkonosze (Śnieżka)" },
+  sniardwy:   { file: "sniardwy.pmtiles",   bounds: [[21.55, 53.68], [21.88, 53.84]], label: "Mazury - Śniardwy" },
+  // mamry (extract pending):      { file: "mamry.pmtiles",      bounds: [[21.70, 54.03], [21.98, 54.20]], label: "Mazury - Mamry" },
+  // moryn (extract pending):      { file: "moryn.pmtiles",      bounds: [[14.33, 52.82], [14.46, 52.90]], label: "Moryń - Jezioro Morzycko" },
+};
+// Pick the region whose bounds contain a scenario bbox ({west,south,east,north}); null if none.
+export function regionFor(bb) {
+  for (const [id, r] of Object.entries(REGIONS)) {
+    const [[w, s], [e, n]] = r.bounds;
+    if (bb.west >= w && bb.east <= e && bb.south >= s && bb.north <= n) return { id, ...r };
+  }
+  return null;
+}
 export const ZAWRAT_BOUNDS = [[19.985, 49.175], [20.1075, 49.269]];   // zawrat.json / blind-01.json + pad
 
 // The whole extract (~3.5 MB) is fetched once into memory, so any static server works

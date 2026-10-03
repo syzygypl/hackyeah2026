@@ -174,6 +174,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", action="append", help="scenario json, repeatable; the extract covers the union of their bboxes "
                     "(default: every rescue/scenarios/*.json that is not a -terrain file)")
+    ap.add_argument("--bbox", help="west,south,east,north instead of scenario files (for regions without a scenario yet)")
     ap.add_argument("--build", default="20261003.pmtiles", help="file name from https://build-metadata.protomaps.dev/builds.json")
     ap.add_argument("--minzoom", type=int, default=0)
     ap.add_argument("--maxzoom", type=int, default=15)
@@ -182,8 +183,15 @@ def main():
     a = ap.parse_args()
 
     import glob
-    files = a.scenario or sorted(f for f in glob.glob(os.path.join(ROOT, "scenarios", "*.json")) if not f.endswith("-terrain.json"))
-    boxes = [json.load(open(f))["bbox"] for f in files]
+    if a.bbox:
+        w0, s0, e0, n0 = (float(v) for v in a.bbox.split(","))
+        boxes, files = [{"west": w0, "south": s0, "east": e0, "north": n0}], ["--bbox " + a.bbox]
+    else:
+        files = a.scenario or sorted(f for f in glob.glob(os.path.join(ROOT, "scenarios", "*.json")) if not f.endswith("-terrain.json"))
+        boxes = [json.load(open(f))["bbox"] for f in files]
+        if not a.scenario:  # default = tatry.pmtiles: only scenarios in the Tatras, other regions get their own file via --bbox
+            keep = [(f, b) for f, b in zip(files, boxes) if 19.6 <= b["west"] and b["east"] <= 20.4 and 49.0 <= b["south"] and b["north"] <= 49.4]
+            files, boxes = [f for f, _ in keep], [b for _, b in keep]
     w = min(b["west"] for b in boxes) - a.pad
     s = min(b["south"] for b in boxes) - a.pad
     e = max(b["east"] for b in boxes) + a.pad

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mapa offline - Zawrat</title>
+<title>Mapa offline</title>
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
 <style>
   html, body, #map { margin: 0; height: 100%; }
@@ -17,10 +17,11 @@
 <div id="info"><b>Mapa bazowa offline</b><span id="net">sprawdzam sieć…</span></div>
 <script type="module">
   import * as maplibregl from "../vendor/maplibre-gl.mjs";
-  import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "./basemap.js";
+  import { offlineStyle, loadBasemap, REGIONS } from "./basemap.js";
 
-  await loadBasemap(maplibregl);
-  const map = new maplibregl.Map({ container: "map", style: offlineStyle(), bounds: ZAWRAT_BOUNDS, maxBounds: [[19.9, 49.13], [20.2, 49.31]] });
+  const R = REGIONS[new URLSearchParams(location.search).get("region")] || REGIONS.tatry;   // ?region=bieszczady|karkonosze|sniardwy
+  await loadBasemap(maplibregl, R.file);
+  const map = new maplibregl.Map({ container: "map", style: offlineStyle({ file: R.file }), bounds: R.bounds });
   window.map = map;
   map.addControl(new maplibregl.NavigationControl());
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }));
