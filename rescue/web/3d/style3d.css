@@ -16,6 +16,10 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: #d9e1e6; color: var(--ink); }
 #scene { position: fixed; inset: 0; }
 #scene canvas { display: block; }
+/* soft vignette over the terrain, under the 3D labels */
+#scene::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse 80% 75% at 50% 48%, transparent 55%, rgba(20, 24, 30, 0.22) 100%); }
+body.embed #scene::after { background: radial-gradient(ellipse 80% 75% at 50% 48%, transparent 50%, rgba(0, 0, 0, 0.38) 100%); }
+#scene > div { z-index: 2; }
 
 .panel {
   position: fixed; z-index: 5;

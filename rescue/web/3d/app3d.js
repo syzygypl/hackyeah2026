@@ -340,6 +340,7 @@ terrainGeo.rotateX(-Math.PI / 2);
   terrainGeo.computeVertexNormals();
 }
 // object-space normal map from the full-resolution DEM: the mesh is averaged 2x2 for the wide cut, the shading keeps every ridge
+let terrainAO = null;
 const normalTex = (() => {
   const k = DEM_FULL.cols / DEM.cols >= 1.5 ? 2 : 1, C = DEM.cols * k, Rr = DEM.rows * k, Z = DEM_FULL.z;
   const sx = 2 * (DEM_FULL.step * KX * KM), sz = 2 * ((DEM_FULL.stepLat || DEM_FULL.step) * KM), f = EX / 1000;
@@ -352,10 +353,25 @@ const normalTex = (() => {
   }
   const t = new THREE.DataTexture(data, C, Rr, THREE.RGBAFormat);
   t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; t.needsUpdate = true;
+  // baked ambient occlusion: horizon angle in 8 directions out to ~1 km, so gullies and cirques sit in their own shade
+  const ao = new Uint8Array(C * Rr * 4), px = sx / 2, pz = sz / 2, DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], STEPS = [1, 2, 3, 5, 8, 12, 18, 27, 40];
+  for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) {
+    const h0 = Z[r][c] * f; let occ = 0;
+    for (const [dc, dr] of DIRS) {
+      let mx = 0; const dl = Math.hypot(dc * px, dr * pz);
+      for (const k of STEPS) { const rr = r + dr * k, cc = c + dc * k; if (rr < 0 || cc < 0 || rr >= Rr || cc >= C) break; const tn = (Z[rr][cc] * f - h0) / (dl * k); if (tn > mx) mx = tn; }
+      occ += mx / Math.hypot(1, mx); // sin(horizon angle)
+    }
+    const v = clamp(1 - (occ / 8) * 1.35, 0.25, 1) * 255, o = ((Rr - 1 - r) * C + c) * 4;
+    ao[o] = ao[o + 1] = ao[o + 2] = v; ao[o + 3] = 255;
+  }
+  const a = new THREE.DataTexture(ao, C, Rr, THREE.RGBAFormat);
+  a.magFilter = THREE.LinearFilter; a.minFilter = THREE.LinearMipmapLinearFilter; a.generateMipmaps = true; a.needsUpdate = true;
+  terrainAO = a;
   return t;
 })();
 const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissiveMap: glowTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.96, metalness: 0,
-  normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap });
+  normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 });
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
