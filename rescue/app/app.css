@@ -156,3 +156,141 @@ body.role-ratownik #rescuer{display:flex;flex-direction:column;gap:8px;padding:8
   body.float header,body.float #left,body.float #right,body.float #bottom{transition:opacity .6s,transform .6s}
   body.float.cinema header,body.float.cinema #left,body.float.cinema #right,body.float.cinema #bottom{opacity:0;pointer-events:none}
 }
+
+/* ---------- look: paper over terrain (ui design; canvas https://claude.ai/artifact/MKFv412DcTTKiZsPvanixR) ----------
+   Values for the plumbing variables above, then the panels' look. Akcja: header, one right panel (Top 3 + przydział),
+   a one-line dock; #left only in Plan (edycja); the event cards behind "Sygnały". */
+:root{--float-gap:12px;--rail-l-w:300px;--rail-r-w:360px;--dock-h:84px;--bar-h:56px;--panel-radius:var(--rl-radius-l);--panel-bg:var(--rl-panel);--panel-border:1px solid var(--rl-line);--panel-blur:var(--rl-blur)}
+body.signals,body.mode-edycja{--dock-h:204px}
+html,body{font-family:var(--rl-font);-webkit-font-smoothing:antialiased}
+button{border-radius:var(--rl-radius-s);border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);min-height:32px}
+button:hover:not(:disabled){border-color:var(--rl-ink)}
+button.primary{background:var(--rl-danger);color:var(--rl-on-danger);border-color:var(--rl-danger)}
+input,select,textarea{background:var(--rl-card);border-color:var(--rl-line-strong);border-radius:var(--rl-radius-s);color:var(--rl-ink)}
+h2{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--rl-mute);margin:14px 0 8px}
+.help{color:var(--rl-mute)}
+.mute{color:var(--rl-mute)}
+@media (min-width:901px){
+  body.float header,body.float #left,body.float #right,body.float #bottom{box-shadow:var(--rl-shadow)}
+  body.float.mode-akcja #left{display:none}
+  body.float:not(.signals):not(.mode-edycja) #events{display:none}
+}
+/* header = app bar */
+header{gap:12px;padding:6px 8px 6px 14px;min-height:56px;background:var(--rl-panel);border-bottom:1px solid var(--rl-line)}
+header h1{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:.01em;white-space:nowrap;margin:0 4px 0 0}
+header .logo{width:36px;height:25px;fill:var(--rl-ink);flex:none}
+header .logo circle{fill:var(--rl-danger)}
+.scenlbl{display:flex;align-items:center}
+.scenlbl>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#scen{height:40px;border-radius:var(--rl-radius);font-weight:600;font-size:14px;padding:0 10px;max-width:260px}
+.views{border:0;border-radius:12px;padding:3px;gap:2px;background:color-mix(in srgb,var(--rl-ink) 6%,transparent);overflow:visible}
+.views button{min-height:36px;padding:0 16px;border:0;border-radius:9px;background:transparent;font-weight:600;font-size:15px;color:var(--rl-ink-2)}
+.views button:not(.on):hover:not(:disabled){color:var(--rl-ink);border:0}
+.views button.on:hover{border:0}
+.views button.on{background:var(--rl-chrome);color:var(--rl-on-chrome);font-weight:700}
+#status{font-size:12.5px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#roleBtn{min-height:40px;border-radius:20px;padding:0 16px;font-weight:600}
+#firstRun{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--rl-warn-ink);background:color-mix(in srgb,var(--rl-warn) 22%,transparent);border-radius:10px;padding:4px 6px 4px 12px}
+#firstRun[hidden]{display:none}
+/* the 2D/3D switch floats over the scene, centred in the free area */
+#views{position:fixed;z-index:12;top:80px;right:16px;background:var(--rl-panel);border:1px solid var(--rl-line);box-shadow:var(--rl-shadow);backdrop-filter:blur(var(--rl-blur));-webkit-backdrop-filter:blur(var(--rl-blur))}
+#views button{font-size:15px;padding:0 20px}
+@media (min-width:901px){
+  body.float #views{top:calc(var(--float-gap) * 2 + max(var(--bar-h), var(--hdr-h, 0px)));right:auto;left:calc((100vw - var(--rail-r-w) - var(--float-gap)) / 2);transform:translateX(-50%)}
+  body.float.mode-edycja #views{left:calc((100vw + var(--rail-l-w) - var(--rail-r-w)) / 2)}
+  body.float.cinema #views{opacity:0;pointer-events:none}
+}
+/* right panel: Top 3 sektory + przydział */
+#right{padding:4px 12px 12px}
+.hero{padding:0 4px 10px}
+.hero .big{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:400;color:var(--rl-ink-2);line-height:1.25}
+.hero .big b{font-family:var(--rl-font-num);font-size:54px;font-weight:700;line-height:1;color:var(--rl-danger);font-variant-numeric:tabular-nums}
+.hero .big em{font-style:normal;font-weight:700;color:var(--rl-ink)}
+.hero .help{font-family:var(--rl-mono);font-size:11.5px;margin-top:6px}
+.seg{position:relative;background:var(--rl-card);border:1px solid var(--rl-line);border-radius:12px;padding:12px 12px 12px 52px;margin-bottom:8px}
+.seg:hover{border-color:var(--rl-line-strong)}
+.seg .rank{position:absolute;left:12px;top:12px;width:30px;height:30px;line-height:27px;margin:0;font-size:14px;background:transparent;border:1.5px solid var(--rl-danger);color:var(--rl-danger)}
+#segs .seg:first-child{border:1.5px solid var(--rl-danger);box-shadow:0 2px 10px color-mix(in srgb,var(--rl-danger) 14%,transparent)}
+#segs .seg:first-child .rank{background:var(--rl-danger);color:var(--rl-on-danger)}
+.seg>b{display:block;font-size:16px;font-weight:600;line-height:1.2}
+.seg .p{font-family:var(--rl-font-num);font-size:26px;font-weight:700;color:var(--rl-danger);font-variant-numeric:tabular-nums;line-height:1.1;margin-top:2px}
+.seg .p .mute{font-family:var(--rl-font);font-size:13px!important;font-weight:400}
+.segbar{display:block;position:relative;height:5px;border-radius:3px;margin-top:8px;overflow:hidden;background:color-mix(in srgb,var(--rl-ink) 8%,transparent)}
+.segbar::after{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--w);border-radius:3px;background:var(--rl-danger)}
+#segs .seg:nth-child(2) .segbar::after{background:#d9572b}
+#segs .seg:nth-child(n+3) .segbar::after{background:#e9a23b}
+.segteam{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13.5px;font-weight:600}
+.segteam .tk{width:24px;height:24px;border-radius:7px;background:var(--rl-accent);color:var(--rl-on-accent);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.seg.sel,#segs .seg.sel:first-child{border-color:var(--sel);box-shadow:0 0 0 2px var(--sel)}
+.moreinfo{border-top:1px solid var(--rl-line);margin-top:8px;padding:0 4px}
+.moreinfo>summary{list-style:none;cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:600;color:var(--rl-accent)}
+.moreinfo>summary::-webkit-details-marker{display:none}
+.moreinfo>summary::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform .2s;flex:none}
+.moreinfo[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+.box{background:var(--rl-card);border-color:var(--rl-line);border-radius:12px;padding:10px 12px}
+.pill{background:color-mix(in srgb,var(--rl-ok) 14%,transparent);color:var(--rl-ok);font-weight:600;padding:2px 8px}
+.pill.off{background:color-mix(in srgb,var(--rl-danger) 12%,transparent);color:var(--rl-danger)}
+.flag,.rflag{color:var(--rl-danger)}
+.team summary,.asec .seglink,.seglink{color:var(--rl-accent)}
+.bar{background:color-mix(in srgb,var(--rl-ink) 10%,transparent)}
+.bar i{background:var(--rl-accent)}
+.big{color:var(--rl-ok)}
+.alert{border:1px solid color-mix(in srgb,var(--rl-warn) 60%,transparent);background:color-mix(in srgb,var(--rl-warn) 16%,transparent);border-radius:10px;padding:9px 11px;font-size:13px;color:var(--rl-ink)}
+.alert.bad{border-color:color-mix(in srgb,var(--rl-danger) 35%,transparent);background:color-mix(in srgb,var(--rl-danger) 9%,transparent)}
+.alert.ok{border-color:var(--rl-line);background:transparent;color:var(--rl-mute)}
+.note{color:var(--rl-warn-ink)}
+/* dock: one line in Akcja, event cards in Plan or with "Sygnały" */
+#bottom{padding:0 14px 0 12px}
+#bottom>.row{min-height:82px;gap:12px;flex-wrap:nowrap}
+#play{width:52px;height:52px;min-height:0;flex:none;border-radius:50%;border:0;padding:0;background:var(--rl-danger);color:var(--rl-on-danger);font-size:18px;box-shadow:0 4px 12px color-mix(in srgb,var(--rl-danger) 35%,transparent)}
+#play:hover{border:0;filter:brightness(.92)}
+#bottom>.row>b{font-size:15px}
+#clock{font-family:var(--rl-mono);font-size:13px;color:var(--rl-ink-2);max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#slider{accent-color:var(--rl-accent);height:28px;cursor:pointer}
+#sigBtn,#evReset{min-height:36px;font-weight:600;flex:none}
+#sigBtn[aria-pressed=true]{border-color:var(--rl-accent);color:var(--rl-accent);background:color-mix(in srgb,var(--rl-accent) 8%,var(--rl-card))}
+body.mode-edycja #sigBtn{display:none}
+#events{gap:8px;padding:2px 0 10px}
+.ev{background:var(--rl-card);border-color:var(--rl-line);border-radius:10px;padding:8px 10px}
+.ev.cur{border:2px solid var(--rl-accent)}
+.ev .src{font-family:var(--rl-mono)}
+/* overlays of the app's own map (Plan) */
+#legend{background:var(--rl-panel);border-color:var(--rl-line);border-radius:12px;box-shadow:var(--rl-shadow);padding:8px 10px}
+.note3d,.fullnote{background:var(--rl-panel);color:var(--rl-ink-2)}
+#hint{background:var(--rl-chrome);color:var(--rl-on-chrome);border:0;box-shadow:var(--rl-shadow)}
+#hint b{color:var(--rl-warn)}
+#toast{background:var(--rl-chrome);color:var(--rl-on-chrome);border-radius:10px;box-shadow:var(--rl-shadow)}
+#ghost{background:var(--rl-accent);color:var(--rl-on-accent)}
+.card{background:var(--rl-card);border-color:var(--rl-line);border-radius:10px;min-height:44px}
+.card.armed{outline-color:var(--rl-accent);background:color-mix(in srgb,var(--rl-accent) 8%,var(--rl-card))}
+.pop{background:var(--rl-panel-solid);border-color:var(--rl-line-strong);box-shadow:var(--rl-shadow)}
+.tok{background:var(--rl-panel-solid);color:var(--rl-ink);border-color:var(--rl-accent)}
+.tok button.nic{background:var(--rl-card)}
+.tok button.found{background:var(--rl-ok);color:var(--rl-on-ok);border-color:var(--rl-ok)}
+/* Więcej: Teren, Monitoring, Walidacja on the page ground */
+.full{background:var(--rl-bg)}
+#val{max-width:1240px;padding:24px}
+#teamFeed{max-width:1240px;margin:0 auto;padding:24px}
+.vcard{background:var(--rl-panel-solid);border-color:var(--rl-line);border-radius:14px;padding:18px 20px}
+.vcard h3{font-size:17px}
+.stat b{font-family:var(--rl-font-num);font-size:30px}
+/* role picker and the rescuer's phone */
+#rolePick{background:color-mix(in srgb,var(--rl-ink) 55%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.rolebox{background:var(--rl-panel-solid);border:0;border-radius:20px;padding:22px;box-shadow:var(--rl-shadow)}
+.rolebox button{background:var(--rl-card);border-radius:14px}
+.rolebox button[data-role=ratownik]{background:var(--rl-danger);color:var(--rl-on-danger);border-color:var(--rl-danger)}
+.rolebox button[data-role=ratownik] span{color:inherit;opacity:.85}
+.rcard{border:0;border-radius:16px;background:var(--rl-panel-solid);box-shadow:var(--rl-shadow)}
+.rbig.off{color:var(--rl-danger)}
+.rsurv{color:var(--rl-warn-ink)}
+#frameRescuer{background:var(--rl-panel-solid)}
+.box.seg{padding:12px 12px 12px 52px}
+/* first-run hint floats under the bar instead of wrapping it */
+header{position:relative}
+header #firstRun{position:absolute;top:calc(100% + 8px);right:0;max-width:560px;z-index:30;background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid color-mix(in srgb,var(--rl-warn) 70%,transparent);box-shadow:var(--rl-shadow);padding:8px 8px 8px 14px}
+@media (min-width:901px){body.float header{z-index:11}}
+/* Walidacja: AI Marcina's summary card and AI Denisa's card read as one column */
+#validation-summary{max-width:1192px;margin:24px auto 0}
+#validation-summary>*{background:var(--rl-panel-solid)!important;border:1px solid var(--rl-line)!important;border-radius:14px!important;box-shadow:none!important}
+#validation-summary:empty{display:none}
+#validation-summary~#val{padding-top:12px}

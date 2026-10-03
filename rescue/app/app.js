@@ -190,11 +190,12 @@ function setStep(n, from) {
 function renderPanels() {
   const R = D(), S = curStep(); if (!R || !S) return;
   const t3 = S.segments.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
-  $("vbig").textContent = `${pct(tp)} wagi mapy w ${Math.round(ta)}% obszaru`;
+  $("vbig").innerHTML = `<b>${pct(tp)}</b><span>wagi mapy<br>w <em>${Math.round(ta)}% obszaru</em> · top 3</span>`;
   $("vsub").textContent = `Top 3 z ${S.segments.length} segmentów · krok ${store.step}/${R.steps.length} (${S.t})`;
   const segRows = [...t3]; const sel = S.segments.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
   $("segs").innerHTML = segRows.map((s) => { const k = S.segments.indexOf(s);
-    return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p">${pct(s.poa)} <span class="mute" style="font-size:13px">w ${(+s.areaPct).toFixed(1)}% obszaru</span></div></div>`; }).join("");
+    const a = segTeam(S, s.id);
+    return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p">${pct(s.poa)} <span class="mute" style="font-size:13px">w ${(+s.areaPct).toFixed(1)}% obszaru</span></div><i class="segbar" style="--w:${Math.min(100, s.poa * 100 / Math.max(t3[0].poa, 1e-9) * 0.9).toFixed(0)}%"></i>${a ? `<div class="segteam"><span class="tk">${esc((a.name || "?")[0])}</span>${esc(a.name)}</div>` : ""}</div>`; }).join("");
   const W = S.weather || {}; $("surv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
   const by = {}; (S.assignments || []).forEach((a) => by[a.resourceId] = a);
   (store.manual || []).forEach((m) => by[m.resourceId] = { ...(by[m.resourceId] && by[m.resourceId].segmentId === m.segmentId ? by[m.resourceId] : { travelMin: NaN, expectedFind: NaN, safety: [] }), ...m, reason: "Przydział operatora" + (m.at ? " o " + m.at : "") });
@@ -209,6 +210,12 @@ function renderPanels() {
   $("status").textContent = `${R.incident || ""}${store.backend !== "studio" ? " · tylko odczyt" : ""}`;
   document.body.classList.toggle("readonly", !store.editable);
   $("readonly").style.display = store.editable || store.mode !== "edycja" ? "none" : "";
+}
+// which team works a segment in this step (operator's manual assignment wins), for the "Top 3 + przydział" cards
+function segTeam(S, segId) {
+  const m = (store.manual || []).find((x) => x.segmentId === segId), a = m || (S.assignments || []).find((x) => x.segmentId === segId);
+  if (!a) return null; const r = (S.resources || []).find((x) => x.id === a.resourceId);
+  return { name: (r && r.name) || a.resourceName || a.resourceId };
 }
 function renderProgress() {
   const R = D(), S = curStep(); if (!S) return;
@@ -653,7 +660,7 @@ function setRole(r) {
 }
 // first-run hint: one line, dismissible, remembered per role
 const HINTS = {
-  operator: "Wybierz scenariusz u góry. Akcja pokazuje mapę i plan, Edycja pozwala dodawać dowody przeciągając je na mapę.",
+  operator: "Wybierz scenariusz u góry. Akcja pokazuje mapę i plan, Plan pozwala dodawać dowody przeciągając je na mapę.",
   ratownik: "Wybierz swój zespół. Zadanie i mapa są u góry, meldunki wysyłasz dużymi przyciskami na dole.",
 };
 function showFirstRun(role) {
@@ -664,6 +671,8 @@ function showFirstRun(role) {
   el.hidden = false; $("firstRunText").textContent = HINTS[role];
   $("firstRunOk").onclick = () => { el.hidden = true; try { localStorage.setItem("rescue-app-hint-" + role, "1"); } catch (e) {} };
 }
+// Akcja: the event cards hide behind "Sygnały" so the dock is one line; Plan always shows them
+$("sigBtn").onclick = () => { const on = document.body.classList.toggle("signals"); $("sigBtn").setAttribute("aria-pressed", on); setTimeout(pushInsets, 50); };
 function setRescuerFrame() { const t = myTeam(); setFrame("frameRescuer", patrolURL(t)); }
 $("roleBtn").onclick = () => { $("rolePick").hidden = false; };
 $("rolePick").onclick = (e) => { const b = e.target.closest("[data-role]"); if (b) setRole(b.dataset.role); };
@@ -674,21 +683,29 @@ addEventListener("message", (e) => {
 });
 // ---------- modes (top tabs) and views inside a mode
 const MODES = {
-  akcja: { label: "Akcja", views: [["2d", "2D"], ["3d", "3D"], ["split", "Podział"]] },
-  edycja: { label: "Edycja", views: [["map", "Mapa"], ["split", "Mapa + 3D"]] },
+  akcja: { label: "Akcja", views: [["2d", "2D"], ["3d", "3D"]] },
+  edycja: { label: "Plan", views: [["map", "Mapa"], ["split", "Mapa + 3D"]] },
   teren: { label: "Teren", views: [["przeglad", "Przegląd zespołów"], ["patrol", "Telefon patrolu"], ["field", "Meldunek"]] },
   monitoring: { label: "Monitoring", views: [] },
   walidacja: { label: "Walidacja", views: [] },
 };
 const lastView = {};
-$("modes").innerHTML = Object.entries(MODES).map(([k, m]) => `<button data-mode="${k}" role="tab">${m.label}</button>`).join("");
-$("modes").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); };
+// three top tabs (redesign): Akcja, Plan (= edycja), Więcej (Teren / Monitoring / Walidacja as sub-tabs in #more)
+const TABS = [["akcja", "Akcja"], ["edycja", "Plan"], ["wiecej", "Więcej"]], MORE = ["teren", "monitoring", "walidacja"];
+let lastMore = "teren";
+$("modes").innerHTML = TABS.map(([k, l]) => `<button data-mode="${k}" role="tab">${l}</button>`).join("");
+$("modes").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode === "wiecej" ? lastMore : b.dataset.mode); };
+$("more").innerHTML = MORE.map((k) => `<button data-mode="${k}" role="tab">${MODES[k].label}</button>`).join("");
+$("more").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); };
 $("views").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) setView(b.dataset.view); };
 function setMode(m, v) {
   if (!MODES[m]) m = "akcja";
   store.mode = m;
   document.body.className = document.body.className.replace(/\bmode-\w+/g, "").trim() + " mode-" + m;
-  document.querySelectorAll("#modes button").forEach((b) => b.classList.toggle("on", b.dataset.mode === m));
+  if (MORE.includes(m)) lastMore = m;
+  document.querySelectorAll("#modes button").forEach((b) => b.classList.toggle("on", b.dataset.mode === m || (b.dataset.mode === "wiecej" && MORE.includes(m))));
+  document.querySelectorAll("#more button").forEach((b) => b.classList.toggle("on", b.dataset.mode === m));
+  $("more").style.display = MORE.includes(m) ? "" : "none";
   const views = MODES[m].views;
   $("views").innerHTML = views.map(([k, l]) => `<button data-view="${k}" role="tab">${l}</button>`).join("");
   $("views").style.display = views.length ? "" : "none";

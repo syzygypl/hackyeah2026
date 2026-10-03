@@ -12,10 +12,10 @@
 <body class="mode-akcja view-2d">
 <div id="app">
 <header>
-  <h1>Rescue Locator</h1>
-  <label class="mute">Scenariusz <select id="scen"></select></label>
+  <h1><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</h1>
+  <label class="mute scenlbl"><span>Scenariusz</span> <select id="scen"></select></label>
   <span id="modes" class="views modes" role="tablist" aria-label="Tryb"></span>
-  <span id="views" class="views" role="tablist" aria-label="Widok"></span>
+  <span id="more" class="views more" role="tablist" aria-label="Więcej" style="display:none"></span>
   <span class="edit-only edit-mode"><button id="newZ" title="Nowa historia na terenie Zawratu">Nowa historia</button>
   <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button></span>
   <span style="flex:1"></span>
@@ -25,6 +25,7 @@
   <button id="roleBtn" title="Zmień rolę (ratownik / operator)">Rola</button>
   <span id="firstRun" class="note" role="status" hidden><span id="firstRunText"></span> <button id="firstRunOk">OK, rozumiem</button></span>
 </header>
+<span id="views" class="views" role="tablist" aria-label="Widok"></span>
 <aside id="left">
   <div class="edit-only edit-mode">
     <h2>Dowody - przeciągnij na mapę</h2>
@@ -33,10 +34,6 @@
     <div id="tokens" class="grid2"></div>
   </div>
   <div id="readonly" class="note" style="display:none">Podgląd scenariusza (tylko odczyt). Edycja: wybierz „Studio (edycja na żywo)”.</div>
-  <h2>Ocena sytuacji</h2>
-  <div id="assess" class="box"></div>
-  <h2>Alerty</h2>
-  <div id="alerts"></div>
 </aside>
 <main id="center">
   <div id="map"><div id="toast"></div><div id="hint"></div><div id="legend"></div></div>
@@ -55,13 +52,18 @@
 </section>
 <aside id="right">
   <h2>Gdzie szukać najpierw</h2>
-  <div class="box"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
+  <div class="hero"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
   <div id="segs"></div>
+  <div id="alerts"></div>
+  <details id="moreInfo" class="moreinfo"><summary>Szczegóły: plan zespołów, postęp, ocena</summary>
   <h2>Plan zespołów</h2><div id="surv" class="help"></div><div id="teams"></div>
   <h2>Postęp akcji</h2><div id="progress" class="box"></div>
+  <h2>Ocena sytuacji</h2>
+  <div id="assess" class="box"></div>
+  </details>
 </aside>
 <footer id="bottom">
-  <div class="row"><button id="play" title="Odtwórz historię">▶</button><b>Historia</b><span class="mute" id="clock"></span><input type="range" id="slider" min="1" value="1"><button id="evReset" hidden title="Włącz z powrotem wszystkie sygnały">Przywróć sygnały</button></div>
+  <div class="row"><button id="play" title="Odtwórz historię">▶</button><b>Historia</b><span class="mute" id="clock"></span><input type="range" id="slider" min="1" value="1"><button id="evReset" hidden title="Włącz z powrotem wszystkie sygnały">Przywróć sygnały</button><button id="sigBtn" title="Pokaż lub ukryj listę sygnałów" aria-pressed="false">Sygnały</button></div>
   <div id="events"></div>
 </footer>
 </div>
