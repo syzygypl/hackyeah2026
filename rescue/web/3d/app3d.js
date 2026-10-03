@@ -77,8 +77,10 @@ function taskFor(name) {
 const DIFF_COLORS = ['#e6dfc8', '#9cc47a', '#3f7a3a', '#b8a78a', '#8f80a6', '#4b3f4a', '#4a8fd1']; // same as 2D
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// LAN server with --pin: /api/* needs X-Rescue-Pin (the app stores it raw, web/patrol JSON-quoted); same origin only
+const runPin = (u) => { try { const p = (localStorage.getItem('rescue-pin') || '').replace(/^"(.*)"$/, '$1'); return p && new URL(u, location.href).origin === location.origin ? { 'X-Rescue-Pin': p } : {}; } catch { return {}; } };
 const getJSON = async (u, optional) => {
-  try { const r = await fetch(u, { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status + ' ' + u); return await r.json(); }
+  try { const r = await fetch(u, { cache: 'no-cache', headers: runPin(u) }); if (!r.ok) throw new Error(r.status + ' ' + u); return await r.json(); }
   catch (e) { if (optional) return null; throw e; }
 };
 
@@ -1081,7 +1083,7 @@ addEventListener('keydown', (e) => {
   await Promise.all(extra.map(async (id) => { try { const r = await fetch(`../../tools/terrain/data/${id}-dem.json`, { method: 'HEAD' }); if (r.ok) addScen(id); } catch {} }));
   for (const [id, s] of Object.entries(SCENS)) {
     const o = document.createElement('option'); o.value = id; o.textContent = s.name; o.selected = id === SC;
-    if (id !== SC && !live.has(id)) { try { const r = await fetch(s.run, { method: 'HEAD' }); if (!r.ok) throw 0; } catch { o.disabled = true; o.textContent += ' (brak run.json)'; } }
+    if (id !== SC && !live.has(id)) { try { const r = await fetch(s.run, { method: 'HEAD', headers: runPin(s.run) }); if (!r.ok) throw 0; } catch { o.disabled = true; o.textContent += ' (brak run.json)'; } }
     sel.appendChild(o);
   }
   sel.addEventListener('change', () => { const u = new URL(location.href); u.searchParams.set('sc', sel.value); u.searchParams.delete('run'); location.href = u.toString(); });

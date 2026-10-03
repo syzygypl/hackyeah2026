@@ -100,7 +100,13 @@
   let run, step, team, map, queue = store.get(QKEY, []), log = store.get(LKEY, []), online = true;
 
   // ---------- data ----------
-  run = await (await fetch(RUN)).json();
+  // LAN server with --pin: the run (/api/run/<sc>, /story) needs X-Rescue-Pin too. The app stores it raw, this page JSON-quoted - accept both.
+  const pinRaw = () => { try { return String(localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch { return ""; } };
+  const pinH = () => pinRaw() ? { "X-Rescue-Pin": pinRaw() } : {};
+  let rr = await fetch(RUN, { headers: pinH() }).catch(() => null);
+  if (rr && (rr.status === 401 || rr.status === 403) && !EMBED) { const p = prompt("Podaj PIN akcji:"); if (p) { store.set("rescue-pin", p.trim()); rr = await fetch(RUN, { headers: pinH() }).catch(() => null); } }
+  if (!rr || !rr.ok) { document.body.innerHTML = `<p>${rr && (rr.status === 401 || rr.status === 403) ? "Podaj PIN akcji (zapytaj kierownika akcji) i odśwież stronę." : "Brak danych akcji - sprawdź połączenie i odśwież."}</p>`; await new Promise(() => {}); }
+  run = await rr.json();
   step = [...run.steps].reverse().find(s => (s.assignments || []).length) || run.steps[run.steps.length - 1];   // last step that still has a plan (the final one may be "akcja zamknięta")
   const teams = (step.resources || []).filter(r => r.type !== "drone");
   $("team").innerHTML = teams.map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join("");
@@ -187,7 +193,7 @@
   if (!clientId) { clientId = "patrol-" + Math.random().toString(36).slice(2, 10); store.set("rescue-client-id", clientId); }
   const headers = () => {
     const h = { "Content-Type": "application/json", "X-Rescue-Client": clientId, "X-Rescue-Team": team || "", "X-Rescue-Source": "patrol" };
-    const pin = store.get("rescue-pin", "");
+    const pin = pinRaw();
     if (pin) h["X-Rescue-Pin"] = pin;
     return h;
   };

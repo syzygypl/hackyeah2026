@@ -54,8 +54,10 @@
   const FIELD = (() => { try { return new URL(CFG.field, location.href); } catch (e) { return null; } })();
   const FIELD_LOOPBACK = !FIELD || ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(FIELD.hostname);
   let PIN = '';
-  try { PIN = localStorage.getItem('rescue-pin') || ''; } catch (e) { /* storage blocked */ }
+  try { PIN = (localStorage.getItem('rescue-pin') || '').replace(/^"(.*)"$/, '$1'); } catch (e) { /* storage blocked */ }   // web/patrol stores it JSON-quoted
   const toField = (url) => { try { return !!FIELD && new URL(url, location.href).origin === FIELD.origin; } catch (e) { return false; } };
+  // the run (/api/run/<sc>) on a LAN server needs the PIN too: send it to the field server and to our own origin
+  const runPin = (url) => { try { return PIN && (toField(url) || new URL(url, location.href).origin === location.origin) ? { 'X-Rescue-Pin': PIN } : {}; } catch (e) { return {}; } };
   const pinHeaders = (url, extra) => Object.assign({}, extra || {}, !FIELD_LOOPBACK && PIN && toField(url) ? { 'X-Rescue-Pin': PIN } : {});
 
   /* ---------- diagnostics (read by the headless check) ---------- */
@@ -108,7 +110,7 @@
   /* ---------- fetch helpers ---------- */
   async function fetchJSON(url, optional) {
     try {
-      const r = await fetch(url, { cache: 'no-store' });
+      const r = await fetch(url, { cache: 'no-store', headers: runPin(url) });
       if (!r.ok) { if (optional) return null; throw new Error(`HTTP ${r.status} dla ${url}`); }
       return await r.json();
     } catch (e) {
@@ -1122,7 +1124,7 @@
   async function pollRun() {
     if (CFG.run === 'inline') return; // parent-supplied run: nothing to poll
     try {
-      const r = await fetch(CFG.run, { method: 'HEAD', cache: 'no-store' });
+      const r = await fetch(CFG.run, { method: 'HEAD', cache: 'no-store', headers: runPin(CFG.run) });
       const sig = (r.headers.get('last-modified') || '') + '|' + (r.headers.get('content-length') || '');
       if (sig !== '|' && S.lastRunSig && sig !== S.lastRunSig) {
         S.lastRunSig = sig;
@@ -1203,7 +1205,7 @@
     // discover which run.json files exist; missing ones are greyed out
     SCENARIOS.forEach(async (x) => {
       let ok = false;
-      try { ok = (await fetch(x.run, { method: 'HEAD', cache: 'no-store' })).ok; } catch (e) { ok = false; }
+      try { ok = (await fetch(x.run, { method: 'HEAD', cache: 'no-store', headers: runPin(x.run) })).ok; } catch (e) { ok = false; }
       const o = sel.querySelector(`option[value="${x.id}"]`);
       if (o && !ok) { o.disabled = true; o.textContent = `${x.label} (brak run.json)`; o.title = `Wygeneruj: cd rescue && swift run rescue-demo --fast scenarios/${x.id}.json`; }
     });
