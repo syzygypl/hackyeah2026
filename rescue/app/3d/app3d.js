@@ -19,15 +19,15 @@ import { FX, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel sha
 const Q = new URLSearchParams(location.search);
 const SCENS = {
   zawrat: { name: 'Zawrat', run: '../../out/run.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg' },
-  'morskie-oko': { name: 'Morskie Oko', run: '../../out/morskie-oko.run.json' },
-  kasprowy: { name: 'Kasprowy', run: '../../out/kasprowy.run.json' },
+  'morskie-oko': { name: 'Morskie Oko', run: '../../out/morskie-oko.run.json', ortho: 'data/morskie-oko-ortho.jpg' },
+  kasprowy: { name: 'Kasprowy', run: '../../out/kasprowy.run.json', ortho: 'data/kasprowy-ortho.jpg' },
   'blind-01': { name: 'Test na ślepo: runda 1 (replay)', run: '../../out/blind-01-replay.run.json', scenario: '../../scenarios/blind-01-replay.json',
     terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg', reveal: '../../blindtest/blind-01.reveal.json' },
 };
 // Regions outside the Tatras: any scenario with tools/terrain/data/<sc>-dem.json opens on its own (narrow) DEM, without
 // the wide backdrop or aerial photo. Blind tests only through their SCENS entries.
 const REGIONS = { 'bieszczady-wetlinska': 'Bieszczady - Połonina Wetlińska', 'karkonosze-sniezka': 'Karkonosze - Śnieżka', sniardwy: 'Śniardwy', morzycko: 'Morzycko', miedzyzdroje: 'Międzyzdroje (Bałtyk)' };
-const addScen = (id) => { if (!SCENS[id] && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id)) SCENS[id] = { name: REGIONS[id] || id, run: `../../out/${id}.run.json`, region: true }; };
+const addScen = (id) => { if (!SCENS[id] && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id)) SCENS[id] = { name: REGIONS[id] || id, run: `../../out/${id}.run.json`, region: true, ortho: `data/${id}-ortho.jpg` }; };
 SCENS['blind-01-replay'] = SCENS['blind-01']; // the shell's id for the round 1 replay
 if (Q.get('sc')) addScen(Q.get('sc'));
 const SC = SCENS[Q.get('sc')] ? Q.get('sc') : 'zawrat';
@@ -174,7 +174,7 @@ function elevM(lat, lon) {
 }
 // water outside the Tatras: the scenario terrain's waterMask (grid over the scenario bbox: sea, lakes) plus sea-level DEM
 // pixels in regions; the Tatra cuts keep their lake circles only. LOW = a lowland region (no Tatra vegetation belts).
-const LOW = !!SCENS[SC].region;
+const LOW = !!SCENS[SC].region && zMax < 600; // coast, lakes, city; mountain regions (Karkonosze, Bieszczady) keep the vegetation belts
 const WM = TER?.waterMask && TER.slopeGrid && SCN?.bbox ? { m: TER.waterMask, rows: TER.slopeGrid.rows, cols: TER.slopeGrid.cols, b: SCN.bbox } : null;
 function isWater(la, lo) {
   if (WM && la <= WM.b.north && la >= WM.b.south && lo >= WM.b.west && lo <= WM.b.east) {
@@ -309,7 +309,15 @@ scene.add(hemi, sun, sun.target);
 scene.fog = new THREE.Fog(0xffffff, 12, 60);
 
 // ---------- terrain texture ----------
-const TS = clamp(Math.floor(1500 / DEM.cols), 2, 4); // texture pixels per DEM pixel (capped for large DEM cuts)
+// texture pixels per DEM pixel: about 3K px across (high-fidelity hillshade and contours), at most 4096 px on either side
+const TS = clamp(Math.floor(Math.min(3072 / DEM.cols, 4096 / DEM.rows, renderer.capabilities.maxTextureSize / Math.max(DEM.cols, DEM.rows))), 2, 14);
+// the texture samples the full-resolution DEM (the mesh uses the decimated one on wide cuts)
+function elevFull(lat, lon) {
+  const D = DEM_FULL, sl = D.stepLat || D.step;
+  const r = clamp((D.lat0 - lat) / sl - 0.5, 0, D.rows - 1), c = clamp((lon - D.lon0) / D.step - 0.5, 0, D.cols - 1);
+  const r0 = Math.floor(r), c0 = Math.floor(c), r1 = Math.min(r0 + 1, D.rows - 1), c1 = Math.min(c0 + 1, D.cols - 1), fr = r - r0, fc = c - c0, z = D.z;
+  return (z[r0][c0] * (1 - fc) + z[r0][c1] * fc) * (1 - fr) + (z[r1][c0] * (1 - fc) + z[r1][c1] * fc) * fr;
+}
 const TW = DEM.cols * TS, TH = DEM.rows * TS;
 // vegetation by elevation (Tatra belts: spruce forest, dwarf pine, alpine meadow), rock by slope, snow high up
 const VEG = [[900, [62, 112, 52]], [1200, [48, 98, 44]], [1450, [70, 118, 52]], [1600, [104, 138, 64]], [1800, [150, 160, 88]], [2000, [168, 166, 120]], [2300, [184, 180, 168]]];
@@ -329,7 +337,7 @@ const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; base
   // printed-topo look: vegetation/rock tint, warm-lit / cool-shadow hillshade, brown contours every 50 m (bold every 250 m)
   const g = baseCanvas.getContext('2d'), img = g.createImageData(TW, TH), d = img.data;
   const E = new Float32Array(TW * TH);
-  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) E[y * TW + x] = elevM(DEM.lat0 - ((y + 0.5) / TS) * stLat, DEM.lon0 + ((x + 0.5) / TS) * stLon);
+  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) E[y * TW + x] = elevFull(DEM.lat0 - ((y + 0.5) / TS) * stLat, DEM.lon0 + ((x + 0.5) / TS) * stLon);
   const px = (stLon * KX * KM * 1000) / TS, py = (stLat * KM * 1000) / TS;
   for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
     const i = y * TW + x, e = E[i];
@@ -352,7 +360,7 @@ const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; base
   g.putImageData(img, 0, 0);
 }
 const compCanvas = document.createElement('canvas'); compCanvas.width = TW; compCanvas.height = TH;
-const compTex = new THREE.CanvasTexture(compCanvas); compTex.colorSpace = THREE.SRGBColorSpace; compTex.anisotropy = 8;
+const compTex = new THREE.CanvasTexture(compCanvas); compTex.colorSpace = THREE.SRGBColorSpace; compTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 // POA heat drawn in the terrain shader: two canvas textures (previous / current step) crossfaded by uHeatT, with
 // contour edges at the 2x / 5x / 10x stops of the shared scale and a slow pulse on the hotspot
 const heatTex = () => { const t = new THREE.CanvasTexture(document.createElement('canvas')); t.colorSpace = THREE.SRGBColorSpace; return t; };
@@ -382,7 +390,7 @@ const normalTex = (() => {
     data[o] = (-gx / l * 0.5 + 0.5) * 255; data[o + 1] = (1 / l * 0.5 + 0.5) * 255; data[o + 2] = (-gz / l * 0.5 + 0.5) * 255; data[o + 3] = 255;
   }
   const t = new THREE.DataTexture(data, C, Rr, THREE.RGBAFormat);
-  t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; t.needsUpdate = true;
+  t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true;
   // flat height array in scene units, for the two bakes below
   const H = new Float32Array(C * Rr); for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) H[r * C + c] = Z[r][c] * f;
   // baked ambient occlusion: horizon angle in 8 directions out to ~1 km, so gullies and cirques sit in their own shade
@@ -519,7 +527,7 @@ let SHOW_DIFF = false, diffCanvas = null;
 // aerial photo layer (button "Zdjęcie"): Sentinel-2 cloudless 2016 resampled onto the wide DEM grid by data/make_ortho.py,
 // drawn instead of the topo base, so the searched wash, the difficulty layer and the shader heat stay on top
 const ORTHO = { on: false, canvas: null };
-if (SCENS[SC].ortho && DEM_FULL.cols > 600) {
+if (SCENS[SC].ortho && (!SCENS[SC].demWide || DEM_FULL.cols > 600)) { // zawrat's photo matches the wide cut only
   const img = new Image();
   img.onload = () => {
     const c = document.createElement('canvas'); c.width = TW; c.height = TH;
