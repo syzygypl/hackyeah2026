@@ -2,6 +2,21 @@
 
 Collected 2026-10-03 10:58, just before the tasks were unlocked. At that time the site had task summaries and rules PDFs, but the **detailed task descriptions were still hidden** (they are published at 11:00 on hackyeah.pl and on HackTribe). Update this file once they are out.
 
+**Update 11:10:** after the unlock, hackyeah.pl/tasks-prizes redirects to HackTribe, so **HackTribe is now the source of truth**: https://hackyeah2026.hacktribe.co/challenges/ (login required). Each challenge page there holds only the short description, the prize pool and a language note, with no extra specs or attachments. Anything more detailed will come from mentors and partners on site and on Discord. The Info page on HackTribe opens only after you complete your profile.
+
+What HackTribe shows differently from the rules PDFs:
+
+| Task | HackTribe page | Rules PDF / hackyeah.pl |
+|---|---|---|
+| Open tasks (all 5) | Prize pool **5,000 PLN** | 8,000 PLN |
+| HubMI.pl | "Polish or English" | Submission and pitch **in Polish** |
+| Cracow without barriers | "must be submitted in Polish" | Same |
+| Huawei | "must be submitted in English" | Same |
+
+The PDFs are the formal rules; when in doubt, ask the task mentor. To be safe, prepare HubMI materials in Polish.
+
+Challenge pages (HackTribe slugs): `artificial-intelligence`, `default` (Defence), `impacther-technology-for-real-change`, `smart-city`, `sport-healthcare`, `partner-task-ai-control-layer` (Goldman Sachs), `partner-task-imagine-what-s-next` (Huawei), `partner-task-cracow-without-barriers` (Miasto Kraków), `partner-task-finance-without-intermediaries` (Superteam), `partner-task-hubmi-pl` (UMWM).
+
 Sources: [hackyeah.pl](https://hackyeah.pl), [Tasks & Prizes](https://hackyeah.pl/tasks-prizes), [Rules](https://hackyeah.pl/rules), [HackTribe](https://hackyeah2026.hacktribe.co/). Full rules PDFs and their text extracts are in [`rules/`](rules/) (`*.txt` is grep-friendly for agents).
 
 ## Event
@@ -71,7 +86,7 @@ Judging: originality 20%, demonstrated usefulness 20%, technical execution 20%, 
 English only. IP: stays with the team; winners grant Huawei a non-exclusive license for demo/promotion. Rules: [`rules/imagine-what-s-next.txt`](rules/imagine-what-s-next.txt)
 Note: needs HarmonyOS tooling (ArkTS / DevEco Studio). Only viable if someone already knows it.
 
-#### Finance Without Intermediaries - 11,300 PLN
+#### Finance Without Intermediaries (Superteam) - 11,300 PLN
 > Imagine a transaction with someone you don't know. No history, no reputation, no way to go after them if they disappear with your money. Blockchain makes this irrelevant: the terms execute themselves, regardless of what the other party wants. Put this capability to use in an application.
 
 Judging: Relevance to the challenge 30%, Completeness and functionality 25%, Idea and choice of problem 20%, Implementation potential 15%, Originality 10%.
@@ -84,7 +99,7 @@ Judging: Idea 30% (creativity, how far the problem is solved), Technical aspects
 Submission in **Polish**, MP4 video required.
 IP: **economic copyright transferred to the City of Kraków**, plus handover of a GitLab repo with complete runnable source within 7 days. Rules: [`rules/cracow-without-barriers.txt`](rules/cracow-without-barriers.txt)
 
-### Open tasks - 8,000 PLN each
+### Open tasks - 8,000 PLN each per rules (HackTribe says 5,000 PLN)
 
 All judged on the default criteria (Idea & Innovation 30%, Relation to Category 20%, Usability 20%, Design 20%, Completeness 10%). IP not transferred. Detailed task content is published at 11:00.
 
