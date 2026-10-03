@@ -1,0 +1,40 @@
+{
+ "region": "zawrat",
+ "seed": 1,
+ "n": 200,
+ "tries": 226,
+ "dropped": {
+  "no_route": 9,
+  "out_of_grid": 17
+ },
+ "commit": "ff2b441",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "wrong_plan": 0.15,
+  "false_item": 0.1,
+  "no_bts": 0.3
+ },
+ "categories": {
+  "child": 19,
+  "dementia": 25,
+  "gatherer": 41,
+  "hiker": 115
+ },
+ "behaviours": {
+  "backtrack": 12,
+  "direction_travel": 43,
+  "follow_drainage": 50,
+  "route_sampling": 10,
+  "stay_put": 32,
+  "view_enhance": 9,
+  "wrong_trail": 44
+ },
+ "stopReasons": {
+  "blocked": 38,
+  "dark": 19,
+  "exhausted": 92,
+  "injury": 13,
+  "stay_put": 38
+ }
+}

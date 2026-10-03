@@ -1,0 +1,57 @@
+{
+ "find": [
+  49.219116,
+  20.064952
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "direction_travel",
+ "lostAt": [
+  49.22064,
+  20.062618
+ ],
+ "lostClock": "11:17",
+ "stopReason": "exhausted",
+ "reportClock": "19:44",
+ "path": [
+  [
+   49.22206,
+   20.06398,
+   "11:10"
+  ],
+  [
+   49.221,
+   20.06309,
+   "11:15"
+  ],
+  [
+   49.220449,
+   20.06291,
+   "11:21"
+  ],
+  [
+   49.219687,
+   20.064077,
+   "11:29"
+  ],
+  [
+   49.219306,
+   20.064661,
+   "11:36"
+  ]
+ ],
+ "distKmFromIpp": 0.349,
+ "trackOffsetM": 229,
+ "elevChangeM": 109,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  }
+ ],
+ "case": "case-0199",
+ "region": "zawrat",
+ "seed": 1
+}

@@ -1,0 +1,78 @@
+{
+ "find": [
+  49.211028,
+  20.042173
+ ],
+ "inGrid": true,
+ "category": "hiker",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  49.21252,
+  20.04171
+ ],
+ "lostClock": "12:36",
+ "stopReason": "blocked",
+ "reportClock": "18:37",
+ "path": [
+  [
+   49.210004,
+   20.023714,
+   "12:08"
+  ],
+  [
+   49.20982,
+   20.028345,
+   "12:13"
+  ],
+  [
+   49.210002,
+   20.031388,
+   "12:19"
+  ],
+  [
+   49.2106,
+   20.034979,
+   "12:25"
+  ],
+  [
+   49.21177,
+   20.038337,
+   "12:30"
+  ],
+  [
+   49.212325,
+   20.04124,
+   "12:36"
+  ],
+  [
+   49.211869,
+   20.041881,
+   "12:41"
+  ]
+ ],
+ "distKmFromIpp": 1.347,
+ "trackOffsetM": 125,
+ "elevChangeM": -118,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": false
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false,
+   "note": "inna osoba"
+  },
+  {
+   "event": 5,
+   "kind": "item",
+   "truthful": false,
+   "note": "cudza czapka"
+  }
+ ],
+ "case": "case-0168",
+ "region": "zawrat",
+ "seed": 1
+}

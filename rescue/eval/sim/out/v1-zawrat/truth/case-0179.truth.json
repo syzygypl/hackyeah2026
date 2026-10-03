@@ -1,0 +1,68 @@
+{
+ "find": [
+  49.21195,
+  20.044348
+ ],
+ "inGrid": true,
+ "category": "hiker",
+ "behaviour": "view_enhance",
+ "lostAt": [
+  49.21195,
+  20.043523
+ ],
+ "lostClock": "10:36",
+ "stopReason": "stay_put",
+ "reportClock": "18:36",
+ "path": [
+  [
+   49.207797,
+   20.029741,
+   "10:13"
+  ],
+  [
+   49.209814,
+   20.030456,
+   "10:18"
+  ],
+  [
+   49.21047,
+   20.034606,
+   "10:24"
+  ],
+  [
+   49.212353,
+   20.039337,
+   "10:29"
+  ],
+  [
+   49.212175,
+   20.042695,
+   "10:35"
+  ]
+ ],
+ "distKmFromIpp": 1.158,
+ "trackOffsetM": 7,
+ "elevChangeM": -42,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 510
+  }
+ ],
+ "case": "case-0179",
+ "region": "zawrat",
+ "seed": 1
+}

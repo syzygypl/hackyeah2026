@@ -24,6 +24,7 @@ export const REGIONS = {
   karkonosze: { file: "karkonosze.pmtiles", bounds: [[15.62, 50.69], [15.82, 50.79]], label: "Karkonosze (Śnieżka)" },
   sniardwy:   { file: "sniardwy.pmtiles",   bounds: [[21.55, 53.68], [21.88, 53.84]], label: "Mazury - Śniardwy" },
   mamry:      { file: "mamry.pmtiles",      bounds: [[21.70, 54.03], [21.98, 54.20]], label: "Mazury - Mamry" },
+  miedzyzdroje: { file: "miedzyzdroje.pmtiles", bounds: [[14.37, 53.88], [14.53, 53.98]], label: "Bałtyk - Międzyzdroje" },
   moryn:      { file: "moryn.pmtiles",      bounds: [[14.33, 52.82], [14.46, 52.90]], label: "Moryń - Jezioro Morzycko" },
 };
 // Pick the region whose bounds contain a scenario bbox ({west,south,east,north}); null if none.

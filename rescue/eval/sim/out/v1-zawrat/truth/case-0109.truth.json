@@ -1,0 +1,57 @@
+{
+ "find": [
+  49.22058,
+  20.060997
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  49.22012,
+  20.05823
+ ],
+ "lostClock": "13:37",
+ "stopReason": "blocked",
+ "reportClock": "17:50",
+ "path": [
+  [
+   49.22206,
+   20.06398,
+   "13:23"
+  ],
+  [
+   49.221,
+   20.06309,
+   "13:28"
+  ],
+  [
+   49.2202,
+   20.060892,
+   "13:34"
+  ],
+  [
+   49.220311,
+   20.058934,
+   "13:39"
+  ],
+  [
+   49.22058,
+   20.060585,
+   "13:44"
+  ]
+ ],
+ "distKmFromIpp": 0.289,
+ "trackOffsetM": 38,
+ "elevChangeM": 24,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  }
+ ],
+ "case": "case-0109",
+ "region": "zawrat",
+ "seed": 1
+}

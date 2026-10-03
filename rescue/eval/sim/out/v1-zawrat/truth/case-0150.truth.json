@@ -1,0 +1,63 @@
+{
+ "find": [
+  49.228232,
+  20.0211
+ ],
+ "inGrid": true,
+ "category": "gatherer",
+ "behaviour": "follow_drainage",
+ "lostAt": [
+  49.228455,
+  20.02268
+ ],
+ "lostClock": "11:58",
+ "stopReason": "blocked",
+ "reportClock": "18:07",
+ "path": [
+  [
+   49.224737,
+   20.022713,
+   "11:42"
+  ],
+  [
+   49.22615,
+   20.02263,
+   "11:49"
+  ],
+  [
+   49.22765,
+   20.023265,
+   "11:56"
+  ],
+  [
+   49.228264,
+   20.021805,
+   "12:01"
+  ]
+ ],
+ "distKmFromIpp": 0.406,
+ "trackOffsetM": 103,
+ "elevChangeM": -170,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "plan",
+   "truthful": true
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 632
+  }
+ ],
+ "case": "case-0150",
+ "region": "zawrat",
+ "seed": 1
+}

@@ -1,0 +1,42 @@
+{
+ "find": [
+  49.205496,
+  20.07365
+ ],
+ "inGrid": true,
+ "category": "child",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.205028,
+  20.07325
+ ],
+ "lostClock": "11:46",
+ "stopReason": "stay_put",
+ "reportClock": "16:40",
+ "path": [
+  [
+   49.20216,
+   20.070624,
+   "11:38"
+  ],
+  [
+   49.203927,
+   20.071437,
+   "11:43"
+  ]
+ ],
+ "distKmFromIpp": 0.437,
+ "trackOffsetM": 6,
+ "elevChangeM": -16,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "bts",
+   "truthful": true,
+   "errorM": 1156
+  }
+ ],
+ "case": "case-0142",
+ "region": "zawrat",
+ "seed": 1
+}

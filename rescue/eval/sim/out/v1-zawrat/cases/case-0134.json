@@ -1,0 +1,943 @@
+{
+ "incident": "Symulacja 0134: turysta pieszy, góry (przypadek fikcyjny)",
+ "date": "2026-10-03",
+ "startClock": "17:57",
+ "blind": true,
+ "subject": {
+  "name": "Osoba fikcyjna 0134",
+  "age": 39,
+  "category": "hiker",
+  "note": "Zgłoszenie o 17:57.",
+  "lastContact": "12:13"
+ },
+ "bbox": {
+  "south": 49.195,
+  "west": 20.005,
+  "north": 49.249,
+  "east": 20.0875
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: szlak zielony (ostatni kontakt)",
+  "at": [
+   49.22745,
+   20.07924
+  ],
+  "seenAt": "12:13"
+ },
+ "terrain": {
+  "trails": [
+   {
+    "name": "Zielony: Wodogrzmoty - Dolina Roztoki - Pięć Stawów",
+    "points": [
+     [
+      49.2348,
+      20.085
+     ],
+     [
+      49.23,
+      20.078
+     ],
+     [
+      49.225,
+      20.07
+     ],
+     [
+      49.22,
+      20.062
+     ],
+     [
+      49.2165,
+      20.056
+     ],
+     [
+      49.2133,
+      20.049
+     ]
+    ]
+   },
+   {
+    "name": "Niebieski: Pięć Stawów - Zawrat",
+    "points": [
+     [
+      49.2133,
+      20.049
+     ],
+     [
+      49.2145,
+      20.042
+     ],
+     [
+      49.215,
+      20.034
+     ],
+     [
+      49.216,
+      20.026
+     ],
+     [
+      49.2175,
+      20.021
+     ],
+     [
+      49.2189,
+      20.017
+     ]
+    ]
+   },
+   {
+    "name": "Niebieski: Zawrat - Hala Gąsienicowa",
+    "points": [
+     [
+      49.2189,
+      20.017
+     ],
+     [
+      49.223,
+      20.016
+     ],
+     [
+      49.229,
+      20.015
+     ],
+     [
+      49.235,
+      20.012
+     ],
+     [
+      49.244,
+      20.008
+     ]
+    ]
+   },
+   {
+    "name": "Żółty/czarny: Pięć Stawów - Szpiglasowa - Morskie Oko",
+    "points": [
+     [
+      49.2133,
+      20.049
+     ],
+     [
+      49.209,
+      20.044
+     ],
+     [
+      49.204,
+      20.041
+     ],
+     [
+      49.201,
+      20.048
+     ],
+     [
+      49.1995,
+      20.06
+     ],
+     [
+      49.198,
+      20.071
+     ]
+    ]
+   },
+   {
+    "name": "Droga: Wodogrzmoty - Morskie Oko",
+    "points": [
+     [
+      49.2348,
+      20.085
+     ],
+     [
+      49.228,
+      20.084
+     ],
+     [
+      49.22,
+      20.081
+     ],
+     [
+      49.21,
+      20.077
+     ],
+     [
+      49.203,
+      20.074
+     ],
+     [
+      49.198,
+      20.071
+     ]
+    ]
+   },
+   {
+    "name": "Czerwony: Orla Perć",
+    "points": [
+     [
+      49.2189,
+      20.017
+     ],
+     [
+      49.2215,
+      20.026
+     ],
+     [
+      49.224,
+      20.034
+     ],
+     [
+      49.226,
+      20.043
+     ],
+     [
+      49.229,
+      20.054
+     ]
+    ]
+   },
+   {
+    "name": "Czerwony: Zawrat - Świnica",
+    "points": [
+     [
+      49.2189,
+      20.017
+     ],
+     [
+      49.2195,
+      20.0095
+     ]
+    ]
+   }
+  ],
+  "streams": [
+   {
+    "name": "Roztoka",
+    "points": [
+     [
+      49.215,
+      20.041
+     ],
+     [
+      49.214,
+      20.048
+     ],
+     [
+      49.2155,
+      20.0555
+     ],
+     [
+      49.22,
+      20.063
+     ],
+     [
+      49.226,
+      20.072
+     ],
+     [
+      49.2348,
+      20.085
+     ]
+    ]
+   },
+   {
+    "name": "Żleb pod Zawratem",
+    "points": [
+     [
+      49.22,
+      20.019
+     ],
+     [
+      49.2198,
+      20.023
+     ],
+     [
+      49.219,
+      20.027
+     ],
+     [
+      49.2178,
+      20.032
+     ],
+     [
+      49.216,
+      20.035
+     ]
+    ]
+   },
+   {
+    "name": "Potok z Zmarzłego Stawu",
+    "points": [
+     [
+      49.223,
+      20.015
+     ],
+     [
+      49.23,
+      20.017
+     ],
+     [
+      49.238,
+      20.012
+     ],
+     [
+      49.244,
+      20.009
+     ]
+    ]
+   },
+   {
+    "name": "Rybi Potok",
+    "points": [
+     [
+      49.198,
+      20.071
+     ],
+     [
+      49.205,
+      20.076
+     ],
+     [
+      49.215,
+      20.08
+     ],
+     [
+      49.228,
+      20.0835
+     ],
+     [
+      49.2348,
+      20.085
+     ]
+    ]
+   }
+  ],
+  "ridges": [
+   {
+    "name": "Grań Orlej Perci",
+    "points": [
+     [
+      49.2195,
+      20.006
+     ],
+     [
+      49.2195,
+      20.0095
+     ],
+     [
+      49.2189,
+      20.017
+     ],
+     [
+      49.2218,
+      20.0265
+     ],
+     [
+      49.2243,
+      20.0345
+     ],
+     [
+      49.2262,
+      20.0435
+     ],
+     [
+      49.2292,
+      20.0545
+     ]
+    ]
+   },
+   {
+    "name": "Grań Miedzianego",
+    "points": [
+     [
+      49.206,
+      20.03
+     ],
+     [
+      49.2045,
+      20.04
+     ],
+     [
+      49.203,
+      20.05
+     ],
+     [
+      49.205,
+      20.062
+     ]
+    ]
+   }
+  ],
+  "lakes": [
+   {
+    "name": "Wielki Staw",
+    "center": [
+     49.2142,
+     20.0415
+    ],
+    "radiusM": 300
+   },
+   {
+    "name": "Przedni Staw",
+    "center": [
+     49.2128,
+     20.052
+    ],
+    "radiusM": 110
+   },
+   {
+    "name": "Czarny Staw",
+    "center": [
+     49.2158,
+     20.0365
+    ],
+    "radiusM": 90
+   },
+   {
+    "name": "Zadni Staw",
+    "center": [
+     49.2168,
+     20.03
+    ],
+    "radiusM": 70
+   },
+   {
+    "name": "Morskie Oko",
+    "center": [
+     49.1975,
+     20.0715
+    ],
+    "radiusM": 250
+   },
+   {
+    "name": "Zmarzły Staw",
+    "center": [
+     49.2245,
+     20.016
+    ],
+    "radiusM": 70
+   }
+  ],
+  "huts": [
+   {
+    "name": "Schronisko w Dolinie Pięciu Stawów",
+    "at": [
+     49.2133,
+     20.049
+    ]
+   },
+   {
+    "name": "Murowaniec",
+    "at": [
+     49.244,
+     20.008
+    ]
+   },
+   {
+    "name": "Schronisko Morskie Oko",
+    "at": [
+     49.201,
+     20.073
+    ]
+   },
+   {
+    "name": "Schronisko Roztoka",
+    "at": [
+     49.234,
+     20.083
+    ]
+   }
+  ]
+ },
+ "segments": [
+  {
+   "id": "S1",
+   "name": "Dolina Roztoki (dolna)",
+   "seed": [
+    49.229,
+    20.079
+   ]
+  },
+  {
+   "id": "S2",
+   "name": "Siklawa / Roztoka górna",
+   "seed": [
+    49.217,
+    20.056
+   ]
+  },
+  {
+   "id": "S3",
+   "name": "Schronisko i Przedni Staw",
+   "seed": [
+    49.213,
+    20.049
+   ]
+  },
+  {
+   "id": "S4",
+   "name": "Wielki Staw",
+   "seed": [
+    49.2087,
+    20.0395
+   ]
+  },
+  {
+   "id": "S5",
+   "name": "Czarny Staw Polski",
+   "seed": [
+    49.205,
+    20.0265
+   ]
+  },
+  {
+   "id": "S6",
+   "name": "Szlak niebieski Wyżnie Solnisko - Zawrat",
+   "seed": [
+    49.212,
+    20.025
+   ]
+  },
+  {
+   "id": "S7",
+   "name": "Żleb pod Zawratem",
+   "seed": [
+    49.216,
+    20.018
+   ]
+  },
+  {
+   "id": "S8",
+   "name": "Zawrat - Świnica, grań",
+   "seed": [
+    49.22,
+    20.009
+   ]
+  },
+  {
+   "id": "S9",
+   "name": "Zmarzły Staw / Kozia Dolinka",
+   "seed": [
+    49.225,
+    20.022
+   ]
+  },
+  {
+   "id": "S10",
+   "name": "Kozi Wierch - Orla Perć",
+   "seed": [
+    49.2205,
+    20.032
+   ]
+  },
+  {
+   "id": "S11",
+   "name": "Granaty / Buczynowa Dolinka",
+   "seed": [
+    49.226,
+    20.042
+   ]
+  },
+  {
+   "id": "S12",
+   "name": "Szpiglasowa Przełęcz",
+   "seed": [
+    49.199,
+    20.042
+   ]
+  },
+  {
+   "id": "S13",
+   "name": "Morskie Oko",
+   "seed": [
+    49.199,
+    20.068
+   ]
+  },
+  {
+   "id": "S14",
+   "name": "Droga do Morskiego Oka",
+   "seed": [
+    49.215,
+    20.08
+   ]
+  },
+  {
+   "id": "S15",
+   "name": "Hala Gąsienicowa / Murowaniec",
+   "seed": [
+    49.241,
+    20.011
+   ]
+  },
+  {
+   "id": "S16",
+   "name": "Wołoszyn",
+   "seed": [
+    49.239,
+    20.05
+   ]
+  },
+  {
+   "id": "S17",
+   "name": "Czarny Staw Gąsienicowy",
+   "seed": [
+    49.231,
+    20.018
+   ]
+  },
+  {
+   "id": "S18",
+   "name": "Dolina za Mnichem",
+   "seed": [
+    49.202,
+    20.015
+   ]
+  },
+  {
+   "id": "S19",
+   "name": "Las nad Wodogrzmotami",
+   "seed": [
+    49.244,
+    20.075
+   ]
+  },
+  {
+   "id": "S20",
+   "name": "Zadni Staw Polski",
+   "seed": [
+    49.212,
+    20.012
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "topr-a",
+   "name": "Patrol TOPR A (4 os.)",
+   "type": "ground",
+   "base": [
+    49.21363,
+    20.04873
+   ],
+   "readyAt": "18:40"
+  },
+  {
+   "id": "topr-b",
+   "name": "Patrol TOPR B (dyżurka Murowaniec)",
+   "type": "ground",
+   "base": [
+    49.24341,
+    20.0072
+   ],
+   "readyAt": "19:10"
+  },
+  {
+   "id": "dog",
+   "name": "Zespół z psem (doszedł z patrolem A)",
+   "type": "dog",
+   "base": [
+    49.21363,
+    20.04873
+   ],
+   "readyAt": "19:15"
+  },
+  {
+   "id": "drone",
+   "name": "Dron termowizyjny",
+   "type": "drone",
+   "base": [
+    49.21363,
+    20.04873
+   ],
+   "readyAt": "19:05"
+  },
+  {
+   "id": "heli",
+   "name": "Śmigłowiec TOPR",
+   "type": "heli",
+   "base": [
+    49.293,
+    19.964
+   ],
+   "readyAt": "17:50"
+  }
+ ],
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "17:57",
+   "title": "Teren: szlaki, potoki, schroniska",
+   "detail": "Dane OSM i DEM.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "17:57",
+   "title": "Koester: turysta pieszy, góry",
+   "detail": "Pierścienie odległości od IPP dla kategorii (wartości przybliżone, publiczne).",
+   "point": [
+    49.22745,
+    20.07924
+   ],
+   "quantilesKm": [
+    1.1,
+    3.0,
+    5.8,
+    11.5
+   ]
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "17:57",
+   "title": "Warunki: widzialność 150 m, wiatr 9 m/s, 4°C",
+   "detail": "Pomiar w rejonie akcji.",
+   "visibilityM": 150,
+   "windMs": 9,
+   "tempC": 4,
+   "precip": "rain",
+   "dark": false,
+   "ice": false
+  },
+  {
+   "provider": "TripPlan",
+   "at": "18:03",
+   "title": "Plan od rodziny",
+   "detail": "Relacja rodziny o planowanej trasie.",
+   "points": [
+    [
+     49.22745,
+     20.07924
+    ],
+    [
+     49.226817,
+     20.077797
+    ],
+    [
+     49.22593,
+     20.07671
+    ],
+    [
+     49.225886,
+     20.074934
+    ],
+    [
+     49.22555,
+     20.07323
+    ],
+    [
+     49.22463,
+     20.07183
+    ],
+    [
+     49.224285,
+     20.070055
+    ],
+    [
+     49.22394,
+     20.06828
+    ],
+    [
+     49.223007,
+     20.067287
+    ],
+    [
+     49.222487,
+     20.065673
+    ],
+    [
+     49.22206,
+     20.06398
+    ],
+    [
+     49.2213,
+     20.06247
+    ],
+    [
+     49.22053,
+     20.062187
+    ],
+    [
+     49.22009,
+     20.06046
+    ],
+    [
+     49.220114,
+     20.058676
+    ],
+    [
+     49.219797,
+     20.056805
+    ],
+    [
+     49.21928,
+     20.054965
+    ],
+    [
+     49.21912,
+     20.05299
+    ],
+    [
+     49.218384,
+     20.051526
+    ],
+    [
+     49.21783,
+     20.04987
+    ],
+    [
+     49.21715,
+     20.04847
+    ],
+    [
+     49.2167,
+     20.04693
+    ],
+    [
+     49.2157,
+     20.04566
+    ],
+    [
+     49.2146,
+     20.044723
+    ],
+    [
+     49.213513,
+     20.043767
+    ],
+    [
+     49.21254,
+     20.042747
+    ],
+    [
+     49.21288,
+     20.04364
+    ],
+    [
+     49.21406,
+     20.044275
+    ],
+    [
+     49.21522,
+     20.04473
+    ],
+    [
+     49.216353,
+     20.046223
+    ],
+    [
+     49.21681,
+     20.04777
+    ],
+    [
+     49.21749,
+     20.04917
+    ],
+    [
+     49.2181,
+     20.05069
+    ],
+    [
+     49.218752,
+     20.052258
+    ],
+    [
+     49.219267,
+     20.053917
+    ],
+    [
+     49.219455,
+     20.05594
+    ],
+    [
+     49.220013,
+     20.057755
+    ],
+    [
+     49.220102,
+     20.059568
+    ],
+    [
+     49.22031,
+     20.061323
+    ],
+    [
+     49.22075,
+     20.06305
+    ],
+    [
+     49.221847,
+     20.063133
+    ],
+    [
+     49.222273,
+     20.064827
+    ],
+    [
+     49.2227,
+     20.06652
+    ],
+    [
+     49.22342,
+     20.067873
+    ],
+    [
+     49.224112,
+     20.069167
+    ],
+    [
+     49.224457,
+     20.070943
+    ],
+    [
+     49.22525,
+     20.07251
+    ],
+    [
+     49.225762,
+     20.074038
+    ],
+    [
+     49.22601,
+     20.07583
+    ],
+    [
+     49.226373,
+     20.077253
+    ],
+    [
+     49.22726,
+     20.07834
+    ]
+   ],
+   "radiusM": 300
+  },
+  {
+   "provider": "Clue",
+   "at": "18:17",
+   "title": "Świadek: widziany/a około 12:14",
+   "detail": "Relacja innych turystów, pewność miejsca średnia.",
+   "point": [
+    49.225532,
+    20.075759
+   ],
+   "radiusM": 250,
+   "seenAt": "12:14"
+  },
+  {
+   "provider": "Cell112Fix",
+   "at": "18:27",
+   "title": "CPR 112: ostatni sektor BTS 15:12",
+   "detail": "Lokalizacja sieciowa operatora.",
+   "point": [
+    49.216899,
+    20.044791
+   ],
+   "radiusM": 900
+  },
+  {
+   "provider": "Weather",
+   "at": "18:47",
+   "title": "IMGW: zachód słońca 18:30",
+   "detail": "Prognoza dla rejonu.",
+   "factor": 1.0
+  }
+ ]
+}

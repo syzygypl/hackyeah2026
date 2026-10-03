@@ -1,0 +1,40 @@
+{
+ "find": [
+  49.219917,
+  20.062248
+ ],
+ "inGrid": true,
+ "category": "dementia",
+ "behaviour": "stay_put",
+ "lostAt": [
+  49.22064,
+  20.062618
+ ],
+ "lostClock": "12:47",
+ "stopReason": "stay_put",
+ "reportClock": "17:06",
+ "path": [
+  [
+   49.22206,
+   20.06398,
+   "12:40"
+  ],
+  [
+   49.221,
+   20.06309,
+   "12:45"
+  ],
+  [
+   49.220376,
+   20.062533,
+   "12:51"
+  ]
+ ],
+ "distKmFromIpp": 0.288,
+ "trackOffsetM": 66,
+ "elevChangeM": 67,
+ "clues": [],
+ "case": "case-0156",
+ "region": "zawrat",
+ "seed": 1
+}
