@@ -969,6 +969,35 @@ class FallbackVerdicts(unittest.TestCase):
         self.assertIn(f"low_confidence_fallback:{LLAMA}", r["event"]["semantic"]["flags"])
 
 
+class ApprovalGuardVerdict(unittest.TestCase):
+    """F13: a call already held by business rules (four-eyes) is still scanned; the verdict reaches the approver."""
+
+    def tearDown(self):
+        self.fake.stop()
+
+    def _layer(self, reply):
+        self.fake = FakeOllama({QWEN: "q", GRANITE: "g"}, reply=reply)
+        env = PolicyEnv()
+        env.edit(semantic_env(self.fake.url))
+        self.seen = []
+        approver = lambda s, t, a, r: (self.seen.append(list(r)) or True, "test-approver")
+        return ControlLayer(TOOLS, approver=approver, policy_path=env.path), Session("t", "test-agent", "Pay Acme 15000 EUR")
+
+    def test_unsafe_verdict_tightens_four_eyes_to_deny(self):
+        layer, s = self._layer(UNSAFE)
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 15000})
+        self.assertEqual(r["decision"], DENY, r["event"]["reasons"])
+        self.assertIn("four_eyes", r["event"]["guardrails"])
+        self.assertEqual(self.seen, [])  # denied before any human is asked
+
+    def test_safe_verdict_shown_to_approver_and_still_needs_approval(self):
+        layer, s = self._layer(SAFE)
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 15000})
+        self.assertEqual(r["decision"], ALLOW, r["event"]["reasons"])
+        self.assertEqual(r["event"]["approved_by"], "test-approver")  # never relaxed to ALLOW without the human
+        self.assertTrue(any(x.startswith("guard verdict for the approver: no flag") for x in self.seen[0]), self.seen)
+
+
 class SemanticCache(unittest.TestCase):
     def tearDown(self):
         self.fake.stop()
@@ -1565,7 +1594,7 @@ GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
           "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "FallbackVerdicts": "fallback verdicts (NEW-1/F14)", "InventoryNonBlocking": "inventory refresh off the request path (NEW-5)", "ParserHardening": "parser hardening (F10)", "CanaryLeak": "system-prompt canary (6b)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
-          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "AuditPrivacy": "audit privacy: HMAC, no bare PII hashes (7c)", "Performance": "performance"}
+          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "ApprovalGuardVerdict": "guard verdict on held calls (F13)", "AuditPrivacy": "audit privacy: HMAC, no bare PII hashes (7c)", "Performance": "performance"}
 
 
 def run_suite():

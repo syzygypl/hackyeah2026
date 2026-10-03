@@ -544,7 +544,8 @@ class ControlLayer:
             decision = self._timed(ev, "business_rules", self._rules, session, name, rule, args, ev)
             args = self._timed(ev, "dlp_input", self._dlp_inputs, name, rule, args, ev)
             pi = self._c("semantic")
-            if pi and pi.get("scan_tool_args", True) and decision != APPROVAL:
+            if pi and pi.get("scan_tool_args", True):  # F13: also when business rules already require approval
+                held = decision == APPROVAL  # the scan can only tighten this (DENY), never relax it to ALLOW
                 high = name in (pi.get("judge") or {}).get("high_risk_tools", [])
                 hit, guard, why, fail = self._timed(ev, "semantic", self._semantic, ev, session,
                                                     json.dumps({"tool": name, "args": args}, ensure_ascii=False), pi, high,
@@ -564,6 +565,10 @@ class ControlLayer:
                     decision = APPROVAL
                     ev["guardrails"].append("semantic_unavailable")
                     ev["reasons"].append("judge model unavailable, fail_mode=closed: needs human approval")
+                if held and not hit:  # F13: the approver sees the guard verdict, not only the business rule
+                    sem = ev.get("semantic") or {}
+                    ev["reasons"].append(f"guard verdict for the approver: no flag (score {sem.get('score')}, {sem.get('backend')}"
+                                         f"{', judge unavailable' if fail == 'approve' else ''})")
             if pi and session.tainted_by and rule.get("risk", "low") in pi.get("taint_escalates", ["high", "critical"]) \
                     and decision == ALLOW:
                 decision = APPROVAL
