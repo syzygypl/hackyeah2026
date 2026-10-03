@@ -3,6 +3,7 @@
 
     python3 rescue/integration/test_exercise_ui.py            # builds rescue-server if missing
     EXERCISE=cwiczenie-sniardwy python3 rescue/integration/test_exercise_ui.py
+    python3 rescue/integration/test_exercise_ui.py --server path/to/rescue-server   # another binary (e.g. the Rust port)
 
 Starts its OWN rescue-server on a free port (8799+), loopback, local LLM off, temporary live file, and clicks through
 app/cwiczenia.html?ex=<id> like a user: briefing -> "Przejmij akcję" -> free team -> sector -> "Czekaj 30 min" -> score.
@@ -27,7 +28,11 @@ import time
 import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lib  # noqa: E402
 from lib import Server, ensure_binary, free_port  # noqa: E402
+
+if "--server" in sys.argv:   # test another server binary with the same contract (e.g. rescue/rs, the Rust port)
+    lib.BIN = os.path.abspath(sys.argv[sys.argv.index("--server") + 1])
 
 CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 EX = os.environ.get("EXERCISE", "cwiczenie-morskie-oko")
@@ -126,7 +131,7 @@ def main():
     ensure_binary("--rebuild" in sys.argv)
     tmp = tempfile.mkdtemp(prefix="rescue-exercise-ui-")
     srv = Server(free_port(8799), None, os.path.join(tmp, "live-events.json"), strict=False, llm_off=True,
-                 log=os.path.join(tmp, "server.log"), extra_env={"RESCUE_LIVE_DIR": tmp})
+                 log=os.path.join(tmp, "server.log"), extra_env={"RESCUE_LIVE_DIR": tmp, "RESCUE_DIR": lib.RESCUE})   # RESCUE_DIR: the Rust port serves this checkout
     srv.start()
     port = free_port(9340)
     chrome = subprocess.Popen([CHROME, "--headless=new", f"--remote-debugging-port={port}", f"--user-data-dir={tmp}/chrome",
@@ -140,8 +145,9 @@ def main():
         c.until("document.readyState==='complete'", 20)
         c.js("window.confirm=()=>true; window.alert=(m)=>console.log('alert '+m)")
         # B4: the session start takes seconds; the user must see that something is happening
-        starting = c.until("document.body.innerText.includes('Uruchamiam sesję')", 3)
-        check("start_shows_progress", bool(starting))
+        # a fast server (Rust: ~0.6 s) may answer before the first probe; then the briefing already being there is the pass
+        starting = c.until("document.body.innerText.includes('Uruchamiam sesję') || !document.getElementById('scrBrief').hidden", 3)
+        check("start_shows_progress", bool(starting), "progress or briefing already loaded")
         check("briefing_shown", bool(c.until("!document.getElementById('scrBrief').hidden", 30)))
         c.js("document.getElementById('briefGo').click()")
         t_first = c.until(MAP_READY, 60)
