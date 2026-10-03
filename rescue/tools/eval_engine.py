@@ -63,12 +63,22 @@ def evaluate(name, run=True):
     sc = json.load(open(path))
     if not sc.get("truth"):
         return None
+    # rescue-demo writes out/<name>.html + out/<name>.run.json; some of those are committed artifacts
+    # (e.g. the referee's blind-01-replay.run.json): back them up and put them back afterwards.
+    outs = [os.path.join(OUT, f) for f in (name + ".html", name + ".run.json")] if name != "zawrat" else []
+    saved = {f: open(f, "rb").read() for f in outs if os.path.exists(f)}
     if run:
         p = subprocess.run(["swift", "run", "-c", "debug", "rescue-demo", path, "--fast"], cwd=PKG, capture_output=True, text=True)
         if p.returncode != 0:
             return {"name": name, "error": p.stderr[-400:]}
     rj = os.path.join(OUT, "run.json" if name == "zawrat" else name + ".run.json")
     doc = json.load(open(rj))
+    for f in outs:
+        if f in saved:
+            open(f, "wb").write(saved[f])
+        else:
+            try: os.remove(f)
+            except OSError: pass
     steps = doc["steps"]
     truth = sc["truth"]["at"]
     first_search = next((i for i, s in enumerate(steps) if s["kind"] == "searched"), len(steps))
@@ -76,10 +86,6 @@ def evaluate(name, run=True):
     before = doc["value"].get("beforePing", len(steps) - 1)
     out = {"name": name, "clues": metrics(doc, steps[clues], truth), "before": metrics(doc, steps[before], truth),
            "coverage": doc["value"].get("coverage")}
-    if name != "zawrat":  # generated per-scenario outputs are not committed
-        for f in (name + ".html", name + ".run.json"):
-            try: os.remove(os.path.join(OUT, f))
-            except OSError: pass
     return out
 
 
