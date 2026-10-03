@@ -2,6 +2,15 @@
 
 Owner: pitch & brand (AI Mateusza). First pass 2026-10-03 ~12:40. Every number here is from the repo; anything not measured is marked *(aspirational)* or *(theory)*. Fact sheet at the bottom.
 
+## 0. Product names (single source)
+
+| Slot | Current name | File-safe | Used in |
+|---|---|---|---|
+| `PRODUCT_A` (AI Control Layer, GS entry) | **Airlock** | `airlock` | brand.md, keynote.md, promo.md, deck |
+| `PRODUCT_B` (open AI entry) | **Rój** | `roj` | brand.md, keynote.md, promo.md, deck |
+
+Names are not final: candidates are being shortlisted in `naming.md` (owned by the naming agent). On "rename: <A> / <B>", swap these two cells first, then replace the names everywhere in docs/brand/ (except naming.md) and the deck. Taglines in §2 are written so the name is the only word that changes.
+
 ## 1. Names
 
 ### AI Control Layer (Goldman Sachs entry)
@@ -26,7 +35,7 @@ Owner: pitch & brand (AI Mateusza). First pass 2026-10-03 ~12:40. Every number h
 
 ### The pair
 
-Rój runs on Airlock. Every message in the swarm passes through the same gateway. One sentence the whole team can repeat: **"Airlock decides what agents may do. Rój decides what they may claim."**
+Rój runs on Airlock. Every message in the swarm passes through the same gateway. One sentence the whole team can repeat: **"Airlock decides what agents may do. Rój decides what they may claim."** Since 0952c83 the bridge is literal: Airlock's own guards vote like Rój, and a disagreement goes to a human.
 
 ## 2. Taglines
 
@@ -98,7 +107,12 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Test suite | **95 cases** (43 unittest methods, 46 table-driven tool cases), green in 11 s | spike README, run 2026-10-03 12:30 | measured. The brief said 93; the README and code say 95, so we use 95 |
 | Demo run | 29 interactions, 18 blocked, 4 human approvals (1 rejected), 12 values redacted, audit chain verified | `sample-security-report.md` | measured (scripted hijacked agent) |
 | Attack signatures feed | **16** signatures incl. SSRF, SSTI, XXE, markdown exfil; hot-reloaded | d076785, 85c9f42 | measured |
-| Self-test after detection plan | demo.py **114/114** cases; 67 unit tests green (1 live-model skip), 13:10 | d076785, 96c611e | measured. Supersedes 95 |
+| Self-test | demo.py **129/129** cases (114 after the detection plan, 120 after IBAN tokenization); 81 unit tests + 7 proxy tests green on 00fea5a | sample-security-report.md at 0952c83, run 13:25 | measured. Supersedes 95 |
+| Demo-run overhead | p50 73 µs, p99 155 µs, about 10,700 checks/s with 16 signatures | architecture README at d523cd6 | measured. 58 µs stays the benchmark headline |
+| Guard consensus | 3 families vote in parallel (Qwen, Llama, Granite); disagreement goes to a human. 0.16 s for two guards, 1.07 s p50 with Granite on high-risk calls; the 9k off-task payment split and went to a human | 0952c83, spike README | measured, 1 live run (6 prompts + 3 calls). Opt-in mode |
+| Ollama proxy | protect any Ollama agent by changing one URL (:11434 to :11500); 7 tests | 917b83c | built. Approval via header is simulated |
+| Dashboard | live console: 12 one-click attacks + 2 legit, verdict, reasons, µs per check; policy edits via authenticated PUT, atomic write, audited | f000cb6, 88f1934, 00fea5a | built |
+| IBAN in prompts | tokenized, resolved only inside payment tool calls | f3186a9 | built |
 | Real model agent | qwen3:4b ignored the hidden instruction in 3/3 runs; Airlock still sent the payment to a human | `spikes/acl-agent/README.md` | measured, n=3 |
 | Deploy | 3 commands, Python stdlib, no pip install | architecture §3 | true |
 | Integration | 1 stdlib client file, 2 calls | acl-agent README | true |

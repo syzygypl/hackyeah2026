@@ -8,6 +8,10 @@ All numbers from `brand.md` §5. Post one at a time.
 4. **One more thing:** Każda reguła mówi "tak". Granite Guardian czyta zadanie, nie regułę, i mówi "to nie było w planie".
 5. **Closing:** Agenci działają. Airlock decyduje. A Rój mówi "nie wiem, sprawdź", kiedy nie jest pewny.
 
+6. **Bridge (refresh 13:30):** Airlock liczy jak Rój: strażnicy z trzech rodzin głosują równolegle, a gdy się nie zgadzają, decyduje człowiek. 129 ze 129 przypadków testowych, a podpięcie dowolnego agenta Ollama to zmiana jednego URL-a.
+
 ## Posted
 
 - 12:55 - kickoff post (see the end of the first-pass report).
+- 13:00 - image post: slides 2, 4, 7 of the status deck.
+- 13:30 - image post: post 6, slides consensus, plugin, numbers.
