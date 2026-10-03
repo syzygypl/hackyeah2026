@@ -77,17 +77,37 @@ fn incident_base_of(run: &[u8], sc: &str, advanced: bool) -> Value {
 
 /// Its cache key holds exactly what runScenario(live:) reads - live reports without sc and for sc, the advance cursor, the
 /// roster teams on a touched incident, the scenario files - so a clue, dispatch or ACK on another incident does not recompute this one.
-pub async fn incident_base_key(sc: &str, n_live: i64) -> String {
-    let teams_key = ROSTER.resources(sc).map(|v| v.iter().map(|r| swift_json(r)).collect::<Vec<_>>().join(";")).unwrap_or_else(|| "-".into());
-    format!(
-        "{sc}|{n_live}|{}|{}|{teams_key}|{}",
-        STORE.report_count(Some(sc)).await,
-        CURSORS.get(sc).unwrap_or_else(|| "-".into()),
-        scenario_hash(sc)
-    )
+/// What /api/incidents reads from the store for every incident, fetched together (Neon: one round trip):
+/// n_live = shared field reports, count = reports of each incident, last = each incident's last feed event.
+pub struct IncidentInputs {
+    pub n_live: i64,
+    pub count: HashMap<String, i64>,
+    pub last: HashMap<String, LiveFeedEvent>,
 }
-pub async fn incident_base(sc: &str, n_live: i64) -> Option<Bytes> {
-    let key = incident_base_key(sc, n_live).await;
+pub async fn incident_inputs(names: &[String], with_last: bool) -> IncidentInputs {
+    if let Some(n) = STORE.neon() {
+        let (counts, last) = n.incident_stats().await;
+        let count = names.iter().map(|sc| (sc.clone(), counts.get(&Some(sc.clone())).copied().unwrap_or(0))).collect();
+        return IncidentInputs { n_live: counts.get(&None).copied().unwrap_or(0), count, last };
+    }
+    let mut count = HashMap::new();
+    let mut last = HashMap::new();
+    for sc in names {
+        count.insert(sc.clone(), STORE.report_count(Some(sc)).await);
+        if with_last {
+            if let Some(e) = LIVE_FEED.last(sc).await {
+                last.insert(sc.clone(), e);
+            }
+        }
+    }
+    IncidentInputs { n_live: STORE.report_count(None).await, count, last }
+}
+pub fn incident_base_key(sc: &str, n_live: i64, count: i64) -> String {
+    let teams_key = ROSTER.resources(sc).map(|v| v.iter().map(|r| swift_json(r)).collect::<Vec<_>>().join(";")).unwrap_or_else(|| "-".into());
+    format!("{sc}|{n_live}|{count}|{}|{teams_key}|{}", CURSORS.get(sc).unwrap_or_else(|| "-".into()), scenario_hash(sc))
+}
+pub async fn incident_base(sc: &str, n_live: i64, count: i64) -> Option<Bytes> {
+    let key = incident_base_key(sc, n_live, count);
     if let Some(d) = super::bake::baked(&key) {
         INCIDENT_LAST.lock().insert(sc.to_string(), d.clone());
         return Some(d);
@@ -143,11 +163,12 @@ pub async fn warm_up() {
     // the default Doradca answer (GET /api/advisor), cached per feed sequence: a cold instance's first visit hits it
     let q = Req { method: "GET".into(), path: "/api/advisor".into(), query: HashMap::new(), headers: HashMap::new(), body: Bytes::new(), peer: "127.0.0.1".into() };
     let _ = advisor_data(&q).await;
-    let n_live = STORE.report_count(None).await;
     let names = scenario_names();
+    let inp = incident_inputs(&names, false).await;
+    let n_live = inp.n_live;
     let hs: Vec<_> = names.iter().map(|sc| {
-        let sc = sc.clone();
-        tokio::spawn(async move { incident_base(&sc, n_live).await })
+        let (sc, c) = (sc.clone(), inp.count.get(sc).copied().unwrap_or(0));
+        tokio::spawn(async move { incident_base(&sc, n_live, c).await })
     }).collect();
     for h in hs {
         let _ = h.await;
@@ -171,15 +192,17 @@ pub async fn warm_up() {
 /// ("stale": true) or a placeholder from the scenario file ("pending": true, top3 []); its run goes on and a later poll has it
 pub async fn incidents_data(fast: bool) -> Resp {
     let asg = assignment_list();
-    let n_live = STORE.report_count(None).await;
     let names = scenario_names();
+    let mut inp = incident_inputs(&names, true).await;
+    let n_live = inp.n_live;
     // engine part in spawned tasks, so a fast answer can leave them running
     let bx: Arc<Mutex<(HashMap<usize, Bytes>, usize)>> = Arc::new(Mutex::new((HashMap::new(), 0)));
     let done = Arc::new(tokio::sync::Notify::new());
     for (i, sc) in names.iter().enumerate() {
         let (sc, bx, done) = (sc.clone(), bx.clone(), done.clone());
+        let c = inp.count.get(&sc).copied().unwrap_or(0);
         tokio::spawn(async move {
-            let d = incident_base(&sc, n_live).await;
+            let d = incident_base(&sc, n_live, c).await;
             {
                 let mut g = bx.lock();
                 g.1 += 1;
@@ -202,15 +225,8 @@ pub async fn incidents_data(fast: bool) -> Resp {
         let g = bx.lock();
         (g.0.clone(), g.1 == names.len())
     };
-    // the feed / roster part for all incidents at once (Neon round trips overlap), then the side effects in a fixed order
-    let hs: Vec<_> = names.iter().map(|sc| {
-        let sc = sc.clone();
-        tokio::spawn(async move { (LIVE_FEED.last(&sc).await, ROSTER.is_touched(&sc)) })
-    }).collect();
-    let mut rows = vec![];
-    for h in hs {
-        rows.push(h.await.unwrap_or((None, false)));
-    }
+    // the feed / roster part for all incidents (feed: fetched above with the counts), then the side effects in a fixed order
+    let rows: Vec<(Option<LiveFeedEvent>, bool)> = names.iter().map(|sc| (inp.last.remove(sc), ROSTER.is_touched(sc))).collect();
     let mut out: Vec<Value> = vec![];
     for (i, (sc, (last_ev, touched))) in names.iter().zip(rows).enumerate() {
         let mut o = bases.get(&i).map(|b| jobj(b)).unwrap_or_default();

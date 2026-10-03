@@ -63,9 +63,9 @@ pub async fn bake(path: &str) -> Result<(), String> {
                 entries.push((k, b));
             }
         }
-        let n_live = STORE.report_count(None).await;
-        let k = incident_base_key(sc, n_live).await;
-        if let Some(b) = incident_base(sc, n_live).await {
+        let (n_live, c) = (STORE.report_count(None).await, STORE.report_count(Some(sc)).await);
+        let k = incident_base_key(sc, n_live, c);
+        if let Some(b) = incident_base(sc, n_live, c).await {
             entries.push((k, b));
         }
         for (k, b) in entries {

@@ -375,6 +375,27 @@ impl NeonStore {
         ev.reverse();
         (top, ev)
     }
+    /// GET /api/incidents in one round trip: report count per sc (None = shared field reports) and the last feed event of
+    /// every incident. An error reads as no reports and no events (what the single queries fall back to).
+    pub async fn incident_stats(&self) -> (HashMap<Option<String>, i64>, HashMap<String, LiveFeedEvent>) {
+        let rows = self
+            .sql(
+                "SELECT 'r' AS t, sc, count(*) AS n, NULL::bigint AS seq, NULL::text AS body FROM rescue_reports GROUP BY sc UNION ALL (SELECT DISTINCT ON (sc) 'f', sc, NULL::bigint, seq, body FROM rescue_feed WHERE sc IS NOT NULL ORDER BY sc, seq DESC)",
+                vec![],
+            )
+            .await
+            .unwrap_or_default();
+        let (mut counts, mut last) = (HashMap::new(), HashMap::new());
+        for r in &rows {
+            let sc = r.get("sc").and_then(|x| x.as_str()).map(String::from);
+            if r.get("t").and_then(|t| t.as_str()) == Some("r") {
+                counts.insert(sc, int(r.get("n")));
+            } else if let (Some(sc), Some(e)) = (sc, Self::feed_events(std::slice::from_ref(r)).into_iter().next()) {
+                last.insert(sc, e);
+            }
+        }
+        (counts, last)
+    }
     pub async fn feed_last(&self, sc: &str) -> Option<LiveFeedEvent> {
         let rows = self.sql("SELECT seq, body FROM rescue_feed WHERE sc = $1 ORDER BY seq DESC LIMIT 1", vec![json!(sc)]).await.unwrap_or_default();
         Self::feed_events(&rows).into_iter().next()
