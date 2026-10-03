@@ -3,7 +3,8 @@
 // else static run files from out/. Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "../web/basemap/basemap.js";
-import { paintGrid, legendHTML } from "./scale.js";   // shared heat scale (decision S2), same as 3D
+import { paintGrid, legendHTML } from "./scale.js";
+import { showValidation } from "./validation.js";   // shared heat scale (decision S2), same as 3D
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -23,7 +24,7 @@ function toast(t, ms = 2600) { const el = $("toast"); el.textContent = t; el.sty
 
 // ---------- shared state store
 // store.run = rescue-run/1 document (+ story/hints from the Studio); store.step is 1-based like the Studio slider
-const store = { backend: "static", hasApi: false, hasStudio: false, scenario: "studio", editable: false, run: null, step: 1, selSeg: null, selEv: null, view: "2d", mods: [] };
+const store = { mode: "akcja", backend: "static", hasApi: false, hasStudio: false, scenario: "studio", editable: false, run: null, step: 1, selSeg: null, selEv: null, view: "2d", mods: [] };
 const subs = [];
 function set(patch, why) { Object.assign(store, patch); for (const f of subs) f(why || Object.keys(patch).join(",")); }
 const D = () => store.run;
@@ -31,7 +32,9 @@ const curStep = () => (store.run && store.run.steps ? store.run.steps[store.step
 window.rescueStore = store;   // debugging / tests
 
 // ---------- backends
-const STATIC = { zawrat: { name: "Zawrat (demo, odczyt)", run: "../out/run.json" } };
+const STATIC = Object.fromEntries([["zawrat", "Zawrat (Tatry)"], ["morskie-oko", "Morskie Oko"], ["kasprowy", "Kasprowy"], ["bieszczady-wetlinska", "Bieszczady - Połonina Wetlińska"],
+  ["karkonosze-sniezka", "Karkonosze - Śnieżka"], ["sniardwy", "Śniardwy"], ["morzycko", "Morzycko"], ["miedzyzdroje", "Międzyzdroje (Bałtyk)"]]
+  .map(([id, name]) => [id, { name, run: id === "zawrat" ? "../out/run.json" : `../out/${id}.run.json` }]));
 async function detect() {
   const a = await tryJSON("/api/scenarios");
   const m = await tryJSON("/modules");
@@ -39,17 +42,21 @@ async function detect() {
   let list = [];
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
-  for (const [id, s] of Object.entries(STATIC)) if (!list.some((x) => x.id === id)) list.push({ id, name: s.name, static: true });
-  $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
+  if (!a) await Promise.all(Object.entries(STATIC).map(async ([id, s]) => {
+    let ok = false; try { const r = await fetch(s.run, { cache: "no-store" }); ok = r.ok; r.body && r.body.cancel(); } catch (e) {}   // GET: the Studio server has no HEAD
+    list.push({ id, name: s.name + (ok ? "" : " (brak run.json)"), static: true, disabled: !ok });
+  }));
+  $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}" ${s.disabled ? "disabled" : ""}>${esc(s.name)}</option>`).join("");
   store.scenList = list;
 }
 async function loadScenario(id) {
-  const s = store.scenList.find((x) => x.id === id) || store.scenList[0];
+  const s = store.scenList.find((x) => x.id === id && !x.disabled) || store.scenList.find((x) => !x.disabled);
   teamOps = []; closePop();
   let run, backend;
   if (s.id === "studio") { run = await api("/story"); backend = "studio"; }
   else if (s.api) { run = await api(s.run); backend = "api"; store.runUrl = s.run; store.assessUrl = s.assessment; }
   else { run = await (await fetch(STATIC[s.id].run, { cache: "no-store" })).json(); backend = "static"; }
+  $("scen").value = s.id;
   applyRun(run, { scenario: s.id, backend, editable: backend === "studio" }, "load");
 }
 function applyRun(run, extra = {}, why = "run") {
@@ -176,7 +183,7 @@ function renderPanels() {
   $("slider").max = R.steps.length; $("slider").value = store.step;
   $("status").textContent = `${R.incident || ""}${store.backend !== "studio" ? " · tylko odczyt" : ""}`;
   document.body.classList.toggle("readonly", !store.editable);
-  $("readonly").style.display = store.editable ? "none" : "";
+  $("readonly").style.display = store.editable || store.mode !== "edycja" ? "none" : "";
 }
 function renderProgress() {
   const R = D(), S = curStep(); if (!S) return;
@@ -215,7 +222,7 @@ function renderAssess() {
 }
 $("segs").onclick = (e) => { const b = e.target.closest("[data-seg]"); if (b) { selectSeg(b.dataset.seg, "panel"); flyToSeg(b.dataset.seg); } };
 $("teams").onclick = (e) => { const b = e.target.closest(".seglink"); if (b) { selectSeg(b.dataset.seg, "panel"); flyToSeg(b.dataset.seg); } };
-function flyToSeg(id) { const s = curStep()?.segments.find((x) => x.id === id); if (!s || !s.polygon || !s.polygon.length || store.view === "3d") return; let w = 180, e = -180, so = 90, n = -90; for (const [x, y] of s.polygon) { w = Math.min(w, x); e = Math.max(e, x); so = Math.min(so, y); n = Math.max(n, y); } map.fitBounds([[w, so], [e, n]], { padding: 120, maxZoom: 15, duration: 500 }); }
+function flyToSeg(id) { const s = curStep()?.segments.find((x) => x.id === id); if (!s || !s.polygon || !s.polygon.length || store.mode !== "edycja") return; let w = 180, e = -180, so = 90, n = -90; for (const [x, y] of s.polygon) { w = Math.min(w, x); e = Math.max(e, x); so = Math.min(so, y); n = Math.max(n, y); } map.fitBounds([[w, so], [e, n]], { padding: 120, maxZoom: 15, duration: 500 }); }
 
 // ---------- alerts (from /metrics of this server and of rescue-field on :8770)
 let alertBase = null;
@@ -264,7 +271,7 @@ $("events").onclick = async (e) => {
   const it = D().story.items.find((i) => i.id === card.dataset.id), ev = it && it.events[0]; if (!ev) return;
   set({ selEv: it.id }, "selectEv");
   const k = D().steps.findIndex((s) => s.label === ev.title); if (k >= 0) setStep(k + 1);
-  if (ev.point && store.view !== "3d") map.flyTo({ center: [ev.point[1], ev.point[0]], zoom: Math.max(map.getZoom(), 13.5), duration: 500 });
+  if (ev.point && store.mode === "edycja") map.flyTo({ center: [ev.point[1], ev.point[0]], zoom: Math.max(map.getZoom(), 13.5), duration: 500 });
 };
 let playing = null;
 $("play").onclick = () => {
@@ -297,7 +304,7 @@ function inPoly(pt, poly) { let c = false; for (let i = 0, j = poly.length - 1; 
 function segAt(lng, lat) { const S = curStep(); return S ? S.segments.find((s) => s.polygon && inPoly([lng, lat], s.polygon)) : null; }
 function mapLL(x, y) { const r = $("map").getBoundingClientRect(); if (!r.width || x < r.left || x > r.right || y < r.top || y > r.bottom) return null; const ll = map.unproject([x - r.left, y - r.top]); return { lng: ll.lng, lat: ll.lat, px: [x - r.left, y - r.top] }; }
 const HINT = "Przeciągnij <b>dowód</b> na mapę, przeciągnij <b>zespół</b> na sektor. Pinezki można przesuwać.";
-function hint(html) { $("hint").innerHTML = store.editable ? (html || HINT) : ""; }
+function hint(html) { $("hint").innerHTML = store.editable && store.mode === "edycja" ? (html || HINT) : ""; }
 function draggable(el, label, onDrop, onMove) {
   el.addEventListener("pointerdown", (e) => {
     if (e.button > 0 || e.target.closest("button,input,select")) return;
@@ -324,7 +331,7 @@ function arm(a) {
   armed = a; document.querySelectorAll(".card.armed").forEach((c) => c.classList.remove("armed"));
   $("map").classList.toggle("armed-map", !!a);
   if (!a) return hint();
-  if (store.view === "3d") setView("split");
+  if (store.mode !== "edycja") setMode("edycja");
   document.querySelector(`.card[data-k="${a.kind === "team" ? "t:" + a.res.id : a.card.key}"]`)?.classList.add("armed");
   hint(a.kind === "team" ? `Kliknij <b>sektor</b> na mapie dla: ${esc(a.res.name)} (Esc - anuluj)` : `Kliknij mapę, żeby dodać: <b>${esc(a.card.label)}</b> (Esc - anuluj)`);
 }
@@ -333,7 +340,7 @@ function renderPalette() {
   $("palette").innerHTML = CARDS.filter((c) => have.has(c.provider)).map((c) => `<div class="card" data-k="${c.key}" tabindex="0" role="button" title="Przeciągnij na mapę albo kliknij, potem kliknij mapę"><span class="dot" style="background:${c.color}"></span>${esc(c.label)}</div>`).join("");
   for (const el of $("palette").children) {
     const c = CARDS.find((x) => x.key === el.dataset.k);
-    draggable(el, () => c.label, (x, y) => { const ll = mapLL(x, y); if (ll) openForm(c, ll); else if (store.view === "3d") toast("Upuść na mapie 2D (widok 2D lub Podział)"); });
+    draggable(el, () => c.label, (x, y) => { const ll = mapLL(x, y); if (ll) openForm(c, ll); }); 
     el.onclick = () => { if (!suppressClick) arm(armed && armed.card === c ? null : { kind: "module", card: c }); };
     el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.onclick(); } };
   }
@@ -452,7 +459,7 @@ function evTarget(x, y) {
   t.classList.add(before ? "drop-before" : "drop-after"); evDrop = { id: t.dataset.id, before };
 }
 function wireEvents() {
-  if (!store.editable) return;
+  if (!store.editable || store.mode !== "edycja") return;
   for (const card of $("events").querySelectorAll(".ev")) {
     draggable(card, () => card.querySelector(".t").textContent, async () => {
       document.querySelectorAll(".ev.drop-before,.ev.drop-after").forEach((c) => c.classList.remove("drop-before", "drop-after"));
@@ -486,8 +493,8 @@ $("save").onclick = async () => {
 // ---------- embedded views (CONTRACT.md): 3D (web/3d, source "rescue3d") and the analysis 2D screen (web/, source "rescue2d")
 // Before a view says "ready" it is driven by reloading its URL; after "ready" by postMessage (run as URL, step, select).
 const FRAMES = {
-  "3d": { el: $("frame3d"), note: $("note3d"), src: "", ready: false, dirty: true, source: "rescue3d", visible: () => store.view === "3d" || store.view === "split" },
-  "2da": { el: $("frame2d"), note: $("note2d"), src: "", ready: false, dirty: true, source: "rescue2d", visible: () => store.view === "2da" },
+  "3d": { el: $("frame3d"), note: $("note3d"), src: "", ready: false, dirty: true, source: "rescue3d", visible: () => (store.mode === "akcja" && (store.view === "3d" || store.view === "split")) || (store.mode === "edycja" && store.view === "split") },
+  "2da": { el: $("frame2d"), note: $("note2d"), src: "", ready: false, dirty: true, source: "rescue2d", visible: () => store.mode === "akcja" && (store.view === "2d" || store.view === "split") },
 };
 // run URL the views can fetch themselves (same origin)
 function runURL() {
@@ -537,16 +544,52 @@ addEventListener("message", (e) => {
   // a view reloading itself reports its boot step before "ready": only user steps after "ready" count
   if (m.type === "step" && Number.isInteger(m.i) && F.ready) setStep(m.i + 1, k);
 });
-function setView(v) {
-  store.view = v;
-  document.body.className = document.body.className.replace(/view-\w+/, "view-" + v);
-  document.querySelectorAll(".views button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
-  try { localStorage.setItem("rescue-app-view", v); } catch (e) {}
-  setTimeout(() => map.resize(), 0);
-  sync3d("view");
+// ---------- modes (top tabs) and views inside a mode
+const MODES = {
+  akcja: { label: "Akcja", views: [["2d", "2D"], ["3d", "3D"], ["split", "Podział"]] },
+  edycja: { label: "Edycja", views: [["map", "Mapa"], ["split", "Mapa + 3D"]] },
+  teren: { label: "Teren", views: [["patrol", "Telefon patrolu"], ["field", "Meldunek"]] },
+  monitoring: { label: "Monitoring", views: [] },
+  walidacja: { label: "Walidacja", views: [] },
+};
+const lastView = {};
+$("modes").innerHTML = Object.entries(MODES).map(([k, m]) => `<button data-mode="${k}" role="tab">${m.label}</button>`).join("");
+$("modes").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); };
+$("views").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) setView(b.dataset.view); };
+function setMode(m, v) {
+  if (!MODES[m]) m = "akcja";
+  store.mode = m;
+  document.body.className = document.body.className.replace(/\bmode-\w+/g, "").trim() + " mode-" + m;
+  document.querySelectorAll("#modes button").forEach((b) => b.classList.toggle("on", b.dataset.mode === m));
+  const views = MODES[m].views;
+  $("views").innerHTML = views.map(([k, l]) => `<button data-view="${k}" role="tab">${l}</button>`).join("");
+  $("views").style.display = views.length ? "" : "none";
+  if (m === "edycja" && store.backend !== "studio" && store.hasStudio) loadScenario("studio").catch((e) => toast(String(e.message || e)));
+  try { localStorage.setItem("rescue-app-mode", m); } catch (e) {}
+  setView(v || lastView[m] || (views[0] || [""])[0]);
+  if (store.run) renderPanels();
+  if (m === "teren") showTeren();
+  if (m === "monitoring") showMonitoring();
+  if (m === "walidacja") showValidation();
 }
-document.querySelectorAll(".views button").forEach((b) => b.onclick = () => setView(b.dataset.view));
-
+function setView(v) {
+  const views = MODES[store.mode].views; if (views.length && !views.some(([k]) => k === v)) v = views[0][0];
+  store.view = v; lastView[store.mode] = v;
+  document.body.className = document.body.className.replace(/\bview-\w+/g, "").trim() + " view-" + v;
+  document.querySelectorAll("#views button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
+  setTimeout(() => map.resize(), 0);
+  if (store.mode === "teren") showTeren();
+  sync3d("view");
+  hint();
+}
+// field server (rescue-field, :8770) pages are served by that server, so they talk to their own API
+const FIELD = `${location.protocol}//${location.hostname}:8770`;
+function setFrame(id, url) { const f = $(id); if (f.dataset.src !== url) { f.dataset.src = url; f.src = url; } }
+function showTeren() {
+  if (store.view === "field") setFrame("frameTeren", FIELD + "/field.html");
+  else setFrame("frameTeren", `../web/patrol/index.html?api=${encodeURIComponent(FIELD)}${store.backend === "studio" ? "&run=" + encodeURIComponent("/story") : store.runUrl ? "&run=" + encodeURIComponent(store.runUrl) : ""}`);
+}
+function showMonitoring() { setFrame("frameMon", FIELD + "/ops.html"); }
 // ---------- wiring
 subs.push((why) => {
   if (!store.run || !store.run.steps) return;
@@ -557,17 +600,17 @@ subs.push((why) => {
 });
 $("scen").onchange = () => loadScenario($("scen").value).catch((e) => toast(String(e.message || e), 5000));
 
-window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
+window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, setMode, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
 async function boot() {
   try {
     await detect();
     if (!store.scenList.length) throw new Error("brak scenariuszy");
     renderPalette();
-    let v = "2d"; try { v = localStorage.getItem("rescue-app-view") || "2d"; } catch (e) {}
-    const q = new URLSearchParams(location.search); if (q.get("view")) v = q.get("view");
+    let m = "akcja"; try { m = localStorage.getItem("rescue-app-mode") || "akcja"; } catch (e) {}
+    const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode");
     if (q.get("sc") && store.scenList.some((s) => s.id === q.get("sc"))) $("scen").value = q.get("sc");
     await loadScenario($("scen").value);
-    setView(["2d", "2da", "3d", "split"].includes(v) ? v : "2d");
+    setMode(m, q.get("view"));
     hint();
     pollAlerts();
   } catch (e) { toast("Serwer niedostępny: swift run rescue-studio, potem http://127.0.0.1:8771/app/ (" + (e.message || e) + ")", 8000); }

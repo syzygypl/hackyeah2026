@@ -9,23 +9,22 @@
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 </head>
-<body class="view-2d">
+<body class="mode-akcja view-2d">
 <div id="app">
 <header>
   <h1>Rescue Locator</h1>
   <label class="mute">Scenariusz <select id="scen"></select></label>
-  <span class="views" role="tablist" aria-label="Widok">
-    <button data-view="2d" class="on" role="tab" title="Mapa 2D z edycją (przeciągnij i upuść)">2D</button><button data-view="2da" role="tab" title="Ekran analizy 2D (web/)">2D analiza</button><button data-view="3d" role="tab">3D</button><button data-view="split" role="tab">Podział</button>
-  </span>
-  <span class="edit-only"><button id="newZ" title="Nowa historia na terenie Zawratu">Nowa historia</button>
+  <span id="modes" class="views modes" role="tablist" aria-label="Tryb"></span>
+  <span id="views" class="views" role="tablist" aria-label="Widok"></span>
+  <span class="edit-only edit-mode"><button id="newZ" title="Nowa historia na terenie Zawratu">Nowa historia</button>
   <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button></span>
   <span style="flex:1"></span>
-  <span class="edit-only"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
+  <span class="edit-only edit-mode"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
   <label id="pinbox" style="display:none">PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
   <span id="status" class="mute"></span>
 </header>
 <aside id="left">
-  <div class="edit-only">
+  <div class="edit-only edit-mode">
     <h2>Dowody - przeciągnij na mapę</h2>
     <div id="palette" class="grid2"></div>
     <h2>Zespoły - przeciągnij na sektor</h2>
@@ -42,6 +41,9 @@
   <div id="pane2d"><iframe id="frame2d" title="Analiza 2D" loading="lazy"></iframe><div id="note2d" class="note3d"></div></div>
   <div id="pane3d"><iframe id="frame3d" title="Widok 3D" loading="lazy"></iframe><div id="note3d" class="note3d"></div></div>
 </main>
+<section id="paneTeren" class="full"><iframe id="frameTeren" title="Teren"></iframe><div class="fullnote">Strony terenowe działają na serwerze rescue-field (:8770): <code>swift run rescue-field serve 8770</code>.</div></section>
+<section id="paneMon" class="full"><iframe id="frameMon" title="Monitoring"></iframe><div class="fullnote">Monitoring z <code>/metrics</code> serwera rescue-field (:8770).</div></section>
+<section id="paneVal" class="full scroll"><div id="val"></div></section>
 <aside id="right">
   <h2>Gdzie szukać najpierw</h2>
   <div class="box"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
