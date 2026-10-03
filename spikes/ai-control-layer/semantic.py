@@ -377,11 +377,18 @@ class SemanticGuard:
                 # judge called only because the prefilter degraded: its failure inherits the prefilter's fail_mode;
                 # with a real reason to suspect (high risk, Controversial, heuristic signal) the judge fails closed
                 self._fail(res, "judge", jd if suspicious else dict(jd, fail_mode=pf.get("fail_mode", "open")), e, mode)
-        if any(r["stage"] == "judge" for r in res["stages"]):  # NEW-1: a judge that answered overrides a fallback model
+        judged = {r["criterion"] or "harm" for r in res["stages"] if r["stage"] == "judge"}  # no criterion = granite default harm
+        if judged:  # NEW-1: a judge that answered overrides a fallback model ...
+            # NEW-6: ... but a confident fallback "unsafe" only when the judge checked a risk that covers it (harm /
+            # unethical_behavior). A "jailbreak: no" says nothing about money laundering, so that verdict stays counted.
+            covers = judged & set(jd.get("overrides_fallback_criteria", ["harm", "unethical_behavior"]))
             for r in res["stages"]:
                 if r["stage"] == "prefilter" and r["model"] != pf.get("model") and r["counted"]:
-                    r["counted"], r["overridden_by_judge"] = False, True
-                    res["flags"].append(f"fallback_overridden_by_judge:{r['model']}")
+                    if covers:
+                        r["counted"], r["overridden_by_judge"] = False, True
+                        res["flags"].append(f"fallback_overridden_by_judge:{r['model']}")
+                    else:
+                        res["flags"].append(f"fallback_kept_judge_criterion_differs:{r['model']}")
         counted = [r["p_unsafe"] for r in res["stages"] if r["counted"]]
         res["score"] = max([h] + counted)
         res["backend"] = "+".join(used + ["heuristic"]) if used else res["backend"]
