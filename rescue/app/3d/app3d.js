@@ -818,6 +818,7 @@ statics.add(pin(R.ipp.lat, R.ipp.lon, '#b8860b', 0.3, 'IPP · ostatnio widziany'
 // the osm3d data) when the scenario has it, else mixed lowland woods in noise patches. October: larches gold, beeches
 // copper, birches yellow, rowans red, conifers green. One InstancedMesh per species, low-poly unit-height geometry.
 const forest = new THREE.Group(); scene.add(forest);
+let forestLod = null; // near / far tree meshes re-split by camera distance (forest block), called from the loop
 {
   let seed = 1234567; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   // cheap value noise for natural patches
@@ -907,18 +908,88 @@ const forest = new THREE.Group(); scene.add(forest);
   }
   const treeMat = new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true, vertexColors: true });
   applyFx(treeMat, [FX.treeWind(heatU), FX.snowCover(heatU, 0.62)]); // fx3d: crowns sway with the step's wind
+  // LOD: every species has a near mesh (the geometry above) and a far one (5-14 triangles: one or two cones, an
+  // octahedron crown, a 3-sided trunk; same unit height and silhouette), both filled from instance data sorted into
+  // 0.5 km tiles. A tile is near while it is closer to the camera than R, the distance where a tree is still ~14 device
+  // px tall (2.5-7 km, longer on the Kino lens); forestLod re-splits after the camera moved 0.15 R and uploads only when
+  // a tile changed side, so a still or orbiting overview (all far) never touches the buffers. No rnd() calls here: the
+  // placement sequence (positions, sizes, colours) stays as it was.
+  const coneN = (r, h, n, y) => part(new THREE.ConeGeometry(r, h, n, 1, true), W, y);
+  const trunk3 = (h, r, col = BARK) => part(new THREE.CylinderGeometry(r * 0.7, r, h, 3, 1, true), col, h / 2);
+  const octa = (r, y, sx, sy, dx = 0) => part(new THREE.OctahedronGeometry(r, 0), W, y, 1, sy).scale(sx, 1, 1).translate(dx, 0, 0);
+  const FAR = {
+    spruce: merge([coneN(0.44, 0.6, 5, 0.38), coneN(0.3, 0.52, 5, 0.74)]),
+    fir: merge([coneN(0.4, 0.92, 5, 0.54)]),
+    larch: merge([coneN(0.27, 0.86, 5, 0.57)]),
+    pine: merge([trunk3(0.62, 0.04), octa(0.34, 0.8, 1, 0.5)]),
+    mugo: merge([octa(0.5, 0.18, 1.3, 0.45, 0.15)]),
+    broad: merge([trunk3(0.42, 0.05), octa(0.42, 0.66, 1.1, 0.82, 0.08)]),
+    birch: merge([trunk3(0.5, 0.03, BIRCH), octa(0.25, 0.74, 0.85, 1.35)]),
+    shrub: merge([octa(0.5, 0.26, 1, 0.6)]),
+  };
+  const farGeo = (g) => Object.entries(GEO).find(([, v]) => v === g)?.[0];
+  const TK = 0.5, TCX = Math.ceil(WKM / TK), TCZ = Math.ceil(HKM / TK), NT = TCX * TCZ;
+  const tileOf = (x, z) => clamp(Math.floor((x + WKM / 2) / TK), 0, TCX - 1) + clamp(Math.floor((z + HKM / 2) / TK), 0, TCZ - 1) * TCX;
+  const tSum = new Float64Array(NT * 4), lods = [];
   const o = new THREE.Object3D(), c = new THREE.Color();
   for (const [k, sp] of Object.entries(SP)) {
     const pts = list[k]; if (!pts.length) continue;
-    const m = new THREE.InstancedMesh(sp.geo, treeMat, pts.length), pal = sp.cols.map((x) => new THREE.Color(x));
+    const n = pts.length, pal = sp.cols.map((x) => new THREE.Color(x)), m0 = new Float32Array(n * 16), c0 = new Float32Array(n * 3), t0 = new Int32Array(n);
     pts.forEach(([la, lo], i) => {
       const h = sp.h[0] + rnd() * (sp.h[1] - sp.h[0]), w = 0.82 + rnd() * 0.36;
       o.position.copy(v3(la, lo, -0.002)); o.rotation.set((rnd() - 0.5) * 0.08, rnd() * 6.28, (rnd() - 0.5) * 0.08); o.scale.set(h * w, h, h * w * (0.9 + rnd() * 0.2)); o.updateMatrix();
-      m.setMatrixAt(i, o.matrix);
-      m.setColorAt(i, c.copy(pal[Math.floor(rnd() * pal.length)]).multiplyScalar((0.9 + rnd() * 0.2) * (0.55 + 0.45 * sunAt(la, lo)))); // darker in the baked terrain shadow
+      o.matrix.toArray(m0, i * 16);
+      c.copy(pal[Math.floor(rnd() * pal.length)]).multiplyScalar((0.9 + rnd() * 0.2) * (0.55 + 0.45 * sunAt(la, lo))); c0.set([c.r, c.g, c.b], i * 3); // darker in the baked terrain shadow
+      const t = (t0[i] = tileOf(o.position.x, o.position.z)); tSum[t * 4] += o.position.x; tSum[t * 4 + 1] += o.position.y; tSum[t * 4 + 2] += o.position.z; tSum[t * 4 + 3]++;
     });
-    m.name = k; m.receiveShadow = true; m.castShadow = false; forest.add(m);
+    // counting sort by tile: each tile's trees are one contiguous run
+    const start = new Int32Array(NT + 1); for (let i = 0; i < n; i++) start[t0[i] + 1]++;
+    for (let t = 0; t < NT; t++) start[t + 1] += start[t];
+    const fill = start.slice(0, NT), M = new Float32Array(n * 16), C = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const j = fill[t0[i]]++; M.set(m0.subarray(i * 16, i * 16 + 16), j * 16); C.set(c0.subarray(i * 3, i * 3 + 3), j * 3); }
+    const mk = (geo, name) => {
+      const m = new THREE.InstancedMesh(geo, treeMat, n); m.setColorAt(0, c);
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceColor.setUsage(THREE.DynamicDrawUsage);
+      m.name = name; m.count = 0; m.receiveShadow = true; m.castShadow = false; forest.add(m); return m;
+    };
+    const hi = mk(sp.geo, k), lo = mk(FAR[farGeo(sp.geo)] || sp.geo, k + '-far');
+    lo.frustumCulled = false; // spread over the whole cut: its bounds would always be in view anyway
+    lods.push({ hi, lo, M, C, start });
   }
+  const tC = new Float32Array(NT * 3), tN = new Uint8Array(NT), tNear = new Uint8Array(NT);
+  for (let t = 0; t < NT; t++) if (tSum[t * 4 + 3]) { tN[t] = 1; for (let a = 0; a < 3; a++) tC[t * 3 + a] = tSum[t * 4 + a] / tSum[t * 4 + 3]; }
+  const lodAt = new THREE.Vector3(1e9, 0, 0); let lodR = 0, first = true;
+  const upload = (m, cnt) => {
+    m.count = cnt; m.visible = cnt > 0;
+    m.instanceMatrix.clearUpdateRanges(); m.instanceMatrix.addUpdateRange(0, cnt * 16); m.instanceMatrix.needsUpdate = true;
+    m.instanceColor.clearUpdateRanges(); m.instanceColor.addUpdateRange(0, cnt * 3); m.instanceColor.needsUpdate = true;
+  };
+  forestLod = () => {
+    if (!lods.length) return;
+    const p = camera.position, R = clamp(((renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360))) * 0.036) / 14, 2.5, 7);
+    if (!first && p.distanceTo(lodAt) < R * 0.15 && Math.abs(R - lodR) < R * 0.1) return;
+    lodAt.copy(p); lodR = R;
+    let changed = first; first = false;
+    for (let t = 0; t < NT; t++) {
+      if (!tN[t]) continue;
+      const d = Math.hypot(tC[t * 3] - p.x, tC[t * 3 + 1] - p.y, tC[t * 3 + 2] - p.z) - 0.36, v = d < (tNear[t] ? R * 1.1 : R) ? 1 : 0; // hysteresis
+      if (v !== tNear[t]) { tNear[t] = v; changed = true; }
+    }
+    if (!changed) return;
+    for (const L of lods) {
+      const cnt = [0, 0], dst = [L.lo, L.hi];
+      for (let t = 0; t < NT;) { // runs of consecutive tiles on the same side: one copy each
+        if (L.start[t] === L.start[t + 1]) { t++; continue; }
+        const v = tNear[t], a = L.start[t]; let u = t + 1;
+        while (u < NT && (L.start[u] === L.start[u + 1] || tNear[u] === v)) u++;
+        const b = L.start[u], m = dst[v];
+        m.instanceMatrix.array.set(L.M.subarray(a * 16, b * 16), cnt[v] * 16); m.instanceColor.array.set(L.C.subarray(a * 3, b * 3), cnt[v] * 3); cnt[v] += b - a; t = u;
+      }
+      upload(L.lo, cnt[0]); upload(L.hi, cnt[1]);
+      if (cnt[1]) L.hi.computeBoundingSphere(); // near set: real bounds, so it is culled when behind the camera
+    }
+  };
+  forestLod(); // all far until the loop first places the camera
 }
 // ---------- near grass: instanced tufts and dwarf pine around the orbit target ----------
 // Only when zoomed in (camera within ~2 km of the target, uGrassFade grows them out of the ground). Placement is a
@@ -2135,6 +2206,7 @@ function frame() {
     else { m.t = (m.t + dt * 0.15) % 1; m.dot.position.copy(m.curve.getPoint(m.t)); m.mat.dashOffset -= dt * 0.08; }
   }
   for (const m of flowMats) m.dashOffset -= dt * 0.05; // streams run downstream
+  forestLod?.(); // trees: near / far LOD split, re-done only after the camera moved far
   nearGrass?.(dt); // near grass: fade with the zoom, re-placed in slices when the target moved far
   if (precip.visible) {
     const u = precipMat.uniforms; u.uCenter.value.copy(controls.target);
