@@ -19,6 +19,9 @@ import { createCoverage3D } from './coverage3d.js';
 import { createWalk3D } from './walk3d.js';   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
+// load in slices: the build hands the main thread back between stages (in /app the iframe shares it with the shell);
+// a MessageChannel task, not a timer, so a background tab is not throttled to one slice per second
+const yieldMain = () => (globalThis.scheduler?.yield ? scheduler.yield() : new Promise((r) => { const ch = new MessageChannel(); ch.port1.onmessage = () => r(); ch.port2.postMessage(0); }));
 const Q = new URLSearchParams(location.search);
 const SCENS = {
   zawrat: { name: 'Zawrat', run: '../../out/run.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg' },
@@ -407,6 +410,7 @@ sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
 scene.add(hemi, sun, sun.target);
 scene.fog = new THREE.Fog(0xffffff, 12, 60);
 
+await yieldMain();
 // ---------- terrain texture ----------
 // texture pixels per DEM pixel: about 3K px across (high-fidelity hillshade and contours), at most 4096 px on either side
 const TS = clamp(Math.floor(Math.min(3072 / DEM.cols, 4096 / DEM.rows, renderer.capabilities.maxTextureSize / Math.max(DEM.cols, DEM.rows))), 2, 14);
@@ -451,6 +455,7 @@ const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; base
   for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) E[y * TW + x] = elevFull(DEM.lat0 - ((y + 0.5) / TS) * stLat, DEM.lon0 + ((x + 0.5) / TS) * stLon);
   const px = (stLon * KX * KM * 1000) / TS, py = (stLat * KM * 1000) / TS;
   for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+    if (x === 0 && y && y % 320 === 0) await yieldMain(); // ~90 ms slices
     const i = y * TW + x, e = E[i];
     const right = E[y * TW + Math.min(x + 1, TW - 1)], left = E[y * TW + Math.max(x - 1, 0)];
     const down = E[Math.min(y + 1, TH - 1) * TW + x], up = E[Math.max(y - 1, 0) * TW + x];
@@ -513,6 +518,7 @@ const heatU = { uHeatFrom: { value: heatTex() }, uHeatTo: { value: heatTex() }, 
 Object.assign(precipMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 Object.assign(snowNearMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 
+await yieldMain();
 const terrainGeo = new THREE.PlaneGeometry(WKM, HKM, DEM.cols - 1, DEM.rows - 1);
 terrainGeo.rotateX(-Math.PI / 2);
 {
@@ -636,6 +642,7 @@ if (WM || LOW) {
   plate.position.y = base; scene.add(plate);
 }
 
+await yieldMain();
 // ---------- heat (POA) ----------
 const RAMP = [[0, [255, 214, 102]], [0.35, [252, 163, 17]], [0.65, [232, 93, 4]], [0.85, [208, 0, 0]], [1, [157, 2, 8]]];
 const heatRect = {
@@ -826,6 +833,7 @@ for (const h of TER?.huts || []) statics.add(pin(h.at[0], h.at[1], '#7f5539', 0.
 for (const g of segs.values()) drapeRuns(ringLL(g.polygon), 0.016, { color: '#2b2f33', width: 1, opacity: 0.28 }, statics);
 statics.add(pin(R.ipp.lat, R.ipp.lon, '#b8860b', 0.3, 'IPP · ostatnio widziany', 'ipp', 0.02));
 
+await yieldMain();
 // ---------- forests: instanced trees by species ----------
 // Tatras: vegetation belts by elevation (lower montane beech-fir-spruce with larch, upper montane spruce with larch and
 // rowan, dwarf pine above, shrubs scattered on the meadows). Outside the Tatras: the OSM landcover (landAt / leafAt from
@@ -1155,6 +1163,7 @@ const nearGrass = (() => {
     for (const m of meshes) m.visible = fade > 0.005 && m.count > 0;
   };
 })();
+await yieldMain();
 // ---------- buildings: one merged mesh, footprints from OSM extruded to their height (levels x 3 m, or by type) ----------
 const buildings = (() => {
   if (!OSM || !OSM.bld.length) return null;
@@ -1191,6 +1200,7 @@ const buildings = (() => {
   m.castShadow = true; m.receiveShadow = true; scene.add(m);
   return m;
 })();
+await yieldMain();
 // ---------- water reflection: the mountains mirrored in the lakes and the sea (fx3d.waterReflect) ----------
 // One planar mirror at a time: the water body nearest the orbit target that is on screen sets the plane y. The terrain
 // and buildings (layer 1, with the lights: no trees, lines, labels or sky; the sky stays the environment map's) are
@@ -1360,6 +1370,7 @@ function palette(el) {
   for (const n of PAL_N) pal[n] = a[n] + (b[n] - a[n]) * t;
   return pal;
 }
+await yieldMain();
 // ---------- night glow: halos around markers at night and in fog, lit windows ----------
 // One additive point cloud (fx3d.halo): every visible object tagged userData.glow ([colour, px]) gets a soft halo at its
 // world position, gathered only on rendered frames while it is dark or foggy. uNight drives the buildings' windows.
@@ -2276,6 +2287,7 @@ function frame() {
   }
 }
 
+await yieldMain();
 // ---------- start ----------
 if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, coverage: POD3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
@@ -2290,6 +2302,8 @@ if (ZOOM[0] > 0) {
   controls.target.copy(t); camera.position.copy(aboveGround(t.clone().add(new THREE.Vector3(0.3, 0.42, 0.86).normalize().multiplyScalar(clamp(ZOOM[0], 0.5, 30))), 0.25));
 } else overview(2.6);
 renderer.shadowMap.needsUpdate = true;
+// shader programs link on the driver's threads (KHR_parallel_shader_compile) instead of inside the first frame (~0.4 s)
+try { await renderer.compileAsync(scene, camera); } catch {}
 frame();
 pollLive();
 document.body.dataset.state = 'ready';
