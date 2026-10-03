@@ -87,3 +87,17 @@ body.role-ratownik #chBtn,body.role-ratownik #chDrawer{display:none}   /* rescue
   .ch-top li{padding:10px 8px}
   body:has(#chDrawer.open) #rl-version{display:none}
 }
+
+/* dock: chat events on the timeline (chat.js markDock) */
+.tlm .tlk.chat{box-shadow:0 0 0 2px var(--rl-panel-solid),0 0 0 4px var(--rl-danger);opacity:1}
+.ch-multi b{display:block;margin-bottom:4px}
+.ch-card.added{border-left:4px solid var(--rl-ok);padding-left:6px}
+.ch-mic{width:42px;height:42px;border-radius:50%;border:1px solid var(--rl-line-strong);background:var(--rl-card);font-size:18px;cursor:pointer;flex:none}
+.ch-mic.on{background:var(--rl-danger);border-color:var(--rl-danger);animation:chpulse 1s ease-in-out infinite}
+@keyframes chpulse{50%{box-shadow:0 0 0 6px rgba(184,50,42,.25)}}
+.ch-pre{white-space:pre-wrap;font:13px/1.4 var(--rl-mono);background:var(--rl-panel-2);padding:6px;border-radius:6px;user-select:all}
+@media (pointer:coarse),(max-width:760px){.ch-mic{width:48px;height:48px}}
+/* Czat button in the /app top bar (no floating button over the panels) */
+#chBtn.inhdr{position:static;z-index:auto;box-shadow:none;padding:6px 14px;font-size:var(--rl-fs);border-radius:var(--rl-radius-s);min-height:36px;flex:none}
+@media (pointer:coarse),(max-width:760px){#chBtn.inhdr{min-height:44px;padding:0 14px}}
+@media (max-width:760px){#chBtn.inhdr{padding:0 12px;min-width:44px;justify-content:center}#chBtn.inhdr .lbl{display:none}}

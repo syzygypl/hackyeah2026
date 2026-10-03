@@ -7,6 +7,7 @@
 // Reply: new top 3 (rank + sector + "% obszaru", never POA %), moves vs before, "pokaż na mapie" (2D select = zoom).
 // Two hosts: the /app shell (drawer, mountAppChat) and czat.html (full screen, mountStandalone). Docs: docs/rescue-locator/czat.md
 
+import { evGroups } from "./dock.js";   // the same event groups as the dock's timeline markers
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fold = (s) => String(s || "").toLowerCase().replace(/ł/g, "l").normalize("NFD").replace(/[̀-ͯ]/g, "");
 const pl1 = (x) => (Math.round(x * 10) / 10).toFixed(1).replace(".", ",");
@@ -231,6 +232,22 @@ function findResource(f, R) {
   return null;
 }
 
+// several events in one message: split at sentence ends, ";", ", a / oraz / potem / natomiast"; a piece without its own kind
+// ("nic", "widoczność 50 m") stays with the previous one. Only when 2+ pieces are events of their own.
+export function splitEvents(text, ctx) {
+  const raw = String(text || "").split(/\s*;\s*|(?<!\b(?:ok|godz|ul|np|m|n))\.\s+(?=[A-ZĄĆĘŁŃÓŚŹŻ])|,\s*(?:a|oraz|potem|a potem|natomiast|i jeszcze|poza tym)\s+|\s+(?:a potem|a także|poza tym)\s+/u).map((x) => x.trim()).filter(Boolean);
+  if (raw.length < 2) return [];
+  const out = [];
+  for (const piece of raw) {
+    const ev = parse(piece, ctx);
+    const prev = out.length && out[out.length - 1].ev, follow = prev && (ev.kind === "search" && !(ev.segs && ev.segs.length) && !ev.team || ev.kind === prev.kind && ev.missing.includes("place"));
+    if (ev.kind && !follow) out.push({ text: piece, ev });
+    else if (out.length) { out[out.length - 1].text += ", " + piece; out[out.length - 1].ev = parse(out[out.length - 1].text, ctx); }
+    else out.push({ text: piece, ev });
+  }
+  const evs = out.map((o) => o.ev).filter((e) => e.kind);
+  return evs.length > 1 ? evs : [];
+}
 // ---------------------------------------------------------------- what the card says, what gets posted
 const short = (n) => String(n || "").split(" (")[0];
 export function summary(ev) {
@@ -345,6 +362,23 @@ export function createChat(root, host, opts = {}) {
     <div class="ch-chips" aria-label="Przykłady"></div>
     <form class="ch-in"><textarea rows="2" placeholder="${esc(opts.placeholder || "Napisz, co się stało, np. „widziałem go o 14:20 przy Czarnym Stawie”")}" aria-label="Wiadomość"></textarea><button class="ch-send" type="submit" aria-label="Wyślij">➤</button></form>`;
   const log = root.querySelector(".ch-log"), ta = root.querySelector("textarea"), chips = root.querySelector(".ch-chips");
+  const SR = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
+  if (opts.voice && SR) {
+    const mic = document.createElement("button"); mic.type = "button"; mic.className = "ch-mic"; mic.setAttribute("aria-label", "Powiedz zamiast pisać"); mic.title = "Powiedz zamiast pisać (po polsku)"; mic.textContent = "🎤";
+    root.querySelector(".ch-send").before(mic);
+    let rec = null;
+    mic.onclick = () => {
+      if (rec) { rec.stop(); return; }
+      try {
+        rec = new SR(); rec.lang = "pl-PL"; rec.interimResults = true; rec.maxAlternatives = 1;
+        const base = ta.value ? ta.value.trim() + " " : ""; let fin = "";
+        rec.onresult = (e) => { let tmp = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const r = e.results[i]; if (r.isFinal) fin += r[0].transcript; else tmp += r[0].transcript; } ta.value = base + fin + tmp; };
+        rec.onerror = (e) => { if (e.error === "not-allowed" || e.error === "service-not-allowed") say("Brak dostępu do mikrofonu - napisz wiadomość albo zezwól na mikrofon w przeglądarce."); };
+        rec.onend = () => { mic.classList.remove("on"); rec = null; const t = ta.value.trim(); if (fin.trim() && t) { ta.value = ""; onText(t); } };
+        rec.start(); mic.classList.add("on");
+      } catch (e) { rec = null; mic.classList.remove("on"); say("Rozpoznawanie mowy nie działa w tej przeglądarce - napisz wiadomość."); }
+    };
+  }
   const scroll = () => { log.scrollTop = log.scrollHeight; };
   const say = (html, who = "bot", cls = "") => { const d = document.createElement("div"); d.className = `ch-msg ${who} ${cls}`; d.innerHTML = html; log.appendChild(d); scroll(); return d; };
   root.querySelector("form").onsubmit = (e) => { e.preventDefault(); const t = ta.value.trim(); ta.value = ""; onText(t); };
@@ -380,6 +414,9 @@ export function createChat(root, host, opts = {}) {
     say(esc(t), "me");
     await ensureCtx();
     const c = { ...ctx, clock: host.clock() }; c.lastWeather = lastWeather(c.clock);
+    // several events in one message ("S3 i S4 przeszukane, nic, a o 15:10 turystka widziała go przy Zawracie"): one card each
+    const parts = splitEvents(t, c);
+    if (parts.length > 1) { draft = null; multi(parts); return; }
     let ev = parse(t, c);
     // a follow-up answer fills what the last card was missing ("przy Wielkim Stawie", "o 15:10", "S4")
     if (draft && draft.ev.missing.length && (!ev.kind || ev.kind === draft.ev.kind)) {
@@ -397,6 +434,13 @@ export function createChat(root, host, opts = {}) {
     }
     card(ev);
   }
+  function multi(evs) {
+    const els = evs.map((ev) => { ev._multi = true; card(ev); const el = draft.el; draft = null; return el; });
+    const box = say(`<div class="ch-multi"><b>Rozpoznałem ${evs.length} zdarzenia.</b> Sprawdź karty powyżej (możesz je poprawić), potem dodaj wszystkie naraz.
+      <div class="ch-acts"><button class="ch-addall primary">Dodaj wszystkie (${evs.length})${host.mode() === "live" ? " na żywo" : host.mode() === "hist" ? " - symulacja" : ""}</button><button class="ch-no">Anuluj</button></div></div>`);
+    box.querySelector(".ch-no").onclick = () => { els.forEach((el) => el.querySelector(".ch-card")?.classList.add("off")); box.querySelector(".ch-acts").innerHTML = `<span class="mute">Anulowano.</span>`; };
+    box.querySelector(".ch-addall").onclick = () => commitAll(evs, els, box);
+  }
   function placeOptions(ev) {
     const seen = new Set(), o = [];
     for (const g of [...ctx.G].sort((a, b) => b.prio - a.prio || a.name.localeCompare(b.name, "pl"))) { if (seen.has(g.name) || g.name === "IPP") continue; seen.add(g.name); o.push(g); }
@@ -409,10 +453,10 @@ export function createChat(root, host, opts = {}) {
       <div class="ch-sum">${esc(summary(ev))}</div>${miniMap(ctx, ev)}
       ${ask ? `<div class="ch-ask">${esc(ask)}</div>` : ""}
       <details class="ch-edit" ${ask ? "open" : ""}><summary>Popraw szczegóły</summary>${fieldsHTML(ev)}</details>
-      <div class="ch-acts"><button class="ch-add primary" ${ev.missing.includes("place") || ev.missing.includes("segs") ? "disabled" : ""}>Dodaj${live ? " (na żywo)" : host.mode() === "hist" ? " (symulacja)" : ""}</button><button class="ch-no">Anuluj</button></div>
+      <div class="ch-acts"${ev._multi ? " hidden" : ""}><button class="ch-add primary" ${ev.missing.includes("place") || ev.missing.includes("segs") ? "disabled" : ""}>Dodaj${live ? " (na żywo)" : host.mode() === "hist" ? " (symulacja)" : ""}</button><button class="ch-no">Anuluj</button></div>
       <div class="ch-foot">${live ? "Na żywo: zobaczą to wszyscy w akcji. Możesz cofnąć." : host.mode() === "hist" ? "Historia: zmiana tylko na Twoim ekranie (symulacja), nagranie zostaje nietknięte." : ""}</div></div>`);
     let el = into; if (el) el.innerHTML = html; else el = say(html);
-    draft = { ev, el };
+    if (!ev._multi || !into) draft = { ev, el };
     wireFields(el, ev);
     el.querySelector(".ch-no").onclick = () => { el.querySelector(".ch-card").classList.add("off"); el.querySelector(".ch-acts").innerHTML = `<span class="mute">Anulowano.</span>`; draft = null; };
     el.querySelector(".ch-add").onclick = () => commit(ev, el);
@@ -476,6 +520,29 @@ export function createChat(root, host, opts = {}) {
       } else acts.innerHTML = `<span class="err">Nie udało się: ${esc(e.message || e)}</span>`;
     }
   }
+  async function commitAll(evs, els, box) {
+    const ok = evs.filter((e) => !e.missing.includes("place") && !e.missing.includes("segs"));
+    if (!ok.length) { say("Żadna karta nie ma jeszcze miejsca ani sektora - popraw je w „Popraw szczegóły”."); return; }
+    const acts = box.querySelector(".ch-acts"); acts.innerHTML = `<span class="spin"></span> Dodaję ${ok.length} i przeliczam mapę…`;
+    const mode = host.mode(), undos = [], notes = []; let before = null, after = null, how = "";
+    try {
+      if (mode === "hist") { const r = await commitSim(ok, ++n); before = r.before; after = r.after; how = r.how; undos.push(r.undo); if (r.note) notes.push(r.note); }
+      else for (const ev of ok) {
+        n++; const r = mode === "live" ? await commitLive(ev, n) : await commitStudio(ev, n); if (!r) continue;
+        if (!before) before = r.before; after = r.after; how = r.how; if (r.undo) undos.push(r.undo); if (r.note) notes.push(r.note);
+      }
+      ok.forEach((ev) => { const el = els[evs.indexOf(ev)]; el.querySelector(".ch-edit")?.removeAttribute("open"); el.querySelector(".ch-card")?.classList.add("added"); });
+      acts.innerHTML = `<span class="ok">✓ Dodano ${ok.length}${how === "sim" ? " do symulacji" : how === "live" ? " na żywo" : ""}</span>${ok.length < evs.length ? ` <span class="mute">(pominięto ${evs.length - ok.length} bez miejsca)</span>` : ""}`;
+      const all = { segs: ok.flatMap((e) => e.segs || []) }, focusSeg = (ok[0].place && ok[0].place.seg) || (ok[0].segs && ok[0].segs[0]);
+      const m = say(`${notes.length ? `<div class="ch-note">${notes.join(" ")}</div>` : ""}${after && after.length ? diffHTML(before || [], after, all) : ""}
+        <div class="ch-acts"><button class="ch-lnk" data-focus="${esc(focusSeg || "")}">Pokaż na mapie</button>${undos.length ? `<button class="ch-lnk" data-undo>Cofnij wszystkie</button>` : ""}</div>`, "bot", "res");
+      const entry = { n, ev: ok[0], how, el: m, undo: async () => { let r = null; for (const u of undos.reverse()) r = await u() || r; return r; } }; done.push(entry);
+      m.querySelector("[data-focus]").onclick = () => host.focus({ segId: focusSeg });
+      m.querySelectorAll("li[data-seg]").forEach((li) => li.onclick = () => host.focus({ segId: li.dataset.seg }));
+      const u = m.querySelector("[data-undo]"); if (u) u.onclick = () => undo(entry, u);
+      if (opts.onAdded) opts.onAdded(entry);
+    } catch (e) { acts.innerHTML = `<span class="err">Nie udało się: ${esc(e.message || e)}</span>`; }
+  }
   async function undo(entry, btn) {
     btn.disabled = true; btn.textContent = "Cofam…";
     try { const r = await entry.undo(); btn.replaceWith(Object.assign(document.createElement("span"), { className: "ok", textContent: "✓ Cofnięto" })); entry.el.classList.add("undone"); if (r && r.after && r.after.length) say(`<div class="ch-note">Po cofnięciu:</div>${diffHTML(r.before, r.after, {})}`, "bot", "res"); }
@@ -530,15 +597,15 @@ export function createChat(root, host, opts = {}) {
     if (!r.ok) throw new Error("serwer nie policzył symulacji (" + r.status + ")");
     const run = await r.json(); if (run.error) throw new Error(run.error); return run;
   }
-  async function commitSim(ev, k) {
-    if (ev.kind === "dispatch") throw new Error("wysłanie zespołu działa tylko na żywo");
-    const at0 = host.clock(), lo = rel(ctx.start, ctx.start);
-    let at = ev.t || at0; if (rel(at, ctx.start) < lo) at = ev.kind === "weather" && ev.tFrom ? ctx.start : at0;   // a sighting at 14:20 (before the call) is noted at the current moment, seen at 14:20
-    const mx = host.maxClock ? host.maxClock() : null; if (mx && rel(at, ctx.start) > rel(mx, ctx.start)) at = mx;   // never after the recording's find
-    const evs = scenarioEvents(ev, at, k, ctx);
+  async function commitSim(evIn, k) {
+    const list = Array.isArray(evIn) ? evIn : [evIn], ev = list[0];
+    if (list.some((e) => e.kind === "dispatch")) throw new Error("wysłanie zespołu działa tylko na żywo");
+    const at0 = host.clock(), lo = rel(ctx.start, ctx.start), mx = host.maxClock ? host.maxClock() : null;
+    const atOf = (e) => { let a = e.t || at0; if (rel(a, ctx.start) < lo) a = e.kind === "weather" && e.tFrom ? ctx.start : at0; if (mx && rel(a, ctx.start) > rel(mx, ctx.start)) a = mx; return a; };   // a sighting at 14:20 (before the call) is noted at the current moment, seen at 14:20; never after the recording's find
+    const at = atOf(ev), evs = list.flatMap((e, i) => scenarioEvents(e, atOf(e), list.length > 1 ? `${k}.${i + 1}` : k, ctx));
     if (!evs.length) { if (ev.kind === "status") throw new Error("status zespołu bez zmiany pogody nie zmienia mapy w historii - dodaj go na żywo"); throw new Error("za mało danych (miejsce / sektor)"); }
-    // "teraz" = the later of the event and the clock: an old observation still changes where to search NOW
-    const cmp = rel(at, ctx.start) > rel(at0, ctx.start) ? at : at0;
+    // "teraz" = the latest of the events and the clock: an old observation still changes where to search NOW
+    const cmp = list.map(atOf).reduce((a, b) => rel(b, ctx.start) > rel(a, ctx.start) ? b : a, at0);
     if (!sim.base) sim.base = await simRun([]);
     const prev = sim.events.length ? sim.last : sim.base, before = ranking(prev, cmp, ctx.start);
     sim.events.push(...evs);
@@ -550,7 +617,7 @@ export function createChat(root, host, opts = {}) {
       if (!sim.events.length) { sim.last = null; await host.restore(); return { before: b, after: ranking(sim.base, cmp, ctx.start) }; }
       const r2 = await simRun(sim.events); sim.last = r2; await host.apply(r2, { at: cmp }); return { before: b, after: ranking(r2, cmp, ctx.start) };
     };
-    const note = at !== ev.t && ev.t ? `${ev.kind === "weather" ? "Zmiana" : "Obserwacja"} z ${esc(ev.t)} - na osi czasu akcji zapisana o ${esc(at)}${rel(ev.t, ctx.start) < 0 ? " (przed zgłoszeniem)" : ""}.` : ev.dir ? `Kierunek „${esc(ev.dir.name)}”: korytarz wzdłuż szlaku (±300 m).` : "";
+    const note = list.length > 1 ? "" : at !== ev.t && ev.t ? `${ev.kind === "weather" ? "Zmiana" : "Obserwacja"} z ${esc(ev.t)} - na osi czasu akcji zapisana o ${esc(at)}${rel(ev.t, ctx.start) < 0 ? " (przed zgłoszeniem)" : ""}.` : ev.dir ? `Kierunek „${esc(ev.dir.name)}”: korytarz wzdłuż szlaku (±300 m).` : "";
     return { how: "sim", before, after: ranking(run, cmp, ctx.start), note, undo, events: evs };
   }
   // ---- Studio (Plan): the existing /story/event + /story/edit undo
@@ -571,7 +638,13 @@ export function createChat(root, host, opts = {}) {
   }
   ensureCtx().then(renderChips).catch(() => renderChips());
   hello();
-  return { say, onText, ensureCtx, resetSim: () => { sim.events = []; sim.last = null; sim.base = null; }, get simActive() { return sim.events.length > 0; }, renderChips, hello };
+  // a short plain-text summary of what was added and where to search now (czat.html "Udostępnij podsumowanie")
+  function summaryText() {
+    const R = host.run(), top = ranking(R, host.clock(), ctx ? ctx.start : "00:00").slice(0, 3);
+    const lines = done.filter((d) => !d.el.classList.contains("undone")).map((d) => "- " + summary(d.ev).replace(/^Na mapie zaznaczę: /, "").replace(/^Oznaczę jako /, ""));
+    return `Rescue Locator - ${host.scenario()}: moje zgłoszenia\n${lines.join("\n") || "- (jeszcze nic)"}\nGdzie szukać najpierw: ${top.map((s, i) => `${i + 1}. ${s.id} ${s.name} (${pl1(+s.areaPct || 0)}% obszaru)`).join("; ")}`;
+  }
+  return { say, onText, ensureCtx, summaryText, resetSim: () => { sim.events = []; sim.last = null; sim.base = null; }, get simActive() { return sim.events.length > 0; }, renderChips, hello };
 }
 
 // the embedded 2D view (same origin, web/ untouched): a what-if run lives at a blob: URL, and the view's 5 s HEAD poll of its run
@@ -596,11 +669,17 @@ function beforeFind(R, i) { const f = R.steps.findIndex((s) => s.kind === "found
 export function mountAppChat() {
   const A = () => window.rescueApp, st = () => window.rescueStore;
   if (!A() || !A().applyRun || !st()) { setTimeout(mountAppChat, 250); return; }
-  const btn = document.createElement("button"); btn.id = "chBtn"; btn.type = "button"; btn.innerHTML = `<span aria-hidden="true">💬</span> Czat`; btn.title = "Dodaj zdarzenie zwykłym zdaniem";
+  const btn = document.createElement("button"); btn.id = "chBtn"; btn.type = "button"; btn.innerHTML = `<span aria-hidden="true">💬</span><span class="lbl">Czat</span>`; btn.setAttribute("aria-label", "Czat"); btn.title = "Dodaj zdarzenie zwykłym zdaniem";
   const dr = document.createElement("aside"); dr.id = "chDrawer"; dr.setAttribute("aria-label", "Czat - dodaj zdarzenie");
   dr.innerHTML = `<div class="ch-head"><b>Czat</b><span class="ch-mode"></span><button class="ch-x" type="button" aria-label="Zamknij">✕</button></div><div class="ch-sim" hidden>Symulacja: mapa pokazuje Twoje dodane zdarzenia. <button type="button" class="ch-lnk" data-back>Wróć do nagrania</button></div><div class="ch-body"></div>`;
-  document.body.append(btn, dr);
-  const f2 = document.getElementById("frame2d"); if (f2) tameFrame(f2);
+  // the button sits in the top bar (before "Udostępnij"): a floating button covered "Wyślij zespół" / "Potwierdź wszystkie" in Na żywo
+  const anchor = document.getElementById("shareBtn");
+  if (anchor && anchor.parentNode) { btn.classList.add("inhdr"); anchor.before(btn); document.body.append(dr); } else document.body.append(btn, dr);
+  // every 2D frame the shell creates (its double buffer swaps in a new <iframe>) gets the blob HEAD shim
+  const f2 = document.getElementById("frame2d"); if (f2) { tameFrame(f2); new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.tagName === "IFRAME" && !n.__tamed) { n.__tamed = 1; tameFrame(n); } }))).observe(f2.parentNode, { childList: true }); }
+  // no blank 2D after a chat change: a "dirty" 2D frame takes the shell's double-buffered reload (old map stays until the new
+  // one is ready, then a crossfade) instead of {type:"run"}, which makes the view reload itself in place (blank ~1 s)
+  const buffered = (fn) => { const F = A().frames && A().frames["2da"]; if (F && F.ready && F.el.getAttribute("src")) F.dirty = true; return fn(); };
   let simRun = null, restoring = false, blob = null;
   const S = () => st();
   const live = () => S().time === "live" && S().backend === "api" && S().mode !== "edycja";
@@ -614,15 +693,15 @@ export function mountAppChat() {
       if (!S().runUrl) return S().run;
       // runInline (1f20792): the frames parse this copy instead of a second GET of the same run
       const u = new URL(S().runUrl, location.href).href, text = await (await fetch(S().runUrl, { cache: "no-cache" })).text(), r = JSON.parse(text);
-      if (r && r.steps) { window.__rescueRunText = { url: u, text }; A().applyRun(r, {}, "run"); }
+      if (r && r.steps) { window.__rescueRunText = { url: u, text }; buffered(() => A().applyRun(r, {}, "run")); }
       return r;
     },
     async apply(run, info) {
-      if (blob) URL.revokeObjectURL(blob);
+      if (blob) { const o = blob; setTimeout(() => URL.revokeObjectURL(o), 30000); }
       const text = JSON.stringify(run); blob = URL.createObjectURL(new Blob([text], { type: "application/json" }));
       window.__rescueRunText = { url: blob, text };   // runInline: the 2D view parses this copy instead of fetching the blob
       simRun = run; if (S().mode !== "akcja") A().setMode("akcja");
-      A().applyRun(run, { runUrl: blob, assessUrl: null }, "edit");
+      buffered(() => A().applyRun(run, { runUrl: blob, assessUrl: null }, "edit"));
       if (info && info.at) { let k = 0; const st = run.steps[0].t; run.steps.forEach((s, i) => { if (rel(s.t, st) <= rel(info.at, st) && s.kind !== "found") k = i; }); A().setStep(k + 1); }
       dr.querySelector(".ch-sim").hidden = false;
     },
@@ -631,6 +710,12 @@ export function mountAppChat() {
     addInput: (inp) => A().addInput(inp), undoInput: () => A().undo(),
   };
   const chat = createChat(dr.querySelector(".ch-body"), host);
+  // dock: the timeline marker of every chat event (simulation steps titled "Czat N: ...") gets a ring, same groups as dock.js
+  const markDock = () => {
+    const tm = document.getElementById("tlMarks"), R = S().run; if (!tm || !R || !R.steps) return;
+    evGroups(R).forEach((g, j) => { const el = tm.children[j]; if (!el) return; const c = g.ks.some((k) => /^Czat \d/.test(R.steps[k - 1].label || "")); el.classList.toggle("chat", c); if (c) el.title = "Zdarzenie z czatu"; });
+  };
+  { const tm = document.getElementById("tlMarks"); if (tm) new MutationObserver(markDock).observe(tm, { childList: true }); }
   const mode = () => { const m = host.mode(); dr.querySelector(".ch-mode").textContent = m === "live" ? "NA ŻYWO" : m === "studio" ? "PLAN" : "HISTORIA"; dr.querySelector(".ch-mode").className = "ch-mode m-" + m; };
   const open = (on) => { dr.classList.toggle("open", on); btn.classList.toggle("on", on); mode(); if (on) { chat.ensureCtx(); setTimeout(() => dr.querySelector("textarea").focus(), 200); } try { sessionStorage.setItem("rescue-chat-open", on ? "1" : ""); } catch (e) {} };
   btn.onclick = () => open(!dr.classList.contains("open"));
@@ -648,31 +733,56 @@ export function mountAppChat() {
 // ---------------------------------------------------------------- host 2: czat.html (full screen chat + small 2D map)
 export async function mountStandalone() {
   const q = new URLSearchParams(location.search), sc = q.get("sc") || "zawrat";
-  const frame = document.getElementById("czMap"), body = document.getElementById("czChat");
-  let run = null, ready = false, pending = [], blob = null, liveWanted = false;
-  tameFrame(frame, () => matchMedia("(max-width:760px)").matches);
-  const post = (m) => { if (ready) frame.contentWindow.postMessage({ source: "rescue-app", ...m }, location.origin); else pending.push(m); };
+  let frame = document.getElementById("czMap"), next = null, nextSel = null;
+  const body = document.getElementById("czChat");
+  let run = null, ready = false, pending = [], blob = null, liveWanted = false, selSeg = null;
+  const narrow = () => matchMedia("(max-width:760px)").matches;
+  tameFrame(frame, narrow);
+  const post = (m) => { if (m.type === "select") selSeg = m.segmentId; if (ready) frame.contentWindow.postMessage({ source: "rescue-app", ...m }, location.origin); else pending.push(m); };
+  const frameURL = (run) => `../web/index.html?embed=scene&sc=${encodeURIComponent(sc)}&parentOrigin=${encodeURIComponent(location.origin)}&run=${encodeURIComponent(run)}&scenario=${encodeURIComponent(`/scenarios/${sc}.json`)}`;
+  // double buffer: the new run boots in a hidden second frame; the old map stays until it says "ready", then a 200 ms crossfade
+  const swapTo = (runUrl) => {
+    if (!frame.getAttribute("src")) { frame.src = frameURL(runUrl); return; }
+    if (next) next.remove();
+    next = document.createElement("iframe"); next.title = frame.title; next.className = "cz-next";
+    next.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;transition:opacity .2s";
+    tameFrame(next, narrow); next.src = frameURL(runUrl); frame.after(next); window.__chatSwapT = performance.now();
+  };
   addEventListener("message", (e) => {
-    if (e.source !== frame.contentWindow || e.origin !== location.origin || !e.data || e.data.source !== "rescue2d") return;
+    if (e.origin !== location.origin || !e.data || e.data.source !== "rescue2d") return;
+    if (next && e.source === next.contentWindow && e.data.type === "ready") {
+      const o = frame; frame = next; next = null; frame.id = "czMap"; o.removeAttribute("id"); frame.style.opacity = "1";
+      window.__chatSwapMs = Math.round(performance.now() - (window.__chatSwapT || 0));
+      setTimeout(() => { o.remove(); frame.style.cssText = ""; frame.style.pointerEvents = ""; }, 220);
+      ready = true; const p = pending; pending = []; if (selSeg && !p.some((m) => m.type === "select")) p.push({ type: "select", segmentId: selSeg }); p.forEach(post); return;
+    }
+    if (e.source !== frame.contentWindow) return;
     if (e.data.type === "ready") { ready = true; const p = pending; pending = []; p.forEach(post); }
   });
   // one GET of the run: the embedded 2D view parses the same text (runInline, window.__rescueRunText) instead of a second GET
   const runText = async () => { const r = await fetch(`/api/run/${encodeURIComponent(sc)}`, { cache: "no-cache" }); if (!r.ok) throw new Error(r.status); const text = await r.text(); window.__rescueRunText = { url: new URL(`/api/run/${sc}`, location.href).href, text }; return JSON.parse(text); };
   try { run = await runText(); } catch (e) { run = null; }
   const startRun = run;
-  frame.src = `../web/index.html?embed=scene&sc=${encodeURIComponent(sc)}&parentOrigin=${encodeURIComponent(location.origin)}&run=${encodeURIComponent(`/api/run/${sc}`)}&scenario=${encodeURIComponent(`/scenarios/${sc}.json`)}`;
+  swapTo(`/api/run/${sc}`);
   const liveAt = () => (run && run.liveCursor && run.liveCursor.at) || (startRun && startRun.steps && beforeFind(startRun, startRun.steps.length - 1).t) || "12:00";
   const host = {
     scenario: () => sc, run: () => run,
     mode: () => liveWanted && hasKey() && !host.forceSim ? "live" : "hist",
     clock: liveAt, maxClock: liveAt,
     simCut: () => (startRun && startRun.liveCursor && startRun.liveCursor.at) || null,
-    async refreshLive() { const r = await runText(); run = r; post({ type: "run", url: `/api/run/${sc}` }); ready = false; return r; },
-    async apply(r) { run = r; if (blob) URL.revokeObjectURL(blob); const text = JSON.stringify(r); blob = URL.createObjectURL(new Blob([text], { type: "application/json" })); window.__rescueRunText = { url: blob, text }; post({ type: "run", url: blob }); ready = false; },
-    async restore() { run = startRun; try { run = await runText(); } catch (e) {} post({ type: "run", url: `/api/run/${sc}` }); ready = false; },
+    async refreshLive() { const r = await runText(); run = r; swapTo(`/api/run/${sc}`); return r; },
+    async apply(r) { run = r; const old = blob; const text = JSON.stringify(r); blob = URL.createObjectURL(new Blob([text], { type: "application/json" })); window.__rescueRunText = { url: blob, text }; swapTo(blob); if (old) setTimeout(() => URL.revokeObjectURL(old), 30000); },
+    async restore() { run = startRun; try { run = await runText(); } catch (e) {} swapTo(`/api/run/${sc}`); },
     focus({ segId }) { if (segId) post({ type: "select", segmentId: segId }); document.body.classList.add("cz-map-big"); setTimeout(() => document.getElementById("czMapBox").scrollIntoView({ behavior: "smooth", block: "nearest" }), 50); },
   };
-  const chat = createChat(body, host, { placeholder: "Co widziałeś? Np. „widziałem kogoś przy Wielkim Stawie 20 min temu”" });
+  const chat = createChat(body, host, { voice: true, placeholder: "Co widziałeś? Np. „widziałem kogoś przy Wielkim Stawie 20 min temu”" });
+  const sh = document.getElementById("czShare");
+  if (sh) sh.onclick = async () => {
+    const text = chat.summaryText(), url = location.href.split("#")[0];
+    try { if (navigator.share) { await navigator.share({ title: "Rescue Locator - zgłoszenie", text, url }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+    try { await navigator.clipboard.writeText(text + "\n" + url); chat.say("Podsumowanie skopiowane - wklej je w SMS-ie albo komunikatorze."); }
+    catch (e) { chat.say(`<pre class="ch-pre">${esc(text)}</pre>Zaznacz i skopiuj powyższy tekst.`); }
+  };
   // big quick starts for casual users: they start a short guided dialog (the parser asks for what is missing)
   document.querySelectorAll("[data-quick]").forEach((b) => b.onclick = () => chat.onText(b.dataset.quick));
   const tg = document.getElementById("czLive");

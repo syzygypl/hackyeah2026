@@ -17,6 +17,14 @@
   .cz-top h1{font-size:17px;margin:0;font-weight:600;color:var(--rl-ink-2)}
   .cz-top .sp{flex:1}
   .cz-top a.app{font-size:14px;color:var(--rl-accent)}
+  .cz-top .share{font:600 14px var(--rl-font);padding:8px 12px;border-radius:var(--rl-radius-s);border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);cursor:pointer;min-height:40px}
+  .cz-intro{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(14,19,23,.55);padding:16px}
+  .cz-intro[hidden]{display:none}
+  .cz-intro .box{max-width:460px;background:var(--rl-panel-solid);color:var(--rl-ink);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);padding:20px 22px}
+  .cz-intro h2{margin:0 0 10px;font-size:22px}
+  .cz-intro ol{margin:0 0 14px;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+  .cz-intro .note{font-size:14px;color:var(--rl-mute);margin:0 0 14px}
+  .cz-intro button{font:700 17px var(--rl-font);width:100%;min-height:48px;border:0;border-radius:var(--rl-radius);background:var(--rl-danger);color:var(--rl-on-danger);cursor:pointer}
   .cz-top label{font-size:14px;display:flex;gap:6px;align-items:center}
   .cz-main{display:grid;grid-template-columns:minmax(360px,560px) minmax(0,1fr);min-height:0;min-width:0}
   .cz-side,#czChat,.ch-log{min-width:0}
@@ -35,6 +43,8 @@
     .cz-main{grid-template-columns:minmax(0,1fr);grid-template-rows:34vh minmax(0,1fr)}
     #rl-version{display:none!important}
     .cz-top a.app{min-height:44px;display:inline-flex;align-items:center}
+    .cz-top .share{min-height:44px;font-size:13px;padding:4px 8px}
+    .cz-top .brand{font-size:0;gap:0}
     .cz-top label{min-height:44px}
     #czMapBox{order:-1}
     body.cz-map-big .cz-main{grid-template-rows:55vh 1fr}
@@ -46,12 +56,25 @@
 </style>
 </head>
 <body>
+<div class="cz-intro" id="czIntro" hidden role="dialog" aria-modal="true" aria-labelledby="czIntroH">
+  <div class="box">
+    <h2 id="czIntroH">Widziałeś kogoś w górach?</h2>
+    <ol>
+      <li><b>Napisz albo powiedz</b> (🎤) zwykłym zdaniem, co widziałeś: kogo, gdzie i kiedy.</li>
+      <li><b>Sprawdź</b>, jak to zrozumieliśmy - pokażemy miejsce na małej mapce. Możesz poprawić.</li>
+      <li><b>Dodaj</b> - mapa poszukiwań od razu pokaże, gdzie szukać najpierw.</li>
+    </ol>
+    <p class="note">Scenariusz ćwiczebny (Zawrat, dane fikcyjne). Bez klucza akcji zmiany widzisz tylko Ty.</p>
+    <button type="button" id="czIntroOk">Rozumiem, zaczynam</button>
+  </div>
+</div>
 <div class="cz">
   <header class="cz-top">
     <a class="brand" href="start.html"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</a>
     <h1>Czat zgłoszeń - Zawrat, zaginiony turysta</h1>
     <span class="sp"></span>
     <label id="czLiveBox"><input type="checkbox" id="czLive" hidden> <span id="czLiveLbl" hidden>Zgłoś do akcji na żywo</span></label>
+    <button type="button" id="czShare" class="share">Udostępnij podsumowanie</button>
     <a class="app" href="./?sc=zawrat&amp;role=operator&amp;chat=1">Pełna aplikacja</a>
   </header>
   <main class="cz-main">
@@ -75,6 +98,11 @@
   await mountStandalone();
   const ta = () => document.querySelector("#czChat textarea");
   document.querySelectorAll("[data-fill]").forEach((b) => b.onclick = () => { ta().value = b.dataset.fill; ta().focus(); });
+  // first run: a 3-step hint, once per device
+  const intro = document.getElementById("czIntro"); let seen = false;
+  try { seen = !!localStorage.getItem("rescue-czat-intro"); } catch (e) {}
+  if (!seen && !new URLSearchParams(location.search).has("nointro")) { intro.hidden = false; document.getElementById("czIntroOk").focus(); }
+  document.getElementById("czIntroOk").onclick = () => { intro.hidden = true; try { localStorage.setItem("rescue-czat-intro", "1"); } catch (e) {} ta().focus(); };
   const live = document.getElementById("czLive");
   if (!live.hidden) document.getElementById("czLiveLbl").hidden = false;
 </script>

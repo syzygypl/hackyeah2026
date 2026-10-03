@@ -105,7 +105,10 @@ def main():
         time.sleep(1)
         check("absurd entry -> no card", (c.js(N_CARD) or 0) == n0)
         check("run and view unchanged", c.js("window.rescueStore.run === window.__chk && window.rescueStore.runUrl === window.__chkUrl"))
+        # no blank 2D: sample the visible 2D frame every 40 ms; the double buffer keeps a ready map on screen the whole time
+        c.js("window.__blank=0;window.__blankT=setInterval(()=>{try{const f=document.getElementById('frame2d');if(!f||f.contentWindow.document.body.dataset.state!=='ready')window.__blank++}catch(e){window.__blank++}},40)")
         for i, m in enumerate(MSGS, 1):
+            t0 = time.time()
             card, res = send(c, m)
             check(f"H{i} card", "zaznaczę" in card or "Oznaczę" in card or "pogody" in card, card.replace("\n", " | ")[:200])
             check(f"H{i} top 3", "obszaru" in res and "%" in res, res.replace("\n", " | ")[:220])
@@ -115,8 +118,20 @@ def main():
                 check("H1 mini map drawn", c.js("!!document.querySelector('.ch-card svg.ch-mini path')"))
             time.sleep(2.5)   # the 2D view reloads with the what-if run: shoot once it is ready again
             c.until("(()=>{try{const w=document.getElementById('frame2d').contentWindow;return w.location.href.includes(encodeURIComponent(window.rescueStore.runUrl))&&w.document.body.dataset.state==='ready'}catch(e){return false}})()", 60)
+            if i == 1:
+                print(f"    H1 message -> new 2D heat map on screen: {time.time() - t0 - 2.5:.1f} s (incl. the server run)")
+                check("H1 dock marks the chat event", c.until("!!document.querySelector('#tlMarks .tlk.chat')", 10))
             time.sleep(1.5)
             shot(c, shots, f"czat-{i}.jpg")
+        check("no blank 2D during 4 changes", (c.js("(clearInterval(window.__blankT),window.__blank)") or 0) == 0, f"blank samples: {c.js('window.__blank')}")
+        # several events in one message -> several cards, one "Dodaj wszystkie"
+        n0, r0 = c.js(N_CARD) or 0, c.js(N_RES) or 0
+        c.js("window.rescueChat.chat.onText('Zespół B przeszukał S3 i S4, nic, a o 15:10 turystka widziała go przy Zawracie')")
+        check("multi -> 2 cards", c.until(f"{N_CARD} >= {n0 + 2} && !!document.querySelector('.ch-addall')", 15), str((c.js(N_CARD) or 0) - n0))
+        c.js("[...document.querySelectorAll('.ch-addall')].pop().click()")
+        c.until(f"{N_RES} > {r0}", 60)
+        res = c.js(LAST_RES) or ""
+        check("multi -> one answer with top 3", "obszaru" in res and "Cofnij wszystkie" in res, res.replace("\n", " | ")[:200])
         c.js("[...document.querySelectorAll('[data-undo]')].pop().click()")
         check("H undo", c.until("[...document.querySelectorAll('.ch-msg .ok')].some(e=>e.textContent.includes('Cofnięto'))", 40))
         c.js("[...document.querySelectorAll('[data-focus]')][0].click()")
@@ -137,7 +152,7 @@ def main():
             check("L2 live search report", "obszaru" in res, res.replace("\n", " | ")[:200])
         # ---- 3. czat.html (casual)
         print("czat.html")
-        c.call("Page.navigate", {"url": f"{base}/app/czat.html?sc=zawrat"})
+        c.call("Page.navigate", {"url": f"{base}/app/czat.html?sc=zawrat&nointro=1"})
         check("czat.html loaded", c.until("!!(window.rescueChat && document.querySelector('.ch-chip'))", 60))
         c.until("(()=>{try{return document.getElementById('czMap').contentWindow.document.body.dataset.state==='ready'}catch(e){return false}})()", 40)
         card, _ = send(c, "Widziałem kogoś", add=False)
@@ -151,6 +166,8 @@ def main():
         c.until("(()=>{try{const w=document.getElementById('czMap').contentWindow;return w.location.href.includes('blob')&&w.document.body.dataset.state==='ready'}catch(e){return false}})()", 60)
         time.sleep(1.5)
         shot(c, shots, "czat-casual.jpg")
+        check("C share button", c.js("!!document.getElementById('czShare')"))
+        check("C summary text", "Gdzie szukać najpierw" in (c.js("window.rescueChat.chat.summaryText()") or ""), (c.js("window.rescueChat.chat.summaryText()") or "")[:160].replace("\n", " | "))
         check("no uncaught page errors", not c.errors, "; ".join(map(str, c.errors))[:300])
     finally:
         chrome.terminate()
