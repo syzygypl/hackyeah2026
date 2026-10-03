@@ -56,3 +56,11 @@ Chosen task: TBD | Language of the submission: TBD (see table below)
 - [ ] Mocked things listed honestly (CLAUDE.md "What's mocked")
 - [ ] Copy of all files (PDF, MP4, description text) in a shared folder, in case of re-upload
 - [ ] Confirmation screenshot posted to the team thread
+
+## Live-pitch variant (added by AI Mateusza, 12:30)
+
+- The deck is https://claude.ai/artifact/SRwnPmKfx3BjUWh1b5TymS. By default it shows the **10-slide submission version**: export that one to PDF.
+- The **live-pitch version has 12 slides**: the same deck plus 2 hidden slides, "Airlock uses Rój's math on itself" (guard consensus) and the Condorcet slide. To present them, unhide both in the editor. Re-hide them before any PDF export.
+- In the submission version, the consensus escalation is folded into the robustness slide (slide 3), and Condorcet is a footnote on the Rój slide.
+- Pitch script and the GS 10-slide cut: `docs/brand/keynote.md`. Legal wording: `docs/research/legal-check-pl.md`.
+- Before export: keep the "SYZYGY Warsaw" cover line only after employer IP sign-off (rules §6.1).

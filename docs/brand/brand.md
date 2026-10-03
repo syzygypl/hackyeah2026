@@ -42,7 +42,8 @@ Rój runs on Airlock. Every message in the swarm passes through the same gateway
 | Product | EN | PL |
 |---|---|---|
 | Airlock | Your agents act. Airlock decides. | Agenci działają. Airlock decyduje. |
-| Airlock (alt, number-led) | Every agent call, checked in 58 microseconds. On your machine. | Każde wywołanie agenta sprawdzone w 58 mikrosekund. Na twoim komputerze. |
+| Airlock (alt, number-led) | Every agent call, checked in 58 microseconds. On your hardware. | Każde wywołanie agenta sprawdzone w 58 mikrosekund. Na twoim sprzęcie. |
+| Rój (frame) | Extracts and quotes. Doesn't advise. | Wyciąga i cytuje. Nie doradza. To nie jest porada prawna ani podatkowa. |
 | Rój | Many small models. One answer. Or an honest "I don't know". | Wiele małych modeli. Jedna odpowiedź. Albo uczciwe "nie wiem, sprawdź". |
 
 The 58 µs line is about the deterministic path only (p50). Never use it for the model tiers.
@@ -56,7 +57,8 @@ The 58 µs line is about the deterministic path only (p50). Never use it for the
 5. **No buzzword soup.** Banned: revolutionary, cutting-edge, seamless, leverage, next-gen, AI-powered, enterprise-grade, military-grade, bulletproof, unhackable, zero-trust (unless we show it).
 6. **Honest by design.** We say "hackathon prototype", "measured on one MacBook", "not production-hardened". "Nie wiem" is a feature in Rój; humility is a feature in the brand.
 7. **No production-security claims.** Never "secure", "safe", "compliant", "certified". Say "blocks these attacks in our test suite" or "in the demo run".
-8. **Local is the headline, not a footnote.** "Nothing leaves the machine" is the reason a bank listens.
+8. **Local is the headline, said precisely.** "Models run on your hardware; no prompt goes to a model provider." Conditional until `claude-sonnet-5-5` is out of `models.allowed`; until then "the guard models run locally". Never "nothing leaves": tools like `send_email` send data out by design.
+11. **Compliance is "supports", never "makes you".** "Supports AI Act Art. 12/14 and DORA logging." The log is "tamper-evident", never "immutable". Approvals are "four-eyes review (simulated)", never "authorises" or SCA. Source: `docs/research/legal-check-pl.md`.
 9. **Plain hyphens, no em dashes.** Sentence case for headings. No exclamation marks. No emoji in the deck.
 10. **Product names are proper nouns.** "Airlock blocks it", not "the Airlock tool" or "our ACL solution". Never the acronym on a slide.
 
@@ -74,7 +76,7 @@ Minimal by rule: two neutrals, one text grey, four decision states. No brand acc
 | `--graphite` | `#6E6E73` | `#8E8E93` | secondary text, labels, axis | `--muted` |
 | `--allow` | `#1A7F37` | `#34C759` | ALLOW / Rój green "pewne" | `--allow` |
 | `--deny` | `#D70015` | `#FF453A` | DENY. The only red. Use once per slide max | `--deny` |
-| `--review` | `#B25000` | `#FF9F0A` | REDACT, needs human / Rój amber "rozstrzygnięte" | `--redact` + `--approve` (merge) |
+| `--review` | `#B25000` | `#FF9F0A` | REDACT, needs human / Rój amber "rozstrzygnięte - sprawdź" | `--redact` + `--approve` (merge) |
 | `--unknown` | `#8E8E93` | `#636366` | Rój grey "nie wiem, sprawdź", skipped tier | - |
 
 Drop the dashboard's purple `--accent`. Merge `--approve` (blue) into `--review`: both mean "a human looks at this".
@@ -113,6 +115,8 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Ollama proxy | protect any Ollama agent by changing one URL (:11434 to :11500); 7 tests | 917b83c | built. Approval via header is simulated |
 | Dashboard | live console: 12 one-click attacks + 2 legit, verdict, reasons, µs per check; policy edits via authenticated PUT, atomic write, audited | f000cb6, 88f1934, 00fea5a | built |
 | IBAN in prompts | tokenized, resolved only inside payment tool calls | f3186a9 | built |
+| PII before models | models only ever see PII-redacted text; a hidden injection marks the session compromised even when the PII check already blocked the prompt | a0eda2b, 7468e6e | built |
+| Agent model | qwen3:4b-instruct allowlisted and digest-pinned as the agent model | da52ab8 | built |
 | Real model agent | qwen3:4b ignored the hidden instruction in 3/3 runs; Airlock still sent the payment to a human | `spikes/acl-agent/README.md` | measured, n=3 |
 | Deploy | 3 commands, Python stdlib, no pip install | architecture §3 | true |
 | Integration | 1 stdlib client file, 2 calls | acl-agent README | true |
@@ -124,4 +128,4 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Condorcet | three independent 90% voters: 2.8% majority error; with correlation 0.4 the floor is 4% | swarm-math §1-2 | *(theory)*, not measured on our letters |
 | Rój "% lokalnie", cost 5.7x cheaper | - | swarm-math §6 | *(theory, all inputs assumed)*. Don't put on a slide as a result |
 
-Not ours to claim: production readiness, MCP proxy (planned), a real approval queue (planned, approval is simulated), persistent shared audit store (planned), per-user authz (planned).
+Not ours to claim: "compliant" / "AI Act-ready" / "nothing leaves", "protects all PII" (we redact PESEL, IBAN, card, e-mail on configured paths; stored hashes are pseudonymised, still personal data), production readiness, MCP proxy (planned), a real approval queue (planned, approval is simulated), persistent shared audit store (planned), per-user authz (planned).

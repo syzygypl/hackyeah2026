@@ -9,14 +9,14 @@ Status deck (12 slides, seed of the final 10): https://claude.ai/artifact/SRwnPm
 | Time | Beat | Say | Screen |
 |---|---|---|---|
 | 0:00 | Hook | "This invoice has a secret. Hidden inside it, an instruction: wire 95,000 euros to a stranger." Pause. | Slide 1, black, the invoice line |
-| 0:15 | Problem | "Agents now hold real tools. Payments. Email. Databases. One poisoned document turns a helpful agent into an insider. And most guardrails check your data in someone else's cloud." | Slide 2 |
-| 0:35 | Product | "This is Airlock. It sits between every agent and every tool. It runs on your machine. Nothing leaves. To plug it in, you change one URL." | Slide 3 |
+| 0:15 | Problem | "Agents now hold real tools. Payments. Email. Databases. One poisoned document turns a helpful agent into an insider. And many guardrails send your data to someone else's cloud." | Slide 2 |
+| 0:35 | Product | "This is Airlock. It sits between every agent and every tool. Its models run on your machine. No prompt goes to a model provider. To plug it in, you change one URL." | Slide 3 |
 | 0:50 | Demo 1 | "A real agent, qwen3 4B, reads the invoice. Airlock's guard model marks it untrusted in 0.19 seconds. The session is now tainted." | Live: acl-agent `--scenario injection` (or `--via-proxy`) |
 | 1:05 | Demo 2 | "The agent didn't take the bait. It paid the real 4,200 euros. Airlock still held that payment for a human. Defence doesn't depend on the model behaving." | Live, then dashboard |
 | 1:20 | Demo 3 | "Now the worst case. We script a fully hijacked agent against the same gateway. 95,000 euros to the attacker. Denied. Customer list to evil-mail.ru. Denied. Card numbers. Redacted. 58 microseconds per check." | Dashboard live console: one-click attacks |
 | 1:45 | Demo 4 | "Change the rules live." Dashboard policy editor, PII from block to redact. "Next call, card masked. No restart. The edit itself is authenticated and audited." | Dashboard policy editor |
 | 2:00 | One more thing | "One more thing. A second payment. Approved vendor. Under the limit. Every rule says yes." Pause. "Three guard models from three families vote. They disagree. Airlock settles it by risk: an arbiter decides, low risk passes with a flag, high risk is denied. A human steps in only where your policy says so." Pause. "This payment? Denied." | Slide: consensus, black |
-| 2:25 | Proof | "Every decision is hash-chained. 129 test cases, all green. Any Ollama agent, one URL." | Numbers slide |
+| 2:25 | Proof | "Every decision lands in a tamper-evident log, the kind of record AI Act Article 12 and DORA expect. 129 test cases, all green. Any Ollama agent, one URL." | Numbers slide |
 | 2:45 | Close | "Your agents act. Airlock decides." | Last slide |
 
 ## Hero number per criterion
@@ -35,22 +35,26 @@ Status deck (12 slides, seed of the final 10): https://claude.ai/artifact/SRwnPm
 |---|---|---|---|
 | 1 | Hook | "This invoice asks your agent to wire 95,000 euros." | - |
 | 2 | Problem | Agents with real tools can be turned by one document. | Guardrails |
-| 3 | Airlock | Cheap rules first, local models second, a human last. | Architecture |
+| 3 | Airlock | Cheap rules first, local models second, a human only where policy says so. | Architecture |
 | 4 | Measured | 58 µs, 0.19 s, 1.4 s, 129/129. | Performance, tests |
 | 5 | Demo | Real model held for a human; scripted hijack denied. | Guardrails |
 | 6 | One URL | Any Ollama agent, governed by changing one URL. | Implementability |
 | 7 | One more thing | When guards disagree, Airlock settles it by risk; a human only where policy says so. | Guardrails |
-| 8 | Reporting | Every decision, hash-chained, live in the console. | Reporting |
+| 8 | Reporting | Every decision in a tamper-evident log, live in the console. | Reporting |
 | 9 | Scale | Stateless checks today; shared store and model pool are planned. | Implementability |
 | 10 | Close | Your agents act. Airlock decides. Repo, 3 commands. | - |
 
-The status deck's Rój, math and team slides drop out of the GS PDF; they seed the open AI deck.
+Deck variants: the artifact shows the 10-slide version by default (consensus folded into the robustness slide, Condorcet as a footnote). The live pitch unhides 2 slides (consensus, Condorcet), 12 in total. For the final GS PDF, the team, decision and next slides get swapped for this table's slides 8-10; Rój, math and team seed the open AI deck.
 
 ## Speaker notes
 
 - Say "scripted" for the 95k scene. The real-model scene right before it carries the truth.
 - Never say "secure" or "production-ready". Say "blocks these attacks in our tests". Planned items (MCP proxy, real approval queue, shared audit store) only if asked.
-- Approvals are simulated (scripted approver, or the `X-ACL-Approved-By` header in the proxy). Say so if asked.
+- Approvals are simulated (scripted approver, or the `X-ACL-Approved-By` header in the proxy). Four-eyes is an internal control, not PSD2 SCA: the bank still authenticates the payment. Never "authorises".
+- "Models run on your machine, no prompt goes to a model provider" holds only once `claude-sonnet-5-5` is out of `models.allowed` (owner: Marcin). Until then say "the guard models run locally".
+- Compliance: "supports AI Act Art. 12/14 and DORA logging", never "compliant", "AI Act-ready" or "certified". The log is tamper-evident, never "immutable". Redaction covers PESEL, IBAN, card numbers and e-mails on configured paths, not "all PII". Stored hashes are pseudonymised, so still personal data.
+- Cover line "SYZYGY Warsaw": IP and employer consent (Ars Thanea S.A.) is pending, rules §6.1. Keep it off the submitted PDF until signed off.
+- Legal source: `docs/research/legal-check-pl.md` (desk check, not legal advice).
 - Consensus is an opt-in policy mode (default is tiered). Escalation rule decided 12:23: arbiter (Granite 8B) decides; then accuracy-weighted votes; then low/medium allow + flag, high/critical deny. A human only where a policy rule says so (four-eyes over 10k). The risk map is in policy.json; invite the jury to toggle it live. The 9k payment (critical tool, under the four-eyes limit) is denied under this rule; the earlier live run that sent it to a human predates the rule. Latencies are from one live run of 6 prompts and 3 high-risk calls: a sample, not a rate.
 - Warm the models before stepping on stage (Granite cold load is about 17 s).
 - If the live agent stalls: switch to `--scripted`. Same gateway, say so.
@@ -58,4 +62,4 @@ The status deck's Rój, math and team slides drop out of the GS PDF; they seed t
 
 ## Rój variant (open AI entry, pending the 13:00 decision)
 
-Hook: an official letter, one deadline. Two model families (qwen3:4b, gemma3:4b) read it. If they agree and the quote is verbatim in the letter: green. If they disagree: "nie wiem, sprawdź". Hidden text is stripped in code before any model reads it. Math slide: three independent 90% voters make 2.8% errors, five make 0.86% (theory, Condorcet; correlation sets a floor, which is why two families). Bridge: Airlock already uses the same rule for its own guards: agreement passes, disagreement is settled by risk. Per-letter time of 4-8 s is an estimate until measured.
+Frame: Rój extracts and quotes, it doesn't advise. On screen and in the UI: "To nie jest porada prawna ani podatkowa." Hook: an official letter, one deadline. Two model families (qwen3:4b, gemma3:4b) read it. If they agree and the quote is verbatim in the letter: green. If they disagree: "Rozstrzygnięte - sprawdź" or "nie wiem, sprawdź". The API arbiter stays off for real letters (names and health details aren't redacted). Hidden text is stripped in code before any model reads it. Math slide: three independent 90% voters make 2.8% errors, five make 0.86% (theory, Condorcet; correlation sets a floor, which is why two families). Bridge: Airlock already uses the same rule for its own guards: agreement passes, disagreement is settled by risk. Per-letter time of 4-8 s is an estimate until measured.
