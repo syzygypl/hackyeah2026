@@ -241,7 +241,47 @@ def _block(url, t, k, cache_dir):
         return zlib.decompress(f.read())
 
 
-def dem_crop(b, cache_dir=os.path.join(HERE, "data", "dem-blocks")):
+def _snap(b, sx, sy):
+    """Crop origin + size on the global pixel grid (rows from 90 N, cols from 180 W). The float form
+    (90 - G0*sy, H0*sx - 180) is kept bit-identical to earlier crops: pixel centres can sit exactly on 100 m
+    cell edges (zawrat: every 10th column), so a 1e-15 shift would move them to the neighbouring cell."""
+    eps = 1e-6  # float noise at exact pixel edges (e.g. 20.005 E = pixel 18.0)
+    G0, G1 = int((90 - b["north"]) / sy + eps), int(math.ceil((90 - b["south"]) / sy - eps))
+    H0, H1 = int((b["west"] + 180) / sx + eps), int(math.ceil((b["east"] + 180) / sx - eps))
+    return 90 - G0 * sy, H0 * sx - 180, G1 - G0, H1 - H0
+
+
+def expand(b, km):
+    """bbox grown by km on every side."""
+    dlat = km / 111.32
+    dlon = km / (111.32 * math.cos(math.radians((b["north"] + b["south"]) / 2)))
+    return {"south": b["south"] - dlat, "west": b["west"] - dlon, "north": b["north"] + dlat, "east": b["east"] + dlon}
+
+
+def dem_window(dem, b):
+    """The pixel window of `dem` that a margin-free crop of bbox b would have had (same global pixel grid),
+    so slope/water/steep for the scenario grid are identical whatever margin the cached crop carries."""
+    sx, sy = dem["step"], dem.get("stepLat", dem["step"])
+    lat0, lon0, R, C = _snap(b, sx, sy)
+    r0, c0 = round((dem["lat0"] - lat0) / sy), round((lon0 - dem["lon0"]) / sx)
+    if r0 == 0 and c0 == 0 and R == dem["rows"] and C == dem["cols"]:
+        return dem
+    assert r0 >= 0 and c0 >= 0 and r0 + R <= dem["rows"] and c0 + C <= dem["cols"], "DEM crop does not cover the bbox"
+    return dict(dem, lat0=lat0, lon0=lon0, rows=R, cols=C,
+                z=[row[c0:c0 + C] for row in dem["z"][r0:r0 + R]])
+
+
+def dem_crop(b, cache_dir=os.path.join(HERE, "data", "dem-blocks"), margin_km=0.0):
+    """Like dem_crop_bbox, for bbox b grown by margin_km; adds bbox, marginKm and bounds (pixel-edge extent)."""
+    d = dem_crop_bbox(expand(b, margin_km) if margin_km else b, cache_dir)
+    d["bbox"] = {k: b[k] for k in ("south", "west", "north", "east")}
+    d["marginKm"] = margin_km
+    d["bounds"] = {"north": d["lat0"], "south": d["lat0"] - d["rows"] * d["stepLat"],
+                   "west": d["lon0"], "east": d["lon0"] + d["cols"] * d["step"]}
+    return d
+
+
+def dem_crop_bbox(b, cache_dir=os.path.join(HERE, "data", "dem-blocks")):
     """Elevations (m) for the bbox from every 1x1 degree Copernicus GLO-30 tile it touches:
     {lat0, lon0, step (lon), stepLat, rows, cols, z (row 0 = north), source, missing}.
     Resolution is read from each tile's geotransform (GLO-30: 1" x 1" below 50 N, 1" lat x 1.5" lon for 50-60 N),
@@ -261,10 +301,7 @@ def dem_crop(b, cache_dir=os.path.join(HERE, "data", "dem-blocks")):
             missing.append(os.path.basename(DEM_URL.format(lat=k[0], lon=k[1])))
     sx = min((h[1][33550][0] for h in heads.values()), default=1 / 3600)
     sy = min((h[1][33550][1] for h in heads.values()), default=1 / 3600)
-    eps = 1e-6  # float noise at exact pixel edges
-    lat0 = b["north"] if not heads else math.ceil(b["north"] / sy - eps) * sy  # snap to the global pixel grid
-    lon0 = math.floor(b["west"] / sx + eps) * sx
-    R, C = int(math.ceil((lat0 - b["south"]) / sy - eps)), int(math.ceil((b["east"] - lon0) / sx - eps))
+    lat0, lon0, R, C = _snap(b, sx, sy)
     rows_cache = {}
 
     def block_row(k, rr, tc):
@@ -636,6 +673,9 @@ def main():
     ap.add_argument("--refresh", action="store_true", help="query Overpass and the DEM again even if cached")
     ap.add_argument("--no-dem", action="store_true", help="OSM only")
     ap.add_argument("--data", default=os.path.join(HERE, "data"), help="cache dir (default: data/ next to this script)")
+    ap.add_argument("--dem-margin-km", type=float, default=1.5,
+                    help="extra DEM around the bbox in data/<name>-dem.json for 3D views (slope etc. stay on the bbox)")
+    ap.add_argument("--dem-only", action="store_true", help="only (re)build data/<name>-dem.json, don't write -terrain.json")
     a = ap.parse_args()
     name = os.path.splitext(os.path.basename(a.scenario))[0]
     with open(a.scenario) as f:
@@ -648,10 +688,14 @@ def main():
         if os.path.exists(cache) and not a.refresh:
             with open(cache) as f:
                 dem = json.load(f)
-        else:
-            dem = dem_crop(b, os.path.join(a.data, "dem-blocks"))
+        if dem is None or dem.get("marginKm", 0.0) != a.dem_margin_km:
+            dem = dem_crop(b, os.path.join(a.data, "dem-blocks"), a.dem_margin_km)
             with open(cache, "w") as f:
                 json.dump(dem, f, separators=(",", ":"))
+            print(f"{cache}: {dem['rows']}x{dem['cols']} px, bounds {dem['bounds']} (bbox + {a.dem_margin_km} km)")
+        if a.dem_only:
+            return
+        dem = dem_window(dem, b)  # slope / water / steep on exactly the scenario bbox
     terrain, stats = build(raw, b, dem, sc.get("cellM", 100))
     out = os.path.join(os.path.dirname(a.scenario), f"{name}-terrain.json")
     with open(out, "w") as f:

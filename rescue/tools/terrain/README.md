@@ -25,6 +25,22 @@ Per scenario, it reads `bbox` and `cellM` from `scenarios/<name>.json` and write
 
 DEM sanity check: lake surfaces match their known elevations within 2 m (Wielki Staw 1664 vs 1665, Morskie Oko 1395, Czarny Staw Gąsienicowy 1624), huts too (Murowaniec 1501, Pięć Stawów 1670).
 
+## DEM crop (`data/<name>-dem.json`, for 3D views)
+
+Covers the scenario bbox **plus a margin** (default 1.5 km on every side, `--dem-margin-km`), because the engine can expand the grid beyond the bbox when evidence leaves it. `slopeDeg`, `waterMask` and the DEM ridges are still computed on exactly the scenario bbox (the inner pixel window, bit-identical to the old margin-free crop), so `-terrain.json` doesn't change with the margin (verified for zawrat, kasprowy, morskie-oko, blind-02).
+
+| Field | Meaning |
+|---|---|
+| `lat0`, `lon0` | north-west corner of pixel (0, 0) (pixel edges, not centres) |
+| `step`, `stepLat` | pixel size in degrees (lon, lat); lon is 1.5" above 50 N |
+| `rows`, `cols`, `z` | elevation grid in metres, `z[row][col]`, row 0 = north |
+| `bounds` | `{north, south, west, east}`: pixel-edge extent of the whole crop (= `lat0`, `lat0 - rows*stepLat`, `lon0`, `lon0 + cols*step`) |
+| `bbox` | the scenario bbox the crop was made for |
+| `marginKm` | margin around `bbox` (1.5) |
+| `source`, `missing` | Copernicus tiles used / missing (open sea, filled with 0 m) |
+
+`python3 rescue/tools/terrain/osm_terrain.py --scenario rescue/scenarios/<name>.json --dem-only` rebuilds only the crop, and a cached crop whose `marginKm` differs from `--dem-margin-km` is rebuilt automatically. Size: ~0.9 MB per 6 x 6 km scenario with the 1.5 km margin (was 0.4 MB).
+
 ## Output (`scenarios/zawrat-terrain.json`)
 
 Contract shape from `rescue/README.md` (coordinates `[lat, lon]`), plus two optional fields:
