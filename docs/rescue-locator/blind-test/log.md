@@ -149,7 +149,11 @@ Rozważany i nie wysłany wariant: dron S5, pies S12 + górna część S13, TOPR
 
 **ok. 14:58, wynik rundy:** ZNALEZIONO w fali 3, przy 12. przydziale łącznie. Dron w S12, start 19:35.
 
-**Uczciwie:** znalezienie przyszło z odejścia agenta-szukającego od planera, opartego na zasadzie Koestera (start od ostatniego znanego punktu), której zamrożony silnik nie stosował. Planer silnika wysłałby drona po raz trzeci do S3. Uwaga: S12 przeszły już dwa patrole w fali 1 (łączny POD ok. 0,70) z wynikiem "nic". Dopiero trzecie przejście znalazło zaginioną, co jest zgodne z POD poniżej 1.
+**Podsumowanie (sformułowanie koordynatora):** blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03.
+
+S12 miał wcześniej dwa przejścia we mgle (POD 0,45 każde), które jej nie znalazły: realistyczny POD poniżej 1. Decyzję podjęło AI, nie człowiek.
+
+**Zegary zespołów:** czasy są liczone osobno dla każdego zespołu. Fala 3 drona ruszyła o 19:35, zaraz po jego przelocie z fali 2, więc kolejność jest spójna w obrębie zespołu. W odtworzeniu sortujemy po czasie i pokazujemy zespół.
 
 **Odsłonięcie:** sól, `reveal.py`, metryki i pełna oś czasu (po odsłonięciu).
 

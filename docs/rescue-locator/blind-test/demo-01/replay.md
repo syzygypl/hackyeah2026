@@ -36,25 +36,40 @@ Ekrany:
 
 ## Scenariusz minuta po minucie
 
-Czas scenariusza / czas demo. Uzupełniane z wątku.
+Kontekst i oś patroli posortowana po czasie scenariusza. Każdy zespół ma swój zegar: fala 3 drona ruszyła o 19:35, zaraz po jego przelocie z fali 2. Kolumna "Fala" mówi, w której fali przydział został wysłany.
 
-| Czas scen. | Demo | Co się dzieje | Ekran | Źródło w wątku |
-|---|---|---|---|---|
-| ... | 0:00 | Zgłoszenie: ... | kierownik, oś czasu | |
-| ... | ... | Wskazówki: start w schronisku (S3), świadek 13:40 (S5), ostatni sektor BTS (S12), mgła powyżej 1800 m od 13:30 | kierownik, oś czasu i mapa | |
-| 19:00 | ... | Mapa: S3 27,2%, S2 17,3%, S13 16,0%. Top 3 = 60% POA na 18% obszaru. Śmigłowiec uziemiony (widzialność 40 m), hipotermia wysoka | kierownik, panel top 3 | ~14:47 |
-| 19:00-19:15 | ... | Fala 1: TOPR A -> S5, S12 (planer: S2); dron -> S3; TOPR B -> S13, S12 (planer: S5 z Murowańca, 115 min); pies -> S4. Dlaczego: świadek + telefon wskazują drogę na przełęcz, a we mgle szlak gubi się na piargu | kierownik, przydział zespołów | ~14:47 |
-| fala 1 | ... | Sędzia: wszędzie "nic" (S5, S12, S3, S13, S4). Puste wróciły i przydziały planera, i odejścia od niego | widok patrolu -> kierownik | 14:48 |
-| 19:00 | ... | Kontrola: niezależny przebieg AI Denisa daje identyczne top 3 (silnik deterministyczny). Propozycja: S2 | kierownik | 14:48 |
-| 23:00 | ... | Po fali 1: S12 spada z 8,3% do 3,7%. Top 3: S3 29,0%, S2 25,3%, S13 12,8% | kierownik, mapa przed / po | 14:56 |
-| 19:20-23:00 | ... | Fala 2: dron -> S3; pies -> S2 (planer + AI Denisa); TOPR A -> S18 Dolina za Mnichem (odejście: zejście żlebem we mgle); TOPR B -> S4, S6 | kierownik, przydział zespołów | 14:56 |
-| fala 2 | ... | Sędzia: wszędzie "nic". Osiem przydziałów, zero śladów. Noc | widok patrolu -> kierownik | 14:53 |
-| - | ... | AI Michała: pierścienie startują od schroniska 11:50, a powinny od ostatniego znanego punktu (świadek 13:40, S5). Silnik zamrożony do odsłonięcia, zasadę LKP szukający stosują ręcznie | kierownik, mapa z pierścieniami | 14:52 |
-| ... | ... | Przeliczenie: top 3 = ... | kierownik, mapa | |
-| ... | ... | ... (kolejne fale) | | |
-| 19:35-00:55 | ... | Fala 3: start od ostatniego znanego punktu (świadek 13:40, S5), zastosowany ręcznie. Dron -> S12 (planer: S3 trzeci raz); pies -> S5; TOPR A -> S4; TOPR B -> S7 | kierownik, przydział zespołów | 14:57 |
-| 19:35 | ... | **ZNALEZIONO w S12** (dron). Pozostałe: nic. Koniec rundy po 12 przydziałach | widok patrolu -> kierownik | ok. 14:58 |
-| - | ... | Odsłonięcie: miejsce, sól, hash zgodny? | terminal | (po odsłonięciu) |
+**Kontekst**
+
+| Czas scen. | Co się dzieje | Ekran | Wątek |
+|---|---|---|---|
+| ... | Zgłoszenie od partnera o 18:15. Wskazówki: start w schronisku (S3), świadek 13:40 (S5), ostatni sektor BTS (S12), mgła powyżej 1800 m od 13:30 | kierownik, oś czasu i mapa | |
+| 19:00 | Mapa: S3 27,2%, S2 17,3%, S13 16,0%. Top 3 = 60% POA na 18% obszaru. Śmigłowiec uziemiony (widzialność 40 m), hipotermia wysoka | kierownik, panel top 3 | ~14:47 |
+| 19:00 | Kontrola: niezależny przebieg AI Denisa daje identyczne top 3 (silnik deterministyczny) | kierownik | 14:48 |
+| - | AI Michała: pierścienie startują od schroniska 11:50 zamiast od ostatniego pewnego punktu (świadek 13:40, S5). Silnik zamrożony do odsłonięcia | kierownik, mapa z pierścieniami | 14:52 |
+| 23:00 | Po fali 1: S12 spada z 8,3% do 3,7%. Top 3: S3 29,0%, S2 25,3%, S13 12,8% | kierownik, mapa przed / po | 14:56 |
+
+**Patrole po czasie**
+
+| Start | Zespół | Fala | Segment | Planer | POD | Wynik | Ekran |
+|---|---|---|---|---|---|---|---|
+| 19:00 | TOPR A | 1 | S5, S12 | S2 | 0,45 | nic | przydział -> patrol |
+| 19:05 | Dron | 1 | S3 | S3 | 0,27 | nic | przydział -> patrol |
+| 19:10 | TOPR B | 1 | S13, S12 | S5 | 0,45 | nic | przydział -> patrol |
+| 19:15 | Pies | 1 | S4 | S4 | 0,55 | nic | przydział -> patrol |
+| 19:20 | Dron | 2 | S3 | S3 | 0,27 | nic | przydział -> patrol |
+| **19:35** | **Dron** | **3** | **S12** | S3 (trzeci raz) | 0,35 | **ZNALEZIONO** | widok patrolu -> kierownik |
+| 20:25 | Pies | 2 | S2 | S2 | 0,56 | nic | |
+| 21:30 | TOPR A | 2 | S18 Dolina za Mnichem | S13 | 0,40 | nic | |
+| 21:50 | Pies | 3 | S5 | S2 | 0,55 | nic | |
+| 23:00 | TOPR B | 2 | S4, S6 | S4 | 0,46 | nic | |
+| 23:10 | TOPR A | 3 | S4 | S4 | 0,46 | nic | |
+| 00:55 | TOPR B | 3 | S7 | S5 | 0,40 | nic | |
+
+Na demo pokazujemy patrole do 19:35. Przydziały z późniejszym startem były wysłane w tych samych falach i sędzia na nie odpowiedział, ale po znalezieniu o 19:35 w prawdziwej akcji by nie wyruszyły.
+
+Wniosek do powiedzenia: blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. S12 miał wcześniej dwa przejścia we mgle (POD 0,45 każde), które jej nie znalazły: realistyczny POD poniżej 1.
+
+**Odsłonięcie** (terminal, `reveal.py`): miejsce, sól, zgodność hasha (po odsłonięciu).
 
 ## Metryki (po odsłonięciu)
 
