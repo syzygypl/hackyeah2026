@@ -38,7 +38,9 @@
   <h1>Meldunki terenowe - Rescue Locator</h1>
   <div class="sub">Działa bez internetu: lokalny model (Ollama) na laptopie kierownika akcji, a gdy go nie ma - reguły słów kluczowych. Żadnych usług w chmurze.
     <span id="status" class="status">sprawdzam serwer...</span>
-    <label id="pinbox" style="display:none;margin-left:8px">PIN <input id="pin" inputmode="numeric" autocomplete="off" size="8" style="font:inherit;width:7em"></label></div>
+    <label id="pinbox" style="display:none;margin-left:8px">PIN <input id="pin" inputmode="numeric" autocomplete="off" size="8" style="font:inherit;width:7em"></label>
+    <label style="margin-left:8px">Zespół <input id="team" autocomplete="off" placeholder="np. topr-a" style="font:inherit;width:8em;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 4px"></label>
+    <a href="ops.html" id="opslink" style="margin-left:8px">monitoring</a></div>
 
   <textarea id="txt" placeholder="np. Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"></textarea>
   <div class="row">
@@ -68,7 +70,19 @@ const $ = id => document.getElementById(id);
 const LOOPBACK = !location.protocol.startsWith("http") || ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
 let PIN = "";
 try { PIN = localStorage.getItem("rescue-pin") || ""; } catch (e) {}
-function hdrs(extra) { return Object.assign({}, extra || {}, !LOOPBACK && PIN ? { "X-Rescue-Pin": PIN } : {}); }
+// Stable client id (monitoring: who reported when). Random UUID kept in localStorage, never the IP.
+let CLIENT = "", TEAM = "";
+try { CLIENT = localStorage.getItem("rescue-client") || ""; TEAM = localStorage.getItem("rescue-team") || ""; } catch (e) {}
+if (!CLIENT) { CLIENT = "field-" + (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)).slice(0, 8); try { localStorage.setItem("rescue-client", CLIENT); } catch (e) {} }
+function hdrs(extra) { return Object.assign({ "X-Rescue-Client": CLIENT, "X-Rescue-Source": "field-page" }, TEAM ? { "X-Rescue-Team": TEAM } : {}, extra || {}, !LOOPBACK && PIN ? { "X-Rescue-Pin": PIN } : {}); }
+$("team").value = TEAM;
+$("team").onchange = () => { TEAM = $("team").value.trim(); try { localStorage.setItem("rescue-team", TEAM); } catch (e) {} };
+// reports parsed in the browser while the server was down: counted on the server (rescue_reports_received_total{parsed_by="browser"}) once it is back
+function pendingBrowser() { try { return +(localStorage.getItem("field-browser-pending") || 0); } catch (e) { return 0; } }
+async function flushBrowser() {
+  const n = pendingBrowser(); if (!n) return;
+  try { const r = await fetch(API + "/client-event", { method: "POST", headers: hdrs({ "Content-Type": "application/json" }), body: JSON.stringify({ browserReports: n }) }); if (r.ok) localStorage.setItem("field-browser-pending", "0"); } catch (e) {}
+}
 if (!LOOPBACK) {
   $("pinbox").style.display = "";
   $("pin").value = PIN;
@@ -109,6 +123,7 @@ async function refresh() {
     if (r.status === 401) { $("status").textContent = "podaj PIN serwera (wyświetlony w terminalu)"; render(); return; }
     server = await r.json();
     $("status").textContent = "serwer lokalny: OK";
+    flushBrowser();
   } catch (e) {
     $("status").textContent = "serwer lokalny niedostępny - parsowanie regułami w przeglądarce";
   }
@@ -152,7 +167,7 @@ async function send(text) {
   } catch (e) {
     const rep = { t: new Date().toISOString(), source: "field", text, parsedBy: "rules", browser: true, latencyMs: Math.round(performance.now() - t0), note: "serwer lokalny niedostępny", hints: rules(text) };
     local.push(rep);
-    try { localStorage.setItem("field-local", JSON.stringify(local)); } catch (e2) {}
+    try { localStorage.setItem("field-local", JSON.stringify(local)); localStorage.setItem("field-browser-pending", String(pendingBrowser() + 1)); } catch (e2) {}
     $("msg").textContent = "serwer niedostępny - reguły w przeglądarce (nie trafia do live-events.json)";
     $("txt").value = "";
     render();
