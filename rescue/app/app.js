@@ -815,12 +815,22 @@ async function setTime(t) {
   renderLiveHead();
   toast(t === "live" ? "Na żywo: mapa pokazuje teraz, ze zgłoszeniami z terenu" : "Historia: nagrany przebieg akcji. Przesuń oś czasu albo naciśnij ▶", 3000);
 }
+// the map follows a move only after the server recomputed the run (3-7 s): until then the buttons stay locked with a
+// "przeliczam" note (the 3 s live poll used to re-enable them under the old "dalej"), the run is fetched right away, and a run
+// fetch started before the move (runGen) is dropped instead of putting the old position back
+var runGen = 0;
 async function advance(op) {
-  if (!liveNow()) return;
+  if (!liveNow() || advance.busy) return;
   if (op === "start" && !confirm("Cofnąć akcję do początku dla wszystkich podłączonych (operatorzy, telefony ratowników, Centrum)?")) return;
-  $("advNext").disabled = $("advStart").disabled = true;
-  try { const r = await api("/api/advance", { sc: store.scenario, op }); toast("Na żywo: " + r.title, 3500); await pollLive(); }
-  catch (e) { toast(plErr(e), 4500); renderLiveHead(); }
+  const g = ++runGen;
+  advance.busy = op === "start" ? "Cofam akcję do początku…" : "Przechodzę do następnego zdarzenia…"; renderLiveHead();
+  try {
+    const r = await api("/api/advance", { sc: store.scenario, op });
+    advance.busy = "Przeliczam mapę: " + r.title; renderLiveHead();
+    toast("Na żywo: " + r.title, 3500);
+    if (liveOn() && store.runUrl) { const run = await api(store.runUrl); if (g === runGen) applyRun(run, {}, "run"); }
+  } catch (e) { toast(plErr(e), 4500); }
+  advance.busy = null; renderLiveHead();
 }
 $("advNext").onclick = () => advance("next");
 // Historia: rewind the recording to its first event (local to this screen, nobody else sees it)
@@ -855,8 +865,8 @@ function renderLiveHead() {
   // Na żywo: no replay; the operator moves the incident on for everyone (POST /api/advance), the server's liveCursor says what is next
   $("slider").hidden = on; $("play").hidden = on; $("histStart").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
   const lc = D() && D().liveCursor, nx = lc && lc.next;
-  $("advNext").disabled = !liveNow() || !nx; $("advStart").disabled = !liveNow();
-  $("advNextT").textContent = !lc ? "" : nx ? `dalej ${nx.at} · ${shortEv(nx.title, evKind({ label: nx.title }))}` : "koniec nagranej akcji";
+  $("advNext").disabled = !!advance.busy || !liveNow() || !nx; $("advStart").disabled = !!advance.busy || !liveNow();
+  $("advNextT").textContent = advance.busy ? advance.busy : !lc ? "" : nx ? `dalej ${nx.at} · ${shortEv(nx.title, evKind({ label: nx.title }))}` : "koniec nagranej akcji";
   $("advNextT").title = nx ? `Następne zdarzenie: ${nx.at} ${nx.title}` : "";
   $("tlabel").textContent = plan ? "Historia" : on ? "Na żywo · teraz" : "Historia";
   renderDock();
@@ -969,7 +979,7 @@ async function pollLive() {
 }
 async function onLiveChange(evs) {
   try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
-  if (liveOn() && store.runUrl) { try { applyRun(await api(store.runUrl), {}, "run"); } catch (e) {} }
+  if (liveOn() && store.runUrl) { const g = runGen; try { const run = await api(store.runUrl); if (g === runGen) applyRun(run, {}, "run"); } catch (e) {} }
   if (store.role === "ratownik") renderRescuer();
   const other = evs.filter((e) => !(e.by === "operator" && store.role === "operator"));
   if (other.length) toast("Na żywo: " + other.map((e) => (e.team ? e.team + ": " : "") + e.title).join("; ") + (liveOn() ? "" : " (oglądasz historię - przełącz na „Na żywo”)"), 4000);
