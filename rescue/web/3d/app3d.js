@@ -388,6 +388,33 @@ const normalTex = (() => {
 })();
 const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissiveMap: glowTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.96, metalness: 0,
   normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 });
+// close-up detail: procedural world-space noise on the albedo, fading in near the camera (meadow speckle on flat
+// ground, horizontal strata on cliffs, finer grain on scree), so the topo texture does not turn to mush when zoomed in
+terrainMat.onBeforeCompile = (sh) => {
+  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vDW; varying vec3 vDN;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDW = (modelMatrix * vec4(transformed, 1.0)).xyz; vDN = normal;');
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
+    varying vec3 vDW; varying vec3 vDN;
+    float dHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float dNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(dHash(i), dHash(i + vec2(1, 0)), f.x), mix(dHash(i + vec2(0, 1)), dHash(i + vec2(1, 1)), f.x), f.y); }
+    float dFbm(vec2 p, float lod) { float a = 0.0, w = 0.5; for (int k = 0; k < 4; k++) { a += w * dNoise(p) * (1.0 - smoothstep(0.6, 1.0, lod * float(k + 1) * 0.35)); p *= 2.03; w *= 0.5; } return a; }`)
+    .replace('#include <map_fragment>', `#include <map_fragment>
+    {
+      float dist = length(vDW - cameraPosition), near = 1.0 - smoothstep(1.2, 7.0, dist);
+      if (near > 0.0) {
+        float lod = clamp(dist / 3.0, 0.0, 1.0), slope = 1.0 - clamp(vDN.y, 0.0, 1.0);
+        float fl = dFbm(vDW.xz * 160.0, lod);
+        float side = dFbm(vec2(vDW.x + vDW.z, vDW.y * 9.0) * 90.0, lod); // strata: stretched along the contour
+        float strata = 0.5 + 0.5 * sin(vDW.y * 420.0 + side * 6.0);
+        float rock = smoothstep(0.25, 0.55, slope);
+        float d = mix(fl, mix(side, strata, 0.45), rock);
+        vec3 tint = mix(vec3(1.06, 1.04, 0.9), vec3(0.92, 1.0, 1.02), fl); // dry / lush patches on meadows
+        diffuseColor.rgb *= mix(vec3(1.0), mix(tint, vec3(1.0), rock) * (0.55 + 0.9 * d), near * 0.9);
+      }
+    }`);
+};
+terrainMat.customProgramCacheKey = () => 'terrain-detail-1';
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
