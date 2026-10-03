@@ -52,7 +52,9 @@ public final class TimelineEngine {
     /// Search conditions at a minute: latest WeatherConditions hint; wind direction from the latest event that has one.
     public func env(at minute: Int) -> FieldOfView.Env {
         var e = FieldOfView.Env()
-        for h in hints where h.minute <= minute { if case let .conditions(c) = h.evidence { e.dark = c.dark; e.visibilityM = c.visibilityM } }
+        for h in hints where h.minute <= minute {
+            if case let .conditions(c) = h.evidence { e.dark = c.dark; e.visibilityM = c.visibilityM; e.windMs = c.windMs }
+        }
         e.windFromDeg = scenario.events.filter { $0.windFromDeg != nil && scenario.minute($0.at) <= minute }.last?.windFromDeg
         return e
     }
@@ -63,10 +65,10 @@ public final class TimelineEngine {
     func sweep() {
         var envCache: [Int: FieldOfView.Env] = [:]
         func envAt(_ m: Int) -> FieldOfView.Env { if let e = envCache[m] { return e }; let e = env(at: m); envCache[m] = e; return e }
-        let cellM = scenario.cellM
-        for a in tracks.actors where a.fov.type != "none" && a.fov.radiusM > 0 {
+        for a in tracks.actors where a.fov.type != "none" && a.fov.maxWidth > 0 {
             guard let ss = samples[a.id], ss.count > 1 else { continue }
-            let stepM = max(5, min(25, a.fov.radiusM / 2))
+            // sample spacing: 25 m, coarser for wide swaths (helicopter) where the kernel is wide anyway
+            let stepM = max(25, max(scenario.cellM / 2, (a.fov.sweepWidthM["open"] ?? a.fov.maxWidth) / 2) / 2)
             var carry = 0.0
             for (p, q) in zip(ss, ss.dropFirst()) {
                 let d = Geo.meters(p.coord, q.coord)
@@ -75,8 +77,8 @@ public final class TimelineEngine {
                 while s <= d {
                     let t = s / d
                     let pt = Coord(p.lat + (q.lat - p.lat) * t, p.lon + (q.lon - p.lon) * t)
-                    for hit in fov.hits(at: pt, a.fov, env: envAt(p.minute)) {
-                        let h = hit.p * exp(-(hit.d / hit.r) * (hit.d / hit.r)) * stepM / cellM
+                    for hit in fov.coveragePerM(at: pt, a.fov, env: envAt(p.minute)) {
+                        let h = hit.c * stepM
                         if h > 1e-5 { contrib.append((q.minute, hit.cell, h)) }
                     }
                     s += stepM
@@ -91,8 +93,11 @@ public final class TimelineEngine {
     public func pod(at minute: Int) -> [Double] {
         var h = [Double](repeating: 0, count: grid.count)
         for c in contrib { if c.minute > minute { break }; h[c.cell] += c.h }
-        return h.map { 1 - exp(-$0) }
+        return h.map { min(podCap, 1 - exp(-$0)) }
     }
+
+    /// Cumulative POD cap (fov-params.json pod.cap, 0.95).
+    var podCap: Double { tracks.actors.filter { $0.fov.type != "none" }.map(\.fov.podCap).min() ?? 0.95 }
 
     func stepPOA(_ step: Int) -> [Double] {
         if let p = stepPOACache[step] { return p }
@@ -159,7 +164,7 @@ public final class TimelineEngine {
         var m = startMinute
         while m <= endMinute {
             while k < contrib.count && contrib[k].minute <= m { h[contrib[k].cell] += contrib[k].h; k += 1 }
-            let pod = h.map { 1 - exp(-$0) }
+            let pod = h.map { min(podCap, 1 - exp(-$0)) }
             finalPod = pod
             if frames { fr.append(frame(m, pod: pod)) }
             m += max(1, frameMin)

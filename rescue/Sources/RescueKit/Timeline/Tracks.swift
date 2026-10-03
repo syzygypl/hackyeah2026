@@ -12,6 +12,9 @@ public struct TrackFix: Sendable {
     public var src: String          // gps | report | est
     public var text: String? = nil
     public var coord: Coord { Coord(lat, lon) }
+    public init(minute: Int, lat: Double, lon: Double, accM: Double, src: String, text: String? = nil) {
+        self.minute = minute; self.lat = lat; self.lon = lon; self.accM = accM; self.src = src; self.text = text
+    }
 }
 
 public struct TrackConstraint: Sendable {
@@ -20,73 +23,101 @@ public struct TrackConstraint: Sendable {
     public var text: String? = nil
 }
 
-/// Detection parameters per actor kind. Precedence: actor fov > fov-params.json > these defaults.
+/// Detection parameters per actor kind = one `units.<unit>` entry of fov-params.json (AI Michała, sourced in
+/// docs/rescue-locator/pole-widzenia.md). Effective sweep width W per terrain class (Koopman): a track of length L through a
+/// cell adds coverage W x L / cellArea, POD = 1 - exp(-coverage). Precedence: actor `fov` > fov-params.json > these defaults
+/// (the same numbers as the 31e61c0 file).
 public struct FOVParams: Sendable {
-    public var type = "eye"          // eye | scent | thermal | eye-air | eye-water | none
-    public var radiusM = 50.0
-    public var pmax = 0.9
-    public var eyeM = 1.7
-    public var forestRadius = 0.5    // multipliers in forest / kosodrzewina target cells
-    public var forestPmax = 0.7
-    public var darkRadius = 0.6      // multiplier at night (eye types)
-    public var los = true            // needs line of sight on the DEM
-    public var water = true          // can detect in water cells
-    public var land = true           // can detect in land cells
+    public var unit = "ground"           // ground | dog | drone | heli | boat | diver | none
+    public var type = "eye"              // eye | scent | thermal | eye-air | eye-water | none (display / rules)
+    /// W in metres per class: open (trail), meadow, forest, dwarfPine, scree, slab, cliff, water
+    public var sweepWidthM: [String: Double] = ["open": 80, "meadow": 60, "forest": 35, "dwarfPine": 15, "scree": 40, "slab": 50, "cliff": 25, "water": 30]
+    public var detectionRangeM = 50.0    // FOV outline radius (display) and the scale of the lateral kernel
+    public var maxRangeM = 200.0         // no coverage beyond
+    public var nightFactor = 0.34
+    public var eyeM = 1.7                // observer height above ground (altitude AGL for air units)
+    public var los = true
+    /// dog: wind bands (windMsMax, rangeM, halfAngleDeg); the cone opens upwind from the dog
+    public var windCone: [WindBand] = []
     public var speedKmh = 3.0
-    public var halfAngleDeg: Double? = nil   // scent: upwind cone half-angle
-    public var upwindRadius: Double? = nil   // scent: radius multiplier inside the upwind cone
-    public var tobler = true         // ground kinds: speed by slope
+    public var tobler = true
+    public var podCap = 0.95
+
+    public struct WindBand: Sendable { public var maxMs: Double, rangeM: Double, halfAngleDeg: Double }
+
+    public static let unitOfKind = ["pieszy": "ground", "pies": "dog", "dron": "drone", "smiglowiec": "heli", "lodz": "boat",
+                                    "nurkowie": "diver", "osoba": "none"]
 
     public static func defaults(_ kind: String) -> FOVParams {
         var p = FOVParams()
-        switch kind {
-        case "pies":
-            p.type = "scent"; p.radiusM = 80; p.pmax = 0.85; p.forestRadius = 0.9; p.forestPmax = 0.9; p.darkRadius = 1
-            p.los = false; p.speedKmh = 3.5; p.halfAngleDeg = 45; p.upwindRadius = 2.5
-        case "dron":
-            p.type = "thermal"; p.radiusM = 60; p.pmax = 0.8; p.eyeM = 80; p.forestRadius = 1; p.forestPmax = 0.25; p.darkRadius = 1
-            p.speedKmh = 25; p.tobler = false
-        case "smiglowiec":
-            p.type = "eye-air"; p.radiusM = 150; p.pmax = 0.6; p.eyeM = 150; p.forestRadius = 1; p.forestPmax = 0.15
-            p.speedKmh = 120; p.tobler = false
-        case "lodz":
-            p.type = "eye-water"; p.radiusM = 100; p.pmax = 0.7; p.eyeM = 2; p.land = false; p.forestRadius = 1; p.forestPmax = 1
-            p.speedKmh = 15; p.tobler = false
-        case "osoba":
-            p.type = "none"; p.radiusM = 0; p.pmax = 0; p.los = false; p.speedKmh = 2.0
-        default:   // pieszy
-            break
+        p.unit = unitOfKind[kind] ?? "ground"
+        switch p.unit {
+        case "dog":
+            p.type = "scent"; p.sweepWidthM = ["open": 95, "meadow": 95, "forest": 80, "dwarfPine": 70, "scree": 70, "slab": 60, "cliff": 40, "water": 20]
+            p.detectionRangeM = 100; p.maxRangeM = 250; p.nightFactor = 1; p.eyeM = 0.5; p.los = false; p.speedKmh = 3.5
+            p.windCone = [WindBand(maxMs: 1, rangeM: 40, halfAngleDeg: 180), WindBand(maxMs: 2, rangeM: 80, halfAngleDeg: 35),
+                          WindBand(maxMs: 5, rangeM: 150, halfAngleDeg: 25), WindBand(maxMs: 9, rangeM: 120, halfAngleDeg: 20),
+                          WindBand(maxMs: 99, rangeM: 70, halfAngleDeg: 15)]
+        case "drone":
+            p.type = "thermal"; p.sweepWidthM = ["open": 60, "meadow": 55, "forest": 12, "dwarfPine": 25, "scree": 35, "slab": 40, "cliff": 30, "water": 45]
+            p.detectionRangeM = 120; p.maxRangeM = 250; p.nightFactor = 1.1; p.eyeM = 80; p.speedKmh = 25; p.tobler = false
+        case "heli":
+            p.type = "eye-air"; p.sweepWidthM = ["open": 300, "meadow": 250, "forest": 30, "dwarfPine": 75, "scree": 150, "slab": 150, "cliff": 100, "water": 185]
+            p.detectionRangeM = 300; p.maxRangeM = 1000; p.nightFactor = 0.5; p.eyeM = 150; p.speedKmh = 120; p.tobler = false
+        case "boat":
+            p.type = "eye-water"; p.sweepWidthM = ["open": 20, "meadow": 20, "forest": 10, "dwarfPine": 10, "scree": 20, "slab": 20, "cliff": 20, "water": 300]
+            p.detectionRangeM = 200; p.maxRangeM = 600; p.nightFactor = 0.3; p.eyeM = 2; p.speedKmh = 15; p.tobler = false
+        case "diver":
+            p.type = "eye-water"; p.sweepWidthM = ["open": 0, "meadow": 0, "forest": 0, "dwarfPine": 0, "scree": 0, "slab": 0, "cliff": 0, "water": 3]
+            p.detectionRangeM = 2; p.maxRangeM = 10; p.nightFactor = 1; p.eyeM = 0; p.speedKmh = 1; p.tobler = false
+        case "none":
+            p.type = "none"; p.sweepWidthM = [:]; p.detectionRangeM = 0; p.maxRangeM = 0; p.los = false; p.speedKmh = 2
+        default: break
         }
         return p
     }
 
-    /// Overrides from a JSON object (fov-params.json kind entry or an actor's own `fov`). Unknown / null keys are ignored.
+    /// Overrides from fov-params.json `units.<unit>` or an actor's own `fov` (same keys; `sweepWidthM` may be one number).
     public mutating func merge(_ o: [String: Any]?) {
         guard let o else { return }
         func d(_ k: String) -> Double? { (o[k] as? NSNumber)?.doubleValue }
-        func b(_ k: String) -> Bool? { o[k] as? Bool }
         if let v = o["type"] as? String { type = v }
-        if let v = d("radiusM") { radiusM = v }
-        if let v = d("pmax") { pmax = v }
-        if let v = d("eyeM") { eyeM = v }
-        if let v = d("forestRadius") { forestRadius = v }
-        if let v = d("forestPmax") { forestPmax = v }
-        if let v = d("darkRadius") { darkRadius = v }
-        if let v = b("los") { los = v }
-        if let v = b("water") { water = v }
-        if let v = b("land") { land = v }
+        if let w = o["sweepWidthM"] as? [String: Any] {
+            for (k, v) in w { if let n = (v as? NSNumber)?.doubleValue { sweepWidthM[k] = n } }
+        } else if let n = d("sweepWidthM") {
+            for k in sweepWidthM.keys { sweepWidthM[k] = n }
+        }
+        if let v = d("detectionRangeM") { detectionRangeM = v }
+        if let v = d("maxRangeM") { maxRangeM = v }
+        if let v = d("nightFactor") { nightFactor = v }
+        if let v = d("observerHeightM") { eyeM = v }
+        if let v = d("altitudeAglM") { eyeM = v }
+        if let v = o["needsLineOfSight"] as? Bool { los = v }
         if let v = d("speedKmh") { speedKmh = v }
-        if let v = d("halfAngleDeg") { halfAngleDeg = v }
-        if let v = d("upwindRadius") { upwindRadius = v }
-        if let v = b("tobler") { tobler = v }
+        if let c = o["windCone"] as? [String: Any], let bands = c["rangeM"] as? [[String: Any]] {
+            let half0 = (c["halfAngleDeg"] as? NSNumber)?.doubleValue ?? 25
+            windCone = bands.compactMap { b in
+                guard let mx = (b["windMsMax"] as? NSNumber)?.doubleValue, let r = (b["rangeM"] as? NSNumber)?.doubleValue else { return nil }
+                return WindBand(maxMs: mx, rangeM: r, halfAngleDeg: (b["halfAngleDeg"] as? NSNumber)?.doubleValue ?? half0)
+            }
+        }
+        if let v = d("podCap") { podCap = v }
     }
 
+    /// W (m) for a grid cell: the forest overlay replaces land classes (not water).
+    public func width(_ d: ProbabilityGrid.Difficulty, forest: Bool) -> Double {
+        if forest && d != .water { return sweepWidthM["forest"] ?? 0 }
+        let key = ["open", "meadow", "dwarfPine", "scree", "slab", "cliff", "water"][d.rawValue]
+        return sweepWidthM[key] ?? 0
+    }
+
+    public var maxWidth: Double { sweepWidthM.values.max() ?? 0 }
+
     public var json: [String: Any] {
-        var o: [String: Any] = ["type": type, "radiusM": radiusM, "pmax": pmax, "eyeM": eyeM, "forestRadius": forestRadius,
-                                "forestPmax": forestPmax, "darkRadius": darkRadius, "los": los, "water": water, "land": land,
+        var o: [String: Any] = ["unit": unit, "type": type, "sweepWidthM": sweepWidthM, "detectionRangeM": detectionRangeM,
+                                "maxRangeM": maxRangeM, "nightFactor": nightFactor, "observerHeightM": eyeM, "needsLineOfSight": los,
                                 "speedKmh": speedKmh]
-        if let h = halfAngleDeg { o["halfAngleDeg"] = h }
-        if let u = upwindRadius { o["upwindRadius"] = u }
+        if !windCone.isEmpty { o["windCone"] = windCone.map { ["windMsMax": $0.maxMs, "rangeM": $0.rangeM, "halfAngleDeg": $0.halfAngleDeg] } }
         return o
     }
 }
@@ -99,20 +130,26 @@ public struct TrackActor: Sendable {
     public var fixes: [TrackFix]
     public var constraints: [TrackConstraint] = []
     public var plan: [Coord] = []
+    public init(id: String, kind: String, name: String, fov: FOVParams, fixes: [TrackFix], constraints: [TrackConstraint] = [], plan: [Coord] = []) {
+        self.id = id; self.kind = kind; self.name = name; self.fov = fov; self.fixes = fixes; self.constraints = constraints; self.plan = plan
+    }
 }
 
 public struct TrackSet: Sendable {
     public var actors: [TrackActor]
     public var searchEvents: String   // replace | keep
+    public init(actors: [TrackActor], searchEvents: String = "replace") { self.actors = actors; self.searchEvents = searchEvents }
 
     public static let kindOfType = ["ground": "pieszy", "dog": "pies", "drone": "dron", "heli": "smiglowiec", "boat": "lodz",
-                                    "person": "osoba", "subject": "osoba"]
+                                    "diver": "nurkowie", "person": "osoba", "subject": "osoba"]
 
     /// Parses a rescue-tracks/1 document (both spellings). `fovParams` = parsed fov-params.json (rescue-fov/1) or nil.
     /// Extra live fixes (POST /api/fix) can be merged by passing them in a second document's actors with the same ids.
     public static func parse(_ doc: Any, scenario s: Scenario, fovParams: Any? = nil) -> TrackSet? {
         guard let o = doc as? [String: Any] else { return nil }
-        let kinds = ((fovParams as? [String: Any])?["kinds"] as? [String: Any]) ?? [:]
+        let fp = fovParams as? [String: Any]
+        let units = (fp?["units"] as? [String: Any]) ?? [:]
+        let podCap = ((fp?["pod"] as? [String: Any])?["cap"] as? NSNumber)?.doubleValue
         let list = (o["actors"] as? [Any]) ?? (o["units"] as? [Any]) ?? []
         var actors: [TrackActor] = []
         let resources = Dictionary((s.resources ?? []).map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
@@ -129,7 +166,8 @@ public struct TrackSet: Sendable {
             if kind.isEmpty { kind = "pieszy" }
             if let k = kindOfType[kind] { kind = k }
             var fov = FOVParams.defaults(kind)
-            fov.merge(kinds[kind] as? [String: Any])
+            fov.merge(units[fov.unit] as? [String: Any])
+            if let c = podCap { fov.podCap = c }
             fov.merge(a["fov"] as? [String: Any])
             if let v = (a["speedKmh"] as? NSNumber)?.doubleValue { fov.speedKmh = v }
             var fixes: [TrackFix] = []
