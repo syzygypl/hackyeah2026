@@ -599,7 +599,8 @@ function renderUI(i, ranked, searched, prev) {
   if (w.dark) chips.push(['ciemno', 'night']);
   if (w.ice) chips.push(['oblodzenie', 'warn']);
   $('weather').innerHTML = chips.map(([t, c]) => `<span class="wchip ${c}">${esc(t)}</span>`).join('');
-  renderRanking(ranked, searched, foundStep >= 0 && i >= foundStep ? R.value?.findSeg : null);
+  const n = s.hintsActive?.length || i + 1;
+  renderRanking(ranked, searched, foundStep >= 0 && i >= foundStep ? R.value?.findSeg : null, `Łącznie ${n} ${n === 1 ? 'sygnał' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'sygnały' : 'sygnałów'} do ${s.t}, nie tylko ostatni`);
   const res = new Map((s.resources || []).map((r) => [r.id, r]));
   $('teams').innerHTML = (s.assignments || []).length
     ? s.assignments.map((a) => {
@@ -610,7 +611,8 @@ function renderUI(i, ranked, searched, prev) {
   $('slider').value = i;
   document.querySelectorAll('.tick').forEach((t, k) => { t.classList.toggle('cur', k === i); t.classList.toggle('past', k < i); });
 }
-function renderRanking(ranked, searched, foundSeg) {
+function renderRanking(ranked, searched, foundSeg, scope) {
+  $('rank-scope').textContent = R.synthetic && G.phase === 'off' ? '\u00a0' : scope;
   if (R.synthetic && G.phase === 'off') { $('ranklist').innerHTML = '<li class="none" style="cursor:default;color:var(--mute);font-size:12.5px">Ranking pojawi się z plikiem run.json silnika.</li>'; return; }
   const mx = ranked[0].poa || 1;
   $('ranklist').innerHTML = ranked.slice(0, 8).map((sg) => {
@@ -809,7 +811,7 @@ function refreshGame(msg = '') {
   G.ranked = rankedOf(segPoa(G.grid));
   showHeat(heatCanvasGrid(G.grid));
   drawTop(G.ranked);
-  renderRanking(G.ranked, G.searched, G.found ? G.seg : null);
+  renderRanking(G.ranked, G.searched, G.found ? G.seg : null, `Mapa z ${R.steps[G.base].t} po ${G.patrols.length} ${G.patrols.length === 1 ? 'patrolu' : 'patrolach'} w teście`);
   disposeGroup(dyn.searched);
   for (const id of G.searched) { const g = segs.get(id); if (g) drapeRuns(ringLL(g.polygon), 0.018, { color: '#555b61', width: 1.8, opacity: 0.9, dashed: true, dash: 0.035, gap: 0.03 }, dyn.searched); }
   const area = [...G.searched].reduce((a, id) => a + (segs.get(id)?.areaPct || 0), 0);

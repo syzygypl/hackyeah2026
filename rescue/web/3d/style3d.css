@@ -76,6 +76,7 @@ select { background: #fff; color: var(--ink); border: 1px solid var(--line); bor
 
 /* right: ranking */
 #right { top: 70px; right: 12px; width: 290px; padding: 4px 14px 12px; max-height: calc(100vh - 220px); overflow: auto; }
+.scope { margin: -4px 0 8px; font-size: 11.5px; line-height: 1.35; color: var(--mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #ranklist { list-style: none; margin: 0; padding: 0; }
 #ranklist li { padding: 6px 7px 8px; border-radius: 8px; cursor: pointer; }
 #ranklist li:hover { background: rgba(35, 39, 42, 0.05); }
