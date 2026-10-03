@@ -468,11 +468,16 @@ export const FX = {
       color: `
     vec3 heatEmit = vec3(0.0);
     {
+      // uniform gates first: no heat layer (difficulty view) costs nothing, and a settled step (uHeatT 0 or 1, no
+      // crossfade) samples one texture, not two
+      float ka = uHeatOn.x * (1.0 - uHeatT), kb = uHeatOn.y * uHeatT;
       vec2 hu = (vec2(vMapUv.x, 1.0 - vMapUv.y) - uHeatRect.xy) / uHeatRect.zw;
-      if (hu.x > 0.0 && hu.x < 1.0 && hu.y > 0.0 && hu.y < 1.0) {
+      if (ka + kb > 0.0 && hu.x > 0.0 && hu.x < 1.0 && hu.y > 0.0 && hu.y < 1.0) {
         vec2 st = vec2(hu.x, 1.0 - hu.y);
-        vec4 ha = texture2D(uHeatFrom, st); vec4 hb = texture2D(uHeatTo, st);
-        float wa = ha.a * uHeatOn.x * (1.0 - uHeatT), wb = hb.a * uHeatOn.y * uHeatT, al = wa + wb;
+        vec4 ha = vec4(0.0), hb = vec4(0.0);
+        if (ka > 0.0) ha = texture2D(uHeatFrom, st);
+        if (kb > 0.0) hb = texture2D(uHeatTo, st);
+        float wa = ha.a * ka, wb = hb.a * kb, al = wa + wb;
         if (al > 0.002) {
           vec3 col = (ha.rgb * wa + hb.rgb * wb) / al;
           float fw = fwidth(al) * 1.3 + 1e-4;
@@ -490,9 +495,12 @@ export const FX = {
   // the sun's shadow is the darker of the baked far cascade (ray-marched from the DEM, re-baked when the sun or moon
   // moves; two masks crossfaded by uSunMaskT) and the near shadow map (which is 1 outside its box)
   bakedSun: (U) => ({ name: 'sun', uniforms: { uSunMask: U.uSunMask, uSunMask2: U.uSunMask2, uSunMaskT: U.uSunMaskT },
-    hooks: { color: 'float bakedSun = mix(texture2D(uSunMask, vMapUv).r, texture2D(uSunMask2, vMapUv).r, uSunMaskT);' },
+    // one tap unless a re-bake is crossfading (uSunMaskT sits at 0 or 1 otherwise); in the baked shadow the near shadow
+    // map's PCF taps are skipped (min(0, x) = 0). Only shadowed directional lights get the term, each sampled once.
+    hooks: { color: `float bakedSun = uSunMaskT <= 0.0 ? texture2D(uSunMask, vMapUv).r : uSunMaskT >= 1.0 ? texture2D(uSunMask2, vMapUv).r
+      : mix(texture2D(uSunMask, vMapUv).r, texture2D(uSunMask2, vMapUv).r, uSunMaskT);` },
     chunks: { lights_fragment_begin: (src) => src
-      .replace('? getShadow( directionalShadowMap[ i ],', '? min( bakedSun, getShadow( directionalShadowMap[ i ],')
+      .replace('? getShadow( directionalShadowMap[ i ],', '&& bakedSun > 0.0 ? min( bakedSun, getShadow( directionalShadowMap[ i ],')
       .replace('vDirectionalShadowCoord[ i ] ) : 1.0;', 'vDirectionalShadowCoord[ i ] ) ) : bakedSun;') } }),
 
   // snow cover, the way open-world games do it (RDR2, Horizon): coverage from the up-facing normal, broken up by fbm noise,
