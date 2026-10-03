@@ -660,7 +660,8 @@ function postTo(k, msg) { const F = FRAMES[k]; if (F.ready && F.el.contentWindow
 function post3d(msg) { for (const k in FRAMES) postTo(k, msg); }
 function syncFrame(k, why) {
   const F = FRAMES[k];
-  if (!F.visible()) { if (why === "edit" || why === "load" || why === "run") F.dirty = true; return; }
+  if (F.ready && F.shown !== F.visible()) { F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown }); }   // a hidden view may pause its render loop
+  if (!F.visible() && !(F.warm && store.mode === "akcja")) { if (why === "edit" || why === "load" || why === "run") F.dirty = true; return; }   // warm: kept alive while hidden
   if (F.ready && !F.dirty && why !== "load") {
     if (why === "edit" || why === "run") { const u = runURL(); if (u) { F.ready = false; postTo2(F, { type: "run", url: u }); return; } }
     if (why === "step") postTo(k, { type: "step", i: store.step - 1 });
@@ -669,10 +670,18 @@ function syncFrame(k, why) {
   // still loading (the 3D view needs ~10 s): a step move must not restart it - its "ready" picks up the current step and minute
   if (why === "step" && F.src && !F.ready && !F.dirty) return;
   const u = frameURL(k); if (u === F.src && !F.dirty && why !== "edit" && why !== "run") return;
+  if (!F.visible() && F.src) { F.dirty = true; return; }   // a hidden warm view never reloads in the background (3D boot blocks the page ~1 s): it reloads when shown
   clearTimeout(F.h);
   F.h = setTimeout(() => { F.src = u; F.ready = false; F.el.src = u; F.dirty = false; }, why === "step" ? 700 : 50);
   const R = D(), out = k === "3d" && R && R.bbox && (R.bbox.west > 20.09 || R.bbox.east < 20.0 || R.bbox.north < 49.19 || R.bbox.south > 49.25) && store.backend === "studio";
   F.note.textContent = out ? "3D: teren Zawratu - historia poza tym obszarem nie ma jeszcze modelu 3D" : "";
+}
+// warm-up: once one scene view is ready, the other boots in the background while the browser idles and then stays alive,
+// so 2D <-> 3D is a crossfade (app.css), not a reload of the 3D scene
+function warmOther(k) {
+  if (store.mode !== "akcja" || store.role === "ratownik") return;
+  for (const o in FRAMES) { const F = FRAMES[o]; if (o === k || F.warm) continue; F.warm = true;
+    (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() => syncFrame(o, "load"), { timeout: 3000 }); }
 }
 function postTo2(F, msg) { F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
 function sync3d(why) { for (const k in FRAMES) syncFrame(k, why); }
@@ -682,6 +691,7 @@ addEventListener("message", (e) => {
   const m = e.data, F = FRAMES[k];
   if (m.type === "ready") {
     F.ready = true;
+    warmOther(k); F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown });
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
     if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
     for (const id of evOff) postTo(k, { type: "evidence", id, on: false });

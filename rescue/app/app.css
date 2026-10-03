@@ -88,6 +88,10 @@ body.mode-akcja.view-2d #pane2d,body.mode-akcja.view-split #pane2d{display:block
 body.mode-akcja.view-3d #pane3d,body.mode-akcja.view-split #pane3d{display:block!important;border-left:0}
 body.mode-akcja.view-split #pane3d{border-left:1px solid var(--line)}
 body.mode-edycja #pane3d{display:none}body.mode-edycja.view-split #pane3d{display:block!important}
+/* Akcja 2D <-> 3D crossfade: both scene panes stay laid out on top of each other (the warm one keeps running), the hidden one is transparent and inert */
+body.mode-akcja:not(.view-split) #pane2d,body.mode-akcja:not(.view-split) #pane3d{display:block!important;position:absolute;inset:0;border-left:0;transition:opacity .22s ease,visibility 0s linear .22s}
+body.mode-akcja.view-2d #pane3d,body.mode-akcja.view-3d #pane2d{opacity:0;visibility:hidden;pointer-events:none}
+body.mode-akcja.view-2d #pane2d,body.mode-akcja.view-3d #pane3d{opacity:1;visibility:visible;transition:opacity .22s ease,visibility 0s}
 .full{grid-column:1/4;grid-row:2/4;display:none;position:relative;min-height:0;background:var(--bg)}
 .full iframe{width:100%;height:100%;border:0;display:block}
 .full.scroll{overflow:auto}
