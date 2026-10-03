@@ -97,7 +97,8 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Granite on 10 treasury tool calls | flagged 5/5 attacks, 0 false positives | spike README | measured, n=10, **not a rate** |
 | Test suite | **95 cases** (43 unittest methods, 46 table-driven tool cases), green in 11 s | spike README, run 2026-10-03 12:30 | measured. The brief said 93; the README and code say 95, so we use 95 |
 | Demo run | 29 interactions, 18 blocked, 4 human approvals (1 rejected), 12 values redacted, audit chain verified | `sample-security-report.md` | measured (scripted hijacked agent) |
-| Attack signatures feed | 12 signatures, hot-reloaded | spike README | measured |
+| Attack signatures feed | **16** signatures incl. SSRF, SSTI, XXE, markdown exfil; hot-reloaded | d076785, 85c9f42 | measured |
+| Self-test after detection plan | demo.py **114/114** cases; 67 unit tests green (1 live-model skip), 13:10 | d076785, 96c611e | measured. Supersedes 95 |
 | Real model agent | qwen3:4b ignored the hidden instruction in 3/3 runs; Airlock still sent the payment to a human | `spikes/acl-agent/README.md` | measured, n=3 |
 | Deploy | 3 commands, Python stdlib, no pip install | architecture §3 | true |
 | Integration | 1 stdlib client file, 2 calls | acl-agent README | true |
