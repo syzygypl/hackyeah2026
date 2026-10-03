@@ -551,9 +551,9 @@ function frameURL(k) {
     if (store.backend === "api") return `../web/3d/index.html?embed=scene&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
     return `../web/3d/index.html?embed=scene&sc=${sc}&step=${i}`;
   }
-  if (store.backend === "studio") return `../web/index.html?embed=1&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
-  if (store.backend === "api") return `../web/index.html?embed=1&sc=${sc}&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/scenarios/" + store.scenario + ".json")}&step=${i}`;
-  return `../web/index.html?embed=1&parentOrigin=${po}&sc=${sc}&step=${i}`;
+  if (store.backend === "studio") return `../web/index.html?embed=scene&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
+  if (store.backend === "api") return `../web/index.html?embed=scene&sc=${sc}&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/scenarios/" + store.scenario + ".json")}&step=${i}`;
+  return `../web/index.html?embed=scene&parentOrigin=${po}&sc=${sc}&step=${i}`;
 }
 function postTo(k, msg) { const F = FRAMES[k]; if (F.ready && F.el.contentWindow) F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
 function post3d(msg) { for (const k in FRAMES) postTo(k, msg); }
