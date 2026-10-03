@@ -756,7 +756,7 @@ addEventListener("message", (e) => {
 });
 // ---------- modes (top tabs) and views inside a mode
 const MODES = {
-  akcja: { label: "Akcja", views: [["2d", "2D"], ["3d", "3D"]] },
+  akcja: { label: "Akcja", views: [["2d", "2D"], ["3d", "3D"], ["split", "2D + 3D"]] },
   edycja: { label: "Plan", views: [["map", "Mapa"], ["split", "Mapa + 3D"]] },
   teren: { label: "Teren", views: [["przeglad", "Przegląd zespołów"], ["patrol", "Telefon patrolu"], ["field", "Meldunek"]] },
   monitoring: { label: "Monitoring", views: [] },
