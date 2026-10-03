@@ -30,16 +30,20 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
 - `SearchPlanner` (searcher side, recomputed on every hint): for each available team and segment, expected find rate = POA x POD / (travel + sweep time). Terrain difficulty sets speed and POD per pass, weather sets POD multipliers, resource gates (drone grounded in wind, helicopter no-fly in fog / at night with poor visibility) and the hypothermia clock. Greedy assignment, one team per segment, each team takes the segment's hasty-task core (top-POA cells holding 70% of its POA, max 15 ha). Safety flags: exposed terrain (slab/cliff > 25%) + ice or wind > 12 m/s -> rope team only; no dogs there.
 - Demo screen: terrain-difficulty layer toggle and per-evidence toggles (left), "Przydział zespołów" team cards with status, assigned segment, ETA, expected find % and safety flags (right), weather strip on the timeline, heatmap + segment labels (map), top 3 segments with "% probability in % area" and a task line (right), timeline slider / Play to replay the stream incl. the "searched, nothing found" re-flow and the late Ratunek ping.
 
-## Demo numbers (scenario `zawrat.json` on real OSM + DEM terrain, state at 19:45 just before the find)
+## Demo numbers (scenario `zawrat.json` on real OSM + DEM terrain)
 
-- Top 3 segments hold **42% of probability in 8% of the area** (36 km2 box).
-- Fictional find spot (S7 Żleb pod Zawratem) is segment **#1** after fusion (from 19:35) vs #19 with plain Koester rings.
-- Area to sweep in POA order before reaching the find spot: **0.11% fused vs 41% rings only**.
+Measured with the current engine (after the blind-01 changes): `swift run rescue-demo --fast` and `python3 rescue/tools/eval_engine.py`. Each line names the step and the metric.
+
+- **Step 19:45 (the step just before the 20:03 find, `value.beforePing`), grid 60 x 72 cells (43 km², auto-expanded to cover the trip route):** top 3 segments hold **46% of probability in 7% of the area**.
+- **Same step, segment rank of the fictional find spot (S7 Żleb pod Zawratem):** **#1** after fusion vs **#20** with plain Koester rings only (S7 is #1 from 19:35).
+- **Same step, area swept in POA order before reaching the find cell:** **0.07%** fused (3 of 4320 cells, 0.03 km²) vs **34.3%** with rings only. The map peak is 147 m from the find spot.
+- **Step 18:30 (all clues in, before the first search report):** S7 is still #5 (9.1%), cell rank 65 of 4320 (1.5% of area).
+- `validate/backtest.py` also varies the drone POD (0.6 / 0.75, see backtest.md). With 0.6 S7 is #2 at 19:45, with 0.75 (the scenario's value) #1; area to the find cell 0.07-0.28% vs 34.3% rings only.
 - 19:45 wind 14 m/s: drone grounded, helicopter cleared (fog blown away, NVG night flight), plan re-allocates.
 - **The find comes from the search, not from GPS:** at 19:45 the planner sends the helicopter to S7 (ETA 15 min). At 20:03 a `Found` event (helicopter crew: "ZNALEZIONO" in the gully) closes the case: the map collapses onto the find spot and the planner stops assigning teams. S7 had been #1 on the map since 19:35. (A `Clue` with `"found": true` or "ZNALEZIONO" in its title is treated the same way.)
 - The 20:05 Ratunek ping is an **optional epilogue** (`"epilogue": true` on the event, off by default; `swift run rescue-demo --epilogue` or `"showEpilogue": true` in the scenario). With it on, the page says "ping przyszedł o 20:05; mapa miała ten segment na #1 od 19:35".
 - Blind mode: a scenario without `truth` runs end to end. `value` then has no backtest fields (`rankFused`, `rankRings`, `areaFused`, `areaRings`, `truthSeg`), and `blind: true` is set. The page shows "Tryb ślepy" instead of the backtest.
-- Team allocation vs naive "biggest POA first" (same teams, same physics, simulated from 19:45): 20% chance of find after **1 h 46 min vs 2 h 00 min**, then roughly equal. Honest reading: in this scenario the planner's value is ETAs, safety gating and instant re-allocation when weather changes, not a big POS gain.
+- Team allocation vs naive "biggest POA first" (same teams, same physics, simulated from 19:45): chance of find after 2 h **15% vs 16%**, after 3 h 22% vs 23%: no gain. Plan backtest from 18:30: the planner first sweeps the find cell after 286 min vs 207 min naive. Honest reading: in this scenario the planner's value is ETAs, safety gating, explanations and instant re-allocation when weather changes, not a POS gain.
 
 ## Providers
 
