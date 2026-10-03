@@ -65,6 +65,7 @@ async function loadScenario(id) {
 function applyRun(run, extra = {}, why = "run") {
   if (run && run.error && !run.steps) { toast("Błąd: " + run.error); return; }
   const fit = !store.run || JSON.stringify(store.run.bbox) !== JSON.stringify(run.bbox);
+  if (why === "load") evOff.clear();
   set({ ...extra, run, step: run.steps ? run.steps.length : 1 }, why);
   if (fit && run.bbox && mapReady) map.fitBounds([[run.bbox.west, run.bbox.south], [run.bbox.east, run.bbox.north]], { padding: 20, duration: 0 });
   fetchAssessment();
@@ -279,15 +280,28 @@ function renderEvents() {
   if (R.story) {
     const items = R.story.items || [], items0 = items;
     $("events").innerHTML = items0.map((it, k) => { const ev = it.events[0] || {};
-      return `<div class="ev ${rel(ev.at) > rel(S.t) ? "future" : ""} ${it.id === store.selEv ? "cur" : ""}" data-id="${esc(it.id)}"><div class="src">${esc(ev.at)} · ${esc(it.input.provider)}${it.parsedBy ? " · " + esc(it.parsedBy) : ""}</div>
+      const hid = (R.steps.find((st) => st.label === ev.title) || {}).hintId;
+      return `<div class="ev ${rel(ev.at) > rel(S.t) ? "future" : ""} ${it.id === store.selEv ? "cur" : ""} ${hid && evOff.has(hid) ? "evoff" : ""}" data-id="${esc(it.id)}"><div class="src">${hid ? evToggle(hid) : ""}${esc(ev.at)} · ${esc(it.input.provider)}${it.parsedBy ? " · " + esc(it.parsedBy) : ""}</div>
         <div class="t">${esc(ev.title || it.input.provider)}${it.events.length > 1 ? ` <span class="mute">(+${it.events.length - 1})</span>` : ""}</div>
         ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
         <div class="ops"><button data-op="up" ${k === 0 ? "disabled" : ""}>&lt;</button><button data-op="down" ${k === items.length - 1 ? "disabled" : ""}>&gt;</button><button data-op="delete">usuń</button></div></div>`; }).join("");
     wireEvents();
   } else {
-    $("events").innerHTML = R.steps.map((s, k) => `<div class="ev ${k + 1 === store.step ? "cur" : k + 1 > store.step ? "future" : ""}" data-step="${k + 1}"><div class="src">${esc(s.t)} · ${esc(s.source || "")}</div><div class="t">${esc(s.label)}</div></div>`).join("");
+    $("events").innerHTML = R.steps.map((s, k) => `<div class="ev ${k + 1 === store.step ? "cur" : k + 1 > store.step ? "future" : ""} ${s.hintId && evOff.has(s.hintId) ? "evoff" : ""}" data-step="${k + 1}"><div class="src">${s.hintId ? evToggle(s.hintId) : ""}${esc(s.t)} · ${esc(s.source || "")}</div><div class="t">${esc(s.label)}</div></div>`).join("");
   }
 }
+// evidence on/off ("uwzględnij"): the embedded views recompute the map in the browser (contract: {type:'evidence', id, on}, '*' = all)
+const evOff = new Set();
+const evToggle = (id) => `<input type="checkbox" class="evt" data-hint="${esc(id)}" ${evOff.has(id) ? "" : "checked"} title="Uwzględnij ten sygnał (przelicza 2D analizę i 3D)"> `;
+function setEvidence(id, on, from) {
+  if (id === "*") { if (on) evOff.clear(); } else if (on) evOff.delete(id); else evOff.add(id);
+  for (const k in FRAMES) if (k !== from) postTo(k, { type: "evidence", id, on });
+  renderEvents();
+  $("evReset").hidden = !evOff.size;
+}
+$("events").addEventListener("change", (e) => { const c = e.target.closest(".evt"); if (c) setEvidence(c.dataset.hint, c.checked, "panel"); });
+$("events").addEventListener("click", (e) => { if (e.target.closest(".evt")) e.stopPropagation(); }, true);
+$("evReset").onclick = () => setEvidence("*", true, "panel");
 $("slider").oninput = () => setStep(+$("slider").value);
 $("events").onclick = async (e) => {
   if (suppressClick) return;
@@ -533,9 +547,9 @@ function runURL() {
 function frameURL(k) {
   const i = store.step - 1, sc = encodeURIComponent(store.scenario), ru = runURL(), po = encodeURIComponent(location.origin);
   if (k === "3d") {
-    if (store.backend === "studio") return `../web/3d/index.html?embed=bare&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
-    if (store.backend === "api") return `../web/3d/index.html?embed=bare&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
-    return `../web/3d/index.html?embed=bare&sc=${sc}&step=${i}`;
+    if (store.backend === "studio") return `../web/3d/index.html?embed=scene&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
+    if (store.backend === "api") return `../web/3d/index.html?embed=scene&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
+    return `../web/3d/index.html?embed=scene&sc=${sc}&step=${i}`;
   }
   if (store.backend === "studio") return `../web/index.html?embed=1&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
   if (store.backend === "api") return `../web/index.html?embed=1&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/scenarios/" + store.scenario + ".json")}&step=${i}`;
@@ -567,15 +581,17 @@ addEventListener("message", (e) => {
     F.ready = true;
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
     if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
+    for (const id of evOff) postTo(k, { type: "evidence", id, on: false });
   }
   if (m.type === "select" && (typeof m.segmentId === "string" || m.segmentId === null)) selectSeg(m.segmentId, k);
+  if (m.type === "evidence" && typeof m.id === "string") setEvidence(m.id, !!m.on, k);
   // a view reloading itself reports its boot step before "ready": only user steps after "ready" count
   if (m.type === "step" && Number.isInteger(m.i) && F.ready) setStep(m.i + 1, k);
 });
 // operator -> rescuer: persist the assignment (phones poll GET /story/assign) and tell embedded patrol views
 async function assignTeam(resourceId, segmentId) {
   try { const a = await api("/story/assign", { resourceId, segmentId, at: curClock(), scenario: store.scenario, segmentName: curStep()?.segments.find((x) => x.id === segmentId)?.name }); store.manual = a.assignments || []; } catch (e) { toast("Przydział nie zapisany: " + (e.message || e)); }
-  for (const id of ["frameTeren", "frameRescuer"]) { const f = $(id); try { f.contentWindow && f.contentWindow.postMessage({ source: "rescue-app", type: "assign", resourceId, segmentId }, location.origin); } catch (e) {} }
+  for (const id of ["frameTeren", "frameRescuer"]) { const f = $(id); try { f.contentWindow && f.contentWindow.postMessage({ source: "rescue-app", type: "assign", team: resourceId, resourceId, segmentId, by: "operator" }, location.origin); } catch (e) {} }
   renderPanels();
 }
 // ---------- roles: ratownik (phone, own task + patrol reports) / operator (all modes). ?role= or remembered; picker on first open

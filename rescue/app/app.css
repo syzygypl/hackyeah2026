@@ -131,3 +131,4 @@ body.role-ratownik #rescuer{display:flex;flex-direction:column;gap:8px;padding:8
 #rMapHost #map{position:absolute;inset:0;display:block!important}
 #frameRescuer{width:100%;min-height:520px;flex:1;border:0;border-radius:12px;background:var(--panel)}
 .gpsdot{width:16px;height:16px;border-radius:50%;background:#3fa9ff;border:3px solid #fff;box-shadow:0 0 0 6px rgba(63,169,255,.3)}
+.ev.evoff{opacity:.45;text-decoration:line-through}.ev .evt{vertical-align:-2px;margin:0 4px 0 0;cursor:pointer}

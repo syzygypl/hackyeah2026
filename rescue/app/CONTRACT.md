@@ -33,6 +33,7 @@ Shared look: `rescue/app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default
 |---|---|
 | `{ type: "step", i }` | Show step `i` (0-based index into `run.steps`). |
 | `{ type: "select", segmentId }` | Highlight segment `segmentId` (string, e.g. `"S7"`). |
+| `{ type: "evidence", id, on }` | Switch one signal on/off and recompute the map in the browser (`id` = step `hintId`, or the step index; `id: "*"` with `on: true` restores all). Sent from the shell's evidence list checkboxes; re-sent for every switched-off signal after `ready`. |
 | `{ type: "run", run }` | New run document (`rescue-run/1`). 3D parks it in `sessionStorage["rescue3d-run"]` and reloads itself with `?runInline=1`. Sent after every edit (drop evidence, move pin, team nic/ZNALEZIONO, retime, undo). |
 | `{ type: "run", url }` | Same, but the view fetches the run from `url` (3D reloads with `?run=<url>`). The shell uses this when the run has a URL (`/story`, `/api/run/<sc>`). |
 
@@ -44,6 +45,7 @@ Shared look: `rescue/app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default
 | `{ source: "rescue2d", type: "ready", version }` | 2D loaded and listening. |
 | `{ source, type: "step", i, t }` | The **user** moved the view's timeline (not echoed for shell-sent steps). `t` = clock `HH:MM`. |
 | `{ source, type: "select", segmentId }` | The **user** clicked a segment (not echoed for shell-sent selects). |
+| `{ source: "rescue3d", type: "evidence", id, on }` | The user toggled a signal in 3D (`"*"` = Przywróć). The shell mirrors it to its list and to the other views. |
 
 After `ready` the shell sends the current `step` and `select` (and `run` if it changed since the iframe URL was set).
 
@@ -51,7 +53,8 @@ After `ready` the shell sends the current `step` and `select` (and `run` if it c
 
 | View | URL |
 |---|---|
-| 3D | `../web/3d/index.html?embed=1&sc=<sc>&run=<url>&step=<i>` (`embed=1` hides header and side panels, `embed=bare` leaves only the scene; `runInline=1` = run from sessionStorage) |
+| 3D | `../web/3d/index.html?embed=scene&sc=<sc>&run=<url>&step=<i>` - the shell uses `embed=scene` (3D buttons Kino/Trudność/Las..., no timeline, no progress panel). `embed=1` hides header and side panels, `embed=bare` leaves only the scene; `runInline=1` = run from sessionStorage |
+| Patrol (Teren, role Ratownik) | `../web/patrol/index.html?embed=1&api=<origin>&run=<run url>&team=<id>` |
 | 2D | `../web/index.html?embed=1&parentOrigin=<origin>` (in progress, AI Marcina) |
 
 Run URLs per backend: Studio live story `run=/story&scenario=/story/scenario` (with `sc=zawrat` for terrain); rescue-server `run=/api/run/<sc>`; static `sc=<sc>` only.
@@ -114,3 +117,16 @@ Shown: headline numbers, grouped top-1/3/5 bars, area-to-find histogram (engine 
 ### 3. Fallback: simulator runs (AI Michała, `rescue/eval/sim/README.md`)
 
 When `results.json` is missing, the shell lists `rescue/eval/sim/out/<run>/` folders that have `manifest.csv` (`GET /eval/sim-runs` -> `[{ id, manifest, run }]`, served by rescue-studio; rescue-server should offer the same route) and shows counts by category / behaviour / stop reason, share with misleading clues and with a cell fix, and the case table from `manifest.csv`. Truth files are not read.
+
+## Patrol view (web/patrol, AI Michała) and operator assignments
+
+- Shell -> patrol: `{ type: "assign", segmentId, team, by: "operator" }` (sent to the Teren and Ratownik patrol frames when the operator drops a team on a segment). Patrol answers `{ source: "rescuePatrol", type: "assigned", team, segmentId }`; it also posts `ready`, `report`, `queued`, `online`.
+- The assignment is persisted on the server so phones outside the shell get it:
+  - `POST /story/assign { resourceId, segmentId, at?, scenario?, segmentName?, note? }` -> `{ assignments: [{ resourceId, segmentId, segmentName, at, by, t, scenario?, note? }] }`; `segmentId: null` clears. `GET /story/assign` returns the same list (the app).
+  - `GET /api/assignments` -> `{ "<team>": { segmentId, by, at, why? } }` (patrol polls every 15 s); `POST /api/assignments { team, segmentId, at?, why? }` writes the same store.
+  - Both on rescue-studio and rescue-server (RescueStudioKit `Studio.assign*`), PIN-guarded on LAN. In memory: a server restart clears them.
+
+## Roles (`?role=ratownik|operator`, remembered in localStorage, picker on first open)
+
+- **Ratownik** (phone): team picker, "Moje zadanie" (operator assignment for the current scenario wins over the planner; vibrates and toasts when it changes), "dlaczego", ETA, safety flags, hypothermia; the 2D map with own GPS dot and the task segment selected; reports through the embedded patrol view (`POST /report`, offline queue there). No editing, no validation.
+- **Operator**: all modes. Dropping a team chip on a segment in Edycja persists the assignment (above). Teren / Przegląd zespołów shows per-team last report age (CISZA past `silent_threshold_seconds`) and the live field reports (`GET /live-events`), each with "Dodaj do historii" (Studio `FieldReport`).
