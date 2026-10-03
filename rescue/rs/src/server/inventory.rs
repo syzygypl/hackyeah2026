@@ -736,13 +736,52 @@ async fn inv_inventory(q: &Req) -> Resp {
     }
     let params = inv_params();
     let file = inv_file_units();
-    let events = INV_EVENTS.all().await;
     let teams = inv_teams();
     let mut tls: HashMap<String, Option<Timeline>> = HashMap::new();
     let mut lives: HashMap<String, Option<i64>> = HashMap::new();
     let mut units: Vec<Obj> = vec![];
     let mut pre = InvPre::default();
     let at_q = q.q("at");
+    // every store read of the unit loop below at once (Neon: the round trips overlap instead of queueing)
+    let (mut want_sc, mut want_feed): (Vec<String>, Vec<Option<String>>) = (vec![], vec![]);
+    for t in &teams {
+        let sc = inv_unit_sc(t, qsc.as_deref());
+        let on_sc = match &qsc {
+            None => true,
+            Some(qs) => t.sc.as_ref() == Some(qs) || (t.sc.is_none() && t.home.contains(qs)),
+        };
+        let fk = if on_sc { sc.clone() } else { None };
+        if !want_feed.contains(&fk) {
+            want_feed.push(fk);
+        }
+        if let (Some(s), true) = (sc, on_sc) {
+            if !want_sc.contains(&s) {
+                want_sc.push(s);
+            }
+        }
+    }
+    let ev_h = tokio::spawn(async { INV_EVENTS.all().await });
+    let at_s = at_q.map(String::from);
+    let sc_h: Vec<_> = want_sc
+        .iter()
+        .map(|s| {
+            let (s, at) = (s.clone(), at_s.clone());
+            tokio::spawn(async move { (inv_timeline(&s, at.as_deref()).await, LIVE_FIXES.all(&s).await) })
+        })
+        .collect();
+    let feed_h: Vec<_> = want_feed.iter().map(|k| {
+        let k = k.clone();
+        tokio::spawn(async move { inv_feed_all(k.as_deref()).await })
+    }).collect();
+    let events = ev_h.await.unwrap_or_default();
+    for (s, h) in want_sc.iter().zip(sc_h) {
+        let (tl, fx) = h.await.unwrap_or((None, vec![]));
+        tls.insert(s.clone(), tl);
+        pre.fixes.insert(s.clone(), fx);
+    }
+    for (k, h) in want_feed.iter().zip(feed_h) {
+        pre.feed.insert(k.clone().unwrap_or_default(), h.await.unwrap_or_default());
+    }
     for t in &teams {
         let sc = inv_unit_sc(t, qsc.as_deref());
         // with ?sc=, a unit attached to another incident keeps static values
