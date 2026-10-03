@@ -189,6 +189,36 @@ class PolicyStore:
         self.signatures, self.feed_version, self._feed_key = [], None, None
         self.reloads, self.errors = 0, []
 
+    @staticmethod
+    def version_of(raw):
+        return hashlib.sha256(raw.encode()).hexdigest()[:10]
+
+    @staticmethod
+    def validate(raw):
+        """The one validator: used by hot-reload and by PUT /v1/policy. Returns the parsed policy or raises."""
+        p = json.loads(raw)
+        if not isinstance(p, dict):
+            raise ValueError("policy must be a JSON object")
+        if not isinstance(p.get("controls"), dict):
+            raise ValueError("'controls' object missing")
+        for name, c in p["controls"].items():
+            if not isinstance(c, dict):
+                raise ValueError(f"controls.{name} must be an object")
+            if "action" in c and c["action"] not in ("block", "redact", "flag", "approve"):
+                raise ValueError(f"controls.{name}.action must be block | redact | flag | approve")
+        if p.get("mode", "enforce") not in ("enforce", "monitor"):
+            raise ValueError("mode must be enforce | monitor")
+        sem = p["controls"].get("semantic") or {}
+        if "threshold" in sem and not (isinstance(sem["threshold"], (int, float)) and 0 <= sem["threshold"] <= 1):
+            raise ValueError("controls.semantic.threshold must be a number 0..1")
+        if sem.get("mode", "tiered") not in ("tiered", "consensus"):
+            raise ValueError("controls.semantic.mode must be tiered | consensus")
+        b = p.get("budgets") or {}
+        for k, v in b.items():
+            if k.startswith("max_") and not (isinstance(v, (int, float)) and v >= 0):
+                raise ValueError(f"budgets.{k} must be a non-negative number")
+        return p
+
     def get(self):
         try:
             m = os.stat(self.path).st_mtime_ns
@@ -199,11 +229,10 @@ class PolicyStore:
         if m != self.mtime:
             self.mtime = m
             try:
-                raw = open(self.path).read()
-                p = json.loads(raw)
-                if not isinstance(p.get("controls"), dict):
-                    raise ValueError("'controls' object missing")
-                self.policy, self.version = p, hashlib.sha256(raw.encode()).hexdigest()[:10]
+                with open(self.path) as f:
+                    raw = f.read()
+                p = self.validate(raw)
+                self.policy, self.version = p, self.version_of(raw)
                 self.reloads += 1
             except Exception as e:
                 self.errors.append(f"{time.strftime('%H:%M:%S')} rejected policy edit: {e}")
@@ -681,6 +710,16 @@ class ControlLayer:
         return True, "prompt_injection", (f"injection score {res['score']} >= {thr} (heuristic: {', '.join(res['signals'])}"
                                           f"{'; ' + said if said else ''})"), res["fail"]
 
+    # -- admin events (policy changes) go into the same hash-chained audit
+    def audit_admin(self, kind, actor, ok, reason, old_version=None, new_version=None, diff=None):
+        ev = {"session": "admin", "user": actor, "kind": kind, "tool": "policy", "decision": ALLOW if ok else DENY,
+              "decision_final": ALLOW if ok else DENY, "guardrails": [] if ok else ["policy_admin"], "reasons": [reason],
+              "redactions": [], "approved_by": None, "checks_us": {}, "policy_version": new_version or old_version,
+              "semantic": None, "args": {"old_version": old_version, "new_version": new_version, "diff": diff or []},
+              "overhead_us": 0, "tokens_total": 0, "usd_total": 0, "compute_ms_total": 0}
+        self._append(ev)
+        return ev
+
     # -- tamper-evident audit log
     def _append(self, ev):
         with self._lock:
@@ -742,6 +781,22 @@ class ControlLayer:
             "latency_us": {k: {"p50": pct(v, .5), "p95": pct(v, .95), "p99": pct(v, .99), "n": len(v)} for k, v in sorted(lat.items())},
             "audit": {"records": len(a), "chain_verified": ok, "head": self._head[:16]},
         }
+
+
+def policy_diff(old, new, prefix="", out=None, limit=25):
+    """Changed leaf keys as 'a.b.c: old -> new' (doc strings skipped)."""
+    out = [] if out is None else out
+    keys = sorted(set((old or {}).keys()) | set((new or {}).keys()))
+    for k in keys:
+        if k == "_doc" or len(out) >= limit:
+            continue
+        a, b = (old or {}).get(k, "<absent>"), (new or {}).get(k, "<absent>")
+        path = f"{prefix}{k}"
+        if isinstance(a, dict) and isinstance(b, dict):
+            policy_diff(a, b, path + ".", out, limit)
+        elif a != b:
+            out.append(f"{path}: {json.dumps(a)[:60]} -> {json.dumps(b)[:60]}")
+    return out
 
 
 def _consensus_phases(a):

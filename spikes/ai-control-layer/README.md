@@ -28,7 +28,7 @@ python3 server.py                    # HTTP gateway on 127.0.0.1:8787 for ad-hoc
    - real-time metrics (`/metrics`)
    - per-check latency telemetry (p50/p95/p99)
    - a report for management and the security team (`out/security_report.md`, sample in `sample-security-report.md`)
-   - **Self-tests**: 130+ positive and negative cases, including budgets, exploit mitigation, live policy edits and semantic fail modes. Live-model tests skip without Ollama.
+   - **Self-tests**: 129+ positive and negative cases, including budgets, exploit mitigation, live policy edits and semantic fail modes. Live-model tests skip without Ollama.
 
 ## Architecture
 
@@ -129,6 +129,17 @@ curl -s localhost:8787/report    # markdown report
 ```
 
 Concurrency: there is no request-wide lock. Each session has its own lock, so calls within one session stay ordered and budget, loop and taint stay consistent. Different sessions and all GETs run in parallel. The layer only locks policy reload and the audit-chain append, and each thread works on its own policy snapshot. Measured: `/metrics` answers in about 1 ms while a 2.5 s judge call runs in another session.
+
+Policy editing over the API (dashboard editor):
+- **Request:** `PUT /v1/policy` with the full policy JSON and `Authorization: Bearer $ACL_ADMIN_TOKEN`. The token comes from the env or `spikes/ai-control-layer/.env`, which is gitignored.
+- **Responses:**
+  - no server token: 403 (editing disabled)
+  - missing or wrong token: 401 (constant-time compare)
+  - invalid policy: 400, file untouched (same validator as hot-reload)
+  - success: 200 `{version, previous, changed}`
+- **Write:** atomic (temp file + rename), applied on the next request.
+- **Audit:** every attempt is a hash-chained audit event (`policy_changed` / `policy_change_rejected`) with actor, old -> new version and a key-level diff.
+- **CORS:** only the dashboard origin `http://127.0.0.1:8790`.
 
 The tests run against a temp copy of `policy.json`. If you weaken the policy (disable a control, raise a threshold), the matching negative tests fail on purpose, so the suite also catches config regressions.
 

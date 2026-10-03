@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -892,6 +893,101 @@ class Concurrency(unittest.TestCase):
         self.assertEqual(layer.policy["mode"], "enforce")  # this thread keeps its snapshot until its next call
 
 
+class PolicyApi(unittest.TestCase):
+    """PUT /v1/policy on the real gateway handler, against a temp policy file."""
+
+    def setUp(self):
+        import server
+        self.server_mod = server
+        self.env = PolicyEnv()
+        self._saved = (server.LAYER, os.environ.get("ACL_ADMIN_TOKEN"))
+        server.LAYER = ControlLayer(TOOLS, approver=server.approver, policy_path=self.env.path)
+        server.LAYER._load_policy()
+        self.srv = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        self.url = f"http://127.0.0.1:{self.srv.server_port}"
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        os.environ["ACL_ADMIN_TOKEN"] = "test-token-123"
+
+    def tearDown(self):
+        self.srv.shutdown()
+        self.server_mod.LAYER = self._saved[0]
+        if self._saved[1] is None:
+            os.environ.pop("ACL_ADMIN_TOKEN", None)
+        else:
+            os.environ["ACL_ADMIN_TOKEN"] = self._saved[1]
+
+    def _req(self, method, path, body=None, token=None, origin=None):
+        h = {"Content-Type": "application/json"}
+        if token is not None:
+            h["Authorization"] = f"Bearer {token}"
+        if origin:
+            h["Origin"] = origin
+        data = body.encode() if isinstance(body, str) else (json.dumps(body).encode() if body is not None else None)
+        req = urllib.request.Request(self.url + path, data, h, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=5) as r:
+                return r.status, json.loads(r.read() or b"{}"), dict(r.headers)
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read() or b"{}"), dict(e.headers)
+
+    def _policy(self):
+        return json.load(open(self.env.path))
+
+    def _last_admin(self):
+        return [e for e in self.server_mod.LAYER.audit if e["session"] == "admin"][-1]
+
+    def test_200_valid_update_applies_live_and_is_audited(self):
+        p = self._policy()
+        p["controls"]["pii"]["action"] = "redact"
+        code, body, _ = self._req("PUT", "/v1/policy", p, token="test-token-123")
+        self.assertEqual(code, 200, body)
+        self.assertEqual(self._policy()["controls"]["pii"]["action"], "redact")
+        self.assertEqual(body["version"], self.server_mod.LAYER.store.version)
+        ev = self._last_admin()
+        self.assertEqual((ev["kind"], ev["decision"]), ("policy_changed", ALLOW))
+        self.assertTrue(any(d.startswith("controls.pii.action") for d in ev["args"]["diff"]), ev["args"]["diff"])
+        self.assertNotEqual(ev["args"]["old_version"], ev["args"]["new_version"])
+        code, r, _ = self._req("POST", "/v1/tool", {"tool": "send_email", "args": {"to": "ops@bank.example", "subject": "s", "body": "card 4111 1111 1111 1111"}})
+        self.assertEqual((code, r["decision"]), (200, "REDACT"))  # takes effect on the next request
+
+    def test_400_invalid_policy_leaves_file_unchanged(self):
+        before = open(self.env.path).read()
+        for bad in ["{ not json", {"mode": "enforce"}, dict(self._policy(), mode="yolo")]:
+            code, body, _ = self._req("PUT", "/v1/policy", bad, token="test-token-123")
+            self.assertEqual(code, 400, body)
+        self.assertEqual(open(self.env.path).read(), before)
+        self.assertEqual(self._last_admin()["kind"], "policy_change_rejected")
+
+    def test_401_missing_or_wrong_token(self):
+        for tok in [None, "wrong"]:
+            code, _, _ = self._req("PUT", "/v1/policy", self._policy(), token=tok)
+            self.assertEqual(code, 401)
+        ev = self._last_admin()
+        self.assertEqual((ev["kind"], ev["user"]), ("policy_change_rejected", "unauthenticated"))
+
+    def test_403_disabled_without_server_token(self):
+        os.environ.pop("ACL_ADMIN_TOKEN")
+        code, body, _ = self._req("PUT", "/v1/policy", self._policy(), token="anything")
+        self.assertEqual(code, 403)
+        self.assertIn("ACL_ADMIN_TOKEN", body["error"])
+        self.assertEqual(self._last_admin()["kind"], "policy_change_rejected")
+
+    def test_cors_only_for_dashboard_origin(self):
+        _, _, h = self._req("GET", "/metrics", origin="http://127.0.0.1:8790")
+        self.assertEqual(h.get("Access-Control-Allow-Origin"), "http://127.0.0.1:8790")
+        _, _, h = self._req("GET", "/metrics", origin="http://evil.example")
+        self.assertIsNone(h.get("Access-Control-Allow-Origin"))
+        req = urllib.request.Request(self.url + "/v1/policy", method="OPTIONS", headers={"Origin": "http://127.0.0.1:8790"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            self.assertEqual(r.status, 204)
+            self.assertIn("PUT", r.headers.get("Access-Control-Allow-Methods"))
+
+    def test_audit_chain_still_valid_with_admin_events(self):
+        self._req("PUT", "/v1/policy", self._policy(), token="wrong")
+        self._req("PUT", "/v1/policy", self._policy(), token="test-token-123")
+        self.assertEqual(self.server_mod.LAYER.verify_chain(), (True, None))
+
+
 class Performance(unittest.TestCase):
     def test_overhead_under_1ms_p99(self):
         p = measure_overhead(2000)
@@ -916,7 +1012,7 @@ GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection
           "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
           "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "GuardConsensus": "guard consensus (parallel votes)",
-          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "Performance": "performance"}
+          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "Performance": "performance"}
 
 
 def run_suite():

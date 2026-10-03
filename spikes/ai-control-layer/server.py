@@ -11,15 +11,37 @@ Run:  python3 server.py [port]      (default 8787, binds 127.0.0.1)
   GET  /audit      exportable audit log (JSONL, hash-chained)
   GET  /report     security report (markdown)
   GET  /policy     the policy currently in force (edit policy.json, it hot-reloads on the next request)
+  PUT  /v1/policy  full policy JSON; header "Authorization: Bearer $ACL_ADMIN_TOKEN" (from env or .env, never
+                   committed; unset = endpoint disabled, 403). Validated by the hot-reload loader, written atomically,
+                   audited as policy_changed / policy_change_rejected with actor, old -> new version and a key diff.
+CORS: only the dashboard origin (ACL_DASHBOARD_ORIGIN, default http://127.0.0.1:8790).
 """
+import hmac
 import json
+import os
 import sys
+import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from control_layer import ControlLayer, Session, security_report
+from control_layer import HERE, ControlLayer, PolicyStore, Session, policy_diff, security_report
 from mock_tools import TOOLS
 
+def load_dotenv(path=os.path.join(HERE, ".env")):
+    """Minimal .env reader (KEY=VALUE lines); real env vars win."""
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+    except OSError:
+        pass
+
+
+load_dotenv()
+POLICY_WRITE_LOCK = threading.Lock()
 SESSIONS_LOCK = threading.Lock()  # guards the sessions dict only
 SESSIONS = {}
 PENDING_APPROVER = threading.local()
@@ -51,10 +73,59 @@ class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         data = body if isinstance(body, bytes) else (body if isinstance(body, str) else json.dumps(body, indent=1, ensure_ascii=False, default=str)).encode()
         self.send_response(code)
+        self._cors()
         self.send_header("Content-Type", ctype + "; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+
+    def _cors(self):
+        origin = self.headers.get("Origin")
+        if origin and origin == os.environ.get("ACL_DASHBOARD_ORIGIN", "http://127.0.0.1:8790"):
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def do_PUT(self):
+        if self.path != "/v1/policy":
+            return self._send(404, {"error": "unknown endpoint"})
+        actor = os.environ.get("ACL_ADMIN_LABEL", "admin-token")
+        LAYER._load_policy()
+        old_version = LAYER.store.version
+        token = os.environ.get("ACL_ADMIN_TOKEN", "")
+        if not token:
+            LAYER.audit_admin("policy_change_rejected", "anonymous", False, "policy editing disabled: ACL_ADMIN_TOKEN not set", old_version)
+            return self._send(403, {"error": "policy editing is disabled: set ACL_ADMIN_TOKEN in the server environment (.env)"})
+        given = self.headers.get("Authorization", "")
+        given = given[7:] if given.startswith("Bearer ") else ""
+        if not hmac.compare_digest(given.encode(), token.encode()):
+            LAYER.audit_admin("policy_change_rejected", "unauthenticated", False, "missing or wrong admin token", old_version)
+            return self._send(401, {"error": "missing or wrong bearer token"})
+        raw = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8", "replace")
+        try:
+            new = PolicyStore.validate(raw)
+        except Exception as e:
+            LAYER.audit_admin("policy_change_rejected", actor, False, f"invalid policy: {str(e)[:120]}", old_version)
+            return self._send(400, {"error": f"invalid policy: {e}", "version": old_version})
+        diff = policy_diff(LAYER.store.policy or {}, new)
+        body = json.dumps(new, indent=2, ensure_ascii=False) + "\n"
+        path = LAYER.store.path
+        with POLICY_WRITE_LOCK:
+            fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".policy.", suffix=".tmp")
+            with os.fdopen(fd, "w") as f:
+                f.write(body)
+            os.replace(tmp, path)  # atomic: readers see the old or the new file, never half
+            LAYER._load_policy()
+        LAYER.audit_admin("policy_changed", actor, True, f"policy updated via API ({len(diff)} key(s) changed)",
+                          old_version, LAYER.store.version, diff)
+        self._send(200, {"version": LAYER.store.version, "previous": old_version, "changed": diff})
 
     def do_GET(self):
         LAYER._load_policy()  # no request-wide lock: reads use snapshots, never wait on model calls
