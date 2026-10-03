@@ -32,3 +32,5 @@
 .acts button{font:inherit;font-size:var(--rl-fs-xs);background:var(--rl-card);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-s);color:var(--rl-ink);cursor:pointer;padding:3px 8px}
 .acts button:hover{border-color:var(--rl-accent);color:var(--rl-accent)}
 .acts button.fault{color:var(--rl-danger)}
+/* touch screens: event buttons were 24 px tall (QA mobile); 40 px with the 5 px gap */
+@media (max-width:600px),(pointer:coarse){.acts{gap:8px}.acts button{min-height:40px;padding:6px 12px;font-size:var(--rl-fs-s)}}

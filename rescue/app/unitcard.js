@@ -27,7 +27,7 @@ export function unitCard(u, opts) {
   if (h.fatiguePct != null) bars.push(bar(`Zmęczenie - szacunek (${h.distanceKm} km, +${h.climbM} m)`, h.fatiguePct, h.fatiguePct + "%", codeLevel(u, ["fatigue"])));
   if (h.workMin != null) bars.push(bar(`Pies: praca bez przerwy (limit ${h.workLimitMin} min)`, (h.workMin / h.workLimitMin) * 100, `${h.workMin} min`, codeLevel(u, ["dogwork"])));
   if (h.dutyMin != null) bars.push(bar(`Służba załogi (limit ${Math.round(h.dutyLimitMin / 60)} h)`, (h.dutyMin / h.dutyLimitMin) * 100, `${Math.floor(h.dutyMin / 60)} h ${String(h.dutyMin % 60).padStart(2, "0")} min`, codeLevel(u, ["duty"])));
-  if (h.maintenanceDueInH != null) bars.push(bar(`Do przeglądu (co ${h.maintenanceEveryH} h, ostatni ${h.lastMaintenance || "?"})`, (Math.max(0, h.maintenanceDueInH) / h.maintenanceEveryH) * 100, `${h.maintenanceDueInH} h`, codeLevel(u, ["maintenance"])));
+  if (h.maintenanceDueInH != null) bars.push(bar(`Do przeglądu (co ${h.maintenanceEveryH} h, ostatni ${h.lastMaintenance || "?"})`, (Math.max(0, h.maintenanceDueInH) / h.maintenanceEveryH) * 100, `${String(h.maintenanceDueInH).replace(".", ",")} h`, codeLevel(u, ["maintenance"])));
   const crew = (u.crew || []).map((c) => `${esc(c.name)} <span class="mute">(${esc(c.role)})</span>`).join(", ");
   const dog = u.dog ? ` · pies: <b>${esc(u.dog.name)}</b> ${esc(u.dog.breed || "")}` : "";
   const feeds = (u.feeds || []).map((f) => `<span title="${esc(f.label)}: ${f.status === "live" ? "na żywo" : f.status === "stale" ? "nieaktualne" : "brak"}${f.lastAt ? ", ostatnio " + esc(f.lastAt) : ""}${f.note ? " - " + esc(f.note) : ""}"><i class="dot ${esc(f.status)}"></i>${esc(f.label.split(" ")[0])}</span>`).join("");
