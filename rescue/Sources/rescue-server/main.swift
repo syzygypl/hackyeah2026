@@ -134,7 +134,7 @@ func liveEvents(_ reports: [FieldReport], segments: Set<String>, seeds: [String:
 func timelineInput(_ name: String) -> TimelineEngine.Input? {
     guard let t = try? Data(contentsOf: scenariosDir.appendingPathComponent("tracks/\(name).json")) else { return nil }
     let dem = try? Data(contentsOf: scenariosDir.deletingLastPathComponent().appendingPathComponent("tools/terrain/data/\(name)-dem.json"))
-    let fov = try? Data(contentsOf: scenariosDir.appendingPathComponent("fov/fov-params.json"))
+    let fov = (try? Data(contentsOf: scenariosDir.appendingPathComponent("fov/fov-params.json"))) ?? (try? Data(contentsOf: scenariosDir.appendingPathComponent("fov-params.json")))
     return TimelineEngine.Input(tracks: t, dem: dem, fovParams: fov)
 }
 
