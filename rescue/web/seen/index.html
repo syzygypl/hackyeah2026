@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf8f3">
+<title>Widziałem - zaginiona osoba</title>
+<link rel="stylesheet" href="../vendor/maplibre-gl.css">
+<link rel="stylesheet" href="../../app/tokens.css">
+<style>
+  /* Public "Widziałem" page (docs/rescue-locator/city-extension.md, step 4): reached by QR / link from a city alert.
+     Colours only from app/tokens.css (docs/rescue-locator/ui-design.md), paper look, big touch targets, 375 px first. */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--rl-bg); color: var(--rl-ink); font: 16px/1.4 var(--rl-font); }
+  main { max-width: 520px; margin: 0 auto; padding: var(--rl-sp-4); padding-top: max(var(--rl-sp-4), env(safe-area-inset-top)); padding-bottom: max(var(--rl-sp-5), env(safe-area-inset-bottom)); }
+  .band { background: var(--rl-danger); color: var(--rl-on-danger); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: var(--rl-fs-s);
+          padding: var(--rl-sp-2) var(--rl-sp-3); border-radius: var(--rl-radius) var(--rl-radius) 0 0; }
+  .card { background: var(--rl-panel-solid); border: 1px solid var(--rl-line); border-radius: var(--rl-radius-l); box-shadow: var(--rl-shadow); overflow: hidden; }
+  .card .band { border-radius: 0; }
+  .person { display: flex; gap: var(--rl-sp-3); padding: var(--rl-sp-4); align-items: center; }
+  .avatar { flex: none; width: 64px; height: 64px; border-radius: 50%; background: var(--rl-panel-2); border: 1px solid var(--rl-line-strong);
+            display: grid; place-items: center; font: 700 24px var(--rl-font-num); color: var(--rl-ink-2); }
+  .person h1 { margin: 0; font-size: var(--rl-fs-xl); line-height: 1.15; }
+  .person .meta { color: var(--rl-ink-2); font-size: var(--rl-fs); margin-top: 2px; }
+  .last { margin: 0 var(--rl-sp-4); padding: var(--rl-sp-2) var(--rl-sp-3); background: var(--rl-panel-2); border-radius: var(--rl-radius-s); font-size: var(--rl-fs); }
+  .last b { font-family: var(--rl-mono); font-variant-numeric: tabular-nums; }
+  .desc { padding: var(--rl-sp-3) var(--rl-sp-4) var(--rl-sp-4); font-size: var(--rl-fs); color: var(--rl-ink-2); }
+  .tips { margin: 0 var(--rl-sp-4) var(--rl-sp-4); padding: var(--rl-sp-2) var(--rl-sp-3); border-left: 4px solid var(--rl-warn); background: var(--rl-card); font-size: var(--rl-fs); }
+  button, .btn { font: inherit; cursor: pointer; border-radius: var(--rl-radius); min-height: 48px; }
+  .primary { display: block; width: 100%; margin: var(--rl-sp-4) 0; min-height: 64px; border: 0; background: var(--rl-danger); color: var(--rl-on-danger);
+             font-size: var(--rl-fs-xl); font-weight: 700; box-shadow: var(--rl-shadow); }
+  .primary:disabled { opacity: .5; }
+  .secondary { width: 100%; border: 1px solid var(--rl-line-strong); background: var(--rl-card); color: var(--rl-accent); font-weight: 600; font-size: var(--rl-fs-l); }
+  section.step { background: var(--rl-panel-solid); border: 1px solid var(--rl-line); border-radius: var(--rl-radius-l); padding: var(--rl-sp-4); margin-top: var(--rl-sp-3); }
+  section.step h2 { margin: 0 0 var(--rl-sp-2); font-size: var(--rl-fs-l); }
+  section.step h2 .n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--rl-chrome); color: var(--rl-on-chrome);
+                       font: 700 var(--rl-fs-s) var(--rl-font-num); margin-right: 6px; vertical-align: 1px; }
+  .hint { color: var(--rl-mute); font-size: var(--rl-fs-s); margin: 0 0 var(--rl-sp-2); }
+  #map { height: 260px; border-radius: var(--rl-radius); border: 1px solid var(--rl-line-strong); overflow: hidden; margin-bottom: var(--rl-sp-2); }
+  .pin { width: 26px; height: 26px; border-radius: 50% 50% 50% 0; background: var(--rl-danger); border: 3px solid var(--rl-card); transform: rotate(-45deg); box-shadow: var(--rl-shadow); }
+  .where { font-size: var(--rl-fs-s); color: var(--rl-ink-2); min-height: 1.4em; margin-top: var(--rl-sp-2); }
+  .where b { font-family: var(--rl-mono); color: var(--rl-ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--rl-sp-2); }
+  .chip { min-height: 48px; padding: 0 var(--rl-sp-4); border: 1px solid var(--rl-line-strong); background: var(--rl-card); color: var(--rl-ink); font-weight: 600; border-radius: 999px; }
+  .chip[aria-pressed=true] { background: var(--rl-accent); color: var(--rl-on-accent); border-color: var(--rl-accent); }
+  textarea, input { width: 100%; font: inherit; font-size: 16px; color: var(--rl-ink); background: var(--rl-card); border: 1px solid var(--rl-line-strong); border-radius: var(--rl-radius); padding: var(--rl-sp-3); }
+  textarea { min-height: 96px; resize: vertical; }
+  input { min-height: 48px; }
+  label { display: block; font-weight: 600; margin: var(--rl-sp-3) 0 var(--rl-sp-1); font-size: var(--rl-fs); }
+  label small { font-weight: 400; color: var(--rl-mute); }
+  .err { color: var(--rl-danger); font-size: var(--rl-fs-s); min-height: 1.2em; margin-top: var(--rl-sp-2); }
+  .thanks { text-align: center; padding: var(--rl-sp-5) var(--rl-sp-4); margin-top: var(--rl-sp-3); }
+  .thanks .ok { width: 72px; height: 72px; margin: 0 auto var(--rl-sp-3); border-radius: 50%; background: var(--rl-ok); color: var(--rl-on-ok); display: grid; place-items: center; font-size: 40px; font-weight: 700; }
+  .thanks h2 { margin: 0 0 var(--rl-sp-2); font-size: var(--rl-fs-xl); }
+  .thanks p { color: var(--rl-ink-2); margin: 0 0 var(--rl-sp-3); }
+  .queued { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--rl-warn); color: var(--rl-ink); font-size: var(--rl-fs-s); font-weight: 600; }
+  .privacy { margin-top: var(--rl-sp-5); font-size: var(--rl-fs-s); color: var(--rl-mute); border-top: 1px solid var(--rl-line); padding-top: var(--rl-sp-3); }
+  .call { display: block; text-align: center; margin-top: var(--rl-sp-2); font-weight: 700; color: var(--rl-accent); text-decoration: none; padding: var(--rl-sp-3); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="card" id="card">
+    <div class="band">Zaginiona osoba - pomóż ją odnaleźć</div>
+    <div class="person">
+      <div class="avatar" id="avatar">?</div>
+      <div><h1 id="name">Wczytuję…</h1><div class="meta" id="meta"></div></div>
+    </div>
+    <div class="last" id="last"></div>
+    <div class="desc" id="desc"></div>
+    <div class="tips">Jeśli widzisz tę osobę teraz: zostań w pobliżu, nie goń jej, zadzwoń <b>112</b>, a potem wyślij zgłoszenie.</div>
+  </div>
+
+  <div id="intro">
+    <button class="primary" id="seen" type="button">Widziałem tę osobę</button>
+    <a class="call" href="tel:112">Zadzwoń 112</a>
+  </div>
+
+  <form id="form" hidden>
+    <section class="step">
+      <h2><span class="n">1</span>Gdzie?</h2>
+      <p class="hint">Dotknij mapy w miejscu, gdzie widziałeś tę osobę, albo użyj swojej lokalizacji.</p>
+      <div id="map"></div>
+      <button class="secondary" type="button" id="gps">Użyj mojej lokalizacji</button>
+      <div class="where" id="where">Nie wskazano miejsca.</div>
+    </section>
+    <section class="step">
+      <h2><span class="n">2</span>Kiedy?</h2>
+      <div class="chips" id="when">
+        <button type="button" class="chip" data-min="0" aria-pressed="true">teraz</button>
+        <button type="button" class="chip" data-min="15" aria-pressed="false">15 min temu</button>
+        <button type="button" class="chip" data-min="30" aria-pressed="false">30 min</button>
+        <button type="button" class="chip" data-min="60" aria-pressed="false">1 h</button>
+        <button type="button" class="chip" data-min="-1" aria-pressed="false">wcześniej</button>
+      </div>
+    </section>
+    <section class="step">
+      <h2><span class="n">3</span>Coś jeszcze? <small style="font-weight:400;color:var(--rl-mute)">(opcjonalnie)</small></h2>
+      <label for="text">Co widziałeś <small>- ubranie, w którą stronę szedł, z kim</small></label>
+      <textarea id="text" maxlength="220" placeholder="np. szedł w stronę klasztoru w Mogile, w kapciach, sam"></textarea>
+      <label for="phone">Twój telefon <small>- tylko jeśli możemy oddzwonić</small></label>
+      <input id="phone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="np. 600 100 200">
+    </section>
+    <button class="primary" id="send" type="submit">Wyślij zgłoszenie</button>
+    <div class="err" id="err"></div>
+  </form>
+
+  <div class="card thanks" id="thanks" hidden>
+    <div class="ok">✓</div>
+    <h2>Dziękujemy!</h2>
+    <p id="thanksMsg">Zgłoszenie trafiło do koordynatora poszukiwań. Twoja informacja od razu zmienia mapę, gdzie szukać.</p>
+    <p id="queuedMsg" hidden><span class="queued">Brak internetu - zgłoszenie czeka w telefonie i wyślemy je automatycznie.</span></p>
+    <button class="secondary" type="button" id="again">Wyślij kolejne zgłoszenie</button>
+  </div>
+
+  <p class="privacy"><b>Prywatność.</b> Ta strona nie śledzi Cię i nie używa ciasteczek reklamowych. Wysyłamy tylko to, co wpiszesz: miejsce, czas i opis (telefon tylko, jeśli go podasz). Lokalizacja jest pobierana jednorazowo, wyłącznie po kliknięciu przycisku. Wszystkie dane zgłoszeń i dane osoby zaginionej są usuwane po zakończeniu sprawy.</p>
+</main>
+
+<script type="module">
+  import * as maplibregl from "../vendor/maplibre-gl.mjs";
+  import { offlineStyle, loadBasemap, regionFor } from "../basemap/basemap.js";
+
+  const qs = new URLSearchParams(location.search);
+  const SCEN = qs.get("scenario") || "../../scenarios/krakow-nowa-huta.json";
+  const API = (qs.get("api") || location.origin).replace(/\/$/, "");
+  const $ = id => document.getElementById(id);
+  const QKEY = "rescue-seen-queue";
+  const store = {
+    get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  const pad = n => String(n).padStart(2, "0");
+  const hhmm = d => pad(d.getHours()) + ":" + pad(d.getMinutes());
+
+  // ---------- missing person card ----------
+  let sc = null;
+  try { sc = await (await fetch(SCEN)).json(); } catch (e) { console.warn("[seen] scenario not loaded", e); }
+  const s = sc?.subject || {};
+  const name = s.name || "Osoba zaginiona";
+  $("name").textContent = name;
+  $("avatar").textContent = name.split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "?";
+  $("meta").textContent = [s.age ? `${s.age} lat` : "", s.category === "dementia" ? "może być zdezorientowany" : ""].filter(Boolean).join(" · ");
+  const date = sc?.date ? sc.date.split("-").reverse().join(".") : "";
+  $("last").innerHTML = s.lastContact ? `Ostatnio widziany: <b>${date ? date + ", " : ""}ok. ${s.lastContact}</b>` : "";
+  $("desc").textContent = s.note || "";
+  document.title = `Widziałem - ${name}`;
+  const who = s.age >= 60 ? "starszą osobę" : "osobę";
+
+  // ---------- form state ----------
+  let pos = null, minAgo = 0, map = null, marker = null;
+  function setPos(lat, lon, src, acc) {
+    pos = { lat, lon, src, acc };
+    $("where").innerHTML = `Miejsce: <b>${lat.toFixed(5)}, ${lon.toFixed(5)}</b> ${src === "gps" ? "(Twoja lokalizacja" + (acc ? `, ±${Math.round(acc)} m` : "") + ")" : "(wskazane na mapie)"}`;
+    $("err").textContent = "";
+    if (map) {
+      if (!marker) { const el = document.createElement("div"); el.className = "pin"; marker = new maplibregl.Marker({ element: el, anchor: "bottom", offset: [0, -5] }); }
+      marker.setLngLat([lon, lat]).addTo(map);
+    }
+  }
+
+  async function initMap() {
+    if (map) return;
+    const bb = sc?.bbox || { south: 50.045, west: 19.995, north: 50.092, east: 20.075 };
+    const region = regionFor(bb);
+    let style;
+    if (region) {
+      try { await loadBasemap(maplibregl, region.file); style = offlineStyle({ file: region.file, mountain: false }); } catch (e) { console.warn("[seen] offline basemap failed", e); }
+    }
+    // No offline extract for this city yet: online OSM raster tiles (the public page is online anyway).
+    if (!style) style = { version: 8, sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, maxzoom: 19,
+      attribution: '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>' } }, layers: [{ id: "osm", type: "raster", source: "osm" }] };
+    const padD = 0.02;
+    map = new maplibregl.Map({ container: "map", style, bounds: [[bb.west, bb.south], [bb.east, bb.north]],
+      maxBounds: [[bb.west - padD, bb.south - padD], [bb.east + padD, bb.north + padD]], attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false });
+    map.touchZoomRotate.disableRotation();
+    map.on("click", e => setPos(e.lngLat.lat, e.lngLat.lng, "map"));
+    if (pos) setPos(pos.lat, pos.lon, pos.src, pos.acc);
+  }
+
+  $("seen").onclick = async () => {
+    $("intro").hidden = true; $("form").hidden = false;
+    $("form").scrollIntoView({ behavior: "smooth", block: "start" });
+    await initMap();
+  };
+  $("gps").onclick = () => {
+    if (!navigator.geolocation) { $("err").textContent = "Telefon nie udostępnia lokalizacji - wskaż miejsce na mapie."; return; }
+    $("gps").textContent = "Ustalam lokalizację…";
+    navigator.geolocation.getCurrentPosition(p => {
+      $("gps").textContent = "Użyj mojej lokalizacji";
+      setPos(p.coords.latitude, p.coords.longitude, "gps", p.coords.accuracy);
+      map?.easeTo({ center: [p.coords.longitude, p.coords.latitude], zoom: Math.max(map.getZoom(), 15) });
+    }, () => { $("gps").textContent = "Użyj mojej lokalizacji"; $("err").textContent = "Nie udało się pobrać lokalizacji - wskaż miejsce na mapie."; },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  };
+  for (const b of $("when").querySelectorAll(".chip")) b.onclick = () => {
+    for (const x of $("when").querySelectorAll(".chip")) x.setAttribute("aria-pressed", x === b ? "true" : "false");
+    minAgo = +b.dataset.min;
+  };
+
+  // ---------- text the existing report parser reads ----------
+  function compose() {
+    const now = new Date();
+    const at = minAgo > 0 ? hhmm(new Date(now - minAgo * 60000)) : hhmm(now);
+    const when = minAgo === 0 ? `teraz (${at})` : minAgo > 0 ? `ok. ${at}` : `wcześniej niż godzinę temu (przed ${hhmm(new Date(now - 3600000))})`;
+    const ll = `${pos.lat.toFixed(5)}, ${pos.lon.toFixed(5)}`;
+    const where = pos.src === "gps" ? `przy ${ll} (GPS ${ll}${pos.acc ? `, dokładność ${Math.round(pos.acc)} m` : ""})` : `przy ${ll} (wskazane na mapie)`;
+    const extra = $("text").value.trim().replace(/\s+/g, " ");
+    const phone = $("phone").value.trim().replace(/[^\d+ ]/g, "");
+    let text = `Mieszkaniec: widziałem ${who} podobną do zaginionego (${name.replace(/\s*\(.*\)/, "")}) ${when} ${where}.`;
+    if (extra) text += ` ${extra.replace(/[.!]*$/, ".")}`;
+    if (phone) text += ` Tel. do zgłaszającego: ${phone}.`;
+    return { text: text.slice(0, 480), at: minAgo >= 0 ? at : hhmm(new Date(now - 3600000)) };
+  }
+
+  // ---------- send: same contract as web/patrol (POST {API}/report, X-Rescue-* headers, offline queue) ----------
+  let clientId = store.get("rescue-client-id", null);
+  if (!clientId) { clientId = "citizen-" + Math.random().toString(36).slice(2, 10); store.set("rescue-client-id", clientId); }
+  const pinRaw = () => { try { return String(localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch { return ""; } };
+  const headers = () => {
+    const h = { "Content-Type": "application/json", "X-Rescue-Client": clientId, "X-Rescue-Team": "mieszkaniec", "X-Rescue-Source": "citizen" };
+    const pin = pinRaw(); if (pin) h["X-Rescue-Pin"] = pin;
+    return h;
+  };
+  async function post(text, at, id) {
+    const r = await fetch(API + "/report", { method: "POST", headers: headers(), body: JSON.stringify({ text, at, id: clientId + "-" + id }), signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+  let queue = store.get(QKEY, []);
+  async function flush() {
+    if (!queue.length) return;
+    for (const e of queue.slice()) {
+      try {
+        await post((e.text + ` (wysłane z opóźnieniem, zdarzenie o ${e.at})`).slice(0, 500), e.at, e.id);
+        queue = queue.filter(x => x.id !== e.id);
+      } catch { break; }
+    }
+    store.set(QKEY, queue);
+    if (!queue.length) $("queuedMsg").hidden = true;
+  }
+  setInterval(flush, 8000); flush();
+
+  $("form").onsubmit = async ev => {
+    ev.preventDefault();
+    if (!pos) { $("err").textContent = "Wskaż miejsce na mapie albo użyj swojej lokalizacji."; $("map").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    const { text, at } = compose();
+    const id = Date.now() + "-" + Math.random().toString(36).slice(2, 6);
+    $("send").disabled = true; $("send").textContent = "Wysyłam…";
+    let queued = false;
+    try { await post(text, at, id); }
+    catch (e) { queued = true; queue.push({ id, text, at }); store.set(QKEY, queue); }
+    $("send").disabled = false; $("send").textContent = "Wyślij zgłoszenie";
+    $("form").hidden = true; $("thanks").hidden = false; $("queuedMsg").hidden = !queued;
+    $("thanksMsg").textContent = queued ? "Zapisaliśmy Twoje zgłoszenie. Trafi do koordynatora poszukiwań, gdy tylko wróci internet." : "Zgłoszenie trafiło do koordynatora poszukiwań. Twoja informacja od razu zmienia mapę, gdzie szukać.";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  $("again").onclick = () => {
+    $("thanks").hidden = true; $("form").hidden = false; $("text").value = "";
+    pos = null; marker?.remove(); $("where").textContent = "Nie wskazano miejsca.";
+    map?.resize();
+  };
+</script>
+</body>
+</html>
