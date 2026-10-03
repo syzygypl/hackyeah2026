@@ -1545,42 +1545,109 @@ $('btn-diff').addEventListener('click', () => {
 $('btn-trees').addEventListener('click', () => { forest.visible = !forest.visible; $('btn-trees').classList.toggle('on', forest.visible); });
 
 // ---------- cinematic mode: letterbox, subtitles, scripted shots through the timeline ----------
-const CINE = { on: false, shot: null };
+// Every step is a shot with a pose(tau) -> camera position + look-at point: a slow orbit with a gentle dolly-in around the
+// step's subject, or a dolly along the trail for route steps (trip plan, car to trailhead). Between shots the camera flies
+// a cubic Hermite path from its current position and velocity to the next shot's first pose and velocity (no stop at the
+// cut, an arc over the ridges on long hops), on a longer lens (fov 32), inside the letterbox with a soft vignette.
+const CINE = { on: false, shot: null, vel: new THREE.Vector3(), tvel: new THREE.Vector3(), last: null, lastT: null, fov0: camera.fov };
+const CINE_FOV = 32, _cp = new THREE.Vector3(), _ct = new THREE.Vector3(), _cq = new THREE.Vector3(), _cs = new THREE.Vector3();
+const vignette = Object.assign(document.createElement('div'), { id: 'vignette' }); document.body.appendChild(vignette); // style3d.css, body.cinema only
 function shotTarget(i) {
   const e = EVENTS.find((x) => x.step === i);
-  const a = e && (isFound(e) ? e.point : anchorOf(e));
+  const a = e && (isFound(e) ? e.point || foundAt : anchorOf(e)); // the find: where its pin stands
   if (a && inside(a)) return v3(a[0], a[1]);
   const top = rankedOf(R.steps[i].segments)[0], g = segs.get(top.id);
   return v3(g.center[0], g.center[1]);
 }
 // keep the camera above the ground along its whole path (cinema shots fly low)
 const aboveGround = (v, clear = 0.35) => { v.y = Math.max(v.y, hAt(toLat(v.z), toLon(v.x)) + clear); return v; };
+const smoothT = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+// the trail a route step is about (inside the map, at least ~0.6 km long), as a curve on the ground
+function shotTrail(i) {
+  const e = EVENTS.find((x) => x.step === i), s = R.steps[i];
+  if (!e?.points || e.points.length < 2 || !(s.kind === 'route' || s.kind === 'containment' || e.provider === 'TripPlan' || e.provider === 'TrailheadCar')) return null;
+  const pts = densify(e.points.filter(inside), 0.08).map(([la, lo]) => v3(la, lo, 0.02));
+  if (pts.length < 3) return null;
+  const c = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+  return c.getLength() > 0.6 ? c : null;
+}
+// camera pose tau seconds into the shot's hold (both vectors written to out)
+function shotPose(sh, tau, pos, tgt) {
+  const k = smoothT(tau / sh.len);
+  if (sh.trail) {
+    const u = 0.04 + 0.88 * k, p = sh.trail.getPointAt(u), ahead = sh.trail.getPointAt(Math.min(1, u + 0.09));
+    const dir = _cq.subVectors(ahead, p).setY(0); if (dir.lengthSq() < 1e-8) dir.set(1, 0, 0); dir.normalize();
+    _cs.set(dir.z, 0, -dir.x); // the side of the trail the camera rides on, fixed per shot
+    pos.copy(p).addScaledVector(_cs, sh.side * 0.55).addScaledVector(dir, -0.75); pos.y += 0.5 + 0.1 * Math.sin(tau * 0.5);
+    tgt.lerpVectors(p, ahead, 0.7); tgt.y += 0.04;
+  } else {
+    const ang = sh.ang + tau * 0.055, d = sh.dist * (1 - 0.14 * k); // slow orbit with a dolly-in
+    tgt.copy(sh.t); tgt.y += sh.lift + 0.03 * k; // close shots aim between the spot and its pin head
+    pos.set(sh.t.x + Math.cos(ang) * d, sh.t.y + d * (0.42 - 0.06 * k) + 0.25, sh.t.z + Math.sin(ang) * d);
+  }
+  return aboveGround(pos, 0.45);
+}
+const hermite = (out, p0, v0, p1, v1, u, T) => {
+  const u2 = u * u, u3 = u2 * u, a = 2 * u3 - 3 * u2 + 1, b = (u3 - 2 * u2 + u) * T, c = -2 * u3 + 3 * u2, d = (u3 - u2) * T;
+  return out.set(p0.x * a + v0.x * b + p1.x * c + v1.x * d, p0.y * a + v0.y * b + p1.y * c + v1.y * d, p0.z * a + v0.z * b + p1.z * c + v1.z * d);
+};
+// how much of the sight line from the camera to the subject the terrain hides (0 = clear)
+function blockedView(pos, tgt) {
+  let n = 0;
+  for (let k = 1; k < 16; k++) { const f = k / 16, x = pos.x + (tgt.x - pos.x) * f, y = pos.y + (tgt.y - pos.y) * f, z = pos.z + (tgt.z - pos.z) * f; if (hAt(toLat(z), toLon(x)) > y - 0.015) n++; }
+  return n;
+}
 function cineShot(i) {
   setStep(i);
-  const s = R.steps[i], t = shotTarget(i), ang = i * 1.1 + 0.6, dist = s.kind === 'rings' || s.kind === 'route' ? 4.2 : s.kind === 'point' ? 1.4 : 2.4;
-  const pos = t.clone().add(new THREE.Vector3(Math.cos(ang) * dist, dist * 0.42 + 0.25, Math.sin(ang) * dist));
-  aboveGround(pos, 0.45);
-  fly = { t: 0, dur: 2.6, p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: t };
-  CINE.shot = { i, until: performance.now() + (s.kind === 'point' ? 9000 : 5200), ang, dist, t };
+  const s = R.steps[i], t = shotTarget(i), trail = shotTrail(i), close = s.kind === 'point' || s.kind === 'found';
+  const dist = (s.kind === 'rings' || s.kind === 'route' ? 4.2 : close ? 1.4 : 2.4) * 1.2; // longer lens: further back
+  const sh = { i, t, trail, ang: i * 1.1 + 0.6, dist, lift: close ? 0.2 : 0, side: i % 2 ? 1 : -1, len: close ? 9 : trail ? 8 : 5.2, tau: 0 };
+  // orbit start: the default angle, or the nearest of 8 around it from which the ridges do not hide the subject
+  if (!trail) {
+    const a0 = sh.ang, P = new THREE.Vector3(), T = new THREE.Vector3(); let best = Infinity, bestA = a0;
+    for (const da of [0, 0.785, -0.785, 1.571, -1.571, 2.356, -2.356, 3.142]) {
+      sh.ang = a0 + da; const b = blockedView(shotPose(sh, 0, P, T), T) + blockedView(shotPose(sh, sh.len, P, T), T);
+      if (b < best) { best = b; bestA = sh.ang; } if (!b) break;
+    }
+    sh.ang = bestA;
+  }
+  // transition: Hermite from the current camera (position, velocity) to the hold's first pose and velocity
+  const p1 = new THREE.Vector3(), t1 = new THREE.Vector3(), tb = new THREE.Vector3(); shotPose(sh, 0, p1, t1);
+  const v1 = shotPose(sh, 0.1, new THREE.Vector3(), tb).sub(p1).multiplyScalar(10), tv1 = tb.sub(t1).multiplyScalar(10);
+  const hop = camera.position.distanceTo(p1), dur = clamp(2.2 + hop * 0.18, 2.4, 4.5);
+  const f = { u: 0, dur, p0: camera.position.clone(), v0: CINE.vel.clone().clampLength(0, hop / dur), p1, v1, t0: controls.target.clone(), tv0: CINE.tvel.clone().clampLength(0, 1), t1, tv1, arc: 0 };
+  // arc: just enough lift (as a parabola in u) to clear the ridges the straight path would cut
+  for (let u = 0.1; u < 0.95; u += 0.1) { hermite(_cp, f.p0, f.v0, f.p1, f.v1, u, dur); f.arc = Math.max(f.arc, (hAt(toLat(_cp.z), toLon(_cp.x)) + 0.4 - _cp.y) / (4 * u * (1 - u))); }
+  f.arc = Math.min(f.arc, 2.5); sh.fly = f;
+  CINE.shot = sh; fly = null;
   $('caption').innerHTML = `<b>${esc(s.t)}</b> ${esc(s.label)}`;
 }
 function cinema(on) {
   CINE.on = on; document.body.classList.toggle('cinema', on); $('btn-cine').classList.toggle('on', on);
   toParent({ type: 'cinema', on }); // /app hides its floating panels while Kino runs
-  if (on) { CINE.prevRot = autoRot; cineShot(Q.has('step') ? STEP : 0); }
+  if (on) { CINE.prevRot = autoRot; CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null; cineShot(Q.has('step') ? STEP : 0); }
   else { CINE.shot = null; overview(1.6); }
 }
 $('btn-cine').addEventListener('click', () => cinema(!CINE.on));
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && CINE.on) cinema(false); });
 function cineTick(dt) {
+  // lens: ease to the longer focal length in Kino and back afterwards
+  const fovTo = CINE.on ? CINE_FOV : CINE.fov0;
+  if (Math.abs(camera.fov - fovTo) > 0.02) { camera.fov += (fovTo - camera.fov) * (1 - Math.exp(-dt * 1.5)); camera.updateProjectionMatrix(); }
   const sh = CINE.shot; if (!CINE.on || !sh || fly) return;
-  // slow dolly around the subject between cuts
-  sh.ang += dt * 0.09;
-  const pos = sh.t.clone().add(new THREE.Vector3(Math.cos(sh.ang) * sh.dist, sh.dist * 0.42 + 0.25, Math.sin(sh.ang) * sh.dist));
-  aboveGround(pos, 0.45);
-  camera.position.lerp(pos, 1 - Math.exp(-dt * 2)); controls.target.lerp(sh.t, 1 - Math.exp(-dt * 2));
-  camera.lookAt(controls.target);
-  if (performance.now() > sh.until) {
+  if (sh.fly) {
+    const f = sh.fly; f.u = Math.min(1, f.u + dt / f.dur);
+    hermite(_cp, f.p0, f.v0, f.p1, f.v1, f.u, f.dur); _cp.y += f.arc * 4 * f.u * (1 - f.u); // arc over the ridges on long hops
+    hermite(_ct, f.t0, f.tv0, f.t1, f.tv1, f.u, f.dur);
+    if (f.u >= 1) sh.fly = null;
+  } else {
+    sh.tau += dt; shotPose(sh, sh.tau, _cp, _ct);
+  }
+  aboveGround(_cp, 0.3);
+  camera.position.copy(_cp); controls.target.copy(_ct); camera.lookAt(_ct);
+  if (CINE.last && dt > 0) { CINE.vel.lerp(_cq.subVectors(_cp, CINE.last).divideScalar(dt), 0.3); CINE.tvel.lerp(_cq.subVectors(_ct, CINE.lastT).divideScalar(dt), 0.3); }
+  CINE.last = (CINE.last || new THREE.Vector3()).copy(_cp); CINE.lastT = (CINE.lastT || new THREE.Vector3()).copy(_ct);
+  if (!sh.fly && sh.tau > sh.len) {
     if (sh.i < R.steps.length - 1) cineShot(sh.i + 1);
     else { CINE.shot = null; $('caption').innerHTML = ''; overview(4); setTimeout(() => CINE.on && cinema(false), 4500); }
   }
@@ -1936,7 +2003,7 @@ function frame() {
 }
 
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));

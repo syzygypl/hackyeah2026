@@ -183,6 +183,10 @@ body.hiding #scene canvas { cursor: crosshair; }
 #bars i { position: fixed; left: 0; right: 0; height: 0; background: #0b0d10; z-index: 8; transition: height 0.9s cubic-bezier(.2, .8, .2, 1); }
 #bars i:first-child { top: 0; } #bars i:last-child { bottom: 0; }
 body.cinema #bars i { height: 9vh; }
+/* Kino vignette: inside the letterbox only (the bars stay pure black), darker corners and a faint top/bottom falloff */
+#vignette { position: fixed; left: 0; right: 0; top: 9vh; bottom: 9vh; z-index: 7; pointer-events: none; opacity: 0; transition: opacity 1.4s ease;
+  background: radial-gradient(ellipse 72% 78% at 50% 52%, transparent 52%, rgba(6, 8, 12, 0.5) 100%), linear-gradient(rgba(6, 8, 12, 0.22), transparent 18%, transparent 80%, rgba(6, 8, 12, 0.26)); }
+body.cinema #vignette { opacity: 1; }
 body.cinema .panel, body.cinema #feed, body.cinema #hud .btn:not(#btn-cine) { opacity: 0; pointer-events: none; }
 body.cinema #hud { z-index: 9; bottom: calc(9vh + 12px); }
 .panel, #feed, #hud .btn { transition: opacity 0.6s; }
