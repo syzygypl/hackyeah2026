@@ -20,14 +20,15 @@ func hintJSON(_ h: LocationHint, _ f: [Double]) -> [String: Any] {
     case let .searched(ids, pod): g = ["segments": ids, "pod": pod]
     case let .containment(p, r, f): g = ["points": p.map(ll), "radius": r, "factor": f]
     case let .weather(b): g = ["boost": b]
-    case .terrainFeatures, .terrainCost: break
+    case .terrainFeatures, .terrainCost, .difficulty: break
+    case let .conditions(c): g = ["visibilityM": c.visibilityM, "windMs": c.windMs]
     }
     if let m = h.marker { g["marker"] = ll(m) }
     d["geo"] = g
     return d
 }
 
-func renderHTML(scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], summary: [String: Any]) -> String {
+func renderHTML(scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], summary: [String: Any]) -> String {
     let data: [String: Any] = [
         "incident": s.incident, "date": s.date,
         "subject": ["name": s.subject.name, "age": s.subject.age, "category": s.subject.category, "note": s.subject.note],
@@ -41,6 +42,11 @@ func renderHTML(scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHin
         "huts": s.terrain.huts.map { ["name": $0.name, "at": $0.at] },
         "hints": zip(hints, grid.layers).map { hintJSON($0, $1.factor) },
         "summary": summary,
+        "resBases": Dictionary(uniqueKeysWithValues: SearchPlanner.resources(s).map { ($0.id, $0.base) }),
+        "difficulty": grid.difficulty.map(\.rawValue),
+        "diffLabels": ProbabilityGrid.Difficulty.allCases.map(\.label),
+        "plans": plans.map { ["weather": weatherJSON($0), "resources": $0.resources.map(resourceJSON),
+                              "assignments": $0.assignments.map(assignmentJSON)] },
     ]
     let json = String(data: try! JSONSerialization.data(withJSONObject: data), encoding: .utf8)!
     return template.replacingOccurrences(of: "__DATA__", with: json)
@@ -86,23 +92,44 @@ button{background:var(--hot);color:#fff;border:0;border-radius:6px;padding:8px 1
 #banner{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:999;background:var(--warn);color:#000;padding:8px 14px;border-radius:8px;font-weight:700;display:none}
 .lbl{background:rgba(15,20,24,.85);color:#fff;border:1px solid #fff;border-radius:4px;padding:1px 5px;font-size:11px;white-space:nowrap;font-weight:600}
 .lbl.top{background:var(--hot);border-color:var(--hot)}
+.pix{image-rendering:pixelated}
+.lbl.team{background:#1e6fd9;border-color:#1e6fd9}
 .lbl.empty{background:#334;color:#cde;border-color:#667}
 small{color:var(--mute)}
+.team{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px}
+.team.off{opacity:.6;border-style:dashed}
+.team .hd{display:flex;justify-content:space-between;gap:6px;font-weight:600}
+.pill{font-size:11px;padding:1px 6px;border-radius:9px;background:var(--ok);color:#000;white-space:nowrap}
+.pill.off{background:#c0392b;color:#fff}
+.team .as{margin-top:4px}.team .why{color:var(--mute);font-size:12px}
+.flag{color:#ff8a65;font-size:12px;font-weight:600}
+.surv{border:1px solid #c0392b;border-radius:8px;padding:8px;margin:6px 0;font-size:13px}
+#wx{display:flex;gap:2px;height:14px;margin-bottom:4px}
+#wx div{flex:1;border-radius:2px;cursor:pointer}
+#wx div.cur{outline:2px solid #fff}
+#wxnow{font-size:12px;color:var(--mute);white-space:nowrap}
+footer .tl{flex:1;display:flex;flex-direction:column}
+.legend span{display:inline-block;width:10px;height:10px;margin-right:4px;border-radius:2px;vertical-align:middle}
+.legend{font-size:12px;color:var(--mute);margin:6px 0}
 @media (max-width:900px){#app{grid-template-columns:1fr;grid-template-rows:auto 50vh auto auto auto;height:auto}header,footer{grid-column:1}#map{height:50vh}}
 </style>
 </head>
 <body>
 <div id="app">
 <header><h1>Rescue Locator</h1><span class="sub" id="inc"></span></header>
-<div id="left"><h2>Strumień wskazówek (moduły)</h2><div id="cards"></div>
+<div id="left"><h2>Warstwy</h2>
+<label><input type="checkbox" id="diffT"> Trudność terenu (dla ratowników)</label><div class="legend" id="legend"></div>
+<h2>Strumień wskazówek (moduły)</h2><div id="cards"></div>
 <small>Odznacz kartę, żeby zobaczyć, co wnosi dana warstwa. Wszystkie dane fikcyjne.</small></div>
 <div id="map"></div>
 <div id="right"><h2>Gdzie szukać najpierw</h2>
 <div class="value"><div class="big" id="vbig"></div><div id="vsub"></div></div>
 <div id="segs"></div>
+<h2>Przydział zespołów</h2><div id="surv" class="surv"></div><div id="teams"></div>
+<small>Prędkości, POD i progi pogodowe ilustracyjne, nie procedury TOPR/GOPR.</small>
 <h2>Backtest (fikcyjne miejsce odnalezienia)</h2><div id="bt"></div>
 <h2>Osoba</h2><div id="subj"></div></div>
-<footer><button id="play">Odtwórz</button><span id="clock"></span><input type="range" id="slider" min="1" step="1"><span id="stepinfo"></span></footer>
+<footer><button id="play">Odtwórz</button><span id="clock"></span><div class="tl"><div id="wx"></div><input type="range" id="slider" min="1" step="1"></div><div><div id="stepinfo"></div><div id="wxnow"></div></div></footer>
 </div>
 <div id="banner"></div>
 <script>
@@ -126,6 +153,15 @@ L.control.layers({'OpenTopoMap':topo,'OpenStreetMap':osm}).addTo(map);
 const cv = document.createElement('canvas'); cv.width=D.cols; cv.height=D.rows;
 const ctx = cv.getContext('2d');
 const heat = L.imageOverlay(cv.toDataURL(), [[S,W],[Nn,E]], {opacity:0.75}).addTo(map);
+
+// terrain difficulty overlay
+const DCOL=[[200,60,40,0],[120,200,90,90],[20,110,40,170],[160,160,160,170],[230,170,40,190],[120,30,140,220],[40,120,220,0]];
+const dcv=document.createElement('canvas'); dcv.width=D.cols; dcv.height=D.rows;
+{const dctx=dcv.getContext('2d'); const im=dctx.createImageData(D.cols,D.rows); D.difficulty.forEach((k,i)=>im.data.set(DCOL[k],i*4)); dctx.putImageData(im,0,0);}
+const diffLayer=L.imageOverlay(dcv.toDataURL(),[[S,W],[Nn,E]],{opacity:.7,className:'pix'});
+document.getElementById('diffT').onchange=e=>{e.target.checked?diffLayer.addTo(map):map.removeLayer(diffLayer);};
+document.getElementById('legend').innerHTML=D.diffLabels.map((l,k)=>k===0||k===6?'':`<span style="background:rgba(${DCOL[k].slice(0,3)},.9)"></span>${l}`).join(' ');
+const assignLayer=L.layerGroup().addTo(map);
 
 // terrain lines
 const terr = L.layerGroup().addTo(map);
@@ -217,17 +253,47 @@ function render(){
     L.marker([c[0]/c[2],c[1]/c[2]],{icon:L.divIcon({className:'',html:`<div class="${cls}">${txt}</div>`})}).bindTooltip(s.name).addTo(segLabels);});
   ev.clearLayers(); for(let k=0;k<step;k++) if(!disabled.has(H[k].id)) drawEvidence(H[k]);
   H.forEach((h,i)=>{const el=document.getElementById('card'+i); el.classList.toggle('on',i<step); el.classList.toggle('new',i===step-1);});
+  renderTeams(top);
   document.getElementById('clock').textContent=H[step-1].clock;
   document.getElementById('stepinfo').textContent=`${step}/${H.length}: ${H[step-1].title}`;
   const b=document.getElementById('banner');
   if(H[step-1].kind==='point'){b.textContent='Ratunek: pozycja GPS w segmencie, który mapa wskazała przed pingiem';b.style.display='block';}
+  else if(H[step-1].kind==='conditions'&&D.plans[step-1].resources.some(r=>!r.available&&r.type==='drone'&&r.reason.includes('uziemiony'))){b.textContent='Pogoda: dron uziemiony, plan zespołów przeliczony';b.style.display='block';}
   else if(H[step-1].kind==='searched'){b.textContent='Segment przeszukany, nic nie znaleziono: prawdopodobieństwo przepływa dalej';b.style.display='block';}
   else b.style.display='none';
 }
 
+// teams / allocation for the current step (computed in Swift with ALL layers on; toggles do not change it)
+const TYPEN={ground:'patrol',dog:'pies',drone:'dron',heli:'śmigłowiec'};
+function renderTeams(){
+  const P=D.plans[step-1], w=P.weather;
+  document.getElementById('surv').innerHTML=`<b>Zegar hipotermii:</b> ${w.survival.text}`;
+  const byRes={}; P.assignments.forEach(a=>byRes[a.resourceId]=a);
+  document.getElementById('teams').innerHTML=P.resources.map(r=>{const a=byRes[r.id];
+    return `<div class="team ${r.available?'':'off'}"><div class="hd"><span>${r.name}</span><span class="pill ${r.available?'':'off'}">${r.available?(a?'przydział':'wolny'):'niedostępny'}</span></div>
+    ${r.available?'':`<div class="why">${r.reason}</div>`}
+    ${a?`<div class="as">-> <b>${a.segmentId} ${a.segmentName}</b>: ETA ${Math.round(a.travelMin)} min, przeszukanie ${Math.round(a.sweepMin)} min, szansa odnalezienia <b>${(a.expectedFind*100).toFixed(0)}%</b></div><div class="why">${a.reason}</div>${a.safety.map(f=>`<div class="flag">! ${f}</div>`).join('')}`:''}</div>`}).join('');
+  assignLayer.clearLayers();
+  P.assignments.forEach(a=>{const si=D.segments.findIndex(x=>x.id===a.segmentId), c=segCenter[si], b=D.resBases[a.resourceId]; if(!c||!b) return;
+    const to=[c[0]/c[2],c[1]/c[2]];
+    L.polyline([b,to],{color:'#1e6fd9',weight:2,dashArray:'6 6'}).addTo(assignLayer);
+    L.marker([to[0]-0.0012,to[1]],{icon:L.divIcon({className:'',html:`<div class="lbl team">${TYPEN[P.resources.find(r=>r.id===a.resourceId).type]} ${Math.round(a.travelMin)} min</div>`})}).addTo(assignLayer);});
+  const wx=P.weather;
+  document.getElementById('wxnow').textContent=`widz. ${wx.visibilityM>=10000?'dobra':wx.visibilityM+' m'} · wiatr ${wx.windMs} m/s · ${wx.tempC}°C${wx.precip!=='none'?' · '+(wx.precip==='rain'?'deszcz':'śnieg'):''}${wx.dark?' · noc':''}${wx.ice?' · lód':''}`;
+  [...document.getElementById('wx').children].forEach((d,i)=>d.classList.toggle('cur',i===step-1));
+}
+{const wx=document.getElementById('wx');
+ D.plans.forEach((p,i)=>{const w=p.weather, d=document.createElement('div');
+  const col=w.windMs>12?'#c0392b':w.visibilityM<200?'#8a96a3':w.dark?'#1f2a5a':'#3ec28f';
+  d.style.background=w.dark&&w.windMs<=12&&w.visibilityM<200?'linear-gradient(#8a96a3,#1f2a5a)':col;
+  d.title=`${H[i].clock}: widz. ${w.visibilityM} m, wiatr ${w.windMs} m/s, ${w.tempC}°C${w.dark?', noc':''}${w.ice?', lód':''}`;
+  d.onclick=()=>{step=i+1; slider.value=step; render();};
+  wx.appendChild(d);});}
+
 // backtest
 const sm=D.summary;
-document.getElementById('bt').innerHTML=`Przed pingiem Ratunek (${H[sm.beforePing].clock}): segment z miejscem odnalezienia (${sm.truthSeg}) na pozycji <b>#${sm.rankFused}</b> po fuzji vs <b>#${sm.rankRings}</b> w samych pierścieniach Koestera.<br>Obszar do przeszukania do trafienia: <b>${(sm.areaFused*100).toFixed(1)}%</b> vs ${(sm.areaRings*100).toFixed(1)}%.`;
+document.getElementById('bt').innerHTML=`Przed pingiem Ratunek (${H[sm.beforePing].clock}): segment z miejscem odnalezienia (${sm.truthSeg}) na pozycji <b>#${sm.rankFused}</b> po fuzji vs <b>#${sm.rankRings}</b> w samych pierścieniach Koestera.<br>Obszar do przeszukania do trafienia: <b>${(sm.areaFused*100).toFixed(1)}%</b> vs ${(sm.areaRings*100).toFixed(1)}%.<br>Przydział zespołów (symulacja od ${H[sm.beforePing].clock}): szansa odnalezienia po 2 h <b>${(sm.pos2hPlanned*100).toFixed(0)}%</b> vs ${(sm.pos2hNaive*100).toFixed(0)}% przy "największe POA najpierw"; 40% szansy po <b>${fmtM(sm.t40Planned)}</b> vs ${fmtM(sm.t40Naive)}.`;
+function fmtM(m){return m<0?'> 6 h':`${Math.floor(m/60)} h ${String(Math.round(m%60)).padStart(2,'0')} min`;}
 
 const slider=document.getElementById('slider'); slider.max=H.length; slider.value=step;
 slider.oninput=()=>{step=+slider.value; render();};

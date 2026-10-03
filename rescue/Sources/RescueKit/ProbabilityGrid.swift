@@ -13,6 +13,15 @@ public final class ProbabilityGrid {
     // Precomputed terrain distances (metres)
     let dTrail: [Double], dStream: [Double], dRidge: [Double], dHut: [Double]
     let inLake: [Bool]
+    /// Terrain difficulty class per cell (searcher speed / POD and victim mobility).
+    public let difficulty: [Difficulty]
+
+    public enum Difficulty: Int, CaseIterable, Sendable {
+        case trail, meadow, dwarfPine, scree, slab, cliff, water
+        public var label: String {
+            ["szlak", "hala / trawy", "kosodrzewina", "piarg", "płyty / eksponowane", "ściana", "woda"][rawValue]
+        }
+    }
 
     public init(_ s: Scenario) {
         scenario = s
@@ -41,6 +50,30 @@ public final class ProbabilityGrid {
         dRidge = c.map { p in ridges.map { Geo.toLine(p, $0) }.min() ?? .infinity }
         dHut = c.map { p in huts.map { Geo.meters(p, $0) }.min() ?? .infinity }
         inLake = c.map { p in t.lakes.contains { Geo.meters(p, Coord($0.center)) < $0.radiusM } }
+        // Difficulty: slope from terrain file if present, else proxy from distance to ridge (hardcoded terrain).
+        // Priority: OSM feature types (cliff/arete, scree, scrub) > optional DEM slope > ridge-distance proxy.
+        func near(_ lines: [Scenario.Named]?, _ m: Double) -> [Bool] {
+            guard let ls = lines, !ls.isEmpty else { return [Bool](repeating: false, count: c.count) }
+            let pl = ls.map { $0.points.map(Coord.init) }
+            return c.map { p in pl.contains { Geo.toLine(p, $0) < m } }
+        }
+        let nearCliff = near(t.cliffs, 60), nearScree = near(t.scree, 60), nearPine = near(t.dwarfPine, 80)
+        var diff: [Difficulty] = []
+        for i in 0..<c.count {
+            let dT = dTrail[i], dR = dRidge[i]
+            if inLake[i] && dT > 80 { diff.append(.water); continue }
+            if dT < 60 { diff.append(.trail); continue }
+            if nearCliff[i] { diff.append(.cliff); continue }
+            if nearScree[i] { diff.append(.scree); continue }
+            if nearPine[i] { diff.append(.dwarfPine); continue }
+            if let slope = t.slopeDeg, slope.count == c.count {
+                let sl = slope[i]
+                diff.append(sl > 45 ? .cliff : sl > 35 ? .slab : sl > 28 ? .scree : sl > 15 && c[i].lat > 49.225 ? .dwarfPine : .meadow)
+            } else {
+                diff.append(dR < 120 ? .cliff : dR < 250 ? .slab : dR < 450 ? .scree : dR > 1000 ? .dwarfPine : .meadow)
+            }
+        }
+        difficulty = diff
         segmentOf = c.map { p in
             seeds.indices.min { Geo.meters(p, seeds[$0]) < Geo.meters(p, seeds[$1]) }!
         }
@@ -102,6 +135,15 @@ public final class ProbabilityGrid {
             return centers.map { Geo.toLine($0, points) < r ? f : 1 }
         case let .weather(boost):
             return (0..<n).map { i in 1 + boost * exp(-min(dTrail[i], dStream[i]) / 150) }
+        case .difficulty:
+            return (0..<n).map { i in
+                let base: Double = [1, 1, 0.8, 0.9, 0.5, 0.2, 1][difficulty[i].rawValue]
+                // fall line: gullies and streams right below steep ground collect people who slipped
+                let gully = dStream[i] < 120 && dRidge[i] < 600 ? 1.5 : 1
+                return base * gully
+            }
+        case .conditions:
+            return [Double](repeating: 1, count: n)
         }
     }
 

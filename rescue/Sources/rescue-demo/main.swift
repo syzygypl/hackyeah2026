@@ -40,13 +40,21 @@ arrived.sort { ($0.minute, order.firstIndex(of: $0.source) ?? 0, $0.id) < ($1.mi
 
 struct Snap { let segs: [ProbabilityGrid.SegmentScore]; let poa: [Double] }
 var snaps: [Snap] = []
+var plans: [SearchPlanner.Plan] = []
+var conditions = LocationHint.Conditions()
 for h in arrived {
     grid.add(h)
+    if case let .conditions(c) = h.evidence { conditions = c }
     let poa = grid.poa()
     let segs = grid.segments(poa)
     snaps.append(Snap(segs: segs, poa: poa))
-    print("[\(h.clock)] \(h.source.padding(toLength: 16, withPad: " ", startingAt: 0)) \(h.title)")
+    let plan = SearchPlanner.plan(grid: grid, poa: poa, conditions: conditions, minute: h.minute)
+    plans.append(plan)
+    print("[\(h.clock)] \(h.source.padding(toLength: 17, withPad: " ", startingAt: 0)) \(h.title)")
     print("        top3: \(top3Line(segs))")
+    let grounded = plan.resources.filter { !$0.available }.map { "\($0.id): \($0.reason)" }
+    let assigned = plan.assignments.map { "\($0.resourceId)->\($0.segmentId) \(Int($0.travelMin))min \(pct($0.expectedFind))" }
+    print("        plan: \(assigned.joined(separator: ", "))\(grounded.isEmpty ? "" : " | niedostępne: " + grounded.joined(separator: "; "))")
 }
 
 // Value numbers, measured just BEFORE the Ratunek ping (what the search leader had on the paper map)
@@ -73,6 +81,18 @@ print("  2. \(fused[1].id) \(fused[1].name): \(pct(fused[1].poa)) in \(pct(fused
 print("  3. \(fused[2].id) \(fused[2].name): \(pct(fused[2].poa)) in \(pct(fused[2].areaFrac)) area")
 print("Backtest (fictional find spot in \(truthSeg)): segment rank \(rankFused) fused vs \(rankRings) with plain Koester rings.")
 print("Area swept in POA order before reaching the find spot: \(String(format: "%.1f", areaFused * 100))% fused vs \(String(format: "%.1f", areaRings * 100))% rings only.")
+// Search allocation value: terrain+weather-aware plan vs naive "biggest POA first", same teams, same physics
+let planC = plans[beforePing].conditions
+let smartCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: true)
+let naiveCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: false)
+let t50s = SearchPlanner.timeTo(0.5, smartCurve), t50n = SearchPlanner.timeTo(0.5, naiveCurve)
+let pos2s = SearchPlanner.posAt(120, smartCurve), pos2n = SearchPlanner.posAt(120, naiveCurve)
+func hm(_ m: Double?) -> String { m.map { String(format: "%d h %02d min", Int($0) / 60, Int($0) % 60) } ?? "> 6 h" }
+print("Allocation (from \(arrived[beforePing].clock), \(plans[beforePing].survival.text)):")
+print("  time to 50% chance of find: \(hm(t50s)) planned vs \(hm(t50n)) naive (biggest POA first)")
+print("  chance of find after 2 h: \(pct(pos2s)) planned vs \(pct(pos2n)) naive")
+for target in [0.2, 0.3, 0.4] { print("  time to \(pct(target)): \(hm(SearchPlanner.timeTo(target, smartCurve))) planned vs \(hm(SearchPlanner.timeTo(target, naiveCurve))) naive") }
+print("  after 1 h / 3 h: \(pct(SearchPlanner.posAt(60, smartCurve)))/\(pct(SearchPlanner.posAt(180, smartCurve))) planned vs \(pct(SearchPlanner.posAt(60, naiveCurve)))/\(pct(SearchPlanner.posAt(180, naiveCurve))) naive")
 let finalTop = snaps.last!.segs[0]
 print("After Ratunek ping: \(finalTop.id) \(finalTop.name) \(pct(finalTop.poa)).")
 
@@ -82,10 +102,17 @@ try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: t
 let summary: [String: Any] = [
     "top3poa": top3poa, "top3area": top3area, "rankFused": rankFused, "rankRings": rankRings,
     "areaFused": areaFused, "areaRings": areaRings, "truthSeg": truthSeg, "beforePing": beforePing,
+    "t40Planned": SearchPlanner.timeTo(0.4, smartCurve) ?? -1, "t40Naive": SearchPlanner.timeTo(0.4, naiveCurve) ?? -1,
+    "t50Planned": t50s ?? -1, "t50Naive": t50n ?? -1, "pos2hPlanned": pos2s, "pos2hNaive": pos2n,
+    "curvePlanned": smartCurve.map { [$0.0, $0.1] }, "curveNaive": naiveCurve.map { [$0.0, $0.1] },
 ]
-try writeRunJSON(to: out.appendingPathComponent("run.json"), scenario: scenario, grid: grid, hints: arrived, summary: summary)
-let html = renderHTML(scenario: scenario, grid: grid, hints: arrived, summary: summary)
-let file = out.appendingPathComponent("index.html")
+// default scenario -> out/index.html + out/run.json; others -> out/<name>.html + out/<name>.run.json
+let scenName = URL(fileURLWithPath: scenarioPath).deletingPathExtension().lastPathComponent
+let isDefault = scenName == "zawrat"
+let file = out.appendingPathComponent(isDefault ? "index.html" : "\(scenName).html")
+let runFile = out.appendingPathComponent(isDefault ? "run.json" : "\(scenName).run.json")
+try writeRunJSON(to: runFile, scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
+let html = renderHTML(scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
 try html.write(to: file, atomically: true, encoding: .utf8)
 print("\nWrote \(file.path)  (open it in a browser)")
-print("Wrote \(out.appendingPathComponent("run.json").path)  (machine-readable contract)")
+print("Wrote \(runFile.path)  (machine-readable contract)")

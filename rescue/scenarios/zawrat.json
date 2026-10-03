@@ -6,7 +6,8 @@
   "name": "Tomasz W. (osoba fikcyjna)",
   "age": 58,
   "category": "hiker",
-  "note": "Turysta pieszy, sam, średnia kondycja. Zgłoszenie od żony o 17:40: nie wrócił z jednodniowej wycieczki."
+  "note": "Turysta pieszy, sam, średnia kondycja. Zgłoszenie od żony o 17:40: nie wrócił z jednodniowej wycieczki.",
+  "lastContact": "14:12"
  },
  "bbox": {
   "south": 49.195,
@@ -636,6 +637,24 @@
    ]
   },
   {
+   "provider": "TerrainDifficulty",
+   "at": "17:40",
+   "title": "Trudność terenu: szlak / hala / kosodrzewina / piarg / płyty / ściana",
+   "detail": "Ofiara rzadko zostaje na ścianie, częściej w żlebie pod nią. Ratownicy: prędkość i POD zależne od klasy terenu."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "17:40",
+   "title": "Warunki: mgła 80 m, wiatr 6 m/s, +2°C",
+   "detail": "Mgła w kotle Pięciu Stawów. Śmigłowiec nie poleci (próg ilustracyjny 500 m).",
+   "visibilityM": 80,
+   "windMs": 6,
+   "tempC": 2,
+   "precip": "none",
+   "dark": false,
+   "ice": false
+  },
+  {
    "provider": "TripPlan",
    "at": "17:46",
    "title": "Plan od żony: na Zawrat i z powrotem",
@@ -733,6 +752,15 @@
    "factor": 1.2
   },
   {
+   "provider": "WeatherConditions",
+   "at": "18:30",
+   "title": "Zmrok, 0°C, oblodzenie w rejonie Zawratu",
+   "detail": "Po zachodzie słońca. Lód na płytach i łańcuchach pod Zawratem: teren eksponowany tylko z asekuracją.",
+   "tempC": 0,
+   "dark": true,
+   "ice": true
+  },
+  {
    "provider": "SegmentSearched",
    "at": "18:40",
    "title": "Zespół B wszedł Roztoką: S1 i S2, nic",
@@ -775,6 +803,16 @@
    "pod": 0.6
   },
   {
+   "provider": "WeatherConditions",
+   "at": "19:45",
+   "title": "Wiatr 14 m/s rozwiewa mgłę, mżawka",
+   "detail": "Widzialność 1500 m. Dron uziemiony (>12 m/s), śmigłowiec może lecieć w nocy z NVG (progi ilustracyjne).",
+   "visibilityM": 1500,
+   "windMs": 14,
+   "tempC": -1,
+   "precip": "rain"
+  },
+  {
    "provider": "RatunekPing",
    "at": "20:05",
    "title": "Ratunek: ping GPS, dokładność 25 m",
@@ -784,6 +822,58 @@
     20.0228
    ],
    "radiusM": 25
+  }
+ ],
+ "resources": [
+  {
+   "id": "topr-a",
+   "name": "Patrol TOPR A (4 os.)",
+   "type": "ground",
+   "base": [
+    49.2133,
+    20.049
+   ],
+   "readyAt": "18:40"
+  },
+  {
+   "id": "topr-b",
+   "name": "Patrol TOPR B (dyżurka Murowaniec)",
+   "type": "ground",
+   "base": [
+    49.244,
+    20.008
+   ],
+   "readyAt": "19:10"
+  },
+  {
+   "id": "dog",
+   "name": "Zespół z psem (doszedł z patrolem A)",
+   "type": "dog",
+   "base": [
+    49.2133,
+    20.049
+   ],
+   "readyAt": "19:15"
+  },
+  {
+   "id": "drone",
+   "name": "Dron termowizyjny",
+   "type": "drone",
+   "base": [
+    49.2133,
+    20.049
+   ],
+   "readyAt": "19:05"
+  },
+  {
+   "id": "heli",
+   "name": "Śmigłowiec TOPR",
+   "type": "heli",
+   "base": [
+    49.293,
+    19.964
+   ],
+   "readyAt": "17:50"
   }
  ]
 }

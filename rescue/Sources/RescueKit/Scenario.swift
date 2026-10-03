@@ -7,6 +7,7 @@ public struct Scenario: Codable, Sendable {
         public let age: Int
         public let category: String
         public let note: String
+        public var lastContact: String? = nil   // "HH:mm", for the hypothermia clock
     }
     public struct BBox: Codable, Sendable {
         public let south: Double, west: Double, north: Double, east: Double
@@ -30,6 +31,21 @@ public struct Scenario: Codable, Sendable {
         public let ridges: [Named]
         public let lakes: [Lake]
         public let huts: [Spot]
+        /// Optional slope in degrees per cell, row-major (row 0 = north), same rows x cols as the grid.
+        public var slopeDeg: [Double]? = nil
+        /// Optional OSM natural=cliff / arete lines or polygon rings ([lat, lon] points).
+        public var cliffs: [Named]? = nil
+        /// Optional OSM natural=scree areas (ring points).
+        public var scree: [Named]? = nil
+        /// Optional OSM natural=scrub (kosodrzewina) areas (ring points).
+        public var dwarfPine: [Named]? = nil
+    }
+    public struct Resource: Codable, Sendable {
+        public let id: String
+        public let name: String
+        public let type: String        // ground | dog | drone | heli
+        public let base: [Double]      // [lat, lon] where it starts
+        public let readyAt: String     // "HH:mm" scenario clock
     }
     public struct Segment: Codable, Sendable {
         public let id: String
@@ -48,6 +64,13 @@ public struct Scenario: Codable, Sendable {
         public var pod: Double?
         public var quantilesKm: [Double]?
         public var factor: Double?
+        // WeatherConditions fields
+        public var visibilityM: Double?
+        public var windMs: Double?
+        public var tempC: Double?
+        public var precip: String?     // none | rain | snow
+        public var dark: Bool?
+        public var ice: Bool?
     }
 
     public let incident: String
@@ -61,6 +84,7 @@ public struct Scenario: Codable, Sendable {
     public let segments: [Segment]
     public let truth: Spot           // used ONLY for the backtest number, never fed to the grid
     public let events: [Event]
+    public var resources: [Resource]? = nil
 
     public static func load(_ path: String) throws -> Scenario {
         let data = try Data(contentsOf: URL(fileURLWithPath: path))

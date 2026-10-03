@@ -22,6 +22,21 @@ public struct LocationHint: Sendable {
         case containment(points: [Coord], radiusM: Double, factor: Double)
         /// Fog / night: people stop near linear features.
         case weather(linearBoost: Double)
+        /// Terrain difficulty, victim side: people rarely stay on cliffs/slabs, unless fallen into gullies below.
+        case difficulty
+        /// Weather conditions for the SEARCH (POD, resource gates, survival clock). No spatial effect on POA.
+        case conditions(Conditions)
+    }
+
+    public struct Conditions: Sendable, Codable {
+        public var visibilityM: Double = 10_000
+        public var windMs: Double = 3
+        public var tempC: Double = 10
+        public var precip: String = "none"
+        public var dark: Bool = false
+        public var ice: Bool = false
+        public var note: String = ""
+        public init() {}
     }
 
     public let id: String
@@ -45,6 +60,8 @@ public struct LocationHint: Sendable {
         case .searched: "searched"
         case .containment: "containment"
         case .weather: "weather"
+        case .difficulty: "difficulty"
+        case .conditions: "conditions"
         }
     }
 }

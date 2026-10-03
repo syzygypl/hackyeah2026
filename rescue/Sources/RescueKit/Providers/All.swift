@@ -2,6 +2,8 @@
 public func allProviders(_ s: Scenario) -> [any HintProvider] {
     [
         TerrainProvider(s),
+        TerrainDifficultyProvider(s),
+        WeatherConditionsProvider(s),
         KoesterRingsProvider(s),
         TripPlanProvider(s),
         TrailheadCarProvider(s),

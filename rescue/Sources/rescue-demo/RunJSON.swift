@@ -2,7 +2,7 @@ import Foundation
 import RescueKit
 
 /// Contract output rescue/out/run.json (schema in README "Contracts"). Keep field names stable.
-func writeRunJSON(to url: URL, scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], summary: [String: Any]) throws {
+func writeRunJSON(to url: URL, scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], summary: [String: Any]) throws {
     let n = grid.count
     // Segment polygons: convex hull of member cell corners (nearest-seed regions are convex), [lon, lat] closed ring.
     let latStep = (s.bbox.north - s.bbox.south) / Double(grid.rows)
@@ -38,6 +38,9 @@ func writeRunJSON(to url: URL, scenario s: Scenario, grid: ProbabilityGrid, hint
             "t": h.clock, "minute": h.minute, "label": h.title, "source": h.source, "kind": h.kind,
             "hintId": h.id,
             "hintsActive": hints.prefix(k).map(\.id),
+            "weather": weatherJSON(plans[k - 1]),
+            "resources": plans[k - 1].resources.map(resourceJSON),
+            "assignments": plans[k - 1].assignments.map(assignmentJSON),
             "poaGrid": poa.map(r4g),
             "segments": segs.map { sc -> [String: Any] in
                 let idx = s.segments.firstIndex { $0.id == sc.id }!
@@ -52,9 +55,28 @@ func writeRunJSON(to url: URL, scenario s: Scenario, grid: ProbabilityGrid, hint
         "cellM": s.cellM, "rows": grid.rows, "cols": grid.cols,
         "ipp": ["name": s.ipp.name, "lat": s.ipp.at[0], "lon": s.ipp.at[1]],
         "segOf": grid.segmentOf.map { s.segments[$0].id },
+        "difficulty": grid.difficulty.map(\.rawValue),
+        "difficultyClasses": ProbabilityGrid.Difficulty.allCases.map { ["id": $0.rawValue, "key": "\($0)", "label": $0.label] },
         "steps": steps,
         "value": summary,
     ]
     let data = try JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])
     try data.write(to: url)
+}
+
+func weatherJSON(_ p: SearchPlanner.Plan) -> [String: Any] {
+    let c = p.conditions
+    return ["visibilityM": c.visibilityM, "windMs": c.windMs, "tempC": c.tempC, "precip": c.precip,
+            "dark": c.dark, "ice": c.ice, "note": c.note,
+            "survival": ["hoursOut": (p.survival.hoursOut * 10).rounded() / 10, "level": p.survival.level, "text": p.survival.text]]
+}
+func resourceJSON(_ r: SearchPlanner.ResourceStatus) -> [String: Any] {
+    ["id": r.id, "name": r.name, "type": r.type, "available": r.available, "reason": r.reason]
+}
+func assignmentJSON(_ a: SearchPlanner.Assignment) -> [String: Any] {
+    func r(_ x: Double) -> Double { (x * 1000).rounded() / 1000 }
+    return ["resourceId": a.resourceId, "segmentId": a.segmentId, "segmentName": a.segmentName,
+            "travelMin": r(a.travelMin), "sweepMin": r(a.sweepMin), "etaMin": r(a.travelMin),
+            "poa": r(a.poa), "pod": r(a.pod), "expectedFind": r(a.expectedFind), "ratePerHour": r(a.ratePerHour),
+            "reason": a.reason, "safety": a.safety]
 }
