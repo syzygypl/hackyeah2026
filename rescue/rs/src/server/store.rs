@@ -224,7 +224,9 @@ impl NeonStore {
             return None;
         }
         let client = reqwest::Client::builder().timeout(Duration::from_secs(20)).build().ok()?;
-        Some(NeonStore { url: format!("https://{host}/sql"), host, conn: database_url.to_string(), client })
+        // test hook: RESCUE_NEON_HTTP=http://127.0.0.1:PORT/sql points the store at a local Neon-compatible endpoint
+        let url = std::env::var("RESCUE_NEON_HTTP").unwrap_or_else(|_| format!("https://{host}/sql"));
+        Some(NeonStore { url, host, conn: database_url.to_string(), client })
     }
 
     pub async fn sql(&self, query: &str, params: Vec<Value>) -> Result<Vec<Map<String, Value>>, String> {
