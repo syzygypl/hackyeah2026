@@ -347,7 +347,7 @@ export function createChat(root, host, opts = {}) {
   const log = root.querySelector(".ch-log"), ta = root.querySelector("textarea"), chips = root.querySelector(".ch-chips");
   const scroll = () => { log.scrollTop = log.scrollHeight; };
   const say = (html, who = "bot", cls = "") => { const d = document.createElement("div"); d.className = `ch-msg ${who} ${cls}`; d.innerHTML = html; log.appendChild(d); scroll(); return d; };
-  root.querySelector("form").onsubmit = (e) => { e.preventDefault(); const t = ta.value.trim(); if (!t) return; ta.value = ""; onText(t); };
+  root.querySelector("form").onsubmit = (e) => { e.preventDefault(); const t = ta.value.trim(); ta.value = ""; onText(t); };
   ta.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); root.querySelector("form").requestSubmit(); } };
   function renderChips() {
     const ex = EXAMPLES[host.scenario()] || EX_GENERIC;
@@ -369,7 +369,14 @@ export function createChat(root, host, opts = {}) {
     for (const d of done) for (const e of d.events || []) if (e.provider === "WeatherConditions") L = e;
     return L || {};
   }
+  // safe failure: whatever the parser or the card does with a message, the run and the action view stay as they were
   async function onText(t) {
+    t = String(t ?? "").trim();
+    if (!t) { say(`Napisz, co się stało - np. „widziałem go o 15:10 przy Wielkim Stawie” albo kliknij przykład poniżej.`, "bot", "empty"); return; }
+    try { await onText1(t.slice(0, 500)); }
+    catch (e) { draft = null; console.warn("czat:", e); say(`Nie udało się odczytać tej wiadomości - mapa i akcja bez zmian. Spróbuj prościej: <i>co</i>, <i>gdzie</i>, <i>kiedy</i>.`, "bot", "fail"); }
+  }
+  async function onText1(t) {
     say(esc(t), "me");
     await ensureCtx();
     const c = { ...ctx, clock: host.clock() }; c.lastWeather = lastWeather(c.clock);

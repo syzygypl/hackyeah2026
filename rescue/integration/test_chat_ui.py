@@ -8,6 +8,7 @@ Walks the chat like a user, 4 example messages each:
   1. /app Historia: message -> confirmation card (mini map) -> "Dodaj (symulacja)" -> new top 3 + moves; the shell shows the
      what-if run (store.runUrl is a blob:); "Cofnij" on the last one.
   2. /app Na żywo (own server only, loopback = no key): sighting -> POST /api/clue -> top 3 -> "Cofnij" (clue weight 0).
+  0. Safe failure: an incomprehensible, an empty and an absurd entry -> a chat message, no card, run and view unchanged.
   3. czat.html (casual view): "Widziałem kogoś" -> asks where -> "przy Wielkim Stawie" -> card -> Dodaj -> top 3.
 Fails on any uncaught page exception. Screenshots: czat-*.jpg into --shots when given.
 """
@@ -93,6 +94,17 @@ def main():
         c.call("Page.navigate", {"url": f"{base}/app/?sc=zawrat&role=operator&time=hist&mode=akcja&view=2d&chat=1"})
         check("app + chat loaded", c.until("!!(window.rescueChat && window.rescueStore && window.rescueStore.run && document.querySelector('.ch-chip'))", 60))
         c.until("document.getElementById('frame2d').contentWindow.document.body.dataset.state==='ready'", 40)
+        # safe failure: an incomprehensible, an empty and an absurd entry leave the run and the view untouched
+        c.js("window.__chk = window.rescueStore.run; window.__chkUrl = window.rescueStore.runUrl")
+        n0 = c.js(N_CARD) or 0
+        c.js("window.rescueChat.chat.onText('asdf qwerty zzz')")
+        check("garbage -> message, no card", c.until("[...document.querySelectorAll('.ch-msg.bot')].some(e=>e.textContent.includes('Nie rozpoznałem'))", 10) and (c.js(N_CARD) or 0) == n0)
+        c.js("window.rescueChat.chat.onText('')")
+        check("empty -> hint, no card", c.until("!!document.querySelector('.ch-msg.empty')", 10) and (c.js(N_CARD) or 0) == n0)
+        c.js("window.rescueChat.chat.onText('x'.repeat(5000) + ' 99:99 S999 ' + '%'.repeat(200))")
+        time.sleep(1)
+        check("absurd entry -> no card", (c.js(N_CARD) or 0) == n0)
+        check("run and view unchanged", c.js("window.rescueStore.run === window.__chk && window.rescueStore.runUrl === window.__chkUrl"))
         for i, m in enumerate(MSGS, 1):
             card, res = send(c, m)
             check(f"H{i} card", "zaznaczę" in card or "Oznaczę" in card or "pogody" in card, card.replace("\n", " | ")[:200])
