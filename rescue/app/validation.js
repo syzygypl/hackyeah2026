@@ -10,12 +10,13 @@ const METHODS = [["engine", "Silnik", "var(--rl-accent)"], ["expert", "Ekspert",
 async function getJSON(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status + " " + u); return r.json(); }
 async function getText(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status + " " + u); return r.text(); }
 
-let ablation;
+let ablation, detailsOpen = false;
 export async function showValidation() {
   const el = document.getElementById("val");
   if (ablation === undefined) { try { ablation = await getJSON("/eval/ablation.json"); } catch (e) { ablation = null; } }
   await showMain(el);
-  if (ablation && ablation.length) el.insertAdjacentHTML("afterbegin", renderAblation(ablation));
+  const btn = el.querySelector("#val-details-toggle");
+  if (btn) btn.onclick = () => { detailsOpen = !detailsOpen; showValidation(); };
 }
 // rescue/eval/ablation.json (AI Marcina, ablation.py): blind rounds, engine vs expert vs naive vs what happened
 function renderAblation(A) {
@@ -30,8 +31,19 @@ function renderAblation(A) {
   <div class="help">Niżej = lepiej. Segment # = miejsce prawdziwego segmentu w rankingu metody. Źródło: rescue/eval/ablation.json.</div></div>`;
 }
 async function showMain(el) {
-  if (!loaded) { try { loaded = await getJSON("/eval/calibration/results.json"); } catch (e) { loaded = { missing: e.message }; } }
-  if (!loaded.missing) { el.innerHTML = renderResults(loaded); return; }
+  if (!loaded) {
+    try { loaded = await getJSON("/eval/calibration/results.json"); }
+    catch (e) {
+      try { loaded = await getJSON("/eval/calibration/results-water.json"); loaded.water = true; }
+      catch (e2) { loaded = { missing: e.message }; }
+    }
+  }
+  if (!loaded.missing) {
+    el.innerHTML = renderSummary(loaded) +
+      `<p class="row"><button id="val-details-toggle">${detailsOpen ? "Ukryj szczegóły" : "Szczegóły"}</button></p>` +
+      (detailsOpen ? (ablation && ablation.length ? renderAblation(ablation) : "") + renderResults(loaded) : "");
+    return;
+  }
   // no calibration yet: show the simulator runs (manifest + run.json)
   if (!simRuns) { try { simRuns = await getJSON("/eval/sim-runs"); } catch (e) { simRuns = []; } }
   const head = `<h2>Walidacja silnika</h2><div class="vcard note" style="margin-bottom:10px">Wyniki kalibracji jeszcze się liczą. Na razie pokazujemy przypadki z symulatora.</div>`;
@@ -63,6 +75,26 @@ function renderSim(r, run, rows) {
   <div class="vgrid">${bars(countBy(rows, "category"), "Kategorie")}${bars(countBy(rows, "behaviour"), "Zachowanie po zgubieniu się")}${bars(countBy(rows, "stop_reason"), "Powód zatrzymania")}</div>
   <div class="vcard" style="margin-top:12px"><h3>Przypadki</h3><table class="cases"><tr><th>przypadek</th><th>kategoria</th><th>zachowanie</th><th>zatrzymanie</th><th>km od IPP</th><th>odejście od trasy m</th><th>112</th><th>mylące</th></tr>
   ${rows.slice(0, 300).map((x) => `<tr><td>${esc(x.case)}</td><td>${esc(x.category)}</td><td>${esc(x.behaviour)}</td><td>${esc(x.stop_reason)}</td><td>${esc(x.dist_km_from_ipp)}</td><td>${esc(x.track_offset_m)}</td><td>${esc(x.has_bts)}</td><td>${esc(x.misleading_clues)}</td></tr>`).join("")}</table></div>`;
+}
+
+// Default Walidacja view: one card, one headline number, one chart. Full breakdown (per-round
+// ablation, top-k/calibration/Brier charts, per-category tables, case list) is behind "Szczegóły".
+function renderSummary(d) {
+  const M = d.methods || {}, ms = METHODS.filter(([k]) => M[k]);
+  const e = M.engine, n = M.naive;
+  const eArea = e && e.areaToFind ? e.areaToFind.median : null;
+  const nArea = n && n.areaToFind ? n.areaToFind.median : null;
+  const factor = eArea && nArea && eArea > 0 ? nArea / eArea : null;
+  const scope = d.water ? "akcje na wodzie" : (d.region ? "góry, " + d.region : "symulowane przypadki");
+  return `<div class="vcard" style="text-align:center;padding:24px 16px">
+    <div class="help">${esc(scope)} · N=${esc(d.n ?? "-")}${d.generated ? " · " + esc(d.generated) : ""}</div>
+    <div style="font-size:40px;font-weight:700;margin:4px 0">${factor != null ? num(factor, 1) + "x" : "-"}</div>
+    <div>${factor != null
+      ? "mniejszy obszar do przeszukania niż szukanie od zgłoszenia (IPP/LKP)"
+      : "za mało danych na porównanie"}</div>
+    ${eArea != null && nArea != null ? `<div class="help" style="margin-top:4px">mediana obszaru do znalezienia: silnik ${num(eArea, 1)}% vs naiwnie ${num(nArea, 1)}%</div>` : ""}
+  </div>
+  <div class="vcard" style="margin-top:10px"><h3>Obszar przeszukany do znalezienia</h3>${histChart(ms, M)}${legend(ms)}</div>`;
 }
 
 function renderResults(d) {
