@@ -276,9 +276,84 @@ The hall Wi-Fi at Tauron Arena carries thousands of hackers, CTF players among t
   The server prints the LAN URLs, the PIN and a warning.
 - **How clients send the PIN:** HTTP header `X-Rescue-Pin: 4821` (preferred, allowed by CORS), or a JSON body field `"pin": "4821"`. Compared in constant time. Loopback clients (pages opened on the laptop itself) need no PIN.
   The patrol view (`web/patrol/`) and `out/field.html` must add the header to their `fetch` calls when talking to a LAN address, e.g. `headers: { "Content-Type": "application/json", "X-Rescue-Pin": pin }`, with the PIN typed once on the phone and kept in `localStorage`. Never put the PIN in the URL (it ends up in history). `out/field.html` does this: a PIN box appears only when the page is not on loopback.
-- What a wrong or missing PIN gets: `401`, logged to stderr as `[guard] <time> 401 <ip> <method> <path>`. Nothing is written to `out/live-events.json`. Without a PIN only `GET /`, `GET /field.html`, `GET /health` and CORS preflight answer.
+- What a wrong or missing PIN gets: `401`, logged to stderr as `[guard] <time> 401 <ip> <method> <path>`. Nothing is written to `out/live-events.json`. Without a PIN only `GET /`, `GET /field.html`, `GET /ops.html`, `GET /health` and CORS preflight answer (`GET /metrics` too, but only from loopback).
 - `POST /report` limits (`rescue-field`): body over 4 KB -> `413`; text over 500 characters -> `413`; content type other than `application/json` / `text/plain` -> `415`; more than 10 reports per minute from one LAN IP -> `429`. Loopback is not rate limited.
 - The same guard (`Sources/RescueKit/ServerGuard.swift`) is used by every local server we add; mutating endpoints always need the PIN on LAN.
 - Testing the PIN rules on one machine: `RESCUE_GUARD_STRICT=1` makes loopback clients behave like LAN clients.
 - After the demo: stop the server (Ctrl-C). Never leave it bound to `0.0.0.0`.
 
+
+## Monitoring
+
+"Which team reported, and when?" Every local server exposes Prometheus metrics; `out/ops.html` shows them offline, and Prometheus + Grafana (Docker) add history and alerts.
+
+- `GET /metrics` on `rescue-field` (:8770) and `rescue-studio` (:8771), Prometheus text format, written by hand in `Sources/RescueKit/Metrics.swift` (no dependencies). Loopback scrapes need no PIN (even with `RESCUE_GUARD_STRICT=1`); a LAN client needs `X-Rescue-Pin`.
+- Metrics (prefix `rescue_`): `reports_received_total{source,team,parsed_by="llm|rules|browser"}`, `report_parse_seconds` histogram `{parsed_by}`, `reports_rejected_total{reason="pin|size|type|rate"}`, `client_last_report_timestamp_seconds{client_id,team}`, `client_reports_total{client_id,team}`, `live_events_total`, `llm_up` (Ollama `/api/tags` probed every 30 s), `llm_requests_total{model,result="ok|error|off"}`, `story_events_total{module}` (studio), `http_requests_total{path,code}` (unknown paths are `other`), `build_info{version}`, `silent_threshold_seconds`, `server_time_seconds`.
+- Who is a client: header `X-Rescue-Client` (a random id the page keeps in `localStorage`), team from `X-Rescue-Team`, source from `X-Rescue-Source`. Without the header the id is `ip-` + an 8-hex hash of the IP. **Raw IPs never go into labels.** Label values are cut to `[a-z0-9._:-]`, 40 chars; at most 200 client ids, then `overflow`.
+- `parsed_by="browser"`: `field.html` counts reports it parsed with in-browser rules while the server was down and sends the count to `POST /client-event` once the server is back.
+- Env: `RESCUE_SILENT_SECONDS` (default 600 = a team is "silent" after 10 min), `RESCUE_VERSION`, `RESCUE_LIVE_FILE` (alternative live-events file, used by the demo), `RESCUE_RATE_PER_MIN` (default 10).
+
+### Built-in, no Docker: `out/ops.html`
+
+```sh
+swift run rescue-field serve       # then open http://127.0.0.1:8770/ops.html  (also linked from field.html as "monitoring")
+```
+
+Polls `/metrics` every 5 s, no CDN: teams in contact vs silent ("ostatni meldunek X min temu", red "CISZA" past the threshold), reports/min sparkline, LLM vs rules share, parse latency p50/p95, rejects by reason, alert banners with the same rules as `alerts.yml`. On a phone (LAN) it asks for the PIN like `field.html`.
+
+### Prometheus + Grafana (Docker)
+
+```sh
+cd rescue/monitoring
+docker compose up -d          # Grafana http://127.0.0.1:3000 (anonymous viewer; dashboard "Rescue Locator - Teren"), Prometheus http://127.0.0.1:9090
+docker compose down           # after the demo
+```
+
+- `prom/prometheus:v3.15.0` and `grafana/grafana-oss:12.4.3`, ports bound to `127.0.0.1` only. Prometheus scrapes `host.docker.internal:8770` (field), `:8771` (studio), `:8772` (demo.py) every 5 s.
+- Alerts (`alerts.yml`, see Prometheus /alerts): `ClientSilent` (reported in the last 2 h, now quiet longer than `rescue_silent_threshold_seconds`), `FieldServerDown`, `LLMDown` (= parsing fell back to rules), `RejectSpike` (> 5 rejected requests/min = possible attack on the PIN), `ReportBurst` (> 20 reports/min).
+- Dashboard: reports/min by team, last-report age per client (red > 10 min), LLM vs rules share, parse p50/p95, rejects by reason, LLM up timeline, firing alerts, HTTP by path/code.
+- **Offline:** the images are ~110 MB (Prometheus) and ~290 MB (Grafana) compressed. Pull them **before going into the mountains / before the hall Wi-Fi**: `cd rescue/monitoring && docker compose pull`. Without Docker, `out/ops.html` covers the same questions.
+- Grafana admin password: `GRAFANA_ADMIN_PASSWORD` env (local only, never commit it).
+
+### Patrol view (`web/patrol/`, AI Michała): snippet to add
+
+So the monitoring sees each phone as one client with its team, change the `/report` fetch in `web/patrol/index.html` (`post()`, around line 158) to send three headers:
+
+```js
+// once, next to the other store keys
+const CKEY = "rescue-client";
+let clientId = store.get(CKEY, null);
+if (!clientId) { clientId = "patrol-" + (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)).slice(0, 8); store.set(CKEY, clientId); }
+
+// in post(text, at)
+const r = await fetch(API + "/report", { method: "POST",
+  headers: { "Content-Type": "application/json", "X-Rescue-Client": clientId, "X-Rescue-Team": team || "", "X-Rescue-Source": "patrol" },
+  body: JSON.stringify({ text, at }), signal: AbortSignal.timeout(20000) });
+```
+
+Both servers allow these headers in CORS. Over the LAN the PIN header (`X-Rescue-Pin`) is still needed, see [Demo-day network](#demo-day-network).
+
+### Monitoring demo
+
+`monitoring/demo.py` (stdlib only) starts `rescue-field` on **:8772** (loopback only, never touches a real server on :8770, writes a temp live-events file), then plays a story: three phones `topr-a`, `topr-b`, `dog` send realistic Polish reports, `dog` goes silent, and an attacker tries 40 wrong PINs. `RESCUE_GUARD_STRICT=1` + `--pin` make the laptop's own clients behave like phones on the hotspot, so the attacker hits the real PIN guard.
+
+```sh
+python3 rescue/monitoring/demo.py --fast      # ~60 s, silent threshold 20 s (pitch video)
+python3 rescue/monitoring/demo.py             # ~3 min, silent threshold 60 s
+#   --rules  force rules parsing (no Ollama)   --exit  stop the server at the end   --port N
+open http://127.0.0.1:8772/ops.html
+```
+
+60-second demo path (`--fast`):
+1. 0-5 s: start the script, open `ops.html` next to the terminal. "Zespoły w terenie 0", waiting.
+2. 5-30 s: three teams report; the table fills with `topr-a`, `topr-b`, `dog`, "ostatni meldunek 3 s temu", the sparkline rises, the LLM/rules pill shows which parser is working.
+3. ~30 s: the terminal says "dog: ZESPÓŁ MILKNIE". ~20 s later the `dog` row turns red, "CISZA", and a banner: "Cisza: dog (psy) - ostatni meldunek 21 s temu". Line: *"in the field it is 10 minutes; the commander knows before anyone asks on the radio."*
+4. ~40 s: the attacker. 40 wrong PINs in 7 s: the "zły PIN" bar jumps, banner "Skok odrzuceń: 40 / min - możliwy atak na serwer". Terminal: `{401: 40}`, nothing entered the map.
+5. ~60 s: patrols finish. With Docker up, switch to Grafana: same story with history, Prometheus alerts `ClientSilent` and `RejectSpike` firing.
+
+Shot list for the pitch agent:
+- A: split screen, terminal (demo.py) left, `ops.html` right, full 60 s, no cuts.
+- B: close-up of the client table when `dog` turns red ("ostatni meldunek ... temu", "CISZA").
+- C: close-up of the rejects card and the "możliwy atak" banner, then terminal `{401: 40}`.
+- D (if Docker): Grafana "Rescue Locator - Teren" dashboard, then Prometheus `/alerts` with `ClientSilent` + `RejectSpike` firing.
+- E: phone on the hotspot: `field.html` with the "monitoring" link -> `ops.html` asking for the PIN.
