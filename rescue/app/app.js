@@ -1216,3 +1216,70 @@ subs.push((why) => {
   if (why === "load" || store.minute == null || liveOn() || store.minute < tlLo(T) || store.minute > T.endMinute) store.minute = Math.max(tlLo(T), Math.min(T.endMinute, S ? S.minute : tlLo(T)));
   tlSlider(); tlPostTime(); renderDock(); renderPanels();
 });
+// ---------- clue weights (wagi śladów, CONTRACT.md "Clue weights"): one block, decorates the Sygnały cards (#events) and the
+// "Na żywo" feed (#liveFeed) after they render - a small bar + number per clue, hover = "dlaczego ta waga", operator stepper
+// (−/+ 0,1) and "auto" (POST /api/clue/weight). Data: run.clueWeights (live moment) and steps[k].clueWeights (per step, Historia).
+(() => {
+  const pl = (x) => (+x).toFixed(2).replace(".", ",");
+  const list = () => (D() && D().clueWeights) || [];
+  const byHint = (id) => list().find((c) => c.hintId === id);
+  // weight at the current step in Historia (decay over time); Na żywo = the live moment
+  const wAt = (c) => { const m = !liveOn() && curStep() && curStep().clueWeights; return m && m[c.hintId] != null ? m[c.hintId] : c.weight; };
+  const canEdit = () => liveNow() && store.role !== "ratownik";
+  function tip(c) {
+    return [`Waga ${pl(wAt(c))} - ${c.typeLabel}, ${c.sourceLabel}`, ...(c.why || []),
+      `= ${pl(c.factors.reliability)} × ${pl(c.factors.accuracy)} × ${pl(c.factors.recency)} × ${pl(c.factors.corroboration)}${c.override != null ? " → ręcznie " + pl(c.override) : ""}`].join("\n");
+  }
+  function chip(c) {
+    const w = wAt(c), ed = canEdit() && c.id;
+    return `<div class="cw${c.applied ? "" : " info"}${c.override != null ? " man" : ""}" data-cw="${esc(c.id)}" title="${esc(tip(c))}">`
+      + `<span class="cwl">waga</span><i class="cwb"><i style="width:${Math.round(w * 100)}%"></i></i><b>${pl(w)}</b>`
+      + (c.override != null ? `<span class="cwm">ręcznie</span>` : c.applied ? "" : `<span class="cwm">info</span>`)
+      + (ed ? `<button type="button" data-d="-0.1" title="Mniejsza waga (operator)">−</button><button type="button" data-d="0.1" title="Większa waga (operator)">+</button>`
+        + (c.override != null ? `<button type="button" data-auto="1" title="Wróć do wagi wyliczonej">auto</button>` : "") : "") + `</div>`;
+  }
+  async function setW(c, w) {
+    try {
+      await api("/api/clue/weight", { sc: store.scenario, clueId: c.id, weight: w, by: "operator", title: c.typeLabel });
+      toast(w == null ? "Waga śladu: auto - przeliczam mapę" : `Waga śladu ${pl(w)} - przeliczam mapę`); pollLive();
+    } catch (e) { toast("Nie zmieniono wagi. " + plErr(e), 4000); }
+  }
+  function wire(root) {
+    root.querySelectorAll(".cw").forEach((el) => {
+      el.onclick = (e) => {
+        e.stopPropagation();
+        const b = e.target.closest("button"), c = list().find((x) => x.id === el.dataset.cw); if (!b || !c || !canEdit()) return;
+        if (b.dataset.auto) return setW(c, null);
+        setW(c, Math.max(0, Math.min(1, Math.round((wAt(c) + +b.dataset.d) * 10) / 10)));
+      };
+    });
+  }
+  function decorate() {
+    const R = D(); if (!R || !R.steps || !list().length) return;
+    const ev = $("events");
+    if (ev) {
+      for (const card of ev.querySelectorAll(".ev[data-step]")) {
+        if (card.querySelector(".cw")) continue;
+        const s = R.steps[+card.dataset.step - 1], c = s && byHint(s.hintId); if (!c) continue;
+        card.insertAdjacentHTML("beforeend", chip(c));
+      }
+      wire(ev);
+    }
+    const fe = $("liveFeed");
+    if (fe) {
+      const evs = live.events.slice(-8).reverse();
+      [...fe.querySelectorAll(".lfi")].forEach((row, k) => {
+        const e = evs[k]; if (!e) return;
+        const m = row.querySelector(".mute"); if (e.kind === "weight" && m) m.textContent = "waga";
+        if (row.querySelector(".cw") || (e.kind !== "clue" && e.kind !== "report")) return;
+        const c = e.kind === "clue" && e.lat != null ? list().find((x) => x.live && x.lat != null && Math.abs(x.lat - e.lat) < 1e-5 && Math.abs(x.lon - e.lon) < 1e-5)
+          : list().find((x) => x.live && x.lat != null && String(e.note || "").includes(x.lat.toFixed(4)));
+        if (c) row.insertAdjacentHTML("beforeend", chip(c));
+      });
+      wire(fe);
+    }
+  }
+  const mo = new MutationObserver(() => decorate());
+  for (const id of ["events", "liveFeed"]) if ($(id)) mo.observe($(id), { childList: true });
+  decorate();
+})();

@@ -372,6 +372,18 @@
     const active = M.hints.filter((h) => h.k <= step && !S.disabled.has(h.id));
     const searched = searchedState(step);
     let weather = null;
+    // clue weights (CONTRACT.md "Clue weights"): weighted clue markers sized / faded by the weight at this step
+    const cwm = (M.R.steps[step] && M.R.steps[step].clueWeights) || {};
+    for (const c of M.R.clueWeights || []) {
+      const w = cwm[c.hintId], h = M.hints.find((x) => x.id === c.hintId);
+      if (w == null || c.negative || c.lat == null || c.type === 'bts' || !h || h.k > step || S.disabled.has(h.id)) continue;
+      const col = c.override != null ? '#3ee08f' : c.applied ? '#f2b134' : '#b9c9da';
+      f.push(poly(circle(c.lat, c.lon, Math.max(c.radiusM || 150, 60)), { color: col, width: 1 + 2 * w, opacity: 0.3 + 0.65 * w, dash: c.applied ? 0 : 1, fill: col, fillOpacity: 0.03 + 0.15 * w }));
+      const d = Math.round(6 + 12 * w);
+      chips.push({ key: 'cw:' + c.id, at: [c.lon, c.lat], cls: 'chip cw' + (c.applied ? '' : ' info') + (c.override != null ? ' man' : ''),
+        html: `<i class="cwd" style="width:${d}px;height:${d}px;opacity:${(0.35 + 0.65 * w).toFixed(2)}"></i>${esc(c.typeLabel)} ${nf(w, 2)}`,
+        title: `Waga ${nf(w, 2)}: ${c.title}\n${(c.why || []).join('\n')}` });
+    }
     for (const h of active) {
       const e = h.ev || {};
       if (h.kind === 'rings' && e.point && e.quantilesKm) {
@@ -389,7 +401,7 @@
         if (e.points) f.push(line(e.points.map(ll), { color: '#c3cbd3', width: 14, opacity: 0.28, dash: 0 }));
         if (e.point) chips.push({ key: 'car', at: ll(e.point), cls: 'chip car', html: 'Auto', title: h.label });
       }
-      if (h.kind === 'sector' && e.point && e.radiusM) {
+      if (h.kind === 'sector' && e.point && e.radiusM && !(h.source === 'Clue' && cwm[h.id] != null)) {   // weighted clues: drawn below
         f.push(poly(circle(e.point[0], e.point[1], e.radiusM), { color: '#b98cff', width: 2.2, opacity: 0.95, dash: 1, fill: '#b98cff', fillOpacity: 0.07 }));
         chips.push({ key: 'bts', at: [e.point[1], e.point[0] - (e.radiusM * 0.8) / 110540], cls: 'chip bts', html: 'Sektor 112', title: h.label });
       }

@@ -477,3 +477,11 @@ body.time-live .tlfill{background:var(--rl-danger)}
   header>span[style*="flex:1"]{flex:0 0 0}
 }
 @media (min-width:901px) and (max-width:1499px){ header .livehead{display:none} }
+/* clue weights (wagi śladów): bar + number in the Sygnały cards and the Na żywo feed */
+.cw{display:flex;align-items:center;gap:5px;margin-top:4px;font-size:11px;color:var(--rl-mute,#93a1ad);cursor:help;font-weight:400}
+.cw .cwb{flex:0 0 54px;height:6px;border-radius:3px;background:var(--rl-line,#2a3540);overflow:hidden;display:block}
+.cw .cwb i{display:block;height:100%;background:var(--rl-accent,#f2b134)}
+.cw.info .cwb i{background:var(--rl-mute,#8797a4)}.cw.man .cwb i{background:var(--rl-ok,#3ee08f)}
+.cw b{font-family:var(--rl-mono,ui-monospace,monospace);color:var(--rl-ink,inherit);min-width:28px}
+.cw .cwm{font-size:10px;border:1px solid var(--rl-line,#2a3540);border-radius:8px;padding:0 5px}
+.cw button{min-height:22px;min-width:22px;padding:0 6px;font-size:12px;line-height:1;border-radius:11px;cursor:pointer}
