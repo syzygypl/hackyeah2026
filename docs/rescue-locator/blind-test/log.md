@@ -64,21 +64,43 @@ Bez pingu GPS.
 
 ### Wskazówki
 
-| Czas | Wskazówka | Typ (plan, auto, BTS, świadek, telefon gaśnie, pogoda) | Niepewność |
+Pełna lista wskazówek z czasami jeszcze nie trafiła do wątku. Z opisu mapy wiadomo, gdzie silnik umieścił trzy z nich:
+
+| Czas | Wskazówka | Typ (plan, auto, BTS, świadek, telefon gaśnie, pogoda) | Gdzie na mapie |
 |---|---|---|---|
-| ... | ... | ... | ... |
+| ... | Start ze schroniska | punkt startu | S3 |
+| 13:40 | Świadek | świadek | S5 |
+| ... | Ostatni sektor BTS (środek sektora i przełęcz) | BTS | S12 |
+| od 13:30 | Mgła powyżej 1800 m | pogoda | przełęcz ok. 2110 m |
+| 19:00 | Widzialność 40 m, 1°C, wiatr 9 m/s | pogoda | śmigłowiec uziemiony (< 500 m), ryzyko hipotermii wysokie (4,2 h) |
 
 ### Co pokazała mapa
 
-| Czas | Top 1 | Top 2 | Top 3 | Uwagi |
-|---|---|---|---|---|
-| ... | ... | ... | ... | ... |
+**19:00** (wszystkie wskazówki, prawdziwy teren OSM + DEM, 50 szlaków). Top 3 = 60% POA na 18% obszaru.
+
+| # | Segment | POA | Obszar |
+|---|---|---|---|
+| 1 | S3 Schronisko i Przedni Staw | 27,2% | 3,8% |
+| 2 | S2 Siklawa / Roztoka górna | 17,3% | 6,0% |
+| 3 | S13 Morskie Oko | 16,0% | 8,4% |
+| 4 | S4 Wielki Staw | 13,7% | 3,0% |
+| 5 | S12 Szpiglasowa Przełęcz | 8,3% | 4,6% |
+| 6 | S5 Czarny Staw Polski | 8,2% | ... |
 
 ### Patrole
 
-| # | Czas | Patrol (segment, zespół) | Dlaczego tam | Odpowiedź sędziego (nic / ślad / znaleziony) | POD |
-|---|---|---|---|---|---|
-| 1 | ... | ... | ... | ... | ... |
+**Fala 1** (wysłana w wątku ok. 14:47).
+
+Uzasadnienie szukających: pierścienie Koestera mają szczyt przy schronisku, ale świadek i sektor telefonu wskazują trasę na przełęcz. Mgła powyżej 1800 m od 13:30, a przełęcz leży na ok. 2110 m, czyli tam, gdzie na piargu gubi się szlak.
+
+**Uczciwie:** szukający odeszli od planera w 2 z 4 zespołów. Zapisujemy oba warianty, żeby odsłonięcie pokazało, czy to pomogło.
+
+| # | Start | Zespół | Planer proponował | Wysłane | POD | Dlaczego | Odpowiedź sędziego |
+|---|---|---|---|---|---|---|---|
+| 1 | 19:00 | Patrol TOPR A | S2 | **S5, S12** (odejście od planera) | 0,45 | Świadek i BTS wskazują żółty szlak na przełęcz | ... |
+| 2 | 19:05 | Dron | S3 | S3 (jak planer) | 0,27 | Najwyższe POA | ... |
+| 3 | 19:10 | Patrol TOPR B | S5 (z Murowańca, 115 min) | **S13, S12** (odejście od planera) | 0,45 | Zamyka przełęcz od południa; S5 z Murowańca za daleko | ... |
+| 4 | 19:15 | Pies | S4 | S4 (jak planer) | 0,55 | Plan planera | ... |
 
 ### Odsłonięcie
 
