@@ -1,18 +1,27 @@
 # Rescue Locator - pitch
 
-Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research.md). All demo data is mocked and fictitious. Numbers marked (TBC) must be replaced with what the tool actually computes for the demo scenario before they go on a slide.
+Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research.md). All demo data is mocked and fictitious. Numbers come from `rescue/README.md` (demo numbers) and `rescue/validate/backtest.md` (4262ffe).
 
 ## Demo script
 
-- **User:** GOPR/TOPR search leader (kierownik akcji) in the first hour after a missing-hiker report, with a laptop at the station or in the car.
+Scenario `rescue/scenarios/zawrat.json` (fictional), on real OSM + DEM terrain.
+
+- **User:** GOPR/TOPR search leader (kierownik akcji) in the first hours after a missing-hiker report, with a laptop at the station or in the car.
 - **Problem:** The few location hints rescuers get (a stale cell fix, a vague trip plan, a car at a trailhead, an empty drone pass) are heterogeneous and uncertain, and today the leader fuses them in their head on a paper map.
 - **Steps:**
-  1. Open the incident: Pan Tomasz, 58, solo hiker, car found at the trailhead parking (IPP). Map shows Koester distance rings for "hiker, mountains" as a faint heatmap.
-  2. Add hints one by one: wife's trip plan ("red trail to the hut and back"), 112 cell fix at 14:12 with ~1.5 km radius, fog from 15:00. Each hint is a provider; the heatmap reshapes live with every one, and toggling a hint off shows what it contributed.
-  3. Read the "first hour plan": top segments ranked by probability, each with a reflex task ("Team A: hasty search red trail from junction to hut, 23%").
-  4. Report "Team B searched segment 3 with drone, nothing found": probability flows to the drainage below the junction. Then a mocked Ratunek app ping lands inside the new top segment.
-- **Wow moment:** Step 4. An empty search result is evidence too: the map re-flows live, and the next real signal confirms it.
-- **Value number:** Top 3 segments hold ~60% of the probability in ~12% of the search area (TBC); first-hour task list in ~30 seconds instead of ~20 minutes of map work.
+  1. Open the incident: Tomasz W., 58, solo hiker, last seen 12:10 at the Pięć Stawów hut (IPP); wife reports at 17:40. Map shows Koester distance rings for "hiker, mountains" plus terrain (trails, streams, cliffs).
+  2. Hints stream in on the timeline: wife's trip plan (Palenica - Pięć Stawów - Zawrat and back), car still at Palenica, 112 cell sector from 14:12 (~1.5 km), fog and nightfall. Each hint is a provider; the heatmap reshapes with every one, and toggling a hint off shows what it contributed.
+  3. Read the plan: top 3 segments hold **42% of the probability in 8% of the area**, and "Przydział zespołów" gives each team a segment, ETA and safety flags (ice on Zawrat = rope team only).
+  4. Searched segments come back empty (Roztoka, hut, blue trail, drone over the lakes at 19:35): probability drains into Żleb pod Zawratem (S7), now #1. Wind at 19:45 grounds the drone and clears the helicopter; the plan re-allocates. At 20:05 the Ratunek ping lands inside S7.
+- **Wow moment:** Step 4. Empty searches are evidence too: the map re-flows, S7 is already #1, and the Ratunek ping confirms it.
+- **Value number (demo):** the find spot is **#1 after fusion vs #19 with Koester rings only**; to reach it you sweep **0.11-0.22% of the area vs 41%** with rings only. The range is the drone POD assumption (0.75 / 0.6); the result holds for both.
+- **Value number (backtest, all scenarios):** find spot in the **top 3 segments in 3/3 scenarios**; on average **0.69% of the area to sweep vs 18.4%** with Koester rings only (mean of 5 runs: 3 scenarios, 2 drone POD variants). Source: `rescue/validate/backtest.md` (4262ffe). **Preliminary:** only zawrat ran on real OSM + DEM terrain; kasprowy and morskie-oko ran on hand-drawn fallback terrain in that backtest, although their real terrain exists since 0cf94c9. Re-run pending; numbers may move (zawrat moved #1 -> #2 -> #1 when terrain changed).
+- **Drone POD is an assumption:** 0.6 and 0.75 are illustrative, not a specific drone spec (`rescue/README.md`).
+
+### Also in the demo (supporting numbers)
+
+- **Field reports:** a rescuer's free-text radio note ("S6 pusto, widoczność 50 m") becomes structured evidence. Local qwen3 4B in Ollama, offline: **1.3-1.7 s per report** (warm, M4 Pro); keyword rules fallback **~15 ms** when the model is unavailable. Source: `rescue/README.md`.
+- **Team planner, honest framing:** against a naive "biggest POA first" allocation it reaches a 20% chance of find in 1 h 46 min vs 2 h 00 min, then roughly equal. The value is ETAs, safety gating (no drone in 12+ m/s wind, rope team on iced slabs) and instant re-planning when weather changes, **not a big POS gain**. Do not oversell it.
 
 ### Target task: DEFENCE (open task)
 
@@ -22,27 +31,27 @@ Fits the brief almost word for word ([`docs/tasks/defence.txt`](../tasks/defence
 
 | Criterion (weight) | Where the demo shows it | Say it out loud |
 |---|---|---|
-| Idea & Innovation (30%) | Step 4: empty drone pass lowers segment 3, map re-flows, Ratunek ping lands in the new top segment | "Brak wyniku to też informacja" - negative evidence as a Bayes update, which CalTopo does not do automatically |
+| Idea & Innovation (30%) | Step 4: empty searches and drone pass drain their segments, S7 becomes #1 (vs #19 on rings only), Ratunek ping lands inside S7 | "Brak wyniku to też informacja" - negative evidence as a Bayes update, which CalTopo does not do automatically |
 | Relation to Category (20%) | Steps 1-2: incomplete, stale, mixed hints in the first hour, few teams, fog and sunset | Use the brief's own words: incomplete information, limited resources, coordination during an emergency |
-| Practical Applicability / Usability (20%) | Step 3: first-hour plan with one task per team, readable in 5 seconds; one click per hint | 30 s instead of ~20 min; follows the existing GOPR/TOPR reflex-task workflow, no new process |
+| Practical Applicability / Usability (20%) | Step 3: plan with one segment, ETA and safety flag per team; field reports parsed offline in 1.3-1.7 s | Follows the existing GOPR/TOPR reflex-task workflow, no new process; works without internet |
 | Design (20%) | Whole demo: one screen, heatmap centre, hints left, plan right; toggling a hint shows its contribution | Keep the screen calm: one colour ramp, big % numbers, no settings |
-| Completeness & Implementation Value (10%) | Architecture slide + roadmap: providers in a Swift package, mocked inputs listed honestly | "Prawdziwe: silnik fuzji i ranking. Zamockowane: dane wejściowe i teren. Dalej: LiDAR GUGiK i backtest na dawnych akcjach" |
+| Completeness & Implementation Value (10%) | Architecture slide + roadmap: providers in a Swift package, mocked inputs listed honestly | "Prawdziwe: silnik fuzji, ranking, planer i teren OSM + DEM. Zamockowane: dane wejściowe i progi. Backtest: top 3 w 3/3 scenariuszach. Dalej: backtest na dawnych akcjach" |
 
 AI disclosure (required by the open-task rules): name the AI tools used (Claude Code for code and docs), external data (Koester / ISRID approximate quantiles, attributed), libraries, and state that everything was built during HackYeah. Goes on slide 10 and in the HackTribe description.
 
 ## Pitch (90 s, Polish)
 
-> Sobota, 17:40. Żona dzwoni na 985: mąż, 58 lat, poszedł sam w Gorce i nie wrócił. Za godzinę zachód słońca, od 15:00 mgła.
+> Sobota, 17:40. Żona dzwoni na 985: mąż, 58 lat, poszedł sam na Zawrat i nie wrócił. Mgła, za chwilę zmrok.
 >
-> Ratownik ma w ręku kilka okruchów: samochód na parkingu przy szlaku, zdanie "szedł czerwonym do schroniska", lokalizację z sieci komórkowej sprzed trzech godzin z dokładnością półtora kilometra. Dziś łączy to w głowie, na papierowej mapie. A w Polsce wciąż nie ma AML, czyli precyzyjnej lokalizacji z telefonu przy 112 - ma ruszyć dopiero około 2027 roku.
+> Ratownik ma w ręku kilka okruchów: samochód wciąż na parkingu na Palenicy, zdanie "szedł przez Pięć Stawów na Zawrat i z powrotem", lokalizację z sieci komórkowej z 14:12 z dokładnością półtora kilometra. Dziś łączy to w głowie, na papierowej mapie. A w Polsce wciąż nie ma AML, czyli precyzyjnej lokalizacji z telefonu przy 112 - ma ruszyć dopiero około 2027 roku.
 >
-> Rescue Locator robi z tych okruchów jedną mapę prawdopodobieństwa. Zaczynamy od statystyk zachowań osób zaginionych Roberta Koestera - wiemy, jak daleko zwykle odchodzi turysta w górach. Każda wskazówka to osobny moduł: plan wycieczki, samochód, lokalizacja z sieci, ping z aplikacji Ratunek. Dodajemy je i mapa przelicza się na żywo.
+> Rescue Locator robi z tych okruchów jedną mapę prawdopodobieństwa. Zaczynamy od statystyk zachowań osób zaginionych Roberta Koestera i od prawdziwego terenu: szlaki, potoki, ściany. Każda wskazówka to osobny moduł. Dodajemy je i mapa przelicza się na żywo.
 >
-> Po prawej: plan pierwszej godziny. Trzy najlepsze sektory, procent prawdopodobieństwa, konkretne zadanie dla każdego zespołu.
+> Po prawej: trzy najlepsze sektory, 42 procent prawdopodobieństwa na 8 procentach obszaru. I przydział zespołów: kto, dokąd, za ile minut, a na oblodzone płyty tylko zespół z liną.
 >
-> A teraz najważniejsze. Dron przeleciał sektor trzeci i nic nie znalazł. To też jest informacja. Mapa przepływa - prawdopodobieństwo przesuwa się do potoku poniżej rozwidlenia szlaku. I właśnie tam przychodzi ping z aplikacji Ratunek.
+> A teraz najważniejsze. Kolejne sektory wracają puste, dron nad stawami nic nie widzi. To też jest informacja. Prawdopodobieństwo spływa do Żlebu pod Zawratem. O 19:45 wiatr uziemia drona, plan sam się przelicza. O 20:05 przychodzi ping z aplikacji Ratunek: dokładnie w sektorze, który już był pierwszy.
 >
-> Trzy sektory, około 12 procent obszaru, około 60 procent szansy. Plan pierwszej godziny w 30 sekund zamiast 20 minut pracy nad mapą. Tylko legalne źródła, zero śledzenia, a każdy nowy sygnał - AML, RECCO, dron - to po prostu kolejny moduł.
+> Same pierścienie Koestera stawiały to miejsce na 19. pozycji. Po fuzji jest pierwsze. W trzech fikcyjnych scenariuszach miejsce odnalezienia zawsze było w pierwszej trójce. Tylko legalne źródła, zero śledzenia, działa offline, a każdy nowy sygnał - AML, RECCO, dron - to po prostu kolejny moduł.
 >
 > Reagowanie kryzysowe wtedy, gdy informacji jest mało, a zespołów jeszcze mniej. Rescue Locator. Gdzie szukać najpierw.
 
@@ -61,7 +70,16 @@ AML is mandatory in the EU, but Poland is one of the last countries without it; 
 Koester's *Lost Person Behavior* and the ISRID database (tens of thousands of incidents). ISRID tables are copyrighted by dbS Productions, so the demo uses a few approximate, attributed quantiles or our own illustrative numbers. Production use would need a licence or cooperation with dbS / ISRID, ideally with Polish incident data contributed back.
 
 **How do you know it is better than circles?**
-Published evaluation (MapScore, Sava et al. 2015) shows even plain ISRID rings beat random; terrain-aware models do better. Next step is a backtest on anonymised past GOPR/TOPR cases: median rank of the true find location, ours vs circles.
+Our backtest (`rescue/validate/backtest.md`) on 3 fictional scenarios: the find spot is in the top 3 segments in 3/3, and you sweep on average 0.69% of the area vs 18.4% with Koester rings only. In the demo scenario: #1 vs #19. Caveats to say out loud: the scenarios and find spots are ours, so this shows the fusion works as designed, not field accuracy; two of three scenarios still ran on hand-drawn terrain (re-run on real terrain pending). Published evaluation (MapScore, Sava et al. 2015) shows terrain-aware models beat plain rings; the real test is a backtest on anonymised past GOPR/TOPR cases.
+
+**What does the drone POD 0.6 vs 0.75 mean?**
+An assumption, not a spec. We ran both; the zawrat result (#1) holds for both.
+
+**Does the team planner find people faster?**
+Barely, in this scenario: 20% chance of find in 1 h 46 min vs 2 h 00 min with a naive plan, then roughly equal. Its value is ETAs, safety gating and instant re-planning when weather changes.
+
+**Does it need the internet?**
+No. Field reports are parsed by a local model (qwen3 4B in Ollama, 1.3-1.7 s per report), with keyword rules (~15 ms) as a fallback.
 
 **Is the data real?**
 No. Scenario, person, cell fix, drone pass and Ratunek ping are all mocked. The fusion math (Koester rings x evidence likelihoods, Bayesian POA update after a search with given POD) is real and runs live.
@@ -70,4 +88,4 @@ No. Scenario, person, cell fix, drone pass and Ratunek ping are all mocked. The 
 Every hint source is a provider that streams updates into one fused stream, so adding AML, RECCO or a live drone feed means writing one provider, not touching the core. Swift runs natively on the iPad/Mac a search leader carries into the field, offline.
 
 **What is mocked?**
-Terrain grid (one pre-baked valley), all evidence inputs, segment polygons, the Ratunek ping. Real: the fusion and re-ranking engine.
+All evidence inputs, people, find spots, segment seeds, speeds, POD and weather thresholds (illustrative). Terrain is real OSM + DEM for zawrat (and kasprowy, morskie-oko since 0cf94c9). Real: the fusion, re-ranking, planner and field-report parsing.

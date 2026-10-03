@@ -1,6 +1,6 @@
 # Rescue Locator - slides (max 10)
 
-Outline for the PDF deck. One idea per slide. Numbers marked (TBC) come from the tool's output for the demo scenario.
+Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo, zawrat) and `rescue/validate/backtest.md` (4262ffe).
 
 1. **Title**
    - Rescue Locator - gdzie szukać najpierw (where to search first)
@@ -8,8 +8,8 @@ Outline for the PDF deck. One idea per slide. Numbers marked (TBC) come from the
    - Team / author, HackYeah 2026.
 
 2. **Problem**
-   - Saturday 17:40, solo hiker missing, fog, sunset in an hour.
-   - Hints are few, uncertain and mixed: car at trailhead, vague trip plan, 1.5 km cell fix, empty drone pass.
+   - Saturday 17:40, solo hiker missing on the way to Zawrat, fog, nightfall.
+   - Hints are few, uncertain and mixed: car at Palenica, vague trip plan, 1.5 km cell fix, empty searches and drone pass.
    - Today they are fused in one person's head on a paper map.
 
 3. **Who suffers**
@@ -31,7 +31,8 @@ Outline for the PDF deck. One idea per slide. Numbers marked (TBC) come from the
 
 6. **Demo**
    - Screenshot or live: heatmap, evidence toggles left, first-hour plan right.
-   - Key frame: "segment 3 searched, nothing found" -> map re-flows -> Ratunek ping lands in new top segment.
+   - Key frame: empty searches and drone pass -> probability drains into Żleb pod Zawratem (S7, #1) -> wind grounds the drone, plan re-allocates -> Ratunek ping at 20:05 lands inside S7.
+   - Field report typed in free text, parsed offline by local qwen3 4B in 1.3-1.7 s (rules fallback ~15 ms).
    - Link to demo video.
 
 7. **Architecture: pluggable providers**
@@ -40,12 +41,14 @@ Outline for the PDF deck. One idea per slide. Numbers marked (TBC) come from the
    - New source (AML, RECCO, live drone feed) = one new provider, core untouched.
 
 8. **Value number**
-   - Top 3 segments: ~60% of probability in ~12% of the area (TBC).
-   - First-hour plan in ~30 s instead of ~20 min of map work.
+   - Hero: find spot **#1 after fusion vs #19 with Koester rings only**; area to sweep **0.11-0.22% vs 41%** (zawrat, real OSM + DEM terrain).
+   - Backtest: find spot in the **top 3 in 3/3 scenarios**; on average **0.69% of the area vs 18.4%** with rings only.
+   - Footnote: fictional scenarios; drone POD 0.6 / 0.75 is an assumption and the zawrat result holds for both; kasprowy and morskie-oko ran on hand-drawn terrain, so the backtest is preliminary (re-run on real terrain pending).
+   - Planner, said honestly: ETAs, safety gating, instant re-plan; 20% find chance in 1 h 46 min vs 2 h 00 min, not a big POS gain.
 
 9. **Roadmap**
-   - Real terrain from GUGiK LiDAR + OSM trails for one GOPR group region.
-   - Backtest on anonymised past GOPR/TOPR cases vs plain rings.
+   - Re-run the backtest with real terrain for all 3 scenarios, then on anonymised past GOPR/TOPR cases vs plain rings.
+   - Terrain from GUGiK LiDAR (1 m) instead of the current DEM, for a whole GOPR group region.
    - AML provider when the Polish 112 rollout lands; ISRID licence with dbS Productions.
    - WOPR water variant (drift model) later.
 

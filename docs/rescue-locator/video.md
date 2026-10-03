@@ -8,21 +8,21 @@ Backup video for the DEFENCE submission (MP4 not required for open tasks, but it
 - Screen recorder: QuickTime (File > New Screen Recording) or OBS; record the browser window only, 30 fps, export MP4 H.264.
 - Voice: record separately on a phone in a quiet room, lay it over in iMovie / CapCut. Re-record the voice, not the screen, if you stumble.
 - Before recording: reset the scenario to its start state, close other tabs, hide bookmarks bar, notifications off (Focus mode).
-- Every number spoken must match the screen. Replace every (TBC) in the pitch with the tool's actual output first.
+- Scenario: `zawrat.json` (real OSM + DEM terrain). Every number spoken must match the screen; sources: `rescue/README.md`, `rescue/validate/backtest.md`.
 
 ## Shots
 
 | # | Time | On screen | Voice-over (Polish, short) |
 |---|---|---|---|
-| 1 | 0:00-0:12 | Title card: "Rescue Locator - gdzie szukać najpierw", subtitle "HackYeah 2026, DEFENCE" | "Sobota, 17:40. Mąż, 58 lat, poszedł sam w Gorce i nie wrócił. Za godzinę zachód słońca, od 15:00 mgła." |
-| 2 | 0:12-0:30 | Incident open: map of the valley, car pin at the trailhead parking, faint Koester rings heatmap | "Ratownik ma kilka okruchów i łączy je w głowie na papierowej mapie. Zaczynamy od statystyk Koestera: jak daleko zwykle odchodzi turysta w górach." |
-| 3 | 0:30-0:55 | Click hint 1 "plan wycieczki: czerwony szlak do schroniska" - heat concentrates on the trail. Click hint 2 "112, 14:12, ~1,5 km" - circle cuts the heat. Click hint 3 "mgła od 15:00" | "Każda wskazówka to osobny moduł. Plan wycieczki. Lokalizacja z sieci sprzed trzech godzin. Mgła. Mapa przelicza się na żywo." |
+| 1 | 0:00-0:12 | Title card: "Rescue Locator - gdzie szukać najpierw", subtitle "HackYeah 2026, DEFENCE" | "Sobota, 17:40. Mąż, 58 lat, poszedł sam na Zawrat i nie wrócił. Mgła, za chwilę zmrok." |
+| 2 | 0:12-0:30 | Incident open: Dolina Pięciu Stawów, IPP at the hut, Koester rings and terrain layer | "Ratownik ma kilka okruchów i łączy je w głowie na papierowej mapie. Zaczynamy od statystyk Koestera i od prawdziwego terenu." |
+| 3 | 0:30-0:55 | Timeline plays: trip plan (Palenica - Zawrat), car still at Palenica, 112 sector 14:12 ~1,5 km, fog | "Każda wskazówka to osobny moduł. Plan wycieczki. Auto na parkingu. Lokalizacja z sieci sprzed trzech godzin. Mgła. Mapa przelicza się na żywo." |
 | 4 | 0:55-1:05 | Toggle the trip-plan hint off and on again, heatmap visibly changes | "Wyłączam wskazówkę i widać, ile wniosła. Nic nie jest czarną skrzynką." |
-| 5 | 1:05-1:25 | Zoom / highlight the right panel "Plan pierwszej godziny": top 3 segments with % and a team task each | "Plan pierwszej godziny: trzy sektory, procent prawdopodobieństwa i konkretne zadanie dla każdego zespołu. 30 sekund zamiast 20 minut pracy nad mapą." |
-| 6 | 1:25-1:50 | **Wow.** Click "Sektor 3 przeszukany dronem - brak wyniku". Heat drains from segment 3 and flows to the stream below the junction; plan re-ranks | "Najważniejsze: dron przeleciał sektor trzeci i nic nie znalazł. To też jest informacja. Prawdopodobieństwo przepływa do potoku poniżej rozwidlenia." |
-| 7 | 1:50-2:05 | Mocked Ratunek ping drops inside the new top segment, pin pulses | "I właśnie tam przychodzi ping z aplikacji Ratunek." |
+| 5 | 1:05-1:25 | Right panel: top 3 segments "42% na 8% obszaru", team cards with ETA and "tylko zespół z liną" on iced slabs | "Trzy sektory: 42 procent prawdopodobieństwa na 8 procentach obszaru. Każdy zespół dostaje sektor, czas dojścia i ostrzeżenie: na oblodzone płyty tylko z liną." |
+| 6 | 1:25-1:50 | **Wow.** Empty searches 18:40-19:20 and the drone pass over the lakes at 19:35: heat drains, S7 Żleb pod Zawratem becomes #1. 19:45 wind 14 m/s: drone grounded, helicopter cleared, team cards re-allocate | "Kolejne sektory wracają puste, dron nad stawami nic nie widzi. To też jest informacja. Prawdopodobieństwo spływa do Żlebu pod Zawratem. Wiatr uziemia drona, plan sam się przelicza." |
+| 7 | 1:50-2:05 | 20:05 Ratunek ping drops inside S7, pin pulses. Optional cut: a free-text field report parsed in ~1,5 s | "O 20:05 ping z aplikacji Ratunek: dokładnie w sektorze, który już był pierwszy." |
 | 8 | 2:05-2:20 | Slide: architecture - providers -> fused stream -> heatmap + ranking; small "AML / RECCO / dron = kolejny moduł" | "Każde nowe źródło - AML, RECCO, dron na żywo - to po prostu kolejny moduł. Tylko legalne źródła, zero śledzenia, dane w demo są fikcyjne." |
-| 9 | 2:20-2:30 | End card: value number, repo link, team, "Reagowanie kryzysowe, gdy informacji jest mało" | "Trzy sektory, około 12 procent obszaru, około 60 procent szansy. Rescue Locator." |
+| 9 | 2:20-2:30 | End card: "#1 zamiast #19", "top 3 w 3/3 scenariuszach (wstępnie)", repo link, team | "Same pierścienie Koestera dawały temu miejscu 19. pozycję. Po fuzji pierwszą. Rescue Locator." |
 
 ## Checklist before upload
 
