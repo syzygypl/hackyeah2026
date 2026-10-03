@@ -23,6 +23,35 @@
   "three/addons/": "../../web/vendor/three/addons/"
 } }
 </script>
+<!-- the whole module graph in one round trip (without this: app3d.js, then its imports, then fov3d.js) -->
+<link rel="modulepreload" href="../../web/vendor/three/three.module.min.js">
+<link rel="modulepreload" href="../../web/vendor/three/addons/controls/OrbitControls.js">
+<link rel="modulepreload" href="../../web/vendor/three/addons/renderers/CSS2DRenderer.js">
+<link rel="modulepreload" href="../../web/vendor/three/addons/lines/Line2.js">
+<link rel="modulepreload" href="../../web/vendor/three/addons/lines/LineMaterial.js">
+<link rel="modulepreload" href="../../web/vendor/three/addons/lines/LineGeometry.js">
+<link rel="modulepreload" href="../../web/vendor/three/addons/lines/LineSegments2.js">
+<link rel="modulepreload" href="../../web/vendor/three/addons/lines/LineSegmentsGeometry.js">
+<link rel="modulepreload" href="../scale.js">
+<link rel="modulepreload" href="fx3d.js">
+<link rel="modulepreload" href="timeline3d.js">
+<link rel="modulepreload" href="fov3d.js">
+<link rel="modulepreload" href="coverage3d.js">
+<link rel="modulepreload" href="walk3d.js">
+<script>
+/* The scenario's static 3D files start downloading now, in parallel with the scripts; app3d.js getJSON() takes these
+   promises (window.__pre3d, by absolute URL) instead of a second request. Only the default paths for ?sc= (no overrides). */
+(function () {
+  var q = new URLSearchParams(location.search), sc = q.get('sc') || 'zawrat';
+  if (!/^[a-z0-9-]{1,40}$/.test(sc) || /blind/.test(sc) || q.has('dem') || q.has('scenario') || q.has('terrain') || q.get('wide') === '0') return;
+  var pre = window.__pre3d = {};
+  ['data/' + sc + '-dem-wide.json', 'data/' + sc + '-osm3d.json', '../../scenarios/' + sc + '.json', '../../scenarios/' + sc + '-terrain.json'].forEach(function (u) {
+    var url = new URL(u, location.href).href;
+    pre[url] = fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); });
+    pre[url].catch(function () {}); // a missing optional file is handled by getJSON
+  });
+})();
+</script>
 </head>
 <body data-state="loading">
 <div id="scene"></div>

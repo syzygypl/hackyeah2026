@@ -75,6 +75,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // LAN server with --pin: /api/* needs X-Rescue-Pin (the app stores it raw, web/patrol JSON-quoted); same origin only
 const runPin = (u) => { try { const p = (localStorage.getItem('rescue-pin') || '').replace(/^"(.*)"$/, '$1'); return p && new URL(u, location.href).origin === location.origin ? { 'X-Rescue-Pin': p } : {}; } catch { return {}; } };
 const getJSON = async (u, optional) => {
+  const k = new URL(u, location.href).href, pre = window.__pre3d?.[k]; // prefetched by index.html
+  if (pre) { delete window.__pre3d[k]; try { return await pre; } catch (e) { if (optional) return null; throw e; } }
   try { const r = await fetch(u, { cache: 'no-cache', headers: runPin(u) }); if (!r.ok) throw new Error(r.status + ' ' + u); return await r.json(); }
   catch (e) { if (optional) return null; throw e; }
 };
