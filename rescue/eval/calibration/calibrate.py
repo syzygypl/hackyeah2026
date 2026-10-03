@@ -153,18 +153,22 @@ def reliability_bins(rows, n_bins=10):
 
 # ---- running the frozen engine on one case ----
 
-def run_case(case_path, keep=False):
+def run_case(case_path, keep=False, engine_features=None):
     """Invoke the built binary directly (not `swift run`, which hangs with piped
-    stdout/stderr under this harness's subprocess sandbox - see validate/backtest.py)."""
+    stdout/stderr under this harness's subprocess sandbox - see validate/backtest.py).
+    engine_features: value for the engine's own `--features traceWindow,podModel | all`
+    flag (post-v2.1 candidate code, off by default so the frozen baseline stays frozen)."""
     binary = RESCUE / ".build" / "debug" / "rescue-demo"
     name = case_path.stem
     run_json_path = OUT / f"{name}.run.json"
     html_path = OUT / f"{name}.html"
     rel = case_path.relative_to(RESCUE)
+    cmd = [str(binary), "--fast", str(rel)]
+    if engine_features:
+        cmd += ["--features", engine_features]
     try:
         proc = subprocess.run(
-            [str(binary), "--fast", str(rel)],
-            cwd=RESCUE, capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL,
+            cmd, cwd=RESCUE, capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL,
         )
         if proc.returncode != 0:
             return None, proc.stderr.strip()[-500:] or "rescue-demo exited non-zero"
@@ -186,10 +190,13 @@ def main():
     ap.add_argument("--sim-run", required=True, help="rescue/eval/sim/out/<run> directory")
     ap.add_argument("--limit", type=int, default=None, help="use only the first N cases (manifest order)")
     ap.add_argument("--keep-engine-runs", action="store_true", help="don't delete out/case-NNNN.run.json")
+    ap.add_argument("--engine-features", default=None,
+                    help="forwarded to rescue-demo's own --features flag (e.g. 'all' for the post-v2.1 "
+                         "candidate code; omit for the frozen baseline)")
     ap.add_argument("--json-out", default=None)
     args = ap.parse_args()
 
-    run_dir = Path(args.sim_run)
+    run_dir = Path(args.sim_run).resolve()
     binary = RESCUE / ".build" / "debug" / "rescue-demo"
     if not binary.exists():
         print(f"error: {binary} not found - run `cd rescue && swift build` first", file=sys.stderr)
@@ -216,7 +223,7 @@ def main():
             dropped.append((case_id, "outside scenario bbox (per contract)"))
             continue
 
-        doc, err = run_case(case_path, keep=args.keep_engine_runs)
+        doc, err = run_case(case_path, keep=args.keep_engine_runs, engine_features=args.engine_features)
         if doc is None:
             dropped.append((case_id, f"engine error: {err}"))
             continue
