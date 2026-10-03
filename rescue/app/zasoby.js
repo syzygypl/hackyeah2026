@@ -50,10 +50,14 @@ async function addEvent(id, sc, type, label) {
   catch (e) { toast("Nie zapisano: " + e.message, 4000); }
 }
 async function init() {
+  // the unit cards do not wait for the scenario list: ask for the default action's inventory at the same time
+  const scP = api("/api/scenarios"), guessed = !state.sc;
+  if (guessed) state.sc = "zawrat";
+  let loadP = load();
   try {
-    const s = await api("/api/scenarios");
+    const s = await scP;
     const list = (s.scenarios || []).map((x) => x.name);
-    if (!state.sc) state.sc = list.includes("zawrat") ? "zawrat" : list[0] || "";
+    if (guessed && !list.includes("zawrat")) { state.sc = list[0] || ""; loadP = loadP.then(load); }   // this server has no Zawrat
     $("sc").innerHTML = `<option value="">wszystkie (każdy zespół w swojej akcji)</option>` + list.map((n) => `<option ${n === state.sc ? "selected" : ""}>${esc(n)}</option>`).join("");
   } catch (e) { $("sc").innerHTML = `<option>${esc(state.sc)}</option>`; }
   $("at").value = state.at;
@@ -61,7 +65,7 @@ async function init() {
   $("sc").onchange = () => { state.sc = $("sc").value; sync(); };
   $("at").onchange = () => { const v = $("at").value.trim(); if (v && !/^\d{1,2}:\d{2}$/.test(v)) return toast("Godzina w formacie GG:MM"); state.at = v; sync(); };
   $("now").onclick = () => { state.at = ""; $("at").value = ""; sync(); };
-  await load();
+  await loadP;
   setInterval(() => { if (!document.hidden) load(); }, 15000);
   if (Q.get("actor")) openActor(Q.get("actor"), { sc: state.sc || undefined, at: state.at || undefined });
 }
