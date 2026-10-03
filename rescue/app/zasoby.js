@@ -55,7 +55,6 @@ function unitCard(u) {
     ${spares || u.model ? `<div class="facts">${u.model ? esc(u.model) : ""}${spares ? `${u.model ? " · " : ""}zapas: ${spares}` : ""}</div>` : ""}
     <div class="feeds">${feeds}</div>
     ${u.inventory === false ? '<div class="facts">Brak wpisu w inwentarzu (tylko dane z listy zespołów).</div>' : ""}
-    ${u.fallback ? '<div class="facts">Inwentarz zastępczy (wygenerowany, fikcyjny) - plik inwentarza jeszcze nie wgrany.</div>' : ""}
     <div class="acts">${eventsFor(kind).map(([t, l]) => `<button data-ev="${t}" class="${t === "fault" ? "fault" : ""}" title="Zapisz zdarzenie: ${esc(l)} (trafia do dziennika i kanału na żywo)">${esc(l)}</button>`).join("")}</div>
   </article>`;
 }
@@ -73,7 +72,7 @@ function render() {
   $("atLabel").textContent = d.at ? `godzina akcji ${d.at}${state.at ? "" : " (na żywo)"}` : "";
   const red = d.units.filter((u) => u.level === "red").length, amber = d.units.filter((u) => u.level === "amber").length;
   $("counts").innerHTML = `${d.units.length} zasobów${red ? ` · <b style="color:var(--rl-danger)">${red} alarm</b>` : ""}${amber ? ` · ${amber} uwaga` : ""}`;
-  $("src").textContent = `· źródło: GET /api/inventory${d.inventoryFile ? "" : " (inwentarz zastępczy)"}`;
+  $("src").textContent = `· źródło: GET /api/inventory${d.inventoryFile ? " + scenarios/inventory/inventory.json" : " (brak pliku inwentarza)"}`;
   document.querySelectorAll(".unit").forEach((el) => {
     const open = () => openActor(el.dataset.id, { sc: el.dataset.sc || state.sc || undefined, at: state.at || undefined });
     el.onclick = (e) => { if (!e.target.closest("button")) open(); };

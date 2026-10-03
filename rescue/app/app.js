@@ -1283,7 +1283,7 @@ subs.push((why) => {
   for (const id of ["events", "liveFeed"]) if ($(id)) mo.observe($(id), { childList: true });
   decorate();
 })();
-// ---------- Zasoby i dziennik (CONTRACT.md "Zasoby i dziennik" 6): actor drawer from the Na żywo feed and the 2D view, Zasoby link
+// ---------- Zasoby i dziennik (CONTRACT.md "Zasoby i dziennik" 6): actor drawer from the Na żywo feed and the 2D / 3D views ({type:"actor", id}), Zasoby link
 {
   const zl = $("zasobyLink");
   const upd = () => { if (zl) zl.href = "zasoby.html?sc=" + encodeURIComponent(store.scenario || ""); };
@@ -1293,7 +1293,7 @@ subs.push((why) => {
   const showActor = (id) => import("./actorlog.js").then((m) => m.openActor(id, { sc: store.backend === "api" ? store.scenario : undefined, at: liveOn() ? undefined : atNow(),
     onTrack: (a) => { if (store.mode !== "akcja" || store.view === "3d") toast("Ślad zespołu rysuje widok 2D (Akcja, 2D)"); highlight(a); }, onClose: () => highlight(null) }));
   $("liveFeed") && $("liveFeed").addEventListener("click", (e) => { const b = e.target.closest("[data-actor]"); if (b) { showActor(b.dataset.actor); highlight(b.dataset.actor); } });
-  addEventListener("message", (e) => { if (e.origin === location.origin && e.data && e.data.source === "rescue2d" && e.data.type === "actor" && typeof e.data.id === "string") showActor(e.data.id); });
+  addEventListener("message", (e) => { if (e.origin === location.origin && e.data && (e.data.source === "rescue2d" || e.data.source === "rescue3d") && e.data.type === "actor" && typeof e.data.id === "string") showActor(e.data.id); });
   const qa = new URLSearchParams(location.search).get("actor");
   if (qa) setTimeout(() => { showActor(qa); highlight(qa); }, 2500);
 }
