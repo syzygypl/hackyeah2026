@@ -1608,11 +1608,28 @@ function blockedView(pos, tgt) {
   for (let k = 1; k < 16; k++) { const f = k / 16, x = pos.x + (tgt.x - pos.x) * f, y = pos.y + (tgt.y - pos.y) * f, z = pos.z + (tgt.z - pos.z) * f; if (hAt(toLat(z), toLon(x)) > y - 0.015) n++; }
   return n;
 }
-function cineShot(i) {
+// Kino shots follow event GROUPS (Mateusz): events at the same moment (the start setup: terrain, weather, rings, IPP) or within
+// 2 min of the group's first one are one shot with one card. The shell's rule (window.rescueApp.eventGroups) when embedded,
+// the same rule here when 3D runs alone.
+function cineGroups() {
+  try { const g = parent !== window && parent.rescueApp?.eventGroups?.(); if (Array.isArray(g) && g.length && g.every((x) => x.steps?.length)) return g.map((x) => x.steps.filter((i) => i >= 0 && i < R.steps.length)).filter((x) => x.length); } catch (e) {}
+  const out = [];
+  R.steps.forEach((s, i) => { const m = Number.isFinite(s.minute) ? s.minute : null, g = out[out.length - 1];
+    if (g && m != null && g.first != null && m - g.first <= 2) g.steps.push(i); else out.push({ first: m, steps: [i] }); });
+  return out.map((g) => g.steps);
+}
+function cineCard(ks) {
+  const ss = ks.map((k) => R.steps[k]), head = `<b>${esc(ss[ss.length - 1].t)}</b>`;
+  if (ss.length === 1) return `${head} ${esc(ss[0].label)}`;
+  const shown = ss.slice(0, 4).map((s) => `<span class="cc-i">${esc(s.label)}</span>`).join('');
+  return `${head} <span class="cc-n">${ss.length} ${ss.length % 10 >= 2 && ss.length % 10 <= 4 && (ss.length % 100 < 12 || ss.length % 100 > 14) ? 'zdarzenia' : 'zdarzeń'}</span><span class="cc-l">${shown}${ss.length > 4 ? `<span class="cc-i">+${ss.length - 4} więcej</span>` : ''}</span>`;
+}
+function cineShot(gi) {
+  const ks = CINE.groups[gi], i = ks[ks.length - 1];   // the group's last step: all of its events are in force
   setStep(i);
-  const s = R.steps[i], t = shotTarget(i), trail = shotTrail(i), close = s.kind === 'point' || s.kind === 'found';
+  const s = R.steps[i], t = shotTarget(i), trail = ks.map(shotTrail).find(Boolean) || null, close = ks.some((k) => R.steps[k].kind === 'point' || R.steps[k].kind === 'found');
   const dist = (s.kind === 'rings' || s.kind === 'route' ? 4.2 : close ? 1.4 : 2.4) * 1.2; // longer lens: further back
-  const sh = { i, t, trail, ang: i * 1.1 + 0.6, dist, lift: close ? 0.2 : 0, side: i % 2 ? 1 : -1, len: close ? 9 : trail ? 8 : 5.2, tau: 0 };
+  const sh = { i, g: gi, t, trail, ang: i * 1.1 + 0.6, dist, lift: close ? 0.2 : 0, side: i % 2 ? 1 : -1, len: close ? 9 : trail ? 8 : 5.2, tau: 0 };
   // orbit start: the default angle, or the nearest of 8 around it from which the ridges do not hide the subject
   if (!trail) {
     const a0 = sh.ang, P = new THREE.Vector3(), T = new THREE.Vector3(); let best = Infinity, bestA = a0;
@@ -1631,12 +1648,14 @@ function cineShot(i) {
   for (let u = 0.1; u < 0.95; u += 0.1) { hermite(_cp, f.p0, f.v0, f.p1, f.v1, u, dur); f.arc = Math.max(f.arc, (hAt(toLat(_cp.z), toLon(_cp.x)) + 0.4 - _cp.y) / (4 * u * (1 - u))); }
   f.arc = Math.min(f.arc, 2.5); sh.fly = f;
   CINE.shot = sh; fly = null;
-  $('caption').innerHTML = `<b>${esc(s.t)}</b> ${esc(s.label)}`;
+  $('caption').innerHTML = cineCard(ks);
 }
 // Kino mixes in first-person shots: a unit seen at this minute (patrol, dog, helicopter...) for ~5 s, then the next shot
 function cineFpp(next) {
   if (!TL3D?.startFpp) return false;
-  const ids = (TL3D.frame?.actors || []).map((a) => a.id).filter(Boolean);
+  // rescue units only: the missing person's track is an estimate, "through their eyes" would read as knowing where they are
+  const kindOf = (id) => (R.timeline?.actors || []).find((a) => a.id === id)?.kind;
+  const ids = (TL3D.frame?.actors || []).map((a) => a.id).filter((id) => id && kindOf(id) !== 'osoba');
   for (let k = 0; k < ids.length; k++) {
     const id = ids[(next + k) % ids.length];
     CINE.inserting = true; const ok = TL3D.startFpp(id); CINE.inserting = false;   // our own insert: startFpp's onStopCamera must not end Kino
@@ -1653,7 +1672,7 @@ function cinema(on) {
   if (on) TL3D?.stopFpp();
   CINE.on = on; document.body.classList.toggle('cinema', on); $('btn-cine').classList.toggle('on', on);
   toParent({ type: 'cinema', on }); // /app hides its floating panels while Kino runs
-  if (on) { CINE.prevRot = autoRot; CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null; cineShot(0); }   // Kino is the film of the whole story, from the first step (the shell's step sits at the end, the timeline sync moves STEP)
+  if (on) { CINE.prevRot = autoRot; CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null; CINE.groups = cineGroups(); cineShot(0); }   // Kino is the film of the whole story, from the first step (the shell's step sits at the end, the timeline sync moves STEP)
   else { if (CINE.fpp) { CINE.fpp = null; TL3D?.stopFpp(); } CINE.shot = null; overview(1.6); }
 }
 $('btn-cine').addEventListener('click', () => cinema(!CINE.on));
@@ -1667,7 +1686,7 @@ function cineTick(dt) {
     CINE.fpp.t -= dt;
     if (CINE.fpp.t > 0 && TL3D?.following) return;
     const next = CINE.fpp.next; CINE.fpp = null; TL3D?.stopFpp(); CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null;
-    if (next < R.steps.length) cineShot(next); return;
+    if (next < CINE.groups.length) cineShot(next); return;
   }
   const sh = CINE.shot; if (!CINE.on || !sh || fly) return;
   if (sh.fly) {
@@ -1683,8 +1702,9 @@ function cineTick(dt) {
   if (CINE.last && dt > 0) { CINE.vel.lerp(_cq.subVectors(_cp, CINE.last).divideScalar(dt), 0.3); CINE.tvel.lerp(_cq.subVectors(_ct, CINE.lastT).divideScalar(dt), 0.3); }
   CINE.last = (CINE.last || new THREE.Vector3()).copy(_cp); CINE.lastT = (CINE.lastT || new THREE.Vector3()).copy(_ct);
   if (!sh.fly && sh.tau > sh.len) {
-    if (sh.i < R.steps.length - 1 && sh.i % 2 === 1 && cineFpp(sh.i + 1)) return;
-    if (sh.i < R.steps.length - 1) cineShot(sh.i + 1);
+    const more = sh.g < CINE.groups.length - 1;
+    if (more && sh.g % 2 === 1 && cineFpp(sh.g + 1)) return;
+    if (more) cineShot(sh.g + 1);
     else { CINE.shot = null; $('caption').innerHTML = ''; overview(4); setTimeout(() => CINE.on && cinema(false), 4500); }
   }
 }

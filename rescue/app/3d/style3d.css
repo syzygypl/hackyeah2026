@@ -368,3 +368,7 @@ body.embed.cinema #sceneCtl { background: transparent; border-color: transparent
 body.embed.cinema #sceneCtl .seg-switch { background: rgba(255, 255, 255, 0.1); }
 body.embed.cinema #sceneCtl .seg-switch button { color: rgba(250, 248, 243, 0.75); }
 body.embed.cinema #sceneCtl .seg-switch button.on { background: rgba(250, 248, 243, 0.9); color: #23272a; }
+/* Kino group card (several events at one moment): count + one line per event */
+#caption .cc-n { font-size: 15px; opacity: .85; }
+#caption .cc-l { display: block; margin-top: 6px; font-size: 16px; line-height: 1.45; }
+#caption .cc-i { display: block; }
