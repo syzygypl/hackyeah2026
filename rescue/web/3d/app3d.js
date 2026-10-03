@@ -20,6 +20,11 @@ const SCENS = {
   'blind-01': { name: 'Test na ślepo: runda 1 (replay)', run: '../../out/blind-01-replay.run.json', scenario: '../../scenarios/blind-01-replay.json',
     terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg', reveal: '../../blindtest/blind-01.reveal.json' },
 };
+// Regions outside the Tatras: any scenario with tools/terrain/data/<sc>-dem.json opens on its own (narrow) DEM, without
+// the wide backdrop or aerial photo. Blind tests only through their SCENS entries.
+const REGIONS = { 'bieszczady-wetlinska': 'Bieszczady - Połonina Wetlińska', 'karkonosze-sniezka': 'Karkonosze - Śnieżka', sniardwy: 'Śniardwy', morzycko: 'Morzycko', miedzyzdroje: 'Międzyzdroje (Bałtyk)' };
+const addScen = (id) => { if (!SCENS[id] && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id)) SCENS[id] = { name: REGIONS[id] || id, run: `../../out/${id}.run.json`, region: true }; };
+if (Q.get('sc')) addScen(Q.get('sc'));
 const SC = SCENS[Q.get('sc')] ? Q.get('sc') : 'zawrat';
 const P = {
   run: Q.get('run') || SCENS[SC].run,
@@ -122,10 +127,11 @@ if (document.body.classList.contains('embed')) {
 // is missing, ask the same origin's GET /api/run/<sc> before giving up (blind tests are never served there).
 const API_RUN = `/api/run/${SC}`;
 const loadRun = async () => {
-  try { return await getJSON(P.run, !!P.reveal); }
+  try { return await getJSON(P.run); }
   catch (e) {
-    if (Q.get('run') || P.reveal || !/^404 /.test(e.message)) throw e;
-    try { const r = await getJSON(API_RUN); P.run = API_RUN; return r; } catch { throw e; }
+    if (!Q.get('run') && !P.reveal && /^404 /.test(e.message)) { try { const r = await getJSON(API_RUN); P.run = API_RUN; return r; } catch {} }
+    if (P.reveal || SCENS[SC].region) return null; // replay from the scenario file (synthRun below)
+    throw e;
   }
 };
 let R, SCN, TER, DEM, REV, DEM_FULL;
@@ -1058,6 +1064,9 @@ addEventListener('keydown', (e) => {
   const sel = $('scensel');
   const api = await getJSON('/api/scenarios', true); // rescue-server: these run live even without a static run.json
   const live = new Set((api?.scenarios || []).map((s) => (typeof s === 'string' ? s : s.name || s.id)));
+  // scenarios the server knows that have a DEM in the repo (static servers: the known regions)
+  const extra = [...new Set([...live, ...Object.keys(REGIONS)])].filter((id) => !SCENS[id] && !/blind/.test(id));
+  await Promise.all(extra.map(async (id) => { try { const r = await fetch(`../../tools/terrain/data/${id}-dem.json`, { method: 'HEAD' }); if (r.ok) addScen(id); } catch {} }));
   for (const [id, s] of Object.entries(SCENS)) {
     const o = document.createElement('option'); o.value = id; o.textContent = s.name; o.selected = id === SC;
     if (id !== SC && !live.has(id)) { try { const r = await fetch(s.run, { method: 'HEAD' }); if (!r.ok) throw 0; } catch { o.disabled = true; o.textContent += ' (brak run.json)'; } }
