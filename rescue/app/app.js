@@ -59,14 +59,15 @@ const STATIC = {};
 STATIC["blind-01-replay"] = { name: "Test na ślepo: runda 1 (replay)", run: "../out/blind-01-replay.run.json" };
 async function detect() {
   // the three probes at once (perf: they ran one after another, three round trips before the run could even start)
-  const blindP = (async () => { try { const r = await fetch(STATIC["blind-01-replay"].run, { cache: "no-cache" }); r.body && r.body.cancel(); return r.ok; } catch (e) { return false; } })();
+  const blindP = Promise.resolve(true);   // out/blind-01-replay.run.json is committed and served statically: no probe (a GET + cancel showed in every console)
   const [a, m, blindOk] = await Promise.all([tryJSON("/api/scenarios"), tryJSON("/modules"), blindP]);
   store.hasApi = !!a; store.hasStudio = !!(m && m.modules); store.mods = m ? m.modules : [];
   let list = [];
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
   // blind test round 1 replay (the 3D view shows the hider's story and the true spot at the end); only when its run is there
-  if (blindOk) list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true });
+  // not on the demo list (demo review d1510b2 pt 6); still reachable with ?sc=blind-01-replay (3D README, blind test reveal)
+  if (blindOk && new URLSearchParams(location.search).get("sc") === "blind-01-replay") list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true });
   $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}" ${s.disabled ? "disabled" : ""}>${esc(s.name)}</option>`).join("");
   store.scenList = list;
 }

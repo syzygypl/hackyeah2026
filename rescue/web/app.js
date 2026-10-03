@@ -1444,7 +1444,7 @@
     });
     // grey out missing committed run files (out/*.run.json); /api/run/<id> is computed on request, and HEAD runs the
     // whole engine on the server, so those are never probed
-    SCENARIOS.filter((x) => !x.run.startsWith('/api/')).forEach(async (x) => {
+    if (!EMBED) SCENARIOS.filter((x) => !x.run.startsWith('/api/')).forEach(async (x) => {   // embedded: no switcher, no probe
       let ok = false;
       try { ok = (await fetch(x.run, { method: 'HEAD', cache: 'no-cache', headers: runPin(x.run) })).ok; } catch (e) { ok = false; }
       const o = sel.querySelector(`option[value="${x.id}"]`);
@@ -1545,9 +1545,12 @@
     document.body.dataset.renderer = S.view.kind;
     DIAG.info.renderer = S.view.kind; DIAG.info.layers = S.view.layerCount(); DIAG.info.base = S.base; DIAG.info.bases = S.bases; DIAG.info.relief = relief ? relief.src : null;
     diag();
-    setInterval(() => pollLive(false), CFG.livePollMs);
-    setInterval(pollRun, CFG.runPollMs);
-    pollRun();
+    // inside /app the shell polls /api/live every 3 s and posts {type:"run"} on every change (this frame then reloads and its
+    // boot reads /live-events again): no HEAD /api/run poll here, live report chips only as a slow fallback (perf round 3).
+    // Standalone /web/ and other parents (Czat pushes runs only after its own edits) keep polling as before.
+    const inShell = (() => { try { return !!EMBED && window.parent !== window && /\/app\/(index\.html)?$/.test(window.parent.location.pathname); } catch (e) { return false; } })();
+    setInterval(() => pollLive(false), inShell ? 30000 : CFG.livePollMs);
+    if (!inShell) { setInterval(pollRun, CFG.runPollMs); pollRun(); }
     window.__rescue = { S, CFG, DIAG, setStep, compute, stats };
     toParent({ type: 'ready', version: EMBED_VERSION, scenario: CFG.sc, steps: M.hints.length, step: S.step });
     (S.pendingMsgs || []).splice(0).forEach(applyParentMessage);

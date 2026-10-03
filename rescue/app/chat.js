@@ -358,7 +358,7 @@ export function createChat(root, host, opts = {}) {
     const sc = host.scenario(), run = host.run(), key = sc + "|" + (run && run.steps ? run.steps.length : 0);
     if (ctx && ctxKey === key) return ctx;
     let scn = ctx && ctx.sc === sc ? ctx.scn : null;
-    if (!scn) { try { scn = await (await fetch(`/scenarios/${encodeURIComponent(sc)}.json`, { cache: "no-cache" })).json(); } catch (e) { scn = null; } }
+    if (!scn) { try { scn = await (await fetch(sc === "studio" ? "/story/scenario" : `/scenarios/${encodeURIComponent(sc)}.json`, { cache: "no-cache" })).json(); } catch (e) { scn = null; } }   // Studio has no scenarios/studio.json (404)
     const { G, segs } = gazetteer(scn, run);
     const S = run && run.steps && run.steps[run.steps.length - 1];
     ctx = { sc, scn, G, segs, resources: (S && S.resources) || (scn && scn.resources) || [], start: (scn && scn.startClock) || (run && run.steps && run.steps[0] && run.steps[0].t) || "00:00" };
