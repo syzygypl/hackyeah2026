@@ -10,7 +10,7 @@
     "api": {
       "root": "./",
       "runtime": "container",
-      "entrypoint": "Dockerfile.vercel-rs"
+      "entrypoint": "Dockerfile.vercel"
     }
   },
   "redirects": [
