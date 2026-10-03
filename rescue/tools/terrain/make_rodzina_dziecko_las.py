@@ -27,17 +27,60 @@ def dist(a, b):
     return math.hypot((a[0] - b[0]) * 111320, (a[1] - b[1]) * 111320 * math.cos(math.radians(a[0])))
 
 
-def nearest_name(terrain, p):
-    best, name = 1e9, "Las"
-    for kind in ("trails", "streams"):
-        for f in terrain[kind]:
-            if f["name"].startswith("(") or "bez nazwy" in f["name"] or "OSM relation" in f["name"]:
-                continue
-            for q in f["points"]:
-                d = dist(p, q)
-                if d < best:
-                    best, name = d, f["name"].split(": ", 1)[-1].split(" (")[0]
-    return name
+def place_name(terrain, p):
+    """Short place name for a segment seed: the nearest named stream within 600 m, else the destination part of the
+    nearest named trail ("Karpacz - Słonecznik" -> "Słonecznik"), else the nearest hut."""
+    def named(f):
+        n = f["name"]
+        return not (n.startswith("(") or "bez nazwy" in n or "OSM relation" in n or n.startswith("rzeka"))
+    best = (1e9, None)
+    for f in terrain["streams"]:
+        if named(f):
+            d = min(dist(p, q) for q in f["points"])
+            if d < best[0]:
+                best = (d, f["name"])
+    if best[0] <= 600:
+        return best[1]
+    best = (1e9, "Las")
+    for f in terrain["trails"]:
+        if named(f):
+            d = min(dist(p, q) for q in f["points"])
+            if d < best[0]:
+                parts = f["name"].split(": ", 1)[-1].split(" (")[0].split(" - ")
+                best = (d, parts[-1].strip())
+    return best[1]
+
+
+def unique_names(segments, terrain):
+    """Duplicate place names get a compass suffix relative to the other segments with the same name."""
+    base = {s["id"]: place_name(terrain, s["seed"]) for s in segments}
+    out = {}
+    for name in set(base.values()):
+        group = [s for s in segments if base[s["id"]] == name]
+        if len(group) == 1:
+            out[group[0]["id"]] = name
+            continue
+        lats = [s["seed"][0] for s in group]
+        lons = [s["seed"][1] for s in group]
+        ns = (max(lats) - min(lats)) * 111320 >= (max(lons) - min(lons)) * 70500
+        for s in group:
+            if ns:
+                suf = "płn." if s["seed"][0] == max(lats) else "płd." if s["seed"][0] == min(lats) else "środek"
+            else:
+                suf = "wsch." if s["seed"][1] == max(lons) else "zach." if s["seed"][1] == min(lons) else "środek"
+            out[s["id"]] = f"{name} - {suf}"
+    # still equal (three or more in a row): number them
+    seen = {}
+    for s in segments:
+        n = out[s["id"]]
+        seen[n] = seen.get(n, 0) + 1
+    count = {}
+    for s in segments:
+        n = out[s["id"]]
+        if seen[n] > 1:
+            count[n] = count.get(n, 0) + 1
+            out[s["id"]] = f"{n} {count[n]}"
+    return out
 
 
 def main():
@@ -49,7 +92,10 @@ def main():
             lat = BBOX["north"] - (i + 0.5) * (BBOX["north"] - BBOX["south"]) / 4
             lon = BBOX["west"] + (j + 0.5) * (BBOX["east"] - BBOX["west"]) / 5
             seed = [round(lat, 5), round(lon, 5)]
-            segments.append({"id": f"R{n}", "name": f"R{n} {nearest_name(terrain, seed)}", "seed": seed})
+            segments.append({"id": f"R{n}", "name": "", "seed": seed})
+    names = unique_names(segments, terrain)
+    for sg in segments:
+        sg["name"] = f"{sg['id']} {names[sg['id']]}"
     near_ipp = min(segments, key=lambda s: dist(s["seed"], IPP))["id"]
 
     sc = {
@@ -98,16 +144,16 @@ def main():
              "detail": "\"Zosia zna tylko drogę, którą przyszliśmy: niebieskim od ul. Leśnej, wzdłuż potoku.\"",
              "points": [[50.76863, 15.75047], [50.76659, 15.74981], [50.76488, 15.75004], [50.76133, 15.74862], [50.76162, 15.75282]], "radiusM": 150},
             {"provider": "Clue", "at": "15:55", "title": "Rodzina (meldunek): wujek - ktoś wołał w dole, w stronę Wilczego Potoku",
-             "detail": "Meldunek: Mieszkaniec (rodzina, wujek Marek, telefon z GPS): słyszałem cienkie wołanie 'mamo' w dole lasu, ok. 15:50. GPS mojego telefonu w miejscu nasłuchu.",
+             "detail": "Meldunek: Mieszkaniec - rodzina, wujek Marek (telefon z GPS): słyszałem cienkie wołanie 'mamo' w dole lasu, ok. 15:50. GPS mojego telefonu w miejscu nasłuchu.",
              "point": [50.7650, 15.7530], "radiusM": 300, "seenAt": "15:50", "clueKind": "sighting"},
             {"provider": "Clue", "at": "16:15", "title": "Rodzina (meldunek): kuzynka - różowa bluza nad Łomniczką",
-             "detail": "Meldunek: Mieszkaniec (rodzina, kuzynka Ola, telefon z GPS): widziałam między drzewami różową bluzę nad Łomniczką, ok. 16:10, dziecko szło z kimś dorosłym.",
+             "detail": "Meldunek: Mieszkaniec - rodzina, kuzynka Ola (telefon z GPS): widziałam między drzewami różową bluzę nad Łomniczką, ok. 16:10, dziecko szło z kimś dorosłym.",
              "point": [50.75718, 15.75936], "radiusM": 250, "seenAt": "16:10", "clueKind": "sighting"},
             {"provider": "SegmentSearched", "at": "16:45", "title": "Policja: Łomniczka przy Szerokim Moście - to inne dziecko z rodzicami, nic",
              "detail": "Patrol Policji sprawdził zgłoszenie kuzynki: dziewczynka w różowej bluzie z rodzicami, to nie Zosia.",
              "segments": [min(segments, key=lambda s: dist(s["seed"], [50.75718, 15.75936]))["id"]], "pod": 0.5},
             {"provider": "Clue", "at": "17:05", "title": "GOPR A: znalezisko - różowa gumka do włosów przy Wilczym Potoku",
-             "detail": "Mama potwierdza: Zosi. Leżała przy ścieżce zwierząt nad potokiem, ok. 600 m od polany, w dół.",
+             "detail": "Mama potwierdza: Zosi. Leżała przy ścieżce zwierząt nad potokiem, ok. 560 m od polany, w dół.",
              "point": [50.76643, 15.75476], "radiusM": 120},
             {"provider": "DronePassEmpty", "at": "17:20", "title": "Dron: zręby i polany nad Łomnicą, nic",
              "detail": "Termowizja pod gęstymi świerkami słabo widzi. POD 40%.",
@@ -115,9 +161,9 @@ def main():
             {"provider": "Clue", "at": "17:50", "title": "Pies GOPR podjął trop w dół wzdłuż Wilczego Potoku",
              "detail": "Przewodnik: pies prowadzi korytem, wyraźnie, ostatnie 200 m.", "point": [50.7672, 15.7560], "radiusM": 150},
             {"provider": "Weather", "at": "18:05", "title": "IMGW: burza nadciąga, od ok. 19:00 grad i ulewa",
-             "detail": "Śmigłowiec LPR ma okno do ok. 18:45. Dziecko w krótkim rękawie: wychłodzenie po zmroku.", "factor": 1.0},
+             "detail": "Śmigłowiec LPR ma okno do ok. 18:45. Dziecko w bluzie, bez kurtki: wychłodzenie po zmroku i w deszczu.", "factor": 1.0},
             {"provider": "Clue", "at": "18:20", "title": "ZNALEZIONO: pies GOPR - Zosia w wykrocie przy Wilczym Potoku",
-             "detail": "Schowana pod korzeniami przewróconego świerka, ok. 150 m nad Łomniczką. Wystraszona, otarcia, lekko wychłodzona. Przekazana mamie i ZRM.",
+             "detail": "Schowana pod korzeniami przewróconego świerka, ok. 150 m nad Łomniczką. Bała się psa, więc przewodnik odwołał go i zawołał mamę - Zosia sama wyszła do niej. Wystraszona, otarcia, lekko wychłodzona. Przekazana ZRM.",
              "point": TRUTH, "radiusM": 30, "found": True},
         ],
     }

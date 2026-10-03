@@ -41,7 +41,7 @@
   },
   {
    "id": "R2",
-   "name": "R2 Szklarska Poręba - Dworzec kolejowy Wałbrzych Główny",
+   "name": "R2 Dziki Potok - zach.",
    "seed": [
     50.78175,
     15.729
@@ -49,7 +49,7 @@
   },
   {
    "id": "R3",
-   "name": "R3 Dziki Potok",
+   "name": "R3 Dziki Potok - wsch.",
    "seed": [
     50.78175,
     15.745
@@ -57,7 +57,7 @@
   },
   {
    "id": "R4",
-   "name": "R4 Karpacz Muzeum Zabawek - Sowia Przełęcz",
+   "name": "R4 Łomniczka - płn.",
    "seed": [
     50.78175,
     15.761
@@ -65,7 +65,7 @@
   },
   {
    "id": "R5",
-   "name": "R5 Skałka",
+   "name": "R5 Skałka - płn.",
    "seed": [
     50.78175,
     15.777
@@ -73,7 +73,7 @@
   },
   {
    "id": "R6",
-   "name": "R6 Karpacz - Słonecznik",
+   "name": "R6 Wapniak",
    "seed": [
     50.77125,
     15.713
@@ -81,7 +81,7 @@
   },
   {
    "id": "R7",
-   "name": "R7 Karpacz Biały Jar - Kocioł Białego Jaru",
+   "name": "R7 Łomnica - płn.",
    "seed": [
     50.77125,
     15.729
@@ -89,7 +89,7 @@
   },
   {
    "id": "R8",
-   "name": "R8 Słonecznik - Przełęcz Okraj",
+   "name": "R8 Bystrzyk - płn.",
    "seed": [
     50.77125,
     15.745
@@ -97,7 +97,7 @@
   },
   {
    "id": "R9",
-   "name": "R9 Karpacz PKP - Schronisko PTTK nad Łomniczką",
+   "name": "R9 Łomniczka - środek 1",
    "seed": [
     50.77125,
     15.761
@@ -105,7 +105,7 @@
   },
   {
    "id": "R10",
-   "name": "R10 Szklarska Poręba - Dworzec kolejowy Wałbrzych Główny",
+   "name": "R10 Skałka - płd.",
    "seed": [
     50.77125,
     15.777
@@ -113,7 +113,7 @@
   },
   {
    "id": "R11",
-   "name": "R11 Karpacz Biały Jar - Kocioł Białego Jaru",
+   "name": "R11 Łomnica - płd.",
    "seed": [
     50.76075,
     15.713
@@ -121,7 +121,7 @@
   },
   {
    "id": "R12",
-   "name": "R12 Karpacz Biały Jar - Śnieżka",
+   "name": "R12 Złoty Potok - płn.",
    "seed": [
     50.76075,
     15.729
@@ -137,7 +137,7 @@
   },
   {
    "id": "R14",
-   "name": "R14 Łomniczka",
+   "name": "R14 Łomniczka - środek 2",
    "seed": [
     50.76075,
     15.761
@@ -145,7 +145,7 @@
   },
   {
    "id": "R15",
-   "name": "R15 Słonecznik - Przełęcz Okraj",
+   "name": "R15 Płomnica - płn.",
    "seed": [
     50.76075,
     15.777
@@ -153,7 +153,7 @@
   },
   {
    "id": "R16",
-   "name": "R16 Karpacz Biały Jar - Kocioł Białego Jaru",
+   "name": "R16 Złoty Potok - płd.",
    "seed": [
     50.75025,
     15.713
@@ -161,7 +161,7 @@
   },
   {
    "id": "R17",
-   "name": "R17 Bystrzyk",
+   "name": "R17 Bystrzyk - płd.",
    "seed": [
     50.75025,
     15.729
@@ -169,7 +169,7 @@
   },
   {
    "id": "R18",
-   "name": "R18 Łomniczka",
+   "name": "R18 Łomniczka - płd.",
    "seed": [
     50.75025,
     15.745
@@ -185,7 +185,7 @@
   },
   {
    "id": "R20",
-   "name": "R20 Płomnica",
+   "name": "R20 Płomnica - płd.",
    "seed": [
     50.75025,
     15.777
@@ -416,7 +416,7 @@
    "provider": "Clue",
    "at": "15:55",
    "title": "Rodzina (meldunek): wujek - ktoś wołał w dole, w stronę Wilczego Potoku",
-   "detail": "Meldunek: Mieszkaniec (rodzina, wujek Marek, telefon z GPS): słyszałem cienkie wołanie 'mamo' w dole lasu, ok. 15:50. GPS mojego telefonu w miejscu nasłuchu.",
+   "detail": "Meldunek: Mieszkaniec - rodzina, wujek Marek (telefon z GPS): słyszałem cienkie wołanie 'mamo' w dole lasu, ok. 15:50. GPS mojego telefonu w miejscu nasłuchu.",
    "point": [
     50.765,
     15.753
@@ -429,7 +429,7 @@
    "provider": "Clue",
    "at": "16:15",
    "title": "Rodzina (meldunek): kuzynka - różowa bluza nad Łomniczką",
-   "detail": "Meldunek: Mieszkaniec (rodzina, kuzynka Ola, telefon z GPS): widziałam między drzewami różową bluzę nad Łomniczką, ok. 16:10, dziecko szło z kimś dorosłym.",
+   "detail": "Meldunek: Mieszkaniec - rodzina, kuzynka Ola (telefon z GPS): widziałam między drzewami różową bluzę nad Łomniczką, ok. 16:10, dziecko szło z kimś dorosłym.",
    "point": [
     50.75718,
     15.75936
@@ -452,7 +452,7 @@
    "provider": "Clue",
    "at": "17:05",
    "title": "GOPR A: znalezisko - różowa gumka do włosów przy Wilczym Potoku",
-   "detail": "Mama potwierdza: Zosi. Leżała przy ścieżce zwierząt nad potokiem, ok. 600 m od polany, w dół.",
+   "detail": "Mama potwierdza: Zosi. Leżała przy ścieżce zwierząt nad potokiem, ok. 560 m od polany, w dół.",
    "point": [
     50.76643,
     15.75476
@@ -484,14 +484,14 @@
    "provider": "Weather",
    "at": "18:05",
    "title": "IMGW: burza nadciąga, od ok. 19:00 grad i ulewa",
-   "detail": "Śmigłowiec LPR ma okno do ok. 18:45. Dziecko w krótkim rękawie: wychłodzenie po zmroku.",
+   "detail": "Śmigłowiec LPR ma okno do ok. 18:45. Dziecko w bluzie, bez kurtki: wychłodzenie po zmroku i w deszczu.",
    "factor": 1.0
   },
   {
    "provider": "Clue",
    "at": "18:20",
    "title": "ZNALEZIONO: pies GOPR - Zosia w wykrocie przy Wilczym Potoku",
-   "detail": "Schowana pod korzeniami przewróconego świerka, ok. 150 m nad Łomniczką. Wystraszona, otarcia, lekko wychłodzona. Przekazana mamie i ZRM.",
+   "detail": "Schowana pod korzeniami przewróconego świerka, ok. 150 m nad Łomniczką. Bała się psa, więc przewodnik odwołał go i zawołał mamę - Zosia sama wyszła do niej. Wystraszona, otarcia, lekko wychłodzona. Przekazana ZRM.",
    "point": [
     50.76825,
     15.75837
