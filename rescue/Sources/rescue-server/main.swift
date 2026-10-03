@@ -74,6 +74,12 @@ actor LiveStore {
         return all
     }
     func raw() -> Data { FileManager.default.contents(atPath: path) ?? Data("[]".utf8) }
+    /// live mode: per-incident clue file (out/live-<sc>.json)
+    func append(_ r: FieldReport, to p: String) throws {
+        var all = FieldReportProvider.load(p); all.append(r)
+        let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        try enc.encode(all).write(to: URL(fileURLWithPath: p), options: .atomic)
+    }
 }
 let store = LiveStore(path: livePath)
 /// Idempotent POST /report: a phone that timed out resends the same client id - stored once (in memory, marked on arrival).
@@ -99,9 +105,9 @@ func scenarioNames() -> [String] {
 func validName(_ n: String) -> Bool { !n.isEmpty && n.count <= 60 && n.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" } }
 
 /// Live field reports -> scenario events (same mapping as the Studio's FieldReport module).
-func liveEvents(segments: Set<String>, seeds: [String: [Double]], mapAt: (String) -> String = { $0 }) -> [[String: Any]] {
+func liveEvents(segments: Set<String>, seeds: [String: [Double]], mapAt: (String) -> String = { $0 }, extraPath: String? = nil) -> [[String: Any]] {
     var out: [[String: Any]] = []
-    for r in FieldReportProvider.load(livePath) {
+    for r in FieldReportProvider.load(livePath) + (extraPath.map { FieldReportProvider.load($0) } ?? []) {   // + per-incident clues (live mode sc)
         guard let at = r.at.map(mapAt) else { continue }   // reports without scenario time cannot be placed on the timeline
         for h in r.hints {
             switch h.type {
@@ -149,10 +155,11 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
         let liveAt = evs.compactMap { $0["at"] as? String }.filter { rel($0) < firstFind }.max { rel($0) < rel($1) } ?? (d["startClock"] as? String ?? "00:00")
         let ev = liveEvents(segments: Set(segs.compactMap { $0["id"] as? String }),
                             seeds: Dictionary(segs.compactMap { s in (s["id"] as? String).flatMap { id in (s["seed"] as? [Double]).map { (id, $0) } } }, uniquingKeysWith: { a, _ in a }),
-                            mapAt: { rel($0) <= end ? $0 : liveAt })
+                            mapAt: { rel($0) <= end ? $0 : liveAt }, extraPath: livePathFor(name))
         nLive = ev.count
         d["events"] = ((d["events"] as? [[String: Any]]) ?? []) + ev
     }
+    if let rs = await roster.resources(for: name) { d["resources"] = rs.compactMap { try? JSONSerialization.jsonObject(with: $0) } }   // live mode: touched incident plans with its roster teams only
     guard let data = try? JSONSerialization.data(withJSONObject: d), var s = try? JSONDecoder().decode(Scenario.self, from: data) else { return nil }
     s.enable(features)
     var doc = (try? JSONSerialization.jsonObject(with: await StoryPipeline.runData(s))) as? [String: Any] ?? [:]
@@ -188,11 +195,11 @@ func landing() -> Data {
     return response("200 OK", "text/html; charset=utf-8", Data(html.utf8))
 }
 
-// MARK: live mode (CONTRACT.md "Live mode": POST /api/clue, GET /api/live feed; dispatch + reports also land in the feed)
+// MARK: live mode (CONTRACT.md "Live mode": POST /api/clue, GET /api/live feed, optional sc per incident, /api/incidents, team roster)
 
 struct LiveFeedEvent: Codable, Sendable {
     var seq = 0, kind = "", t = "", by = "operator", title = ""
-    var team: String?, type: String?, segmentId: String?, note: String?, lat: Double?, lon: Double?
+    var team: String?, type: String?, segmentId: String?, note: String?, lat: Double?, lon: Double?, sc: String?
 }
 actor LiveFeed {
     var seq = 0
@@ -202,7 +209,12 @@ actor LiveFeed {
         events.append(e); if events.count > 300 { events.removeFirst(100) }
         return e
     }
-    func since(_ s: Int) -> (Int, [LiveFeedEvent]) { (seq, Array(events.filter { $0.seq > s }.suffix(50))) }
+    /// sc nil -> every event; sc -> that incident's events + sc-less ones (phone reports); seq = highest among them
+    func since(_ s: Int, sc: String? = nil) -> (Int, [LiveFeedEvent]) {
+        let mine = sc == nil ? events : events.filter { $0.sc == nil || $0.sc == sc }
+        return (sc == nil ? seq : (mine.last?.seq ?? 0), Array(mine.filter { $0.seq > s }.suffix(50)))
+    }
+    func last(sc: String) -> LiveFeedEvent? { events.last { $0.sc == sc } }
 }
 let liveFeed = LiveFeed()
 let clueTypes: [String: (label: String, strength: String)] = ["odziez": ("Odzież", "strong"), "slad": ("Ślad", "medium"), "swiadek": ("Świadek", "weak"),
@@ -210,23 +222,94 @@ let clueTypes: [String: (label: String, strength: String)] = ["odziez": ("Odzie�
 func shortClean(_ v: Any?, _ n: Int) -> String? {
     (v as? String).map { String($0.trimmingCharacters(in: .whitespacesAndNewlines).prefix(n)) }.flatMap { $0.isEmpty ? nil : $0 }
 }
-/// Feed entry for an operator dispatch (POST /api/assignments or /story/assign body).
+func livePathFor(_ sc: String) -> String { URL(fileURLWithPath: livePath).deletingLastPathComponent().appendingPathComponent("live-\(sc).json").path }
+/// optional incident id: JSON body "sc" wins over ?sc=
+func scParam(_ q: Req, _ o: [String: Any] = [:]) -> String? { (shortClean(o["sc"], 60) ?? shortClean(q.query["sc"], 60)).flatMap { validName($0) ? $0 : nil } }
+func jsonObject(_ d: Data) -> [String: Any] { ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any]) ?? [:] }
+
+/// Shared team roster across incidents (seeded from all scenario files, deduped by id). Untouched incident = its own file's teams.
+struct RosterTeam: Codable, Sendable {
+    var id = "", name = "", kind = "", base: [Double]? = nil, sc: String? = nil, home: [String] = []
+    var res = Data(), resByHome: [String: Data] = [:]   // resource object per home scenario file (own base there)
+    enum CodingKeys: String, CodingKey { case id, name, kind, base, sc, home }
+}
+actor Roster {
+    var teams: [RosterTeam] = []
+    var touched: Set<String> = []
+    var version = 0
+    init() {
+        let kinds = ["ground": "pieszy", "dog": "pies", "drone": "dron", "heli": "smiglowiec", "boat": "lodz", "diver": "nurkowie"]
+        var out: [RosterTeam] = []
+        for n in scenarioNames() {
+            let d = jsonObject((try? Data(contentsOf: scenariosDir.appendingPathComponent("\(n).json"))) ?? Data())
+            for r in (d["resources"] as? [[String: Any]]) ?? [] {
+                guard let id = r["id"] as? String else { continue }
+                if let i = out.firstIndex(where: { $0.id == id }) { out[i].home.append(n); out[i].resByHome[n] = try? JSONSerialization.data(withJSONObject: r); continue }
+                let type = r["type"] as? String ?? ""
+                out.append(RosterTeam(id: id, name: r["name"] as? String ?? id, kind: kinds[type] ?? type, base: r["base"] as? [Double], home: [n],
+                                      res: (try? JSONSerialization.data(withJSONObject: r)) ?? Data(), resByHome: [n: (try? JSONSerialization.data(withJSONObject: r)) ?? Data()]))
+            }
+        }
+        teams = out
+    }
+    func list() -> [RosterTeam] { teams }
+    func team(_ id: String) -> RosterTeam? { teams.first { $0.id == id } }
+    func isTouched(_ sc: String) -> Bool { touched.contains(sc) }
+    /// moves a team to sc (nil = release); returns the previous incident
+    func move(_ id: String, to sc: String?) -> String? {
+        guard let i = teams.firstIndex(where: { $0.id == id }) else { return nil }
+        let from = teams[i].sc
+        // first touch of an incident: its own scenario-file teams that are still free join it (the plan does not lose them)
+        for s in [from, sc].compactMap({ $0 }) where !touched.contains(s) {
+            touched.insert(s)
+            for j in teams.indices where teams[j].sc == nil && teams[j].home.contains(s) && j != i { teams[j].sc = s }
+        }
+        teams[i].sc = sc
+        version += 1
+        return from
+    }
+    func resources(for sc: String) -> [Data]? { touched.contains(sc) ? teams.filter { $0.sc == sc }.map { $0.resByHome[sc] ?? $0.res } : nil }
+}
+let roster = Roster()
+
+/// operator assignments (Studio store) as a list of dicts
+func assignmentList() async -> [[String: Any]] { (jsonObject(await studio.assignments())["assignments"] as? [[String: Any]]) ?? [] }
+/// GET /api/assignments shape; with sc only that incident's assignments + ones without a scenario
+func assignmentsByTeam(sc: String?) async -> Data {
+    guard let sc else { return await studio.assignmentsByTeam() }
+    var out: [String: Any] = [:]
+    for a in await assignmentList() where a["scenario"] == nil || a["scenario"] as? String == sc {
+        guard let rid = a["resourceId"] as? String else { continue }
+        var o: [String: Any] = ["segmentId": a["segmentId"] ?? "", "by": a["by"] ?? "operator", "at": a["at"] ?? a["t"] ?? ""]
+        if let n = a["note"] { o["why"] = n }
+        out[rid] = o
+    }
+    return (try? JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])) ?? Data("{}".utf8)
+}
+/// Feed entry for an operator dispatch (POST /api/assignments or /story/assign body); on a touched incident it also attaches the roster team.
 func feedDispatch(_ body: Data) async {
-    guard let o = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any], let team = shortClean(o["team"] ?? o["resourceId"], 64) else { return }
-    let seg = shortClean(o["segmentId"], 16)
-    var e = LiveFeedEvent(kind: "dispatch", by: shortClean(o["by"], 40) ?? "operator", title: seg.map { "\(team) -> \($0)" } ?? "\(team): odwołany")
-    e.team = team; e.segmentId = seg; e.note = shortClean(o["why"] ?? o["note"], 200)
+    let o = jsonObject(body)
+    guard let team = shortClean(o["team"] ?? o["resourceId"], 64) else { return }
+    let seg = shortClean(o["segmentId"], 16), sc = shortClean(o["sc"] ?? o["scenario"], 60)
+    let by = shortClean(o["by"], 40) ?? "operator"
+    if let sc, seg != nil, await roster.isTouched(sc), let t = await roster.team(team), t.sc != sc {
+        if let from = await roster.move(team, to: sc) { var m = LiveFeedEvent(kind: "dispatch", by: by, title: "\(team) -> \(sc) (z \(from))"); m.team = team; m.sc = from; _ = await liveFeed.add(m) }
+    }
+    var e = LiveFeedEvent(kind: "dispatch", by: by, title: seg.map { "\(team) -> \($0)" } ?? "\(team): odwołany")
+    e.team = team; e.segmentId = seg; e.note = shortClean(o["why"] ?? o["note"], 200); e.sc = sc
     _ = await liveFeed.add(e)
 }
-func addClue(_ body: Data) async -> Data {
-    guard let o = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
+func addClue(_ q: Req) async -> Data {
+    guard let o = (try? JSONSerialization.jsonObject(with: q.body)) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
+    let sc = scParam(q, o)
+    if let sc, !scenarioNames().contains(sc) { return jsonErr("400 Bad Request", "unknown sc") }
     let type = clueTypes[(o["type"] as? String ?? "").lowercased()] != nil ? (o["type"] as! String).lowercased() : "slad"
     let (label, strength) = clueTypes[type]!
     var lat = (o["lat"] as? NSNumber)?.doubleValue, lon = (o["lon"] as? NSNumber)?.doubleValue
     let seg = shortClean(o["segmentId"], 16)
     if lat == nil || lon == nil, let seg {
-        let sc = shortClean(o["scenario"], 60).flatMap { validName($0) ? $0 : nil } ?? "zawrat"
-        let s = (try? Scenario.load(scenariosDir.appendingPathComponent("\(sc).json").path)) ?? defaultScenario
+        let name = sc ?? shortClean(o["scenario"], 60).flatMap { validName($0) ? $0 : nil } ?? "zawrat"
+        let s = (try? Scenario.load(scenariosDir.appendingPathComponent("\(name).json").path)) ?? defaultScenario
         if let p = s.segments.first(where: { $0.id == seg })?.seed, p.count == 2 { lat = p[0]; lon = p[1] }
     }
     guard let lat, let lon, abs(lat) <= 90, abs(lon) <= 180 else { return jsonErr("400 Bad Request", "lat/lon or a known segmentId required") }
@@ -244,18 +327,101 @@ func addClue(_ body: Data) async -> Data {
     let rep: [String: Any] = ["t": ISO8601DateFormatter().string(from: Date()), "at": at, "source": "live-clue", "parsedBy": "manual", "latencyMs": 0,
                               "text": "\(by == "ratownik" ? (team ?? "ratownik") : "operator"): \(desc)", "hints": [hint]]
     guard let r = (try? JSONSerialization.data(withJSONObject: rep)).flatMap({ try? JSONDecoder().decode(FieldReport.self, from: $0) }) else { return jsonErr("500 Internal Server Error", "encode failed") }
-    do { Metrics.shared.set("live_events_total", [:], Double(try await store.append(r).count)) } catch { return jsonErr("500 Internal Server Error", "write failed") }
+    do {
+        if let sc { try await store.append(r, to: livePathFor(sc)) }
+        else { Metrics.shared.set("live_events_total", [:], Double(try await store.append(r).count)) }
+    } catch { return jsonErr("500 Internal Server Error", "write failed") }
     var e = LiveFeedEvent(kind: "clue", by: by, title: desc)
-    e.team = team; e.type = type; e.segmentId = seg; e.note = note; e.lat = lat; e.lon = lon
+    e.team = team; e.type = type; e.segmentId = seg; e.note = note; e.lat = lat; e.lon = lon; e.sc = sc
     e = await liveFeed.add(e)
-    print("[clue \(by)\(team.map { " " + $0 } ?? "")] \(desc) @ \(lat),\(lon)")
+    print("[clue \(by)\(team.map { " " + $0 } ?? "")\(sc.map { " sc=" + $0 } ?? "")] \(desc) @ \(lat),\(lon)")
     return response("200 OK", json, Data(#"{"ok":true,"seq":\#(e.seq),"event":\#(jsonString(e))}"#.utf8))
 }
-func liveFeedData(_ since: Int) async -> Data {
-    let (seq, evs) = await liveFeed.since(since)
-    let asg = String(decoding: await studio.assignmentsByTeam(), as: UTF8.self)
+func liveFeedData(_ since: Int, sc: String?) async -> Data {
+    let (seq, evs) = await liveFeed.since(since, sc: sc)
+    let asg = String(decoding: await assignmentsByTeam(sc: sc), as: UTF8.self)
     let now = ISO8601DateFormatter().string(from: Date())
     return response("200 OK", json, Data(#"{"seq":\#(seq),"now":"\#(now)","events":\#(jsonString(evs)),"assignments":\#(asg)}"#.utf8))
+}
+
+/// GET /api/teams
+func teamsData() async -> Data {
+    let asg = await assignmentList()
+    let list: [[String: Any]] = await roster.list().map { t in
+        var o: [String: Any] = ["id": t.id, "name": t.name, "kind": t.kind, "home": t.home, "sc": t.sc ?? NSNull()]
+        if let b = t.base { o["base"] = b }
+        let seg = t.sc.flatMap { sc in asg.first { $0["resourceId"] as? String == t.id && ($0["scenario"] as? String == sc) }?["segmentId"] as? String }
+        o["segmentId"] = seg ?? NSNull()
+        o["status"] = t.sc == nil ? "wolny" : seg == nil ? "w drodze" : "w akcji"
+        return o
+    }
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: list, options: [.sortedKeys])) ?? Data("[]".utf8))
+}
+/// POST /api/teams/assign {team, sc|null, by?}
+func rosterAssign(_ q: Req) async -> Data {
+    let o = jsonObject(q.body)
+    guard let id = shortClean(o["team"], 64), let t = await roster.team(id) else { return jsonErr("400 Bad Request", "unknown team") }
+    let sc = shortClean(o["sc"], 60)
+    if let sc, !validName(sc) || !scenarioNames().contains(sc) { return jsonErr("400 Bad Request", "unknown sc") }
+    let by = shortClean(o["by"], 40) ?? "operator"
+    var touchedSc = false
+    if let sc { touchedSc = await roster.isTouched(sc) }
+    if t.sc != sc || (sc != nil && !touchedSc) {
+        let from = await roster.move(id, to: sc)
+        if let from, from != sc {
+            _ = await studio.assign((try? JSONSerialization.data(withJSONObject: ["resourceId": id])) ?? Data())   // clears its segment there
+            var m = LiveFeedEvent(kind: "dispatch", by: by, title: sc.map { "\(id) -> \($0) (z \(from))" } ?? "\(id) zwolniony"); m.team = id; m.sc = from
+            _ = await liveFeed.add(m)
+        }
+        if let sc, from != sc { var e = LiveFeedEvent(kind: "dispatch", by: by, title: "\(id) -> \(sc)"); e.team = id; e.sc = sc; _ = await liveFeed.add(e) }
+    }
+    return await teamsData()
+}
+
+/// GET /api/incidents: the engine part cached per (sc, live version)
+actor IncidentCache {
+    var c: [String: Data] = [:]
+    func get(_ k: String) -> Data? { c[k] }
+    func put(_ k: String, _ v: Data) { if c.count > 200 { c.removeAll() }; c[k] = v }
+}
+let incidentCache = IncidentCache()
+func fileSize(_ p: String) -> Int { (try? FileManager.default.attributesOfItem(atPath: p)[.size] as? Int) ?? 0 }
+func incidentsData() async -> Data {
+    let feedSeq = await liveFeed.seq, rv = await roster.version, asg = await assignmentList()
+    var out: [[String: Any]] = []
+    for sc in scenarioNames() {
+        let key = "\(sc)|\(feedSeq)|\(rv)|\(fileSize(livePath))|\(fileSize(livePathFor(sc)))"
+        var base = await incidentCache.get(key)
+        if base == nil, let run = await runScenario(sc, live: true) {
+            let d = jsonObject(run), all = (d["steps"] as? [[String: Any]]) ?? []
+            // live moment = the step before the replay's scripted find; only a live ZNALEZIONO (meldunek) closes the incident
+            let isFind = { (s: [String: Any]) -> Bool in (s["label"] as? String ?? "").uppercased().contains("ZNALEZIONO") || s["source"] as? String == "Found" }
+            let cut = all.firstIndex { isFind($0) && !($0["label"] as? String ?? "").contains("(meldunek)") } ?? all.count
+            let steps = Array(all.prefix(max(cut, 1))), last = steps.last ?? [:]
+            let segs = (last["segments"] as? [[String: Any]]) ?? []
+            let inc = (d["incident"] as? String ?? sc).replacingOccurrences(of: #"\s*\(scenariusz[^)]*\)\s*$"#, with: "", options: .regularExpression)
+            let parts = inc.components(separatedBy: " - ")
+            let title = parts[0].prefix(1).lowercased() + parts[0].dropFirst()
+            let b: [String: Any] = ["title": title, "place": parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc,
+                                    "top3": segs.prefix(3).map { ["segmentId": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0] },
+                                    "found": steps.contains(where: isFind), "replayFound": cut < all.count, "at": last["t"] ?? "",
+                                    "total": ((last["resources"] as? [Any]) ?? []).count]
+            base = try? JSONSerialization.data(withJSONObject: b)
+            if let base { await incidentCache.put(key, base) }
+        }
+        var o = jsonObject(base ?? Data())
+        if o.isEmpty { continue }
+        let lastEv = await liveFeed.last(sc: sc)
+        let touched = await roster.isTouched(sc)
+        o["sc"] = sc
+        o["live"] = lastEv != nil || touched
+        o["seq"] = lastEv?.seq ?? 0
+        o["lastEventAt"] = lastEv?.t ?? NSNull()
+        o["teams"] = ["assigned": asg.filter { $0["scenario"] as? String == sc }.count, "total": o["total"] ?? 0]
+        o["total"] = nil
+        out.append(o)
+    }
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])) ?? Data("[]".utf8))
 }
 
 // MARK: routing
@@ -359,10 +525,16 @@ func handle(_ q: Req) async -> Data {
     case ("GET", "/modules"): return response("200 OK", json, StoryPipeline.modulesData())
     case ("GET", "/story"): return response("200 OK", json, await studio.get())
     case ("GET", "/story/scenario"): return response("200 OK", json, await studio.scenarioData())
-    case ("GET", "/api/assignments"): return response("200 OK", json, await studio.assignmentsByTeam())
-    case ("POST", "/api/assignments"): await feedDispatch(q.body); return response("200 OK", json, await studio.assignTeam(q.body))
-    case ("POST", "/api/clue"): return await addClue(q.body)
-    case ("GET", "/api/live"): return await liveFeedData(Int(q.query["since"] ?? "") ?? 0)
+    case ("GET", "/api/assignments"): return response("200 OK", json, await assignmentsByTeam(sc: scParam(q)))
+    case ("POST", "/api/assignments"):
+        var o = jsonObject(q.body); if let sc = scParam(q, o) { o["sc"] = sc; o["scenario"] = sc }   // live mode: per-incident assignment
+        let b = (try? JSONSerialization.data(withJSONObject: o)) ?? q.body
+        await feedDispatch(b); return response("200 OK", json, await studio.assignTeam(b))
+    case ("POST", "/api/clue"): return await addClue(q)
+    case ("GET", "/api/live"): return await liveFeedData(Int(q.query["since"] ?? "") ?? 0, sc: scParam(q))
+    case ("GET", "/api/incidents"): return await incidentsData()
+    case ("GET", "/api/teams"): return await teamsData()
+    case ("POST", "/api/teams/assign"): return await rosterAssign(q)
     case ("GET", "/story/assign"): return response("200 OK", json, await studio.assignments())
     case ("POST", "/story/assign"): await feedDispatch(q.body); return response("200 OK", json, await studio.assign(q.body))
     case ("GET", "/eval/sim-runs"): return response("200 OK", json, EvalFiles.simRuns())

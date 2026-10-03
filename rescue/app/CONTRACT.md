@@ -186,9 +186,11 @@ Every live route takes an optional `sc` (JSON body field `sc`, or `?sc=` in the 
     "place": "Dolina Pięciu Stawów / Zawrat",      // incident text after " - "
     "live": true,                                  // anything happened for this sc since server start (clue, dispatch, roster move)
     "seq": 14, "lastEventAt": "2026-10-04T09:12:03Z",   // per-sc feed seq / time of its last event (null if none)
-    "top3": [ { "segmentId": "S7", "name": "Kozia Dolinka", "weight": 0.31 } ],   // last step of the run, "waga mapy" (POA), 0..1
+    "at": "19:45",                                 // scenario clock of the live moment = last step before the replay's scripted find
+    "top3": [ { "segmentId": "S7", "name": "Kozia Dolinka", "weight": 0.31 } ],   // at the live moment, "waga mapy" (POA), 0..1
     "teams": { "assigned": 2, "total": 5 },        // assigned = teams with a segment in this incident; total = teams the planner uses for it
-    "found": false } ]                             // the run has a ZNALEZIONO / Found step
+    "found": false,                                // a live report/clue said ZNALEZIONO (the replay's own scripted find does not count)
+    "replayFound": true } ]                        // the scenario file itself ends with a find (replay)
 ```
 
 Blind-test scenarios are never listed. Runs are cached per (sc, live version), so polling does not re-run the engine unless something changed; the first call after start computes each scenario once.
@@ -200,5 +202,6 @@ Blind-test scenarios are never listed. Runs are cached per (sc, live version), s
   - `kind` from the resource type: ground -> pieszy, dog -> pies, drone -> dron, heli -> smiglowiec, boat -> lodz, diver -> nurkowie (other types pass through).
   - `status`: `wolny` = not attached (`sc: null`); `w drodze` = attached to an incident, no segment yet; `w akcji` = attached and assigned to a segment of that incident.
 - `POST /api/teams/assign { team, sc | null, by? }` -> the updated roster (same as GET). Moves the team to incident `sc` (or releases it with `null`); a team is attached to at most one incident, so moving it detaches it from the previous one and clears its segment there. Each move adds a `dispatch` feed event (`title` e.g. "gopr-a -> kasprowy" / "gopr-a zwolniony") on the old and on the new incident. 400 for an unknown team or scenario.
+- First touch of an incident (a team moved to it or away from it): its own scenario-file teams that are still free (`sc: null`) are attached to it first, so its plan does not lose them.
 - Planner: an incident whose roster was never touched (no team attached to it or moved away from it) plans with its own scenario-file teams, exactly as today. Once touched, `GET /api/run/<sc>` plans only with the roster teams attached to `sc` (resource objects from the team's home file, `base`/`readyAt` kept).
 - In memory like the assignments: a server restart resets the roster to untouched.
