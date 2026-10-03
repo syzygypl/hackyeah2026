@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Several incidents LIVE at once: Zawrat (Tatry, missing hiker) + Śniardwy (lake, sailor in the water), plus
-krakow-nowa-huta if that scenario exists. One shared team roster: the operator moves the drone and the helicopter
-between incidents, phones add clues tagged with their incident (`sc`), and after every step the script prints
-/api/incidents (top 3 segments, teams per incident) and the roster in a form you can read out to the audience.
+"""Several incidents LIVE at once: Zawrat (Tatry, missing hiker) + Śniardwy (lake, sailor in the water), and
+Kraków Nowa Huta (senior with dementia, city) joining later if that scenario exists. One shared team roster: the
+operator moves the drone and the helicopter between incidents, phones add clues tagged with their incident (`sc`),
+and after every step the script prints /api/incidents (top 3 segments, teams per incident) and the roster in a form
+you can read out to the audience. Roster rule (CONTRACT "First touch of an incident"): the first team sent to an
+incident pulls in that incident's own still-free teams; shared ids (drone, heli, dog) stay where they went first.
 
-    python3 rescue/integration/showcase/multi.py                         # own server on 127.0.0.1:8795+, ~2 min
+    python3 rescue/integration/showcase/multi.py                         # own server on 127.0.0.1:8795+, ~2.5 min
     python3 rescue/integration/showcase/multi.py --port 8796 --ready --keep    # open the screens first, keep the server
     python3 rescue/integration/showcase/multi.py --server http://127.0.0.1:8790 --pin 4821   # drive a running server
     python3 rescue/integration/showcase/multi.py --lan --pin 4821        # 0.0.0.0, OUR hotspot only (phones can watch)
@@ -12,10 +14,12 @@ between incidents, phones add clues tagged with their incident (`sc`), and after
 Contract: rescue/app/CONTRACT.md (several incidents: sc, GET /api/incidents, shared team roster). Needs a rescue-server
 with those routes; on an older server it stops at the start and says which route is missing.
 Timeline (seconds at --speed 1):
-  0  both incidents untouched                         10  roster: TOPR to Zawrat, boats to Śniardwy, drone to Zawrat
- 25  operator: segments for the attached teams        40  TOPR B phone (Zawrat): red glove in the gully under Zawrat
- 55  WOPR boat phone (Śniardwy): life jacket in the reeds SE   70  operator moves the DRONE Zawrat -> Śniardwy (reeds)
- 85  operator sends the HELICOPTER to Zawrat, gully S7         100  summary
+  0  incidents untouched              10  TOPR A -> Zawrat, WOPR boat -> Śniardwy (each pulls in its own free teams)
+ 25  operator: segments               40  TOPR B phone (Zawrat): red glove in the gully under Zawrat -> S7 to #1
+ 55  WOPR phone (Śniardwy): life jacket in open water by the SE shore -> W6 jumps into the top 3
+ 70  operator moves the DRONE Zawrat -> Śniardwy W6     80  TOPR A re-tasked to S7 (the glove)
+ 95  operator moves the HELICOPTER Zawrat -> Śniardwy W2 (person in the water for hours)
+110  third incident: Kraków Nowa Huta, police patrols    125  summary
 """
 import argparse
 import json
@@ -31,13 +35,15 @@ Z, S, K = "zawrat", "sniardwy", "krakow-nowa-huta"
 
 TIMELINE = [
     (0, "operator", "show", "Dwie akcje naraz, nic się jeszcze nie wydarzyło"),
-    (10, "operator", "roster", [("topr-a", Z), ("topr-b", Z), ("drone", Z), ("wopr-boat", S), ("psp-boat", S), ("police-shore", S)]),
-    (25, "operator", "assign", [("topr-a", Z, "S4"), ("topr-b", Z, "S6"), ("drone", Z, "S5"), ("wopr-boat", S, "W3"), ("psp-boat", S, "W6")]),
+    (10, "operator", "roster", [("topr-a", Z), ("wopr-boat", S)]),
+    (25, "operator", "assign", [("topr-a", Z, "S4"), ("topr-b", Z, "S6"), ("drone", Z, "S5"), ("wopr-boat", S, "W3"), ("psp-boat", S, "W2")]),
     (40, "topr-b", "clue", {"sc": Z, "type": "odziez", "segmentId": "S7", "note": "czerwona rękawiczka w żlebie pod Zawratem"}),
-    (55, "wopr-boat", "clue", {"sc": S, "type": "znalezisko", "segmentId": "W5", "note": "kamizelka ratunkowa w trzcinach przy brzegu SE"}),
-    (70, "operator", "move", ("drone", S, "W5", "dron z termowizją przerzucony na trzciny: kamizelka")),
-    (85, "operator", "move", ("heli", Z, "S7", "śmigłowiec do żlebu: rękawiczka, zespół linowy")),
-    (100, "operator", "summary", None),
+    (55, "wopr-boat", "clue", {"sc": S, "type": "znalezisko", "segmentId": "W6", "note": "kamizelka ratunkowa w toni przy brzegu SE"}),
+    (70, "operator", "move", ("drone", S, "W6", "dron z termowizją nad toń przy brzegu SE: kamizelka")),
+    (80, "operator", "assign", [("topr-a", Z, "S7")]),
+    (95, "operator", "move", ("heli", S, "W2", "człowiek w wodzie od godzin: śmigłowiec nad toń na wschód od LKP")),
+    (110, "operator", "newincident", ("pol-a", K, [("pol-a", "N9"), ("pol-b", "N3")])),
+    (125, "operator", "summary", None),
 ]
 
 
@@ -81,7 +87,17 @@ class Multi:
     def roster(self, moves):
         for team, sc in moves:
             st, d, _ = self.P("/api/teams/assign", {"team": team, "sc": sc, "by": "operator"})
-            self.say("operator", f"{team} -> {sc}" + ("" if st == 200 else f"  (HTTP {st}: {str(d)[:120]})"))
+            pulled = sorted(t["id"] for t in d if t["sc"] == sc and t["id"] != team) if st == 200 else []
+            self.say("operator", f"{team} -> {sc}" + (f"  (akcja dociąga swoje wolne zespoły: {', '.join(pulled)})" if pulled else "")
+                     + ("" if st == 200 else f"  (HTTP {st}: {str(d)[:120]})"))
+
+    def newincident(self, team, sc, segs):
+        if sc not in self.names:
+            self.say("operator", f"(scenariusz {sc} nie istnieje, pomijam)")
+            return
+        self.say("operator", f"NOWA AKCJA: {sc}")
+        self.roster([(team, sc)])
+        self.assign([(t, sc, seg) for t, seg in segs])
 
     def assign(self, items):
         for team, sc, seg in items:
@@ -138,8 +154,10 @@ class Multi:
                     self.clue(actor, data)
                 elif action == "move":
                     self.move(*data)
+                elif action == "newincident":
+                    self.newincident(*data)
                 elif action == "summary":
-                    self.say("operator", "PODSUMOWANIE: jeden roster, dwie akcje, ślady trafiają tylko do swojej akcji")
+                    self.say("operator", f"PODSUMOWANIE: jeden roster, {len(scs)} akcje, ślady trafiają tylko do swojej akcji")
                 self.board(scs)
             if a.keep and srv:
                 input("Server keeps running for the screens. Enter to stop. ")
