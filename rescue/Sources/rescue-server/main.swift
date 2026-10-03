@@ -152,7 +152,9 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
         d["events"] = shown
         let ev = liveEvents(await store.reports(sc: nil) + (await store.reports(sc: name)), segments: Set(segs.compactMap { $0["id"] as? String }),
                             seeds: Dictionary(segs.compactMap { s in (s["id"] as? String).flatMap { id in (s["seed"] as? [Double]).map { (id, $0) } } }, uniquingKeysWith: { a, _ in a }),
-                            mapAt: { rel($0) <= min(end, nowRel) ? $0 : now })
+                            // no operator cursor: a report keeps its own time inside the scenario window (as before /api/advance);
+                            // after the operator moved the incident, a report later than the cursor happened "now" = at the cursor
+                            mapAt: { cur == nil ? (rel($0) <= end ? $0 : liveAt) : (rel($0) <= min(end, nowRel) ? $0 : now) })
         nLive = ev.count
         d["events"] = ((d["events"] as? [[String: Any]]) ?? []) + ev
     }
