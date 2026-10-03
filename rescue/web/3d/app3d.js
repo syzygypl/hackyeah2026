@@ -10,6 +10,7 @@ import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { colorFor, gradientCSS, STOPS } from '../../app/scale.js'; // shared heat scale (decision S2), same as 2D
+import { FX, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
 
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
@@ -260,22 +261,7 @@ labels.setSize(innerWidth, innerHeight);
 Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
 host.appendChild(labels.domElement);
 
-// height fog + aerial perspective: three's fog chunks patched once, before any material compiles. Valleys (low world y)
-// fill with haze, denser in bad weather (read from fogNear: 9 clear, 6 fog, 5 thick), and distance shifts towards blue.
-THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float vFogDepth; varying float vFogY;\n#endif';
-THREE.ShaderChunk.fog_vertex = '#ifdef USE_FOG\n vFogDepth = - mvPosition.z; vFogY = (inverse(viewMatrix) * mvPosition).y;\n#endif';
-THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float vFogDepth; varying float vFogY;\n #ifdef FOG_EXP2\n uniform float fogDensity;\n #else\n uniform float fogNear; uniform float fogFar;\n #endif\n#endif';
-THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
-  #ifdef FOG_EXP2
-    float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
-  #else
-    float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
-    float valley = clamp( ( 12.0 - fogNear ) / 6.0, 0.5, 1.0 ) * exp( - max( vFogY - 0.15, 0.0 ) * 1.7 ) * smoothstep( 0.4, 6.0, vFogDepth );
-    fogFactor = clamp( fogFactor + ( 1.0 - fogFactor ) * valley * 0.7, 0.0, 1.0 );
-    gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor * vec3( 0.84, 0.92, 1.07 ), smoothstep( 2.0, 30.0, vFogDepth ) * 0.38 );
-  #endif
-  gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
-#endif`;
+installHeightFog(); // fx3d: valley haze + aerial perspective, before any material compiles
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -304,19 +290,7 @@ applyInsets();
 
 // ---------- sky, lights ----------
 const SUN_DIR = new THREE.Vector3(-0.72, 0.32, -0.38).normalize(); // low evening sun from the west
-const skyMat = new THREE.ShaderMaterial({
-  side: THREE.BackSide, depthWrite: false, fog: false,
-  uniforms: { top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() }, sunDir: { value: SUN_DIR }, sunCol: { value: new THREE.Color('#ffd9a0') }, sunAmt: { value: 1 } },
-  vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-  fragmentShader: `uniform vec3 top; uniform vec3 bottom; uniform vec3 sunDir; uniform vec3 sunCol; uniform float sunAmt; varying vec3 vP;
-    void main(){
-      float h = clamp(vP.y*1.5+0.1,0.0,1.0);
-      vec3 c = mix(bottom, top, pow(h,0.75));
-      float d = max(dot(normalize(vP), sunDir), 0.0);
-      c += sunCol * (pow(d, 900.0) * 6.0 + pow(d, 60.0) * 0.45 + pow(d, 6.0) * 0.18) * sunAmt;
-      gl_FragColor = vec4(c, 1.0);
-    }`,
-});
+const skyMat = FX.sky(SUN_DIR);
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16), skyMat));
 const starGeo = new THREE.BufferGeometry();
 {
@@ -452,68 +426,9 @@ const normalTex = (() => {
 })();
 const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x000000, roughness: 0.96, metalness: 0,
   normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 });
-// close-up detail: procedural world-space noise on the albedo, fading in near the camera (meadow speckle on flat
-// ground, horizontal strata on cliffs, finer grain on scree), so the topo texture does not turn to mush when zoomed in
-terrainMat.onBeforeCompile = (sh) => {
-  Object.assign(sh.uniforms, heatU);
-  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vDW; varying vec3 vDN;')
-    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDW = (modelMatrix * vec4(transformed, 1.0)).xyz; vDN = normal;');
-  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
-    varying vec3 vDW; varying vec3 vDN;
-    uniform sampler2D uHeatFrom; uniform sampler2D uHeatTo; uniform float uHeatT; uniform vec2 uHeatOn; uniform vec4 uHeatRect; uniform vec3 uHeatEdges; uniform float uTime; uniform float uEmis; uniform sampler2D uSunMask; uniform float uSnowY;
-    float dHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-    float dNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-      return mix(mix(dHash(i), dHash(i + vec2(1, 0)), f.x), mix(dHash(i + vec2(0, 1)), dHash(i + vec2(1, 1)), f.x), f.y); }
-    float dFbm(vec2 p, float lod) { float a = 0.0, w = 0.5; for (int k = 0; k < 4; k++) { a += w * dNoise(p) * (1.0 - smoothstep(0.6, 1.0, lod * float(k + 1) * 0.35)); p *= 2.03; w *= 0.5; } return a; }`)
-    .replace('#include <map_fragment>', `#include <map_fragment>
-    {
-      float dist = length(vDW - cameraPosition), near = 1.0 - smoothstep(1.2, 7.0, dist);
-      if (near > 0.0) {
-        float lod = clamp(dist / 3.0, 0.0, 1.0), slope = 1.0 - clamp(vDN.y, 0.0, 1.0);
-        float fl = dFbm(vDW.xz * 160.0, lod);
-        float side = dFbm(vec2(vDW.x + vDW.z, vDW.y * 9.0) * 90.0, lod); // strata: stretched along the contour
-        float strata = 0.5 + 0.5 * sin(vDW.y * 420.0 + side * 6.0);
-        float rock = smoothstep(0.25, 0.55, slope);
-        float d = mix(fl, mix(side, strata, 0.45), rock);
-        vec3 tint = mix(vec3(1.06, 1.04, 0.9), vec3(0.92, 1.0, 1.02), fl); // dry / lush patches on meadows
-        diffuseColor.rgb *= mix(vec3(1.0), mix(tint, vec3(1.0), rock) * (0.55 + 0.9 * d), near * 0.9);
-      }
-    }
-    vec3 heatEmit = vec3(0.0);
-    float bakedSun = texture2D(uSunMask, vMapUv).r;
-    {
-      vec2 hu = (vec2(vMapUv.x, 1.0 - vMapUv.y) - uHeatRect.xy) / uHeatRect.zw;
-      if (hu.x > 0.0 && hu.x < 1.0 && hu.y > 0.0 && hu.y < 1.0) {
-        vec2 st = vec2(hu.x, 1.0 - hu.y);
-        vec4 ha = texture2D(uHeatFrom, st); vec4 hb = texture2D(uHeatTo, st);
-        float wa = ha.a * uHeatOn.x * (1.0 - uHeatT), wb = hb.a * uHeatOn.y * uHeatT, al = wa + wb;
-        if (al > 0.002) {
-          vec3 col = (ha.rgb * wa + hb.rgb * wb) / al;
-          float fw = fwidth(al) * 1.3 + 1e-4;
-          float edge = max(max(1.0 - smoothstep(0.0, fw, abs(al - uHeatEdges.x)), 1.0 - smoothstep(0.0, fw, abs(al - uHeatEdges.y))), 1.0 - smoothstep(0.0, fw, abs(al - uHeatEdges.z)));
-          al = clamp(al * (1.0 + smoothstep(uHeatEdges.y, uHeatEdges.z + 0.04, al) * 0.1 * sin(uTime * 2.2)), 0.0, 1.0);
-          diffuseColor.rgb = mix(diffuseColor.rgb, col, al);
-          diffuseColor.rgb = mix(diffuseColor.rgb, min(col * 1.4 + 0.06, vec3(1.0)), edge * 0.45);
-          heatEmit = col * (al + edge * 0.5);
-        }
-      }
-    }`)
-    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-    totalEmissiveRadiance += heatEmit * uEmis;
-    { // snow glints: sparse sunlit cells on gentle snowfields near the camera, twinkling as the camera moves
-      float dist = length(vDW - cameraPosition), snow = smoothstep(uSnowY, uSnowY + 0.12, vDW.y) * smoothstep(0.55, 0.75, vDN.y);
-      if (snow > 0.0 && dist < 6.0) {
-        float g = dHash(floor(vDW.xz * 600.0) + floor(cameraPosition.xz * 40.0));
-        totalEmissiveRadiance += vec3(1.0, 0.97, 0.9) * step(0.986, g) * snow * bakedSun * (1.0 - smoothstep(2.0, 6.0, dist)) * 2.5;
-      }
-    }`)
-    // the sun's shadow is the darker of the baked far cascade and the near shadow map (which is 1 outside its box)
-    .replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin
-      .replace('? getShadow( directionalShadowMap[ i ],', '? min( bakedSun, getShadow( directionalShadowMap[ i ],')
-      .replace('vDirectionalShadowCoord[ i ] ) : 1.0;', 'vDirectionalShadowCoord[ i ] ) ) : bakedSun;'));
-};
 heatU.uSunMask = { value: sunMask };
-terrainMat.customProgramCacheKey = () => 'terrain-detail-heat-sun-snow-1';
+// fx3d: close-up detail, POA heat layer, baked + near sun shadow, snow glints
+applyFx(terrainMat, [FX.terrainDetail(), FX.poaHeat(heatU), FX.bakedSun(heatU), FX.snowGlints(heatU)]);
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
@@ -680,19 +595,7 @@ for (const t of TER?.trails || []) {
 }
 for (const s of TER?.streams || []) drapeRuns(s.points, 0.008, { color: '#3a86c8', width: 1.3, opacity: 0.75 }, statics);
 const waterMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x03181d, roughness: 0.14, metalness: 0.35 });
-// lake ripples: animated wave normals (stronger in wind), reflecting the sky environment map
-waterMat.onBeforeCompile = (sh) => {
-  sh.uniforms.uTime = heatU.uTime; sh.uniforms.uWind = heatU.uWind;
-  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWW;')
-    .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWW; uniform float uTime; uniform float uWind;')
-    .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-    { vec2 p = vWW.xz * 260.0; float t = uTime, a = 0.25 + uWind * 6.0;
-      vec2 q = p + vec2(sin(p.y * 0.37 + t * 0.4), cos(p.x * 0.41 - t * 0.3)) * 2.2; // domain warp: no regular grid
-      vec3 nW = normalize(vec3((sin(q.x + t * 1.3) * 0.5 + sin((q.x * 0.6 + q.y) * 1.3 - t * 1.1) * 0.35) * a, 8.0, (sin(q.y * 0.9 + t * 0.9) * 0.5 + sin((q.x - q.y * 0.7) * 1.1 + t * 1.6) * 0.3) * a));
-      normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz); }`);
-};
-waterMat.customProgramCacheKey = () => 'water-ripples-1';
+applyFx(waterMat, [FX.waterRipples(heatU)]); // fx3d: lake ripples reflecting the sky
 for (const l of TER?.lakes || []) {
   const m = new THREE.Mesh(new THREE.CircleGeometry(l.radiusM / 1000, 48).rotateX(-Math.PI / 2), waterMat);
   m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
@@ -744,21 +647,7 @@ const forest = new THREE.Group(); scene.add(forest);
   }
   const pineGeo = new THREE.IcosahedronGeometry(0.5, 0); pineGeo.scale(1, 0.45, 1); pineGeo.translate(0, 0.18, 0);
   const treeMat = new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true });
-  // wind: the crown sways with the step's reported wind, phase from the instance position
-  treeMat.onBeforeCompile = (sh) => {
-    sh.uniforms.uTime = heatU.uTime; sh.uniforms.uWind = heatU.uWind;
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform float uTime; uniform float uWind;')
-      .replace('#include <begin_vertex>', `#include <begin_vertex>
-      #ifdef USE_INSTANCING
-        vec2 ph = instanceMatrix[3].xz * 37.0;
-      #else
-        vec2 ph = vec2(0.0);
-      #endif
-      float bend = position.y * position.y * uWind;
-      transformed.x += bend * (sin(uTime * 1.7 + ph.x) * 0.6 + sin(uTime * 3.1 + ph.y) * 0.25);
-      transformed.z += bend * sin(uTime * 2.3 + ph.y) * 0.4;`);
-  };
-  treeMat.customProgramCacheKey = () => 'tree-wind-1';
+  applyFx(treeMat, [FX.treeWind(heatU)]); // fx3d: crowns sway with the step's wind
   place(spruce, sprGeo, treeMat, 0.026, 0.044, '#2f5d34', '#4f7d40');
   place(pine, pineGeo, treeMat, 0.012, 0.02, '#4c7639', '#6d9346');
 }
