@@ -1,0 +1,102 @@
+[
+ {
+  "round": "blind-01",
+  "hiddenSeg": "S12",
+  "cells": 4824,
+  "segments": 20,
+  "lastClue": "19:00",
+  "firstPatrol": "19:00",
+  "lkp": [
+   49.20326,
+   20.03271
+  ],
+  "engine": {
+   "area": 0.020522388059701493,
+   "cellRank": 99,
+   "segRank": 2,
+   "segRankPOA": 2
+  },
+  "expert": {
+   "area": 0.043532338308457715,
+   "cellRank": 210,
+   "segRank": 4
+  },
+  "naive": {
+   "area": 0.24087893864013268,
+   "cellRank": 1162,
+   "segRank": 6
+  },
+  "planner": {
+   "found": true,
+   "searches": 7,
+   "minutes": 180,
+   "effort": 0.2960199004975118,
+   "waves": 4,
+   "log": [
+    "wave 1 19:00: topr-a->S5",
+    "wave 2 20:00: topr-a->S5",
+    "wave 3 21:00: drone->S12, dog->S5, topr-a->S4, topr-b->S3",
+    "wave 4 22:00: drone -> S12 FOUND"
+   ]
+  },
+  "actual": {
+   "found": true,
+   "searches": 8,
+   "minutes": 35,
+   "effort": 0.5124378109452739,
+   "by": null
+  }
+ },
+ {
+  "round": "blind-02",
+  "hiddenSeg": "D18",
+  "cells": 2436,
+  "segments": 20,
+  "lastClue": "17:45",
+  "firstPatrol": "17:45",
+  "lkp": [
+   49.27823,
+   19.94323
+  ],
+  "engine": {
+   "area": 0.3739737274220033,
+   "cellRank": 911,
+   "segRank": 6,
+   "segRankPOA": 8
+  },
+  "expert": {
+   "area": 0.39860426929392445,
+   "cellRank": 971,
+   "segRank": 6
+  },
+  "naive": {
+   "area": 0.35673234811165844,
+   "cellRank": 869,
+   "segRank": 10
+  },
+  "planner": {
+   "found": false,
+   "searches": 31,
+   "minutes": 420,
+   "effort": 1.5418719211822651,
+   "waves": 7,
+   "log": [
+    "wave 1 17:45: drone->D13, heli->D12, gopr-a->D8",
+    "wave 2 18:45: drone->D13, heli->D12, gopr-a->D7",
+    "wave 3 19:45: drone->D13, heli->D8, dog->D14, gopr-a->D12, gopr-b->D3",
+    "wave 4 20:45: drone->D13, heli->D9, dog->D8, gopr-b->D2, gopr-a->D17",
+    "wave 5 21:45: drone->D13, heli->D18, dog->D7, gopr-a->D11, gopr-b->D6",
+    "wave 6 22:45: drone->D19, heli->D14, dog->D13, gopr-a->D12, gopr-b->D18",
+    "wave 7 23:45: heli->D4, drone->D9, dog->D19, gopr-a->D3, gopr-b->D17",
+    "stop at 00:45 (6 h or midnight limit)"
+   ]
+  },
+  "actual": {
+   "found": true,
+   "searches": 11,
+   "minutes": 215,
+   "effort": 0.5545977011494247,
+   "by": "gopr-a"
+  }
+ }
+]
