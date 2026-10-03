@@ -1,0 +1,41 @@
+groups:
+  - name: rescue-teren
+    rules:
+      # A client that reported in the last 2 h but has been quiet longer than the threshold
+      # (RESCUE_SILENT_SECONDS on the server, 600 s = 10 min by default; demo.py uses 20-60 s).
+      - alert: ClientSilent
+        expr: |
+          (time() - rescue_client_last_report_timestamp_seconds)
+            > on(instance) group_left() rescue_silent_threshold_seconds
+          and (time() - rescue_client_last_report_timestamp_seconds) < 7200
+        for: 10s
+        labels: { severity: critical }
+        annotations:
+          summary: "Cisza: {{ $labels.client_id }} ({{ $labels.team }}) bez meldunku od {{ $value | humanizeDuration }}"
+          description: "Zespół meldował, a teraz milczy dłużej niż próg. Skontaktuj się przez radio."
+      - alert: FieldServerDown
+        expr: up{service="field"} == 0
+        for: 30s
+        labels: { severity: critical }
+        annotations:
+          summary: "Serwer meldunków {{ $labels.instance }} nie odpowiada"
+          description: "Telefony w terenie parsują regułami w przeglądarce; meldunki nie trafiają do mapy."
+      - alert: LLMDown
+        expr: rescue_llm_up == 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "Lokalny LLM niedostępny na {{ $labels.instance }} - fallback na reguły"
+          description: "Ollama nie odpowiada na /api/tags. Meldunki nadal działają (reguły słów kluczowych), mniej dokładnie."
+      - alert: RejectSpike
+        expr: sum by (instance) (increase(rescue_reports_rejected_total[1m])) > 5
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $value | humanize }} odrzuconych żądań / min na {{ $labels.instance }} - możliwy atak"
+          description: "Zły PIN, za duże body, zły typ lub limit. Sprawdź, kto jest w sieci hotspotu."
+      - alert: ReportBurst
+        expr: sum by (instance) (increase(rescue_reports_received_total[1m])) > 20
+        labels: { severity: warning }
+        annotations:
+          summary: "Lawina meldunków: {{ $value | humanize }} / min na {{ $labels.instance }}"
+          description: "Dużo meldunków naraz: ważne zdarzenie w terenie albo zapętlony klient."
