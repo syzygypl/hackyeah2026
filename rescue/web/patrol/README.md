@@ -27,3 +27,9 @@ Options: `?api=http://<laptop>:8770` (field server address), `?run=<path to run.
 
 On a real phone the field server must be reachable on the team network (today `rescue-field` binds 127.0.0.1);
 exposing it is a decision for the team, hotspot only.
+
+## Embedding (rescue/app role "ratownik")
+
+`index.html?embed=1&team=<id>&api=<url>` hides the title and team picker (the shell fixes the team) and posts
+messages to the parent, same origin only: `{source: "rescuePatrol", type: "ready" | "report" | "queued" | "online", ...}`.
+`report` carries `{team, text, at, hints}`, `queued` `{team, text, at, queued}`, `online` `{online}`.

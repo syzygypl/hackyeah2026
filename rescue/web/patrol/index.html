@@ -47,6 +47,8 @@
   dialog { border: 0; border-radius: 16px; padding: 16px; width: min(92vw, 520px); }
   dialog::backdrop { background: rgba(0,0,0,.45); }
   .muted { color: var(--muted); font-size: 13px; }
+  body.embed header h1, body.embed header select { display: none; }
+  body.embed header { justify-content: flex-end; padding: 6px 12px; }
 </style>
 </head>
 <body>
@@ -86,6 +88,9 @@
   const qs = new URLSearchParams(location.search);
   const API = qs.get("api") || "http://127.0.0.1:8770";       // rescue-field serve (laptop kierownika akcji)
   const RUN = qs.get("run") || "../../out/run.json";
+  const EMBED = qs.get("embed") === "1";
+  if (EMBED) document.body.classList.add("embed");
+  const tell = (type, data) => { if (EMBED && parent !== window) parent.postMessage({ source: "rescuePatrol", type, ...data }, location.origin); };
   const QKEY = "rescue-patrol-queue", LKEY = "rescue-patrol-log", TKEY = "rescue-patrol-team";
   const store = {
     get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
@@ -96,7 +101,7 @@
 
   // ---------- data ----------
   run = await (await fetch(RUN)).json();
-  step = run.steps[run.steps.length - 1];
+  step = [...run.steps].reverse().find(s => (s.assignments || []).length) || run.steps[run.steps.length - 1];   // last step that still has a plan (the final one may be "akcja zamknięta")
   const teams = (step.resources || []).filter(r => r.type !== "drone");
   $("team").innerHTML = teams.map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join("");
   team = qs.get("team") || store.get(TKEY, null) || teams[0]?.id;
@@ -149,6 +154,8 @@
     }
   }
   renderTask();
+  if (EMBED) $("team").disabled = true;
+  tell("ready", { team, step: run.steps.length - 1 });
 
   // ---------- reports ----------
   const hhmm = () => new Date().toTimeString().slice(0, 5);
@@ -179,10 +186,12 @@
     try {
       const res = await post(text, entry.at);
       Object.assign(entry, { status: "sent", hints: res.hints || [], parsedBy: res.parsedBy, latencyMs: res.latencyMs });
+      tell("report", { team, text, at: entry.at, hints: entry.hints });
       setOnline(true);
       toast(`Wysłane. Odczytane: ${(res.hints || []).map(h => h.type).join(", ") || "bez wskazówek"}`);
     } catch (e) {
       entry.status = "queued"; queue.push(entry); store.set(QKEY, queue); setOnline(false);
+      tell("queued", { team, text, at: entry.at, queued: queue.length });
       toast("Brak łączności - meldunek w kolejce, wyślę automatycznie.");
     }
     store.set(LKEY, log.slice(0, 50)); renderLog();
@@ -204,7 +213,7 @@
   setInterval(flush, 8000);
   async function ping() { try { await fetch(API + "/health", { headers: { "X-Rescue-Client": clientId, "X-Rescue-Team": team || "", "X-Rescue-Source": "patrol" }, signal: AbortSignal.timeout(3000) }); setOnline(true); flush(); } catch { setOnline(false); } }
   setInterval(ping, 15000); ping();
-  function setOnline(v) { online = v; $("net").textContent = v ? "łączność OK" : "BEZ ŁĄCZNOŚCI"; $("net").classList.toggle("off", !v); }
+  function setOnline(v) { if (v !== online) tell("online", { online: v }); online = v; $("net").textContent = v ? "łączność OK" : "BEZ ŁĄCZNOŚCI"; $("net").classList.toggle("off", !v); }
 
   function renderLog() {
     $("qcount").textContent = queue.length ? `· ${queue.length} w kolejce` : "";
