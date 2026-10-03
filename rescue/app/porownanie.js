@@ -70,11 +70,14 @@
     const k = e.source === $("mapA").contentWindow ? "A" : e.source === $("mapB").contentWindow ? "B" : null;
     if (!k) return;
     G.ready[k] = true; $("busy" + k).hidden = true;
+    if (NARROW()) compactFrame($("map" + k));
     if (k === "A" && !$("mapB").src) { sessionStorage.setItem("rescue2d-run", G.textB); $("mapB").src = mapURL(G.bBefore); }
     if (G.ready.A && G.ready.B && !G.started) {
       G.started = true;
       $("toggle").disabled = false; $("status").textContent = "Obie mapy gotowe.";
-      if (Q.get("auto") !== "0") setTimeout(() => { if (!G.on) toggle(); }, 1500);
+      // phone (stacked columns): map B is a screen below the button, so the auto-toggle would happen out of sight; wait for the tap
+      if (Q.get("auto") !== "0" && !NARROW()) setTimeout(() => { if (!G.on) toggle(); }, 1500);
+      else if (NARROW()) $("status").textContent = "Obie mapy gotowe. Dotknij, aby dodać relację.";
     }
   });
 
@@ -163,6 +166,19 @@
     const f = $("flashB"); f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
     render(true);
   }
-  $("toggle").onclick = toggle;
+  const NARROW = () => matchMedia("(max-width:860px)").matches;
+  // phone: the 2D view's legend takes a third of a 330 px map; same-origin frame, so shrink it from here (web/ stays as is)
+  function compactFrame(f) {
+    try {
+      const d = f.contentDocument; if (!d || d.getElementById("porCompact")) return;
+      const st = d.createElement("style"); st.id = "porCompact";
+      st.textContent = "#legend{padding:4px 7px!important;font-size:10px!important}#legend .lg-title{font-size:10.5px;margin-bottom:1px}" +
+        "#legend .lg-ramp,#legend .lg-stops{width:150px!important}#legend .lg-ramp{height:6px}#legend .lg-stops{font-size:9px}#legend .lg-keys{gap:8px;margin-top:2px}" +
+        ".maplibregl-ctrl-scale{display:none}";
+      d.head.appendChild(st);
+    } catch (e) { /* not reachable: leave the frame as is */ }
+  }
+  // phone: the user taps at the top, the change happens in map B below - bring it into view first
+  $("toggle").onclick = () => { toggle(); if (NARROW()) $("colB").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start" }); };
   load().catch((e) => { $("status").textContent = "Nie udało się wczytać: " + e.message; console.error(e); });
 })();
