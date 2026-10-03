@@ -159,10 +159,16 @@ def main():
         # B1/B3: team -> sector = a decision; the map reloads with the new run, the sector must stay selected everywhere
         c.js(f"document.querySelector('#pTeams li[data-team={json.dumps(team)}]').click()")
         seg = c.js("(()=>{const li=[...document.querySelectorAll('#pSegs li')].find(l=>!l.classList.contains('no'));li.click();return li.dataset.seg})()")
-        acted = c.until(f"document.getElementById('pMsg').innerText.includes({json.dumps(seg)})", 30)
+        t0 = time.time()
+        # A: the team is on the map at once (pending), before the server's answer; the frame never reloads
+        shown = c.until(f"(()=>{{try{{return {MAP}.__rescue.S.M.R.steps.at(-1).assignments.some(a=>a.segmentId==={json.dumps(seg)})}}catch(e){{return false}}}})()", 10)
+        dt = time.time() - t0
+        check("decision_on_map_under_1s", bool(shown) and dt < 1.0, f"{dt:.2f} s (click -> team on the map)")
+        acted = c.until(f"document.getElementById('pMsg').innerText.includes('sektor '+{json.dumps(seg)}+': wysłany')", 60)
         check("decision_accepted", bool(acted), c.js("document.getElementById('pMsg').innerText"))
-        t_after = c.until(f"(()=>{{const t={MAP_READY};return t&&t!=={t_first}?t:0}})()", 60)
-        check("map_reloaded_after_decision", bool(t_after))   # documents B1: the run changes, the frame reloads
+        kept = c.until(f"(()=>{{try{{return {MAP}.__rescue.S.M.R.steps.at(-1).assignments.some(a=>a.segmentId==={json.dumps(seg)}&&a.reason!=='wysyłam...')}}catch(e){{return false}}}})()", 10)
+        check("decision_on_map_without_reload", bool(kept) and c.js(MAP_READY) == t_first, f"confirmed={bool(kept)}, same frame={c.js(MAP_READY) == t_first}")
+        t_after = c.js(MAP_READY)
         check("decision_sector_marked_in_list", bool(c.until(f"{LIST_SEL}.includes({json.dumps(seg)})", 5)), f"{seg} list={c.js(LIST_SEL)}")
         check("decision_sector_selected_on_map_after_reload", c.until(f"{MAP_SEL}==={json.dumps(seg)}", 10) is True, f"map={c.js(MAP_SEL)}")
 

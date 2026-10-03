@@ -1124,6 +1124,10 @@
       else if (m.type === 'time' && Number.isFinite(m.minute)) tlTime(m.minute, m.frame, m.frameMinute);
       else if (m.type === 'highlight') highlightActor(m);   // actor drawer (CONTRACT "Zasoby i dziennik" 6)
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
+      // team overlay only (Ćwiczenia: a dispatch without new events): swap each step's assignments and redraw, no reload
+      else if (m.type === 'assignments' && Array.isArray(m.steps) && m.steps.length === S.M.R.steps.length && m.steps.every((a) => a === null || Array.isArray(a))) {
+        m.steps.forEach((a, i) => { if (a) S.M.R.steps[i].assignments = a; }); render(); toParent({ type: 'assignments', steps: m.steps.length });
+      }
       else if (m.type === 'run' && typeof m.url === 'string') reloadWith({ run: m.url }, ['runInline', 'sc', 'step']);
       else if (m.type === 'run' && m.run && typeof m.run === 'object' && typeof m.run.url === 'string' && !m.run.schema) reloadWith({ run: m.run.url }, ['runInline', 'sc', 'step']);
       else if (m.type === 'run' && m.run && typeof m.run === 'object') {

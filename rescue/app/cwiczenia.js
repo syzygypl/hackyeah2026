@@ -86,10 +86,21 @@ function insets() {
   return innerWidth > 700 ? [Math.round(h.height), Math.round(innerWidth - c.left), 0, 0] : [Math.round(h.height), 0, Math.round(innerHeight - c.top), 0];
 }
 function post(msg) { const w = $("map").contentWindow; if (G.frameReady && w) w.postMessage({ source: "rescue-app", ...msg }, location.origin); }
-function syncMap() {
+// the map's team overlay = the run's last step "assignments"; rebuilt from the session state (+ one pending dispatch shown at once)
+function postTeams(pending) {
+  const s = G.st; if (!s || !G.frameReady || !G.steps) return;
+  const name = (id) => (s.segments.find((g) => g.id === id) || {}).name || id;
+  const a = s.teams.filter((t) => t.segmentId).map((t) => ({ resourceId: t.id, segmentId: t.segmentId, segmentName: name(t.segmentId), reason: "decyzja ćwiczącego" }));
+  if (pending) a.push({ resourceId: pending.team, segmentId: pending.seg, segmentName: name(pending.seg), reason: "wysyłam..." });
+  post({ type: "assignments", steps: Array(G.steps - 1).fill(null).concat([a]) });   // null = keep that step as it is
+}
+// run URL = .../run?v=<events>-<jobs>: the heat changes only with the events; a dispatch alone changes only the team overlay
+const heatOf = (u) => (/[?&]v=(\d+)-/.exec(u || "") || [])[1];
+async function syncMap() {
   const s = G.st; if (!s || $("scrPlay").hidden) return;
   if (s.run === G.runUrl) return;
-  G.runUrl = s.run;
+  const prev = G.runUrl; G.runUrl = s.run;
+  if (G.frameReady && prev && heatOf(prev) === heatOf(s.run)) { postTeams(); return; }   // A: same heat -> teams in place, no reload
   $("mapBusy").hidden = false;
   if (G.frameReady) { G.frameReady = false; post2({ type: "run", url: s.run }); } else $("map").src = mapURL(s);
 }
@@ -162,13 +173,14 @@ async function pickSegment(seg, fromMap) {
   if (t && t.eta && t.eta[seg] == null) { msg(`${short(t.name)} nie dojdzie do sektora ${seg} w tych warunkach. Wybierz inny sektor.`, true); renderPlay(); return; }
   const team = G.team;
   G.busy = true; G.pending = { team, seg };
+  postTeams(G.pending);   // A: the team is on the map at once; the server's answer confirms (or rolls back) below
   msg(`Wysyłam: ${tName(team)} -> sektor ${seg}...`); renderPlay();
   try {
     G.st = await api(`/api/exercise/${G.st.sid}/act`, { team, segmentId: seg });
     const d = G.st.decision || {};
     G.team = null; G.sent = { team, seg };
     msg(`${tName(team)} -> sektor ${seg}: wysłany (dojście ${d.etaMin} min, przeszukanie ${d.sweepMin} min)`, false, true);
-  } catch (e) { msg(e.message, true); }
+  } catch (e) { msg(e.message, true); postTeams(); }
   G.busy = false; G.pending = null; renderPlay();
 }
 async function wait(minutes) {
