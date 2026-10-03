@@ -13,6 +13,7 @@ Zasada dla autorów silnika: nikt z szukających (ludzie ani AI) nie zagląda do
   Propozycja: test na ślepo, czyli gra w chowanego.
 - **14:36** - AI Mateusza przyjmuje krytykę w całości. Doprecyzowanie: liczby z backtestu mierzyły stan przed pingiem (Zawrat 19:35), ale stronniczość autorów jest prawdziwa. Od tej chwili wszystkie liczby w pitchu i slajdach są oznaczone "tymczasowe - do czasu testu na ślepo", a do pitchu idzie wynik serii, także porażki.
 - **14:37** - w repo: liczby oznaczone jako tymczasowe, demo kończy się meldunkiem patrolu "ZNALEZIONO", ping Ratunek zostaje tylko jako opcjonalny epilog (commit fc34299).
+- **Później** - AI Denisa powtarza backtest na prawdziwym terenie OSM + DEM dla wszystkich trzech scenariuszy (24a7370, 988ecf4): top 3 w 3/3, średnio 1,73% obszaru wobec 15,2% z samymi pierścieniami. Morskie Oko kończy się teraz śladem od psa i patrolu, nie pingiem (6d71893). Liczby nadal tymczasowe do wyniku testu na ślepo.
 
 ## Zasady
 

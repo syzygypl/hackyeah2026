@@ -42,13 +42,13 @@ Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo,
 
 8. **Value number and how we validate it** (label: "tymczasowe - do czasu testu na ślepo")
    - Hero: find spot **#1 after fusion vs #19 with Koester rings only**; area to sweep **0.11-0.22% vs 41%** (zawrat, real OSM + DEM terrain).
-   - Backtest: find spot in the **top 3 in 3/3 scenarios**; on average **0.69% of the area vs 18.4%** with rings only.
-   - Footnote: fictional scenarios; drone POD 0.6 / 0.75 is an assumption and the zawrat result holds for both; kasprowy and morskie-oko ran on hand-drawn terrain, so the backtest is preliminary (re-run on real terrain pending).
+   - Backtest: find spot in the **top 3 in 3/3 scenarios**; on average **1.73% of the area vs 15.2%** with rings only (N = 3, real OSM + DEM terrain).
+   - Footnote: N = 3 fictional scenarios we wrote ourselves, all on real OSM + DEM terrain; drone POD 0.6 / 0.75 is an assumption, the worse result counts, and the zawrat result holds for both. In kasprowy fusion ranks higher (#2 vs #5) but not smaller in area (4.94% vs 4.2%). None of the scenarios ends on a GPS ping any more.
    - Validation: blind "hide and seek" test. AI Marcina hides the person and commits to the spot with SHA-256; we search with the app only; the judge answers each patrol by its POD; the hash is opened at the end. Series of 3-5 rounds, failures shown too.
    - Planner, said honestly: ETAs, safety gating, instant re-plan; 20% find chance in 1 h 46 min vs 2 h 00 min, not a big POS gain.
 
 9. **Roadmap**
-   - Re-run the backtest with real terrain for all 3 scenarios, then on anonymised past GOPR/TOPR cases vs plain rings.
+   - Blind test series (3-5 rounds), then a backtest on anonymised past GOPR/TOPR cases vs plain rings.
    - Terrain from GUGiK LiDAR (1 m) instead of the current DEM, for a whole GOPR group region.
    - AML provider when the Polish 112 rollout lands; ISRID licence with dbS Productions.
    - WOPR water variant (drift model) later.

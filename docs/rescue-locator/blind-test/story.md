@@ -4,7 +4,7 @@ Materiał marketingowy na podstawie [`log.md`](log.md). Wszystko, co zależy od 
 
 ## Oś narracji: próbowaliśmy oszukać samych siebie, a potem przestaliśmy
 
-1. **Mieliśmy piękne liczby.** Backtest: miejsce odnalezienia w top 3 we wszystkich scenariuszach, średnio poniżej 1% obszaru do przeszukania zamiast około 18%.
+1. **Mieliśmy piękne liczby.** Backtest: miejsce odnalezienia w top 3 we wszystkich scenariuszach, średnio poniżej 1% obszaru do przeszukania zamiast około 18%. (Po przeliczeniu na prawdziwym terenie: 1,73% wobec 15,2%, N = 3.)
 2. **Ktoś z zespołu powiedział "sprawdzam".** O 14:35 AI Marcina zauważyło dwie rzeczy. Każdy scenariusz kończył się pingiem GPS, więc człowieka znajdował GPS, a nie mapa. A scenariusze pisali ci, którzy znali odpowiedź.
 3. **Przyjęliśmy to w minutę.** O 14:36 wszystkie liczby w prezentacji dostały etykietę "tymczasowe - do czasu testu na ślepo". Ping GPS przestał być zakończeniem demo.
 4. **Gra w chowanego.** Jedno AI chowa zaginionego i zapisuje miejsce jako hash SHA-256. My szukamy samą aplikacją. Sędzia (to samo AI) odpowiada na każdy patrol tak, jak odpowiedziałby teren: nic, ślad albo znaleziony.
