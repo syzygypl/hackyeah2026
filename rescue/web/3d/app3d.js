@@ -148,6 +148,22 @@ function influence(k) {
   return best && best.d > 0.004 ? best : null;
 }
 
+// ---------- operation progress (from the timeline, nothing new is computed about the person) ----------
+const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
+const PROG = (() => {
+  const t0 = toMin(R.steps[0].t), area = new Map(R.steps[0].segments.map((s) => [s.id, s.areaPct]));
+  const seen = new Set(); let pos = 0, last = t0;
+  return R.steps.map((s, k) => {
+    let m = toMin(s.t); if (m < last - 600) m += 1440; last = m; // after midnight
+    for (const e of EVENTS) if (e.step === k && e.segments?.length) {
+      const prev = new Map(R.steps[Math.max(0, k - 1)].segments.map((x) => [x.id, x.poa]));
+      for (const id of e.segments) { pos += (prev.get(id) || 0) * (e.pod ?? 0.7); seen.add(id); }
+    }
+    const lead = Math.max(...s.segments.map((x) => x.poa));
+    return { k, min: m - t0, lead, pos: Math.min(pos, 1), area: [...seen].reduce((a, id) => a + (area.get(id) || 0), 0) / 100, searched: seen.size, teams: (s.assignments || []).length, found: EVENTS.some((e) => e.step === k && isFound(e)) };
+  });
+})();
+
 // ---------- renderer / scene ----------
 const host = $('scene');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -317,7 +333,8 @@ function heatCanvasGrid(p) {
 }
 const heatCache = new Map();
 const heatOf = (i) => { if (!heatCache.has(i)) heatCache.set(i, heatCanvasGrid(R.steps[i].poaGrid)); return heatCache.get(i); };
-let heatFrom = null, heatTo = null, heatT = 1;
+let heatFrom = null, heatTo = null, heatT = 1, WASH = new Map(); // searched segment id -> times searched
+const llToTex = (la, lo) => [((lo - DEM.lon0) / stLon) * TS, ((DEM.lat0 - la) / stLat) * TS];
 function compose() {
   const g = compCanvas.getContext('2d'), gg = glowCanvas.getContext('2d');
   g.globalAlpha = 1; g.drawImage(baseCanvas, 0, 0);
@@ -329,6 +346,15 @@ function compose() {
   };
   draw(heatFrom, 1 - heatT); draw(heatTo, heatT);
   g.globalAlpha = 1; gg.globalAlpha = 1;
+  // searched ground: cool grey wash with hatching, stronger for repeated searches
+  for (const [id, n] of WASH) {
+    const sg = segs.get(id); if (!sg?.polygon?.length) continue;
+    g.beginPath(); sg.polygon.forEach(([lo, la], j) => { const [x, y] = llToTex(la, lo); j ? g.lineTo(x, y) : g.moveTo(x, y); }); g.closePath();
+    g.fillStyle = `rgba(214, 222, 232, ${Math.min(0.22 + 0.12 * (n - 1), 0.5)})`; g.fill();
+    g.save(); g.clip(); g.strokeStyle = 'rgba(70, 84, 104, 0.35)'; g.lineWidth = 1.4;
+    for (let x = -TH; x < TW; x += 9) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + TH, TH); g.stroke(); }
+    g.restore();
+  }
   compTex.needsUpdate = true; glowTex.needsUpdate = true;
 }
 const showHeat = (cv, animate = true) => { heatFrom = animate ? heatTo : null; heatTo = cv; heatT = heatFrom ? 0 : 1; compose(); };
@@ -545,6 +571,7 @@ function setStep(i, animate = true) {
   i = clamp(i, 0, R.steps.length - 1);
   const prev = STEP; STEP = i;
   const s = R.steps[i], ranked = rankedOf(s.segments);
+  WASH = new Map(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i) (e.segments || []).forEach((id) => WASH.set(id, (WASH.get(id) || 0) + 1)); });
   showHeat(heatOf(i), animate && prev >= 0);
   drawTop(ranked);
   disposeGroup(dyn.searched);
@@ -561,6 +588,18 @@ function setStep(i, animate = true) {
 }
 function drawTeams(s) {
   disposeGroup(dyn.teams); movers.length = 0;
+  // history: every patrol so far, as a faint trail from its base to the searched segment
+  for (const e of EVENTS) {
+    if (!(e.step >= 0 && e.step <= STEP && e.segments?.length)) continue;
+    const res = resources.get(e.resource) || (e.provider === 'DronePassEmpty' ? resources.get('drone') : null);
+    const base = res?.base || [R.ipp.lat, R.ipp.lon], col = TEAM_COL[res?.type] || '#555b61';
+    for (const id of e.segments) {
+      const g = segs.get(id); if (!g) continue;
+      const p0 = v3(base[0], base[1], 0.03), p2 = v3(g.center[0], g.center[1], 0.04);
+      const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + 0.15 + p0.distanceTo(p2) * 0.08;
+      dyn.teams.add(makeLine(new THREE.QuadraticBezierCurve3(p0, p1, p2).getPoints(40), { color: col, width: e.step === STEP ? 2.2 : 1.2, opacity: e.step === STEP ? 0.95 : 0.4 }));
+    }
+  }
   const resInfo = new Map((s.resources || []).map((r) => [r.id, r]));
   for (const a of s.assignments || []) {
     const res = resources.get(a.resourceId), g = segs.get(a.segmentId); if (!res?.base || !g) continue;
@@ -610,6 +649,24 @@ function renderUI(i, ranked, searched, prev) {
     : '<li class="none">Brak przydziałów w tym kroku</li>';
   $('slider').value = i;
   document.querySelectorAll('.tick').forEach((t, k) => { t.classList.toggle('cur', k === i); t.classList.toggle('past', k < i); });
+  renderProgress(i);
+}
+function renderProgress(i) {
+  const P = PROG, cur = P[i], W = 300, H = 74, maxMin = Math.max(1, P[P.length - 1].min);
+  const X = (m) => 6 + (m / maxMin) * (W - 12), Y = (v) => H - 6 - v * (H - 14);
+  const path = (f, upto = P.length - 1) => P.slice(0, upto + 1).map((p, k) => `${k ? 'L' : 'M'}${X(p.min).toFixed(1)},${Y(f(p)).toFixed(1)}`).join('');
+  const ghost = (f, c) => `<path d="${path(f)}" fill="none" stroke="${c}" stroke-width="1.2" opacity="0.25"/>`;
+  const live = (f, c) => `<path d="${path(f, i)}" fill="none" stroke="${c}" stroke-width="2.2"/>`;
+  const evdots = P.filter((p) => EVENTS.some((e) => e.step === p.k)).map((p) => `<circle cx="${X(p.min)}" cy="${H - 3}" r="${p.found ? 3.5 : 1.8}" fill="${p.found ? '#2d6a4f' : p.k <= i ? '#555b61' : '#c8c8c8'}"/>`).join('');
+  const hh = Math.floor(cur.min / 60), mm = String(cur.min % 60).padStart(2, '0');
+  $('progress').innerHTML = `<div class="pg-head"><b>Przebieg akcji</b><span>${hh} h ${mm} min od zgłoszenia</span></div>
+    <div class="pg-kpi"><div><b>${cur.searched}</b><span>segm. przeszukane</span></div><div><b>${(cur.area * 100).toFixed(0)}%</b><span>obszaru</span></div><div><b style="color:#1f4e79">${(cur.pos * 100).toFixed(0)}%</b><span>szansa znalezienia dotąd</span></div><div><b style="color:#b8322a">${pct(cur.lead)}</b><span>lider mapy</span></div></div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" aria-label="Wykres przebiegu akcji">
+      ${ghost((p) => p.lead, '#b8322a')}${ghost((p) => p.pos, '#1f4e79')}${ghost((p) => p.area, '#6b6f72')}
+      ${live((p) => p.area, '#6b6f72')}${live((p) => p.pos, '#1f4e79')}${live((p) => p.lead, '#b8322a')}
+      <line x1="${X(cur.min)}" x2="${X(cur.min)}" y1="4" y2="${H - 6}" stroke="#23272a" stroke-dasharray="2 2" opacity="0.5"/>${evdots}
+    </svg>
+    <div class="pg-leg"><i style="background:#b8322a"></i>lider mapy <i style="background:#1f4e79"></i>szansa znalezienia (Σ POA×POD) <i style="background:#6b6f72"></i>przeszukany obszar</div>`;
 }
 function renderRanking(ranked, searched, foundSeg, scope) {
   $('rank-scope').textContent = R.synthetic && G.phase === 'off' ? '\u00a0' : scope;
