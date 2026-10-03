@@ -1,0 +1,150 @@
+{
+ "schema": "rescue-eval-summary/1",
+ "generated": "2026-10-03T16:42",
+ "sources": {
+  "land": null,
+  "water": {
+   "file": "calibration/results-water.json",
+   "n": 600,
+   "engine": "6f11fb8",
+   "engineFeatures": "default (rescue-engine-v2.1 frozen)",
+   "simRun": "v3-sniardwy+v3-morzycko+v3-miedzyzdroje"
+  }
+ },
+ "headline": {
+  "land": null,
+  "water": {
+   "n": 600,
+   "engineTop3": 0.905,
+   "baselineTop3": 0.8116666666666666
+  },
+  "all": {
+   "n": 600,
+   "engineTop3": 0.905,
+   "baselineTop3": 0.8116666666666666
+  },
+  "label": "Prawdziwy segment w top 3 silnika",
+  "baselineLabel": "od ostatniego znanego punktu (najbliżej LKP/IPP)",
+  "text": "W 91% symulowanych przypadków prawdziwy segment jest w top 3 silnika (wyszukiwanie od ostatniego znanego punktu: 81%).",
+  "breakdown": "woda: 91% vs 81% (N=600)"
+ },
+ "chart": {
+  "title": "Odsetek przypadków znalezionych po przeszukaniu x% obszaru",
+  "xLabel": "% przeszukanego obszaru",
+  "yLabel": "% przypadków",
+  "x": [
+   0,
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16,
+   17,
+   18,
+   19,
+   20
+  ],
+  "series": [
+   {
+    "id": "engine",
+    "label": "silnik (kolejność POA)",
+    "y": [
+     0.0,
+     0.5117,
+     0.7267,
+     0.825,
+     0.86,
+     0.8733,
+     0.9017,
+     0.92,
+     0.935,
+     0.945,
+     0.9483,
+     0.9567,
+     0.96,
+     0.9667,
+     0.9767,
+     0.9817,
+     0.9817,
+     0.9817,
+     0.9833,
+     0.985,
+     0.9867
+    ]
+   },
+   {
+    "id": "baseline",
+    "label": "od ostatniego znanego punktu",
+    "y": [
+     0.0,
+     0.475,
+     0.625,
+     0.7,
+     0.755,
+     0.7967,
+     0.8183,
+     0.835,
+     0.8533,
+     0.8633,
+     0.8833,
+     0.8983,
+     0.905,
+     0.9133,
+     0.92,
+     0.93,
+     0.935,
+     0.9367,
+     0.9417,
+     0.9467,
+     0.9517
+    ]
+   }
+  ]
+ },
+ "loss": {
+  "text": "Gdzie nie pomaga: pływacy (N=224) - silnik przegrywa z wyszukiwaniem od ostatniego znanego punktu w 114 z 224 przypadków (mediana przeszukanego obszaru 0,8% vs 0,6%).",
+  "group": {
+   "kind": "kategoria",
+   "key": [
+    "swimmer"
+   ],
+   "n": 224,
+   "engineWorse": 114,
+   "engineBetter": 102,
+   "medianArea": {
+    "engine": 0.78,
+    "naive": 0.58
+   }
+  }
+ },
+ "blind": [
+  {
+   "round": "blind-01",
+   "engineSegRank": 2,
+   "naiveSegRank": 6,
+   "engineArea": 0.020522388059701493,
+   "naiveArea": 0.24087893864013268,
+   "segments": 20
+  },
+  {
+   "round": "blind-02",
+   "engineSegRank": 8,
+   "naiveSegRank": 10,
+   "engineArea": 0.3739737274220033,
+   "naiveArea": 0.35673234811165844,
+   "segments": 20
+  }
+ ],
+ "footnote": "Symulacja (N=600), nie prawdziwe akcje; częściowy cykl: ten sam model dryfu w symulatorze i silniku. Brak jeszcze wyników lądowych z symulatora."
+}

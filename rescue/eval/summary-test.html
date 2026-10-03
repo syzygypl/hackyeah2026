@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Validation summary card - local test</title>
+<link rel="stylesheet" href="../app/tokens.css">
+</head>
+<body data-state="loading" style="background:var(--rl-bg);padding:16px;max-width:520px">
+<!-- Local test for rescue/app/validation-summary.js. Serve rescue/ (python3 -m http.server 8000) and open /eval/summary-test.html.
+     body[data-state] = ready when the card rendered with its parts, else error (for web/tools/smoke.py). -->
+<div id="card"></div>
+<pre id="diag" hidden></pre>
+<script type="module">
+  import { renderSummary } from "../app/validation-summary.js";
+  const el = document.getElementById("card");
+  await renderSummary(el, "summary.json");
+  const s = el.querySelector('[data-rl="validation-summary"]');
+  const checks = {
+    card: !!s,
+    bigNumber: /\d+%/.test(s?.textContent || ""),
+    twoLines: el.querySelectorAll("svg path").length === 2,
+    legend: el.textContent.includes("silnik") && el.textContent.includes("od ostatniego znanego punktu"),
+    lossLine: el.textContent.includes("Gdzie nie pomaga") || el.textContent.includes("nie przegrywa"),
+    footnote: el.textContent.includes("Symulacja (N="),
+    decimalComma: !/\d\.\d+%/.test(el.textContent),
+    noGlobalStyle: document.querySelectorAll("style").length === 0,
+  };
+  document.getElementById("diag").textContent = JSON.stringify(checks);
+  document.body.dataset.state = Object.values(checks).every(Boolean) ? "ready" : "error";
+</script>
+</body>
+</html>
