@@ -116,11 +116,12 @@ if (document.body.classList.contains('embed')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../../app/tokens.css'; document.head.appendChild(l);
   if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.dataset.theme = Q.get('theme');
 }
-let R, SCN, TER, DEM, REV;
+let R, SCN, TER, DEM, REV, DEM_FULL;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
   [R, SCN, TER, DEM, REV] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : getJSON(P.run, !!P.reveal), getJSON(P.scenario, true), getJSON(P.terrain, true),
     (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => d || getJSON(P.dem)), P.reveal ? getJSON(P.reveal, true) : null]);
+  DEM_FULL = DEM; // full-resolution DEM, kept for the terrain normal map
   if (DEM.cols > 600) DEM = decimate(DEM, 2); // wide backdrop: 2x2 average keeps the mesh ~100k vertices
   if (!R && SCN) R = synthRun(SCN); // replay without engine output: signals and patrols only, no POA map
   if (R.schema !== 'rescue-run/1') throw new Error('run.json: schema ' + R.schema);
@@ -336,7 +337,23 @@ terrainGeo.rotateX(-Math.PI / 2);
   for (let r = 0; r < DEM.rows; r++) for (let c = 0; c < DEM.cols; c++) pos.setY(r * DEM.cols + c, ((DEM.z[r][c] - zMin) * EX) / 1000);
   terrainGeo.computeVertexNormals();
 }
-const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissiveMap: glowTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.96, metalness: 0 });
+// object-space normal map from the full-resolution DEM: the mesh is averaged 2x2 for the wide cut, the shading keeps every ridge
+const normalTex = (() => {
+  const k = DEM_FULL.cols / DEM.cols >= 1.5 ? 2 : 1, C = DEM.cols * k, Rr = DEM.rows * k, Z = DEM_FULL.z;
+  const sx = 2 * (DEM_FULL.step * KX * KM), sz = 2 * ((DEM_FULL.stepLat || DEM_FULL.step) * KM), f = EX / 1000;
+  const at = (r, c) => Z[clamp(r, 0, Rr - 1)][clamp(c, 0, C - 1)];
+  const data = new Uint8Array(C * Rr * 4);
+  for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) {
+    const gx = ((at(r, c + 1) - at(r, c - 1)) * f) / sx, gz = ((at(r + 1, c) - at(r - 1, c)) * f) / sz, l = Math.hypot(gx, 1, gz);
+    const o = ((Rr - 1 - r) * C + c) * 4; // texture row 0 = south (v = 0)
+    data[o] = (-gx / l * 0.5 + 0.5) * 255; data[o + 1] = (1 / l * 0.5 + 0.5) * 255; data[o + 2] = (-gz / l * 0.5 + 0.5) * 255; data[o + 3] = 255;
+  }
+  const t = new THREE.DataTexture(data, C, Rr, THREE.RGBAFormat);
+  t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; t.needsUpdate = true;
+  return t;
+})();
+const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissiveMap: glowTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.96, metalness: 0,
+  normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap });
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
