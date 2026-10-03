@@ -1,6 +1,6 @@
 # Rescue Locator - slides (max 10)
 
-Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo, zawrat) and `rescue/validate/backtest.md` (4262ffe).
+Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo, zawrat) and `rescue/validate/backtest.md` (4262ffe). **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** Every slide with a number carries the label "tymczasowe - do czasu testu na ślepo".
 
 1. **Title**
    - Rescue Locator - gdzie szukać najpierw (where to search first)
@@ -31,7 +31,7 @@ Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo,
 
 6. **Demo**
    - Screenshot or live: heatmap, evidence toggles left, first-hour plan right.
-   - Key frame: empty searches and drone pass -> probability drains into Żleb pod Zawratem (S7, #1) -> wind grounds the drone, plan re-allocates -> Ratunek ping at 20:05 lands inside S7.
+   - Key frame: empty searches and drone pass -> probability drains into Żleb pod Zawratem (S7, #1) -> wind grounds the drone, plan re-allocates and sends a patrol to S7 -> patrol reports "ŚLAD", then "ZNALEZIONO". Optional epilogue: Ratunek ping at 20:05 inside S7.
    - Field report typed in free text, parsed offline by local qwen3 4B in 1.3-1.7 s (rules fallback ~15 ms).
    - Link to demo video.
 
@@ -40,10 +40,11 @@ Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo,
    - All providers merge into one fused probability stream -> heatmap + ranked segments.
    - New source (AML, RECCO, live drone feed) = one new provider, core untouched.
 
-8. **Value number**
+8. **Value number and how we validate it** (label: "tymczasowe - do czasu testu na ślepo")
    - Hero: find spot **#1 after fusion vs #19 with Koester rings only**; area to sweep **0.11-0.22% vs 41%** (zawrat, real OSM + DEM terrain).
    - Backtest: find spot in the **top 3 in 3/3 scenarios**; on average **0.69% of the area vs 18.4%** with rings only.
    - Footnote: fictional scenarios; drone POD 0.6 / 0.75 is an assumption and the zawrat result holds for both; kasprowy and morskie-oko ran on hand-drawn terrain, so the backtest is preliminary (re-run on real terrain pending).
+   - Validation: blind "hide and seek" test. AI Marcina hides the person and commits to the spot with SHA-256; we search with the app only; the judge answers each patrol by its POD; the hash is opened at the end. Series of 3-5 rounds, failures shown too.
    - Planner, said honestly: ETAs, safety gating, instant re-plan; 20% find chance in 1 h 46 min vs 2 h 00 min, not a big POS gain.
 
 9. **Roadmap**

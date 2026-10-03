@@ -8,7 +8,7 @@ Backup video for the DEFENCE submission (MP4 not required for open tasks, but it
 - Screen recorder: QuickTime (File > New Screen Recording) or OBS; record the browser window only, 30 fps, export MP4 H.264.
 - Voice: record separately on a phone in a quiet room, lay it over in iMovie / CapCut. Re-record the voice, not the screen, if you stumble.
 - Before recording: reset the scenario to its start state, close other tabs, hide bookmarks bar, notifications off (Focus mode).
-- Scenario: `zawrat.json` (real OSM + DEM terrain). Every number spoken must match the screen; sources: `rescue/README.md`, `rescue/validate/backtest.md`.
+- Scenario: `zawrat.json` (real OSM + DEM terrain). Every number spoken must match the screen; sources: `rescue/README.md`, `rescue/validate/backtest.md`. Every number on screen gets the caption "tymczasowe - do czasu testu na ślepo".
 
 ## Shots
 
@@ -20,9 +20,9 @@ Backup video for the DEFENCE submission (MP4 not required for open tasks, but it
 | 4 | 0:55-1:05 | Toggle the trip-plan hint off and on again, heatmap visibly changes | "Wyłączam wskazówkę i widać, ile wniosła. Nic nie jest czarną skrzynką." |
 | 5 | 1:05-1:25 | Right panel: top 3 segments "42% na 8% obszaru", team cards with ETA and "tylko zespół z liną" on iced slabs | "Trzy sektory: 42 procent prawdopodobieństwa na 8 procentach obszaru. Każdy zespół dostaje sektor, czas dojścia i ostrzeżenie: na oblodzone płyty tylko z liną." |
 | 6 | 1:25-1:50 | **Wow.** Empty searches 18:40-19:20 and the drone pass over the lakes at 19:35: heat drains, S7 Żleb pod Zawratem becomes #1. 19:45 wind 14 m/s: drone grounded, helicopter cleared, team cards re-allocate | "Kolejne sektory wracają puste, dron nad stawami nic nie widzi. To też jest informacja. Prawdopodobieństwo spływa do Żlebu pod Zawratem. Wiatr uziemia drona, plan sam się przelicza." |
-| 7 | 1:50-2:05 | 20:05 Ratunek ping drops inside S7, pin pulses. Optional cut: a free-text field report parsed in ~1,5 s | "O 20:05 ping z aplikacji Ratunek: dokładnie w sektorze, który już był pierwszy." |
+| 7 | 1:50-2:05 | Planner sends a patrol to S7; field report "ŚLAD", then "ZNALEZIONO" in S7 (free text parsed in ~1,5 s). Optional epilogue: 20:05 Ratunek ping inside S7 | "Plan wysyła patrol do żlebu. Patrol melduje: ślad. Potem: znaleziony." |
 | 8 | 2:05-2:20 | Slide: architecture - providers -> fused stream -> heatmap + ranking; small "AML / RECCO / dron = kolejny moduł" | "Każde nowe źródło - AML, RECCO, dron na żywo - to po prostu kolejny moduł. Tylko legalne źródła, zero śledzenia, dane w demo są fikcyjne." |
-| 9 | 2:20-2:30 | End card: "#1 zamiast #19", "top 3 w 3/3 scenariuszach (wstępnie)", repo link, team | "Same pierścienie Koestera dawały temu miejscu 19. pozycję. Po fuzji pierwszą. Rescue Locator." |
+| 9 | 2:20-2:30 | End card: "#1 zamiast #19" with caption "tymczasowe - do czasu testu na ślepo", line "Walidacja: test na ślepo, 3-5 rund, porażki też", repo link, team | "Same pierścienie Koestera dawały temu miejscu 19. pozycję. Po fuzji pierwszą. Liczby tymczasowe: sprawdzamy je na ślepo. Rescue Locator." |
 
 ## Checklist before upload
 

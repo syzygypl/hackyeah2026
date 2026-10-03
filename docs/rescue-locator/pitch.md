@@ -1,6 +1,6 @@
 # Rescue Locator - pitch
 
-Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research.md). All demo data is mocked and fictitious. Numbers come from `rescue/README.md` (demo numbers) and `rescue/validate/backtest.md` (4262ffe).
+Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research.md). All demo data is mocked and fictitious. Numbers come from `rescue/README.md` (demo numbers) and `rescue/validate/backtest.md` (4262ffe). **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** They come from scenarios we wrote ourselves, so they only show the engine works as designed. The validation method is the blind test below.
 
 ## Demo script
 
@@ -12,10 +12,11 @@ Scenario `rescue/scenarios/zawrat.json` (fictional), on real OSM + DEM terrain.
   1. Open the incident: Tomasz W., 58, solo hiker, last seen 12:10 at the Pięć Stawów hut (IPP); wife reports at 17:40. Map shows Koester distance rings for "hiker, mountains" plus terrain (trails, streams, cliffs).
   2. Hints stream in on the timeline: wife's trip plan (Palenica - Pięć Stawów - Zawrat and back), car still at Palenica, 112 cell sector from 14:12 (~1.5 km), fog and nightfall. Each hint is a provider; the heatmap reshapes with every one, and toggling a hint off shows what it contributed.
   3. Read the plan: top 3 segments hold **42% of the probability in 8% of the area**, and "Przydział zespołów" gives each team a segment, ETA and safety flags (ice on Zawrat = rope team only).
-  4. Searched segments come back empty (Roztoka, hut, blue trail, drone over the lakes at 19:35): probability drains into Żleb pod Zawratem (S7), now #1. Wind at 19:45 grounds the drone and clears the helicopter; the plan re-allocates. At 20:05 the Ratunek ping lands inside S7.
-- **Wow moment:** Step 4. Empty searches are evidence too: the map re-flows, S7 is already #1, and the Ratunek ping confirms it.
-- **Value number (demo):** the find spot is **#1 after fusion vs #19 with Koester rings only**; to reach it you sweep **0.11-0.22% of the area vs 41%** with rings only. The range is the drone POD assumption (0.75 / 0.6); the result holds for both.
-- **Value number (backtest, all scenarios):** find spot in the **top 3 segments in 3/3 scenarios**; on average **0.69% of the area to sweep vs 18.4%** with Koester rings only (mean of 5 runs: 3 scenarios, 2 drone POD variants). Source: `rescue/validate/backtest.md` (4262ffe). **Preliminary:** only zawrat ran on real OSM + DEM terrain; kasprowy and morskie-oko ran on hand-drawn fallback terrain in that backtest, although their real terrain exists since 0cf94c9. Re-run pending; numbers may move (zawrat moved #1 -> #2 -> #1 when terrain changed).
+  4. Searched segments come back empty (Roztoka, hut, blue trail, drone over the lakes at 19:35): probability drains into Żleb pod Zawratem (S7), now #1. Wind at 19:45 grounds the drone and clears the helicopter; the plan re-allocates and sends a patrol into S7. The patrol reports back "ŚLAD" and then "ZNALEZIONO" in S7: the find comes from a search the planner sent. Optional epilogue: the 20:05 Ratunek ping lands inside S7 as well.
+- **Wow moment:** Step 4. Empty searches are evidence too: the map re-flows, S7 becomes #1, the planner sends a patrol there and the patrol reports "ZNALEZIONO". The Ratunek ping is not needed for the find.
+- **Value number (demo, tymczasowe - do czasu testu na ślepo):** the find spot is **#1 after fusion vs #19 with Koester rings only**; to reach it you sweep **0.11-0.22% of the area vs 41%** with rings only. The range is the drone POD assumption (0.75 / 0.6); the result holds for both.
+- **Value number (backtest, all scenarios, tymczasowe - do czasu testu na ślepo):** find spot in the **top 3 segments in 3/3 scenarios**; on average **0.69% of the area to sweep vs 18.4%** with Koester rings only (mean of 5 runs: 3 scenarios, 2 drone POD variants). Source: `rescue/validate/backtest.md` (4262ffe). **Preliminary:** only zawrat ran on real OSM + DEM terrain; kasprowy and morskie-oko ran on hand-drawn fallback terrain in that backtest, although their real terrain exists since 0cf94c9. Re-run pending; numbers may move (zawrat moved #1 -> #2 -> #1 when terrain changed).
+- **Validation method: blind "hide and seek" test (test na ślepo).** AI Marcina hides the fictional person and publishes only a SHA-256 commitment of the hiding spot before we start. We search with the app alone: we send patrols where the planner says, and the judge answers each patrol with what it would find given its POD (nothing, ŚLAD, ZNALEZIONO). After the search the commitment is opened, so nobody can move the spot after the fact. A series of 3-5 rounds, failures reported alongside successes. Until that series runs, every number on this page is provisional.
 - **Drone POD is an assumption:** 0.6 and 0.75 are illustrative, not a specific drone spec (`rescue/README.md`).
 
 ### Also in the demo (supporting numbers)
@@ -31,7 +32,7 @@ Fits the brief almost word for word ([`docs/tasks/defence.txt`](../tasks/defence
 
 | Criterion (weight) | Where the demo shows it | Say it out loud |
 |---|---|---|
-| Idea & Innovation (30%) | Step 4: empty searches and drone pass drain their segments, S7 becomes #1 (vs #19 on rings only), Ratunek ping lands inside S7 | "Brak wyniku to też informacja" - negative evidence as a Bayes update, which CalTopo does not do automatically |
+| Idea & Innovation (30%) | Step 4: empty searches and drone pass drain their segments, S7 becomes #1 (vs #19 on rings only), the planner's patrol reports ZNALEZIONO in S7 | "Brak wyniku to też informacja" - negative evidence as a Bayes update, which CalTopo does not do automatically |
 | Relation to Category (20%) | Steps 1-2: incomplete, stale, mixed hints in the first hour, few teams, fog and sunset | Use the brief's own words: incomplete information, limited resources, coordination during an emergency |
 | Practical Applicability / Usability (20%) | Step 3: plan with one segment, ETA and safety flag per team; field reports parsed offline in 1.3-1.7 s | Follows the existing GOPR/TOPR reflex-task workflow, no new process; works without internet |
 | Design (20%) | Whole demo: one screen, heatmap centre, hints left, plan right; toggling a hint shows its contribution | Keep the screen calm: one colour ramp, big % numbers, no settings |
@@ -49,9 +50,9 @@ AI disclosure (required by the open-task rules): name the AI tools used (Claude 
 >
 > Po prawej: trzy najlepsze sektory, 42 procent prawdopodobieństwa na 8 procentach obszaru. I przydział zespołów: kto, dokąd, za ile minut, a na oblodzone płyty tylko zespół z liną.
 >
-> A teraz najważniejsze. Kolejne sektory wracają puste, dron nad stawami nic nie widzi. To też jest informacja. Prawdopodobieństwo spływa do Żlebu pod Zawratem. O 19:45 wiatr uziemia drona, plan sam się przelicza. O 20:05 przychodzi ping z aplikacji Ratunek: dokładnie w sektorze, który już był pierwszy.
+> A teraz najważniejsze. Kolejne sektory wracają puste, dron nad stawami nic nie widzi. To też jest informacja. Prawdopodobieństwo spływa do Żlebu pod Zawratem. O 19:45 wiatr uziemia drona, plan sam się przelicza i wysyła patrol do żlebu. Patrol melduje: ślad. Potem: znaleziony.
 >
-> Same pierścienie Koestera stawiały to miejsce na 19. pozycji. Po fuzji jest pierwsze. W trzech fikcyjnych scenariuszach miejsce odnalezienia zawsze było w pierwszej trójce. Tylko legalne źródła, zero śledzenia, działa offline, a każdy nowy sygnał - AML, RECCO, dron - to po prostu kolejny moduł.
+> Same pierścienie Koestera stawiały to miejsce na 19. pozycji. Po fuzji jest pierwsze. To liczby tymczasowe, ze scenariuszy, które sami napisaliśmy. Dlatego sprawdzamy się na ślepo: ktoś inny chowa zaginionego i zapisuje miejsce jako skrót SHA-256, a my szukamy tylko aplikacją. Kilka rund, porażki też pokazujemy. Tylko legalne źródła, zero śledzenia, działa offline, a każdy nowy sygnał - AML, RECCO, dron - to po prostu kolejny moduł.
 >
 > Reagowanie kryzysowe wtedy, gdy informacji jest mało, a zespołów jeszcze mniej. Rescue Locator. Gdzie szukać najpierw.
 
@@ -71,6 +72,9 @@ Koester's *Lost Person Behavior* and the ISRID database (tens of thousands of in
 
 **How do you know it is better than circles?**
 Our backtest (`rescue/validate/backtest.md`) on 3 fictional scenarios: the find spot is in the top 3 segments in 3/3, and you sweep on average 0.69% of the area vs 18.4% with Koester rings only. In the demo scenario: #1 vs #19. Caveats to say out loud: the scenarios and find spots are ours, so this shows the fusion works as designed, not field accuracy; two of three scenarios still ran on hand-drawn terrain (re-run on real terrain pending). Published evaluation (MapScore, Sava et al. 2015) shows terrain-aware models beat plain rings; the real test is a backtest on anonymised past GOPR/TOPR cases.
+
+**Your scenarios are your own, so of course it finds the spot?**
+Right, which is why every number is marked provisional. Our validation is a blind hide-and-seek test: AI Marcina hides the person and commits to the spot with a SHA-256 hash, we search using only the app, the judge answers each patrol according to its POD, and the hash is opened at the end. Series of 3-5 rounds, failures included.
 
 **What does the drone POD 0.6 vs 0.75 mean?**
 An assumption, not a spec. We ran both; the zawrat result (#1) holds for both.
