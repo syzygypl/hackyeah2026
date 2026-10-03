@@ -3,18 +3,24 @@
 `osm_terrain.py` turns a scenario's bbox into `rescue/scenarios/<name>-terrain.json`, which `swift run rescue-demo` loads instead of the hand-drawn `terrain` (it prints `Terrain: .../zawrat-terrain.json`). Python 3 stdlib only, no pip install.
 
 ```sh
-python3 rescue/tools/terrain/osm_terrain.py             # offline from the caches in data/
-python3 rescue/tools/terrain/osm_terrain.py --refresh   # re-query Overpass + re-read the DEM (rarely, be polite)
-python3 rescue/tools/terrain/check_terrain.py           # writes terrain_check.md (scenario vs real terrain)
+python3 rescue/tools/terrain/osm_terrain.py                                    # default: scenarios/zawrat.json
+python3 rescue/tools/terrain/osm_terrain.py --scenario rescue/scenarios/<name>.json   # any scenario
+python3 rescue/tools/terrain/osm_terrain.py --scenario ... --refresh           # re-query Overpass + re-read the DEM
+python3 rescue/tools/terrain/osm_terrain.py --scenario ... --no-dem            # OSM only (no slopeDeg, no DEM ridges)
+python3 rescue/tools/terrain/check_terrain.py                                  # zawrat only: writes terrain_check.md
 cd rescue && swift run rescue-demo
 ```
+
+Per scenario, it reads `bbox` and `cellM` from `scenarios/<name>.json` and writes `scenarios/<name>-terrain.json`. `slopeDeg` is on that scenario's grid, using the same rows/cols formula as Swift's `ProbabilityGrid` (111320 m/deg, rounded half up). Caches go in `data/<name>-overpass.json` and `data/<name>-dem.json` (committed, so reruns are offline). Downloaded DEM blocks go in `data/dem-blocks/` (gitignored, about 2.5 MB each).
+
+**DEM tiles:** chosen by bbox. Every 1x1 degree Copernicus tile the bbox touches is read (e.g. Gorce, across the 19/20 E boundary, reads `N49_00_E019` + `N49_00_E020`). The tiles are stitched by global pixel index, and only the 1024 px blocks that cover the bbox are fetched (HTTP range requests). Tested on a 19.97-20.03 E bbox: the step across the tile seam is in line with steps inside a tile. Limits: northern and eastern hemispheres only. A bbox crossing 50 N is refused, because GLO-30 changes longitude resolution there (1" -> 1.5").
 
 ## Sources and caches
 
 | Source | How | Cache |
 |---|---|---|
 | OpenStreetMap via Overpass (`overpass-api.de`) | one query for the bbox: hiking route relations, `waterway=stream\|river`, `natural=water`, `tourism=alpine_hut`, `amenity=shelter`, `natural=cliff\|arete\|ridge` | `data/zawrat-overpass.json` (raw response, 1.8 MB; the cached one also has `natural=scree`, which is now ignored) |
-| Copernicus DEM GLO-30 (public AWS bucket `copernicus-dem-30m`, tile `Copernicus_DSM_COG_10_N49_00_E020_00_DEM`) | reads the COG header, then HTTP range requests for the 1024 px block(s) the bbox touches; deflate + floating-point predictor decoded in pure Python | `data/zawrat-dem.json` (195 x 298 px crop, 0.4 MB) |
+| Copernicus DEM GLO-30 (public AWS bucket `copernicus-dem-30m`, tiles `Copernicus_DSM_COG_10_N<lat>_00_E<lon>_00_DEM`) | reads the COG headers, then HTTP range requests for the 1024 px block(s) the bbox touches; deflate + floating-point predictor decoded in pure Python | `data/zawrat-dem.json` (195 x 297 px crop, 0.4 MB) |
 
 DEM sanity check: lake surfaces match their known elevations within 2 m (Wielki Staw 1664 vs 1665, Morskie Oko 1395, Czarny Staw Gąsienicowy 1624), huts too (Murowaniec 1501, Pięć Stawów 1670).
 

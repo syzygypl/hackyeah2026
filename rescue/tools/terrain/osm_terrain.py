@@ -198,49 +198,80 @@ def _ifd(buf, off, bo):
     return tags
 
 
-def dem_crop(b):
-    """Elevations (m) for the bbox from the 1x1 degree Copernicus tile: {lat0, lon0, step, rows, cols, z}.
-    Reads the COG header, then only the 1024x1024 block(s) the bbox touches (deflate + floating point predictor)."""
-    lat, lon = math.floor(b["south"]), math.floor(b["west"])
-    assert math.floor(b["north"]) == lat and math.floor(b["east"]) == lon, "bbox spans two DEM tiles"
-    url = DEM_URL.format(lat=lat, lon=lon)
+def _tile_header(url):
     head = _get(url, 0, 65536)
     bo = "<" if head[:2] == b"II" else ">"
     t = _ifd(head, struct.unpack(bo + "I", head[4:8])[0], bo)
-    W, H, tw, th = t[256][0], t[257][0], t[322][0], t[323][0]
-    assert t[259][0] == 8 and t[258][0] == 32 and t[339][0] == 3, "expected deflate float32"
-    pred = t.get(317, (1,))[0]
-    sx, sy = t[33550][0], t[33550][1]
-    lon0, lat0 = t[33922][3], t[33922][4]  # top-left corner
-    r0, r1 = int((lat0 - b["north"]) / sy), int(math.ceil((lat0 - b["south"]) / sy))
-    c0, c1 = int((b["west"] - lon0) / sx), int(math.ceil((b["east"] - lon0) / sx))
-    tiles_across = (W + tw - 1) // tw
-    z = [[0.0] * (c1 - c0) for _ in range(r1 - r0)]
-    for tr in range(r0 // th, (r1 - 1) // th + 1):
-        for tc in range(c0 // tw, (c1 - 1) // tw + 1):
-            k = tr * tiles_across + tc
-            block = zlib.decompress(_get(url, t[324][k], t[325][k]))
-            for rr in range(max(r0, tr * th), min(r1, (tr + 1) * th)):
-                row = bytearray(block[(rr - tr * th) * tw * 4:(rr - tr * th + 1) * tw * 4])
-                if pred in (2, 3):  # undo horizontal byte differencing
-                    for i in range(1, len(row)):
-                        row[i] = (row[i] + row[i - 1]) & 0xFF
-                if pred == 3:  # floating point predictor: byte planes, most significant first
-                    vals = [struct.unpack(">f", bytes((row[i], row[tw + i], row[2 * tw + i], row[3 * tw + i])))[0]
-                            for i in range(tw)]
-                else:
-                    vals = list(struct.unpack(bo + "f" * tw, bytes(row)))
-                for cc in range(max(c0, tc * tw), min(c1, (tc + 1) * tw)):
-                    z[rr - r0][cc - c0] = round(vals[cc - tc * tw], 1)
-    return {"source": url, "lat0": lat0 - r0 * sy, "lon0": lon0 + c0 * sx, "step": sx,
-            "rows": r1 - r0, "cols": c1 - c0, "z": z}
+    assert t[259][0] == 8 and t[258][0] == 32, "expected deflate float32"
+    return bo, t
+
+
+def _block(url, t, k, cache_dir):
+    """One compressed 1024x1024 block of a tile, cached on disk (data/dem-blocks/, not committed)."""
+    path = os.path.join(cache_dir, os.path.basename(url).replace(".tif", f"-b{k}.zz"))
+    if not os.path.exists(path):
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(_get(url, t[324][k], t[325][k]))
+    with open(path, "rb") as f:
+        return zlib.decompress(f.read())
+
+
+def dem_crop(b, cache_dir=os.path.join(HERE, "data", "dem-blocks")):
+    """Elevations (m) for the bbox from as many 1x1 degree Copernicus GLO-30 tiles as it touches:
+    {lat0, lon0, step (lon), stepLat, rows, cols, z (row 0 = north), tiles}. Pixels sit on one global grid
+    (tile edges are whole degrees), so tiles stitch by index. Only the 1024 px blocks the bbox needs are fetched."""
+    tiles = [(la, lo) for la in range(math.floor(b["south"]), math.floor(b["north"]) + 1)
+             for lo in range(math.floor(b["west"]), math.floor(b["east"]) + 1)]
+    assert all(la >= 0 and lo >= 0 for la, lo in tiles), "only N/E tiles supported"
+    heads = {k: _tile_header(DEM_URL.format(lat=k[0], lon=k[1])) for k in tiles}
+    steps = {(h[1][33550][0], h[1][33550][1]) for h in heads.values()}
+    assert len(steps) == 1, f"tiles with different resolutions {steps} (bbox crosses 50 N?)"
+    sx, sy = steps.pop()
+    # global pixel indices: row from 90 N down, col from 180 W
+    eps = 1e-6  # float noise at exact pixel edges (e.g. 20.005 E = pixel 18.0)
+    G0, G1 = int((90 - b["north"]) / sy + eps), int(math.ceil((90 - b["south"]) / sy - eps))
+    H0, H1 = int((b["west"] + 180) / sx + eps), int(math.ceil((b["east"] + 180) / sx - eps))
+    z = [[None] * (H1 - H0) for _ in range(G1 - G0)]
+    for (la, lo), (bo, t) in heads.items():
+        url = DEM_URL.format(lat=la, lon=lo)
+        W, H, tw, th = t[256][0], t[257][0], t[322][0], t[323][0]
+        pred = t.get(317, (1,))[0]
+        top, left = t[33922][4], t[33922][3]
+        gr0, gc0 = round((90 - top) / sy), round((left + 180) / sx)  # tile origin in global pixels
+        r0, r1 = max(G0 - gr0, 0), min(G1 - gr0, H)
+        c0, c1 = max(H0 - gc0, 0), min(H1 - gc0, W)
+        if r0 >= r1 or c0 >= c1:
+            continue
+        across = (W + tw - 1) // tw
+        for tr in range(r0 // th, (r1 - 1) // th + 1):
+            for tc in range(c0 // tw, (c1 - 1) // tw + 1):
+                block = _block(url, t, tr * across + tc, cache_dir)
+                for rr in range(max(r0, tr * th), min(r1, (tr + 1) * th)):
+                    row = bytearray(block[(rr - tr * th) * tw * 4:(rr - tr * th + 1) * tw * 4])
+                    if pred in (2, 3):  # undo horizontal byte differencing
+                        for i in range(1, len(row)):
+                            row[i] = (row[i] + row[i - 1]) & 0xFF
+                    if pred == 3:  # floating point predictor: byte planes, most significant first
+                        vals = [struct.unpack(">f", bytes((row[i], row[tw + i], row[2 * tw + i], row[3 * tw + i])))[0]
+                                for i in range(tw)]
+                    else:
+                        vals = list(struct.unpack(bo + "f" * tw, bytes(row)))
+                    for cc in range(max(c0, tc * tw), min(c1, (tc + 1) * tw)):
+                        z[rr + gr0 - G0][cc + gc0 - H0] = round(vals[cc - tc * tw], 1)
+    missing = sum(v is None for row in z for v in row)
+    assert not missing, f"{missing} DEM pixels missing (tile not available?)"
+    return {"source": [os.path.basename(DEM_URL.format(lat=la, lon=lo)) for la, lo in tiles],
+            "lat0": 90 - G0 * sy, "lon0": H0 * sx - 180, "step": sx, "stepLat": sy,
+            "rows": G1 - G0, "cols": H1 - H0, "z": z}
 
 
 def slope_deg(dem):
     """Slope per DEM pixel (central differences), degrees."""
     R, C, z = dem["rows"], dem["cols"], dem["z"]
-    mid = dem["lat0"] - R / 2 * dem["step"]
-    dy = dem["step"] * 110540
+    sy = dem.get("stepLat", dem["step"])
+    mid = dem["lat0"] - R / 2 * sy
+    dy = sy * 110540
     dx = dem["step"] * 111320 * math.cos(math.radians(mid))
     out = [[0.0] * C for _ in range(R)]
     for r in range(R):
@@ -256,11 +287,12 @@ def steep_ridges(dem, b, cell_m, trail_lines):
     emitted as row runs of cell centres (a run = one 'ridges' polyline)."""
     sl = slope_deg(dem)
     lat_mid = (b["north"] + b["south"]) / 2
-    rows = round((b["north"] - b["south"]) * 110540 / cell_m)
-    cols = round((b["east"] - b["west"]) * 111320 * math.cos(math.radians(lat_mid)) / cell_m)
+    # same as Swift ProbabilityGrid: 111320 m/deg, .rounded() = half away from zero
+    rows = int((b["north"] - b["south"]) * 111320 / cell_m + 0.5)
+    cols = int((b["east"] - b["west"]) * 111320 * math.cos(math.radians(lat_mid)) / cell_m + 0.5)
     acc = [[[0, 0] for _ in range(cols)] for _ in range(rows)]
     for r in range(dem["rows"]):
-        la = dem["lat0"] - (r + 0.5) * dem["step"]
+        la = dem["lat0"] - (r + 0.5) * dem.get("stepLat", dem["step"])
         gr = int((b["north"] - la) / (b["north"] - b["south"]) * rows)
         if not 0 <= gr < rows:
             continue

@@ -26,7 +26,7 @@ FINDINGS = """## 3. Findings (hand-written, 2026-10-03, from the tables above)
 - **Seeds:** S3 is inside the real Przedni Staw (lake), S1/S9/S17 are on steep off-trail cells, S16 (Wołoszyn) and S19 are 700-840 m from any trail. S12 "Szpiglasowa Przełęcz" is 420 m from the real yellow trail to the pass. Seeds only start the segment growth, so this is cosmetic, but S3 inside a lake and S12 off the pass are worth a nudge.
 - **Trip plan route** (green Roztoka + blue to Zawrat) is 107 m median / 280 m max from the real trails. It's fine as a 300 m-sigma corridor, but re-tracing it from the real `Zielony`/`Niebieski` polylines in zawrat-terrain.json would make the map line match the trail.
 - **Hand terrain has a "Schronisko Roztoka"**: OSM has no alpine_hut there in the bbox (the Roztoka hostel is outside or tagged differently).
-- **Steep ground:** 665 of 3600 cells (18%) are > 38° on most pixels and > 120 m from a trail. With the Swift rule `dRidge < 250 m && dTrail > 120 m -> 0.35`, the 250 m buffer around these cell-precise ridges is wide; ~70 m (half a cell diagonal) would match the DEM resolution. Alternatively Swift can read `slopeDeg` directly.
+- **Steep ground:** 659 of 3600 cells (18%) are > 38° on most pixels and > 120 m from a trail. With the Swift rule `dRidge < 250 m && dTrail > 120 m -> 0.35`, the 250 m buffer around these cell-precise ridges is wide; ~70 m (half a cell diagonal) would match the DEM resolution. Alternatively Swift can read `slopeDeg` directly.
 """.splitlines()
 
 
@@ -45,7 +45,7 @@ def main():
     sl = slope_deg(dem)
 
     def z_s(p):
-        r, c = int((dem["lat0"] - p[0]) / dem["step"]), int((p[1] - dem["lon0"]) / dem["step"])
+        r, c = int((dem["lat0"] - p[0]) / dem.get("stepLat", dem["step"])), int((p[1] - dem["lon0"]) / dem["step"])
         if 0 <= r < dem["rows"] and 0 <= c < dem["cols"]:
             return round(dem["z"][r][c]), round(sl[r][c])
         return None, None
