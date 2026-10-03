@@ -540,13 +540,31 @@ func rosterAssign(_ q: Req) async -> Data {
     return await teamsData()
 }
 
-/// GET /api/incidents: the engine part cached per (sc, live version)
+/// GET /api/incidents: the engine part cached per (sc, inputs of its live run). A miss is computed once even when several
+/// pollers ask at the same moment (the first one runs it, the others wait for that run).
 actor IncidentCache {
     var c: [String: Data] = [:]
-    func get(_ k: String) -> Data? { c[k] }
-    func put(_ k: String, _ v: Data) { if c.count > 200 { c.removeAll() }; c[k] = v }
+    var inFlight: [String: Task<Data?, Never>] = [:]
+    func get(_ k: String, _ compute: @escaping @Sendable () async -> Data?) async -> Data? {
+        if let d = c[k] { return d }
+        if let t = inFlight[k] { return await t.value }
+        let t = Task { await compute() }
+        inFlight[k] = t
+        let d = await t.value
+        inFlight[k] = nil
+        if let d { if c.count > 200 { c.removeAll() }; c[k] = d }
+        return d
+    }
 }
 let incidentCache = IncidentCache()
+/// One /api/incidents engine run at a time: parallel runs on a 1-2 vCPU container are slower than serial ones
+/// (all incidents, 1 CPU: 8.5 s in parallel vs 3.8 s one by one). The Neon lookups around them still overlap.
+actor EngineGate {
+    var busy = false, waiting: [CheckedContinuation<Void, Never>] = []
+    func enter() async { if busy { await withCheckedContinuation { waiting.append($0) } } else { busy = true } }
+    func leave() { if waiting.isEmpty { busy = false } else { waiting.removeFirst().resume() } }
+}
+let engineGate = EngineGate()
 /// size+mtime of scenarios/<sc>.json and its terrain: a story re-saved in Studio or pulled by tools/sync-stories.sh invalidates the caches
 func scenarioStamp(_ sc: String) -> String {
     ["\(sc).json", "\(sc)-terrain.json"].map { f -> String in
@@ -554,36 +572,52 @@ func scenarioStamp(_ sc: String) -> String {
         return "\((a?[.size] as? Int) ?? 0)@\((a?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0)"
     }.joined(separator: ",")
 }
+/// The engine summary of one incident (title, place, top3, found, ...). Its cache key holds exactly what runScenario(live:)
+/// reads - live reports without sc and for sc, the advance cursor, the roster teams on a touched incident, the scenario files -
+/// so a clue, dispatch or ACK on another incident does not recompute this one.
+func incidentBase(_ sc: String, nLive: Int) async -> Data? {
+    let teamsKey = await roster.resources(for: sc).map { $0.map { String(decoding: $0, as: UTF8.self) }.joined(separator: ";") } ?? "-"
+    let key = "\(sc)|\(nLive)|\(await store.reportCount(sc: sc))|\(await cursors.get(sc) ?? "-")|\(teamsKey)|\(scenarioStamp(sc))"
+    return await incidentCache.get(key) {
+        await engineGate.enter()
+        let r = await runScenario(sc, live: true)
+        await engineGate.leave()
+        guard let run = r else { return nil }
+        let d = jsonObject(run), all = (d["steps"] as? [[String: Any]]) ?? []
+        // live moment = the step before the replay's scripted find; only a live ZNALEZIONO (meldunek) closes the incident
+        let isFind = { (s: [String: Any]) -> Bool in (s["label"] as? String ?? "").uppercased().contains("ZNALEZIONO") || s["source"] as? String == "Found" }
+        // an operator who advanced the incident past the scripted find (POST /api/advance) found the person live
+        let advanced = await cursors.get(sc) != nil
+        let cut = advanced ? all.count : all.firstIndex { isFind($0) && !($0["label"] as? String ?? "").contains("(meldunek)") } ?? all.count
+        let steps = Array(all.prefix(max(cut, 1))), last = steps.last ?? [:]
+        let segs = (last["segments"] as? [[String: Any]]) ?? []
+        let inc = (d["incident"] as? String ?? sc).replacingOccurrences(of: #"\s*\(scenariusz[^)]*\)\s*$"#, with: "", options: .regularExpression)
+        let parts = inc.components(separatedBy: " - ")
+        let title = parts[0].prefix(1).lowercased() + parts[0].dropFirst()
+        let b: [String: Any] = ["title": title, "place": parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc,
+                                "top3": segs.prefix(3).map { ["segmentId": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0] },
+                                "found": steps.contains(where: isFind) || all.contains { isFind($0) && ($0["label"] as? String ?? "").contains("(meldunek)") },   // a live find counts even after the replay's scripted one
+                                "replayFound": cut < all.count, "at": last["t"] ?? "",
+                                "total": ((last["resources"] as? [Any]) ?? []).count]
+        return try? JSONSerialization.data(withJSONObject: b)
+    }
+}
 func incidentsData() async -> Data {
-    let feedSeq = await liveFeed.currentSeq(), rv = await roster.version, asg = await assignmentList(), nLive = await store.reportCount(sc: nil)
-    var out: [[String: Any]] = []
-    for sc in scenarioNames() {
-        let key = "\(sc)|\(feedSeq)|\(rv)|\(nLive)|\(await store.reportCount(sc: sc))|\(scenarioStamp(sc))"
-        var base = await incidentCache.get(key)
-        if base == nil, let run = await runScenario(sc, live: true) {
-            let d = jsonObject(run), all = (d["steps"] as? [[String: Any]]) ?? []
-            // live moment = the step before the replay's scripted find; only a live ZNALEZIONO (meldunek) closes the incident
-            let isFind = { (s: [String: Any]) -> Bool in (s["label"] as? String ?? "").uppercased().contains("ZNALEZIONO") || s["source"] as? String == "Found" }
-            // an operator who advanced the incident past the scripted find (POST /api/advance) found the person live
-            let advanced = await cursors.get(sc) != nil
-            let cut = advanced ? all.count : all.firstIndex { isFind($0) && !($0["label"] as? String ?? "").contains("(meldunek)") } ?? all.count
-            let steps = Array(all.prefix(max(cut, 1))), last = steps.last ?? [:]
-            let segs = (last["segments"] as? [[String: Any]]) ?? []
-            let inc = (d["incident"] as? String ?? sc).replacingOccurrences(of: #"\s*\(scenariusz[^)]*\)\s*$"#, with: "", options: .regularExpression)
-            let parts = inc.components(separatedBy: " - ")
-            let title = parts[0].prefix(1).lowercased() + parts[0].dropFirst()
-            let b: [String: Any] = ["title": title, "place": parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc,
-                                    "top3": segs.prefix(3).map { ["segmentId": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0] },
-                                    "found": steps.contains(where: isFind) || all.contains { isFind($0) && ($0["label"] as? String ?? "").contains("(meldunek)") },   // a live find counts even after the replay's scripted one
-                                    "replayFound": cut < all.count, "at": last["t"] ?? "",
-                                    "total": ((last["resources"] as? [Any]) ?? []).count]
-            base = try? JSONSerialization.data(withJSONObject: b)
-            if let base { await incidentCache.put(key, base) }
+    async let asgQ = assignmentList(), nLiveQ = store.reportCount(sc: nil)
+    let asg = await asgQ, nLive = await nLiveQ, names = scenarioNames()
+    // all incidents at once (Neon round trips overlap, engine runs queue in EngineGate), then the side effects below in a fixed order
+    let rows = await withTaskGroup(of: (Int, Data?, LiveFeedEvent?, Bool).self) { g in
+        for (i, sc) in names.enumerated() {
+            g.addTask { async let b = incidentBase(sc, nLive: nLive), ev = liveFeed.last(sc: sc), t = roster.isTouched(sc); return (i, await b, await ev, await t) }
         }
+        var r = [(Data?, LiveFeedEvent?, Bool)](repeating: (nil, nil, false), count: names.count)
+        for await (i, b, ev, t) in g { r[i] = (b, ev, t) }
+        return r
+    }
+    var out: [[String: Any]] = []
+    for (sc, (base, lastEv, touched)) in zip(names, rows) {
         var o = jsonObject(base ?? Data())
         if o.isEmpty { continue }
-        let lastEv = await liveFeed.last(sc: sc)
-        let touched = await roster.isTouched(sc)
         o["sc"] = sc
         o["live"] = lastEv != nil || touched
         o["seq"] = lastEv?.seq ?? 0
