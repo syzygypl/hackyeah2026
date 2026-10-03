@@ -8,7 +8,17 @@ cd rescue && swift run rescue-studio          # then http://127.0.0.1:8771/app/ 
 
 The shell owns the state (story/run, current step, selected segment). Embedded views draw it and report **user** actions back.
 
-Shared look: `app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default, `[data-theme=light]` paper variant). Shared heat colours: `app/scale.js` (DECISION S2, "x average cell" log scale, stops 0.5x/1x/2x/5x/10x/25x+, `legendHTML()`).
+Shared look: `rescue/app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default, `[data-theme=light]` paper variant). Shared heat colours: `rescue/app/scale.js` (DECISION S2, "x average cell" log scale, stops 0.5x/1x/2x/5x/10x/25x+, `legendHTML()`). Relative paths: from `web/3d/` they are `../../app/tokens.css` and `../../app/scale.js`; from `web/` they are `../app/...`; from `out/` also `../app/...`.
+
+## Modes (top tabs, one URL `/app/`, `?mode=akcja|edycja|teren|monitoring|walidacja&view=...`)
+
+| Mode | Content |
+|---|---|
+| Akcja | 2D analysis screen (`web/`, embed) / 3D (`web/3d/`, embed) / Podział; shared panels: top segments, team plan + "dlaczego", Ocena sytuacji, progress, alerts, timeline |
+| Edycja | Story Studio drag-and-drop on the app's own MapLibre map (switches to the live Studio story); "Mapa + 3D" split |
+| Teren | `web/patrol/` (patrol phone, `?api=http://<host>:8770&run=<run url>`) and `http://<host>:8770/field.html` (field report entry) |
+| Monitoring | `http://<host>:8770/ops.html` (live `/metrics` of rescue-field) |
+| Walidacja | read-only charts from `rescue/eval/` (section "eval" below) |
 
 ## Transport
 
@@ -55,3 +65,52 @@ Before a view says `ready` (older build), the shell falls back to reloading the 
 3. **static**: `out/run.json` (Zawrat demo, read-only).
 
 Alerts poll `/metrics` of the serving host and `http://<host>:8770/metrics` (rescue-field) every 10 s: silent teams, rejected requests since the page opened, LLM down, planner safety flags.
+
+## eval: files the Walidacja mode reads (served at `/eval/...`, json and csv only)
+
+The shell renders whatever of these exists, in this order.
+
+### 1. `rescue/eval/ablation.json` (AI Marcina, `python3 rescue/eval/ablation.py`)
+
+Array, one object per blind round:
+
+```jsonc
+[{ "round": "blind-01", "segments": 20, "cells": 4824,
+   "engine": { "area": 0.0205, "segRank": 2, "cellRank": 99 },   // area = share of the grid searched before the true cell, in the method's order
+   "expert": { "area": 0.0435, "segRank": 4 },                    // expert.py heuristic
+   "naive":  { "area": 0.2409, "segRank": 6 },                    // segments by distance from the IPP
+   "planner": { "found": true, "searches": 7, "minutes": 180 },   // engine's own team plan simulated
+   "actual":  { "found": true, "searches": 8, "minutes": 35, "by": "gopr-a" } }]
+```
+
+Shown as a table with bars (area) and segment rank per method. `hiddenSeg` is not displayed.
+
+### 2. `rescue/eval/calibration/results.json` (AI Denisa, calibration harness on simulator cases)
+
+```jsonc
+{
+  "schema": "rescue-eval/1",
+  "generated": "2026-10-03T21:00", "engine": "<git short sha>", "simRun": "v1-zawrat", "region": "zawrat", "n": 200,
+  "note": "optional one line",
+  "methods": {                                   // any of engine | expert | naive (others ignored)
+    "engine": {
+      "topk": { "1": 0.42, "3": 0.71, "5": 0.85 },                 // share of cases with the true segment in the top k
+      "brier": 0.081,                                               // mean squared error of segment POA vs one-hot truth
+      "areaToFind": { "bins": [0, 5, 10, 20, 40, 70, 100], "counts": [60, 40, 35, 30, 20, 15], "median": 7.5 },  // % of area searched before the find; counts has bins.length-1 items
+      "calibration": [ { "p": 0.05, "observed": 0.04, "n": 1200 }, { "p": 0.15, "observed": 0.17, "n": 300 } ]   // bin centre of predicted POA, observed frequency, count
+    },
+    "expert": { "...": "same keys" },
+    "naive":  { "...": "same keys" }
+  },
+  "byCategory":  [ { "category": "hiker", "n": 80, "top3": { "engine": 0.74, "expert": 0.6, "naive": 0.4 } } ],
+  "byMisleading": [ { "misleading": 0, "n": 120, "top3": { "engine": 0.8, "naive": 0.45 } } ],
+  "cases": [ { "case": "case-0001", "category": "hiker", "behaviour": "follow_drainage", "misleading": 1,
+               "rank": { "engine": 2, "expert": 4, "naive": 7 }, "areaPctToFind": { "engine": 3.2, "naive": 18.0 } } ]
+}
+```
+
+Shown: headline numbers, grouped top-1/3/5 bars, area-to-find histogram (engine bars, other methods as lines), calibration curve per method with the diagonal, Brier per method, tables by category / by misleading clues, case list (first 300).
+
+### 3. Fallback: simulator runs (AI Michała, `rescue/eval/sim/README.md`)
+
+When `results.json` is missing, the shell lists `rescue/eval/sim/out/<run>/` folders that have `manifest.csv` (`GET /eval/sim-runs` -> `[{ id, manifest, run }]`, served by rescue-studio; rescue-server should offer the same route) and shows counts by category / behaviour / stop reason, share with misleading clues and with a cell fix, and the case table from `manifest.csv`. Truth files are not read.
