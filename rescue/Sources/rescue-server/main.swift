@@ -129,6 +129,15 @@ func liveEvents(_ reports: [FieldReport], segments: Set<String>, seeds: [String:
     return out
 }
 
+/// Timeline mode (CONTRACT "Timeline mode"): scenarios/tracks/<name>.json + DEM (tools/terrain/data/<name>-dem.json) + scenarios/fov/fov-params.json.
+/// nil without a tracks file = no `timeline` key (old behaviour).
+func timelineInput(_ name: String) -> TimelineEngine.Input? {
+    guard let t = try? Data(contentsOf: scenariosDir.appendingPathComponent("tracks/\(name).json")) else { return nil }
+    let dem = try? Data(contentsOf: scenariosDir.deletingLastPathComponent().appendingPathComponent("tools/terrain/data/\(name)-dem.json"))
+    let fov = try? Data(contentsOf: scenariosDir.appendingPathComponent("fov/fov-params.json"))
+    return TimelineEngine.Input(tracks: t, dem: dem, fovParams: fov)
+}
+
 /// Loads scenarios/<name>.json + <name>-terrain.json, folds live reports in, runs the engine.
 func runScenario(_ name: String, live: Bool, features: String? = nil) async -> Data? {
     let path = scenariosDir.appendingPathComponent("\(name).json")
@@ -166,7 +175,7 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
     if let rs = await roster.resources(for: name) { d["resources"] = rs.compactMap { try? JSONSerialization.jsonObject(with: $0) } }   // live mode: touched incident plans with its roster teams only
     guard let data = try? JSONSerialization.data(withJSONObject: d), var s = try? JSONDecoder().decode(Scenario.self, from: data) else { return nil }
     s.enable(features)
-    var doc = (try? JSONSerialization.jsonObject(with: await StoryPipeline.runData(s))) as? [String: Any] ?? [:]
+    var doc = (try? JSONSerialization.jsonObject(with: await StoryPipeline.runData(s, timeline: timelineInput(name)))) as? [String: Any] ?? [:]
     doc["scenario"] = name
     doc["liveEventsFolded"] = nLive
     if let liveCursor { doc["liveCursor"] = liveCursor }
