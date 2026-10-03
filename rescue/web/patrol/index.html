@@ -6,6 +6,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#faf8f3">
 <title>Patrol - Rescue Locator</title>
+<!-- fonts every page paints first (Barlow 400/700, latin + latin-ext for Polish) and the module graph, fetched in parallel instead of discovered one round trip at a time -->
+<link rel="preload" href="../../app/fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../app/fonts/barlow-400-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../app/fonts/barlow-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../app/fonts/barlow-700-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="modulepreload" href="../vendor/maplibre-gl.mjs">
+<link rel="modulepreload" href="../vendor/maplibre-gl-shared.mjs">
+<link rel="modulepreload" href="../basemap/basemap.js">
+<link rel="modulepreload" href="../vendor/pmtiles.js">
+<link rel="modulepreload" href="../vendor/basemaps.js">
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
 <link rel="stylesheet" href="../../app/tokens.css">
 <link rel="manifest" href="manifest.webmanifest">

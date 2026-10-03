@@ -6,6 +6,11 @@
 <title>Rescue Locator - gdzie szukać najpierw</title>
 <meta name="description" content="Narzędzie dla kierownika akcji GOPR/TOPR/WOPR: z niepewnych wskazówek jedna mapa i kolejność przeszukiwania.">
 <link rel="icon" href="data:,">
+<!-- fonts every page paints first (Barlow 400/700, latin + latin-ext for Polish) and the module graph, fetched in parallel instead of discovered one round trip at a time -->
+<link rel="preload" href="fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/barlow-400-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/barlow-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/barlow-700-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="start.css">
 </head>

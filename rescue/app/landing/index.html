@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rescue Locator - gdzie szukać najpierw</title>
 <meta name="description" content="Rescue Locator: mapa, która podpowiada ratownikom, gdzie szukać zaginionej osoby najpierw. Prototyp z HackYeah 2026.">
+<!-- fonts every page paints first (Barlow 400/700, latin + latin-ext for Polish) and the module graph, fetched in parallel instead of discovered one round trip at a time -->
+<link rel="preload" href="../fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-400-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/barlow-700-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../tokens.css">
 <style>
 /* Landing page (rescue/app/landing/). Two audiences behind one switch: ?dla=sar (rescue teams) and ?dla=turysci (hikers, families).
