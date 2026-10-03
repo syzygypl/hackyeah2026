@@ -314,3 +314,8 @@ body.embed-scene #hud { display: none; }
 #sceneCtl .chk { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; color: var(--rl-ink, #eef2f5); }
 #sceneCtl .chk input { margin: 0; accent-color: var(--rl-accent, #5ce1e6); }
 #sceneCtl .full { width: 100%; background: transparent; color: var(--rl-ink, #eef2f5); border: 1px solid var(--rl-line, #2b3741); border-radius: 6px; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; }
+
+/* load error: no spinner, readable message */
+body[data-state="error"] .spinner { display: none; }
+body[data-state="error"] #loadmsg { max-width: 560px; text-align: center; line-height: 1.6; color: var(--ink); }
+#loadmsg code { font-size: 12px; background: rgba(35, 39, 42, 0.08); padding: 1px 5px; border-radius: 4px; }

@@ -128,7 +128,12 @@ try {
   if (!R && SCN) R = synthRun(SCN); // replay without engine output: signals and patrols only, no POA map
   if (R.schema !== 'rescue-run/1') throw new Error('run.json: schema ' + R.schema);
 } catch (e) {
-  $('loadmsg').textContent = 'Nie udało się wczytać danych: ' + e.message + '. Uruchom serwer w katalogu rescue/ (python3 -m http.server 8000) i otwórz /web/3d/.';
+  // a clear message instead of an endless spinner (e.g. a scenario whose run.json is not in the repo)
+  const missingRun = /^404 /.test(e.message) && e.message.includes('.run.json');
+  document.body.dataset.state = 'error';
+  $('loadmsg').innerHTML = missingRun
+    ? `Brak wyniku silnika dla scenariusza <b>${esc(SC)}</b> (<code>${esc(P.run)}</code>).<br>Wygeneruj go: <code>cd rescue && swift run rescue-demo --fast scenarios/${esc(SC)}.json</code><br><a href="?sc=zawrat">Otwórz Zawrat</a>`
+    : `Nie udało się wczytać danych: ${esc(e.message)}.<br>Uruchom serwer w katalogu rescue/ (<code>python3 -m http.server 8000</code>) i otwórz /web/3d/. <a href="?sc=zawrat">Otwórz Zawrat</a>`;
   throw e;
 }
 $('incident').textContent = (R.incident || '') + (R.synthetic ? ' · brak run.json z silnika: bez mapy POA, segmenty przybliżone' : '');
@@ -1063,7 +1068,7 @@ if (EMB === 'scene') {
   // control box like 2D #mapctl: segmented group, checkbox row, full-width button; it drives the regular HUD buttons
   const ctl = document.createElement('div'); ctl.id = 'sceneCtl'; ctl.className = 'floating';
   ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button></div>
-    <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label></div>
+    <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label><label class="chk" hidden><input type="checkbox" data-b="btn-ortho"> zdjęcie</label></div>
     <button class="full" data-b="btn-all">Cały obszar</button>`;
   document.body.appendChild(ctl);
   ctl.addEventListener('click', (e) => { const t = e.target.closest('[data-b]'); if (!t) return; $(t.dataset.b).click(); syncCtl(); });
@@ -1071,7 +1076,8 @@ if (EMB === 'scene') {
   const syncCtl = () => {
     ctl.querySelector('[data-b="btn-cine"]').classList.toggle('on', $('btn-cine').classList.contains('on'));
     ctl.querySelector('[data-b="btn-rot"]').classList.toggle('on', $('btn-rot').classList.contains('on'));
-    for (const id of ['btn-diff', 'btn-trees', 'btn-fog']) ctl.querySelector(`input[data-b="${id}"]`).checked = $(id).classList.contains('on');
+    for (const id of ['btn-diff', 'btn-trees', 'btn-fog', 'btn-ortho']) ctl.querySelector(`input[data-b="${id}"]`).checked = $(id).classList.contains('on');
+    ctl.querySelector('input[data-b="btn-ortho"]').closest('label').hidden = $('btn-ortho').hidden; // shown once the aerial photo has loaded
   };
   setInterval(syncCtl, 1000); // Kino ends on its own; keep the box honest
 }
