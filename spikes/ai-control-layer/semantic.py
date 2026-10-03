@@ -51,6 +51,7 @@ SIGNALS = [
     (0.30, "pl_secrecy", re.compile(r"(?i)\bnie\s+(m[óo]w|informuj|powiadamiaj|wspominaj)\w*\b.{0,20}\b(u[żz]ytkownik|cz[łl]owiek|operator|nikomu)\w*|\bw\s+tajemnicy\b")),
     (0.30, "pl_prompt_leak", re.compile(r"(?i)\b(ujawnij|poka[żz]|wypisz|wy[śs]wietl|powt[óo]rz)\b.{0,25}\b(prompt\w*\s+systemow|instrukcj\w*\s+systemow|swoje\s+instrukcj)")),
     (0.25, "pl_exfil_action", re.compile(r"(?i)\b(wy[śs]lij|prze[śs]lij|przelej|wyeksportuj|przeka[żz])\b.{0,60}(\biban\b|\bkonto\b|\brachun|e-?mail|@[a-z0-9-]+\.|https?://|na\s+zewn[ąa]trz|list\w*\s+klient)")),
+    (0.35, "pl_new_instructions", re.compile(r"(?i)\b(nowe|zaktualizowane|prawdziwe)\s+instrukcje\s*:")),
 ]
 
 
