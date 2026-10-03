@@ -6,7 +6,7 @@ const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.ho
 async function get(path) {
   const h = {}; let pin = ""; try { pin = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}
   if (!LOOPBACK && pin) h["X-Rescue-Pin"] = pin;
-  const r = await fetch(path, { headers: h, cache: "no-store" });
+  const r = await fetch(path, { headers: h, cache: "no-cache" });
   if (!r.ok) throw new Error(r.status === 404 ? "brak danych o tym zespole" : r.status === 401 ? "podaj klucz akcji" : "HTTP " + r.status);
   return r.json();
 }

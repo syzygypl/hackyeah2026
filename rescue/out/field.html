@@ -119,7 +119,7 @@ function render() {
 }
 async function refresh() {
   try {
-    const r = await fetch(API + "/live-events", { cache: "no-store", headers: hdrs() });
+    const r = await fetch(API + "/live-events", { cache: "no-cache", headers: hdrs() });
     if (r.status === 401) { $("status").textContent = "podaj PIN serwera (wyświetlony w terminalu)"; render(); return; }
     server = await r.json();
     $("status").textContent = "serwer lokalny: OK";

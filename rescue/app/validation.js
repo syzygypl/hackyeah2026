@@ -8,8 +8,8 @@ const COL = { engine: "var(--rl-accent)", naive: "var(--rl-mute)", ideal: "var(-
 let loaded = null, simRuns = null, curSim = null;
 const METHODS = [["engine", "Silnik", "var(--rl-accent)"], ["expert", "Ekspert", "var(--rl-warn)"], ["naive", "Naiwnie", "var(--rl-mute)"]];
 
-async function getJSON(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status + " " + u); return r.json(); }
-async function getText(u) { const r = await fetch(u, { cache: "no-store" }); if (!r.ok) throw new Error(r.status + " " + u); return r.text(); }
+async function getJSON(u) { const r = await fetch(u, { cache: "no-cache" }); if (!r.ok) throw new Error(r.status + " " + u); return r.json(); }
+async function getText(u) { const r = await fetch(u, { cache: "no-cache" }); if (!r.ok) throw new Error(r.status + " " + u); return r.text(); }
 
 let ablation, detailsOpen = false;
 export async function showValidation() {

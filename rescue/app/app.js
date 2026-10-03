@@ -19,7 +19,7 @@ let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"
 if (!LOOPBACK) { $("pinbox").style.display = ""; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} boot(); }; }
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
-  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-store" } : { method: "POST", headers: h, body: JSON.stringify(body) });
+  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
   if (r.status === 401) throw new Error("Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz.");
   if (r.status === 404) throw new Error("Nie znaleziono danych na serwerze.");
   if (r.status >= 500) throw new Error("Serwer zgłosił błąd - spróbuj ponownie za chwilę.");
@@ -57,7 +57,7 @@ async function detect() {
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
   // blind test round 1 replay (the 3D view shows the hider's story and the true spot at the end); only when its run is there
-  try { const r = await fetch(STATIC["blind-01-replay"].run, { cache: "no-store" }); if (r.ok) list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true }); r.body && r.body.cancel(); } catch (e) {}
+  try { const r = await fetch(STATIC["blind-01-replay"].run, { cache: "no-cache" }); if (r.ok) list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true }); r.body && r.body.cancel(); } catch (e) {}
   $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}" ${s.disabled ? "disabled" : ""}>${esc(s.name)}</option>`).join("");
   store.scenList = list;
 }
@@ -67,7 +67,7 @@ async function loadScenario(id) {
   let run, backend;
   if (s.id === "studio") { run = await api("/story"); backend = "studio"; }
   else if (s.api) { const u = runUrlFor(s.run); run = await api(u); backend = "api"; store.runUrl = u; store.assessUrl = s.assessment; }
-  else { run = await (await fetch(STATIC[s.id].run, { cache: "no-store" })).json(); backend = "static"; }
+  else { run = await (await fetch(STATIC[s.id].run, { cache: "no-cache" })).json(); backend = "static"; }
   $("scen").value = s.id;
   applyRun(run, { scenario: s.id, backend, editable: backend === "studio" }, "load");
 }
@@ -100,7 +100,7 @@ async function fetchAssessment() {
   try {
     if (store.backend === "api" && store.assessUrl) {
       for (let k = 0; k < 40 && seq === assessSeq; k++) {
-        const r = await fetch(`${store.assessUrl}?step=${i}&wait=0`, { cache: "no-store" }); if (!r.ok) break;
+        const r = await fetch(`${store.assessUrl}?step=${i}&wait=0`, { cache: "no-cache" }); if (!r.ok) break;
         const d = await r.json(); if (seq !== assessSeq) return;
         assessment = d; renderAssess();
         if (!d.pending) break;
@@ -285,7 +285,7 @@ function flyToSeg(id) { const s = curStep()?.segments.find((x) => x.id === id); 
 let alertBase = null;
 function prom(txt) { const out = []; for (const l of (txt || "").split("\n")) { if (!l || l[0] === "#") continue; const m = /^(\w+)(\{([^}]*)\})?\s+(\S+)/.exec(l); if (!m) continue; const lab = {}; (m[3] || "").replace(/(\w+)="([^"]*)"/g, (_, k, v) => lab[k] = v); out.push({ n: m[1], lab, v: +m[4] }); } return out; }
 async function pollAlerts() {
-  const get = async (u) => { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? await r.text() : null; } catch (e) { return null; } };
+  const get = async (u) => { try { const r = await fetch(u, { cache: "no-cache" }); return r.ok ? await r.text() : null; } catch (e) { return null; } };
   const own = await get("/metrics");
   const A = [];
   const M = prom(own);
@@ -809,8 +809,8 @@ async function pollFeed() {
   clearTimeout(feedTimer);
   if (store.mode !== "teren" || store.view !== "przeglad") return;
   let ev = [], met = "";
-  try { ev = await (await fetch((FIELD || "") + "/live-events", { cache: "no-store" })).json(); } catch (e) {}
-  try { met = await (await fetch((FIELD || "") + "/metrics", { cache: "no-store" })).text(); } catch (e) {}
+  try { ev = await (await fetch((FIELD || "") + "/live-events", { cache: "no-cache" })).json(); } catch (e) {}
+  try { met = await (await fetch((FIELD || "") + "/metrics", { cache: "no-cache" })).text(); } catch (e) {}
   const M = prom(met), now = M.find((m) => m.n === "rescue_server_time_seconds")?.v || Date.now() / 1000, thr = M.find((m) => m.n === "rescue_silent_threshold_seconds")?.v || 600;
   const teams = {}; M.filter((m) => m.n === "rescue_client_last_report_timestamp_seconds").forEach((m) => { const k = m.lab.team || m.lab.client_id; teams[k] = Math.max(teams[k] || 0, m.v); });
   const res = (curStep()?.resources || []), man = store.manual || [];
@@ -1129,7 +1129,7 @@ boot();
     if (places) return places;
     const ids = (store.scenList || []).filter((s) => s.api).map((s) => s.id);
     places = (await Promise.all(ids.map(async (id) => {
-      try { const sc = await (await fetch(`../scenarios/${id}.json`, { cache: "no-store" })).json(); return sc.ipp && sc.ipp.at ? { id, name: sc.incident ? sc.incident.split(" - ").slice(1).join(" - ").replace(/\s*\(.*?\)\s*$/, "") || id : id, at: sc.ipp.at } : null; }
+      try { const sc = await (await fetch(`../scenarios/${id}.json`, { cache: "no-cache" })).json(); return sc.ipp && sc.ipp.at ? { id, name: sc.incident ? sc.incident.split(" - ").slice(1).join(" - ").replace(/\s*\(.*?\)\s*$/, "") || id : id, at: sc.ipp.at } : null; }
       catch (e) { return null; }
     }))).filter(Boolean);
     return places;

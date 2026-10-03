@@ -22,7 +22,7 @@ let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"
 if (!LOOPBACK) { $("pinbox").hidden = false; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} tick(); }; }
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
-  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-store" } : { method: "POST", headers: h, body: JSON.stringify(body) });
+  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
   if (!r.ok) { const e = new Error(r.status === 401 ? "Podaj PIN akcji." : "HTTP " + r.status); e.status = r.status; throw e; }
   return r.json();
 }

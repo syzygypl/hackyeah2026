@@ -3,7 +3,7 @@
   "use strict";
   const el = document.getElementById("srv");
   if (!el) return;
-  fetch("/api/incidents", { cache: "no-store" })
+  fetch("/api/incidents", { cache: "no-cache" })
     .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
     .then((list) => {
       const n = Array.isArray(list) ? list.length : 0;

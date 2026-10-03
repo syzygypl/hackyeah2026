@@ -100,7 +100,7 @@ const hist = []; // {t, reports, rejects}
 async function poll() {
   let txt;
   try {
-    const r = await fetch(API + "/metrics", { cache: "no-store", headers: !LOOPBACK && PIN ? { "X-Rescue-Pin": PIN } : {} });
+    const r = await fetch(API + "/metrics", { cache: "no-cache", headers: !LOOPBACK && PIN ? { "X-Rescue-Pin": PIN } : {} });
     if (r.status === 401) { $("srv").className = "pill warn"; $("srv").textContent = "podaj PIN serwera"; return; }
     txt = await r.text();
   } catch (e) { $("srv").className = "pill bad"; $("srv").textContent = "serwer niedostępny " + new Date().toLocaleTimeString("pl-PL"); return; }

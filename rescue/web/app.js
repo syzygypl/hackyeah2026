@@ -110,7 +110,7 @@
   /* ---------- fetch helpers ---------- */
   async function fetchJSON(url, optional) {
     try {
-      const r = await fetch(url, { cache: 'no-store', headers: runPin(url) });
+      const r = await fetch(url, { cache: 'no-cache', headers: runPin(url) });
       if (!r.ok) { if (optional) return null; throw new Error(`HTTP ${r.status} dla ${url}`); }
       return await r.json();
     } catch (e) {
@@ -1159,7 +1159,7 @@
     if (!m.actor) { map.getSource('hl-actor').setData(empty); return; }
     const sc = m.sc || Q.get('sc'); if (!sc) return;
     try {
-      const r = await fetch(`/api/tracks/${encodeURIComponent(sc)}${m.at ? '?at=' + encodeURIComponent(m.at) : ''}`, { cache: 'no-store' });
+      const r = await fetch(`/api/tracks/${encodeURIComponent(sc)}${m.at ? '?at=' + encodeURIComponent(m.at) : ''}`, { cache: 'no-cache' });
       if (!r.ok) { warn('highlight: no tracks for ' + sc); return; }
       const a = ((await r.json()).actors || []).find((x) => x.id === m.actor);
       if (!a || !a.path || !a.path.length) { map.getSource('hl-actor').setData(empty); return; }
@@ -1283,7 +1283,7 @@
   }
   async function pollLive(first) {
     try {
-      const r = await fetch(CFG.live, { cache: 'no-store', headers: pinHeaders(CFG.live) });
+      const r = await fetch(CFG.live, { cache: 'no-cache', headers: pinHeaders(CFG.live) });
       const now = new Date().toTimeString().slice(0, 8);
       if (r.status === 401) { S.liveStatus = 'Meldunki wymagają klucza akcji: wpisz klucz w polu niżej albo otwórz link „Udostępnij”.'; }
       else if (!r.ok) { S.liveStatus = `Brak pliku ${CFG.live.split('/').pop()} - czekam (${now})`; }
@@ -1303,7 +1303,7 @@
   async function pollRun() {
     if (CFG.run === 'inline') return; // parent-supplied run: nothing to poll
     try {
-      const r = await fetch(CFG.run, { method: 'HEAD', cache: 'no-store', headers: runPin(CFG.run) });
+      const r = await fetch(CFG.run, { method: 'HEAD', cache: 'no-cache', headers: runPin(CFG.run) });
       const sig = (r.headers.get('last-modified') || '') + '|' + (r.headers.get('content-length') || '');
       if (sig !== '|' && S.lastRunSig && sig !== S.lastRunSig) {
         S.lastRunSig = sig;
@@ -1330,7 +1330,7 @@
     if (CFG.basemap === 'none' || !useML) return null;
     const dir = CFG.basemap.endsWith('/') ? CFG.basemap : CFG.basemap.replace(/[^/]*$/, '');
     try {
-      const head = await fetch(dir + 'basemap.js', { method: 'HEAD', cache: 'no-store' });
+      const head = await fetch(dir + 'basemap.js', { method: 'HEAD', cache: 'no-cache' });
       if (head.ok) {
         const mod = await import(new URL(dir + 'basemap.js', location.href).href);
         const file = SC.basemapFile && (!CUSTOM_RUN || Q.get('sc') === SC.id) ? SC.basemapFile : undefined;   // regional PMTiles outside the Tatras (?sc= also with ?run=)
@@ -1387,7 +1387,7 @@
     // whole engine on the server, so those are never probed
     SCENARIOS.filter((x) => !x.run.startsWith('/api/')).forEach(async (x) => {
       let ok = false;
-      try { ok = (await fetch(x.run, { method: 'HEAD', cache: 'no-store', headers: runPin(x.run) })).ok; } catch (e) { ok = false; }
+      try { ok = (await fetch(x.run, { method: 'HEAD', cache: 'no-cache', headers: runPin(x.run) })).ok; } catch (e) { ok = false; }
       const o = sel.querySelector(`option[value="${x.id}"]`);
       if (o && !ok) { o.disabled = true; o.textContent = `${x.label} (brak run.json)`; o.title = `Wygeneruj: cd rescue && swift run rescue-demo --fast scenarios/${x.id}.json`; }
     });

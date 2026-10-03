@@ -9,7 +9,7 @@ if (!LOOPBACK) { $("pinbox").hidden = false; $("pin").value = PIN; $("pin").onch
 
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
-  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-store" } : { method: "POST", headers: h, body: JSON.stringify(body) });
+  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
   let d = null; try { d = await r.json(); } catch (e) {}
   if (!r.ok) { const err = new Error((d && d.error) || `HTTP ${r.status}`); err.status = r.status; throw err; }
   return d;

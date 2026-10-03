@@ -80,7 +80,7 @@ export function renderCard(d) {
 export async function renderSummary(el, url = "/eval/summary.json") {
   if (!el) return;
   try {
-    const r = await fetch(url, { cache: "no-store" });
+    const r = await fetch(url, { cache: "no-cache" });
     if (!r.ok) throw new Error(r.status + " " + url);
     el.innerHTML = renderCard(await r.json());
   } catch (e) {
