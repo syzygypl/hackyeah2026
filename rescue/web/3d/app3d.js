@@ -237,6 +237,22 @@ labels.setSize(innerWidth, innerHeight);
 Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
 host.appendChild(labels.domElement);
 
+// height fog + aerial perspective: three's fog chunks patched once, before any material compiles. Valleys (low world y)
+// fill with haze, denser in bad weather (read from fogNear: 9 clear, 6 fog, 5 thick), and distance shifts towards blue.
+THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float vFogDepth; varying float vFogY;\n#endif';
+THREE.ShaderChunk.fog_vertex = '#ifdef USE_FOG\n vFogDepth = - mvPosition.z; vFogY = (inverse(viewMatrix) * mvPosition).y;\n#endif';
+THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float vFogDepth; varying float vFogY;\n #ifdef FOG_EXP2\n uniform float fogDensity;\n #else\n uniform float fogNear; uniform float fogFar;\n #endif\n#endif';
+THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
+  #ifdef FOG_EXP2
+    float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
+  #else
+    float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
+    float valley = clamp( ( 12.0 - fogNear ) / 6.0, 0.5, 1.0 ) * exp( - max( vFogY - 0.15, 0.0 ) * 1.7 ) * smoothstep( 0.4, 6.0, vFogDepth );
+    fogFactor = clamp( fogFactor + ( 1.0 - fogFactor ) * valley * 0.7, 0.0, 1.0 );
+    gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor * vec3( 0.84, 0.92, 1.07 ), smoothstep( 2.0, 30.0, vFogDepth ) * 0.38 );
+  #endif
+  gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+#endif`;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
