@@ -1,7 +1,8 @@
 // Display engine FOV polygons on the rendered terrain. Never feed these meshes back into POD.
-export function createFov3D({ THREE, scene, actors, eyeAt, wake }) {
+export function createFov3D({ THREE, scene, actors, eyeAt, wake, initiallyEnabled = false }) {
   const group = new THREE.Group(); scene.add(group);
-  const layers = new Map(), history = []; let enabled = true, visible = true, frame = null, minute = null;
+  const layers = new Map(), history = []; let enabled = initiallyEnabled, visible = true, frame = null, minute = null;
+  group.visible = enabled;
   const colorOf = (a) => new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue(
     a.kind === 'pies' ? '--rl-warn' : a.kind === 'dron' ? '--rl-accent' : '--rl-ok').trim());
   const shape = (ring, center) => {
@@ -49,6 +50,7 @@ export function createFov3D({ THREE, scene, actors, eyeAt, wake }) {
   }
   function remove(layer) { group.remove(layer.g); layer.g.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }); if (layer.ghost) { layer.edge.geometry.dispose(); layer.edge.material.dispose(); } }
   function setFrame(next, at, animate = true) {
+    if (!enabled || !visible) { frame = next; minute = at; return; }
     if (next === frame) {
       if (at < minute) { history.forEach(remove); history.length = 0; for (const l of layers.values()) { l.blend = 1; draw(l); } }
       minute = at; return;
@@ -77,6 +79,7 @@ export function createFov3D({ THREE, scene, actors, eyeAt, wake }) {
     wake();
   }
   function tick(dt, fpp, at) {
+    if (!enabled || !visible) return false;
     let moving = false;
     for (const layer of layers.values()) {
       layer.g.visible = layer.a.id !== fpp;
@@ -89,7 +92,12 @@ export function createFov3D({ THREE, scene, actors, eyeAt, wake }) {
     }
     return moving;
   }
-  return { setFrame, tick, setVisible(on) { visible = on; group.visible = visible && enabled; },
-    setEnabled(on) { enabled = on; group.visible = visible && enabled; wake(); },
+  function refresh() { group.visible = visible && enabled; if (group.visible) { const last = frame; frame = null; setFrame(last, minute, false); } }
+  return { setFrame, tick, setVisible(on) { if (visible === on) return; visible = on; refresh(); },
+    setEnabled(on) {
+      if (enabled === on) return; enabled = on;
+      if (!on) { history.forEach(remove); history.length = 0; layers.forEach(remove); layers.clear(); }
+      refresh(); wake();
+    },
     get count() { return layers.size; }, get trailCount() { return history.length; }, get frameMinute() { return frame?.minute; }, group };
 }

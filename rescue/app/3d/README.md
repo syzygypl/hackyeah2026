@@ -27,6 +27,8 @@ The controls select a unit and enter FPP at its eye height above the rendered te
 
 **Pole widzenia** toggles filled terrain footprints from `frame.actors[].fov` (closed `[lon,lat]` engine polygons). `fov3d.js` uses the rendered terrain height, token colors, and a half-second transition when a new forward frame arrives. A drone or helicopter has a transparent cone from `observerHeightM` to the footprint; dog polygons retain the engine's upwind extension. Earlier drone footprints fade over three simulation minutes, with at most four stored. This trail is a visual aid: cumulative POD still comes solely from the engine. Rewind clears the trail, and blind play hides the entire layer. Aircraft marker/FPP heights use the contract's `observerHeightM`.
 
+The FOV layer starts **off**; `?fov3d=1` or the checkbox enables it. While off it only remembers the latest engine frame: it allocates no FOV geometry and performs no animation work. Turning it off disposes its meshes. Default enablement awaits viewshed review and an A/B measurement showing a loss of no more than 3 fps on the same machine/view (supervisor decision 1791061223442); the 45 fps overall target remains open.
+
 Continuous fractional-minute messages retain the shell's `frameMinute` and frame cache. Actor movement remains continuous; accuracy rings and historical traces rebuild only on an engine frame or integer-minute change. Fallback frame requests preserve `live=0` in History.
 
 Click a unit marker or its label (also Enter / Space on a focused label) to highlight that unit's track and send `{source:'rescue3d', type:'actor', id}` for the shell's log panel. Parent selection with `{type:'actor',id}` highlights it without echoing. The view does not calculate equipment health or invent log entries.

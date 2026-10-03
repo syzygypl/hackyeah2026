@@ -47,7 +47,8 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     g.add(dot, tag); group.add(g);
     return { ...a, g, tag, dot, color: colors[a.kind] || '#555' };
   });
-  const fields = createFov3D({ THREE, scene, actors, eyeAt, wake });
+  const fovOn = new URLSearchParams(location.search).get('fov3d') === '1';
+  const fields = createFov3D({ THREE, scene, actors, eyeAt, wake, initiallyEnabled: fovOn });
   let drawnMinute = null;
   let target = null, shown = null, from = null, blend = 1, lastFrame = null, held = null, lastSetAt = 0, request = 0, fpp = null, savedCamera = null, selected = null, visible = true;
   const panel = document.createElement('div'); panel.id = 'timeline3dCtl'; panel.className = 'floating';
@@ -55,7 +56,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
   (document.getElementById('sceneCtl') || document.body).appendChild(panel);
   const select = panel.querySelector('select'), button = panel.querySelector('button'), status = panel.querySelector('.tl3d-clock');
   const toggle = document.createElement('label'); toggle.className = 'tl3d-key';
-  toggle.innerHTML = '<input type="checkbox" checked> Pole widzenia';
+  toggle.innerHTML = `<input type="checkbox"${fovOn ? ' checked' : ''}> Pole widzenia`;
   toggle.title = 'Zasięg widzenia lub zapachu z silnika, przycięty do terenu';
   panel.insertBefore(toggle, status);
   toggle.querySelector('input').onchange = (e) => fields.setEnabled(e.target.checked);
