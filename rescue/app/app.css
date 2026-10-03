@@ -453,42 +453,7 @@ body.signals,body.mode-edycja{--dock-h:166px}
 .advbox{display:contents}
 .advbox #advNextT{max-width:230px;order:2;flex:0 1 auto;min-width:0}
 .tl{order:1}.ticker{order:3}#evReset,#sigBtn{order:4}
-.tlm .tlk.cur{box-shadow:0 0 0 2px var(--rl-card),0 0 0 4px var(--rl-accent);opacity:1}
-.tl{position:relative;flex:2 1 260px;min-width:140px;height:32px;display:flex;align-items:center}
-.tl::before{content:"";position:absolute;left:8px;right:8px;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:var(--rl-line-strong)}
-.tl #slider{position:relative;z-index:1;width:100%;min-width:0;height:32px;margin:0;background:transparent;-webkit-appearance:none;appearance:none}
-#slider::-webkit-slider-runnable-track{height:4px;background:transparent}
-#slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;box-sizing:border-box;background:var(--rl-card);border:3px solid var(--rl-accent)}
-#slider::-moz-range-track{height:4px;background:transparent}
-#slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;box-sizing:border-box;background:var(--rl-card);border:3px solid var(--rl-accent)}
-.tlm{position:absolute;left:8px;right:8px;top:0;bottom:0;z-index:2;pointer-events:none}
-/* native range invisible on top of the markers (drag, arrow keys, screen readers) - ported from b069c21 (AI Andrzeja); focus shows a ring on the track */
-.tl #slider{z-index:3;opacity:0}
-.tlfill{position:absolute;left:8px;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:var(--rl-accent);z-index:1;pointer-events:none}
-body.time-live .tlfill{background:var(--rl-danger)}
-.tl:has(#slider:focus-visible){outline:2px solid var(--rl-accent);outline-offset:2px;border-radius:var(--rl-radius-s)}
-.tlk{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px var(--rl-panel-solid)}
-.tlk.fut{opacity:.35}
-/* a group of events at (nearly) the same moment: one bigger marker with a count badge */
-.tlm .tlk.grp{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%}
-.tlm .tlk.grp::after{content:attr(data-n);position:absolute;left:7px;top:-9px;min-width:12px;height:12px;padding:0 3px;box-sizing:border-box;border-radius:6px;background:var(--rl-chrome);color:var(--rl-on-chrome);font:700 9px/12px var(--rl-mono);text-align:center}
-.ticker .tk .more{font-style:normal;font-weight:700;color:var(--rl-mute)}
-.tlk.k-baza{width:4px;height:4px;margin:-2px 0 0 -2px;box-shadow:none}
-.tlk.k-nic{width:3px;height:12px;margin:-6px 0 0 -1.5px;border-radius:2px}
-.tlk.k-pogoda{background:var(--rl-card);box-shadow:inset 0 0 0 2px var(--c)}
-.tlk.k-found{width:11px;height:11px;margin:-5.5px 0 0 -5.5px}
-/* kind colours from the --rl-ev-* tokens (ported from b069c21, AI Andrzeja); a marker may refine --c by its step kind (EV_COL in app.js) */
-.k-slad{--c:var(--rl-accent)}.k-nic{--c:var(--rl-ok)}.k-pogoda{--c:var(--rl-ev-weather)}.k-zespol{--c:var(--rl-accent)}.k-found{--c:var(--rl-danger)}.k-baza{--c:var(--rl-ev-terrain)}
-.ticker{display:flex;gap:6px;flex:0 1 auto;min-width:0;max-width:34%;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
-.ticker:empty{display:none}
-.ticker .tk{display:inline-flex;align-items:center;gap:5px;flex:none;max-width:210px;height:26px;padding:0 10px 0 8px;border-radius:13px;background:var(--rl-panel-2);font-size:var(--rl-fs-xs);color:var(--rl-ink-2);white-space:nowrap}
-.ticker .tk[data-step]{cursor:pointer}
-.ticker .tk[data-step]:hover{box-shadow:inset 0 0 0 1px var(--rl-line-strong)}
-.ticker .tk i{width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
-.ticker .tk b{font-family:var(--rl-mono);font-weight:600;color:var(--rl-ink)}
-.ticker .tk .tx{overflow:hidden;text-overflow:ellipsis;min-width:0}
-.tltip{position:fixed;z-index:70;pointer-events:none;padding:4px 8px;border-radius:var(--rl-radius-s);background:var(--rl-chrome);color:var(--rl-on-chrome);font:600 12px/1.3 var(--rl-font);white-space:nowrap;box-shadow:var(--rl-shadow)}
-.tltip[hidden]{display:none}
+/* dock: track, markers, ticker and group card live in dock.css (linked before this file) */
 @media (max-width:1280px){.ticker .tk:nth-child(n+3){display:none}#clock{flex-basis:220px;max-width:220px}}
 @media (max-width:1100px){.ticker{display:none}}
 @media (max-width:900px){

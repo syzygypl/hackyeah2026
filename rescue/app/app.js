@@ -3,6 +3,7 @@
 // `swift run rescue-server` on a laptop). Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/basemap/basemap.js";
+import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML } from "./dock.js";   // compact dock, shared with Ćwiczenia
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
 import { initRescuer, render as renderRescuer, pollTask, myTeam } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
@@ -936,55 +937,12 @@ function renderLiveHead() {
   const g = note.querySelector(".golive"); if (g) g.onclick = () => setTime("live");
 }
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
-// ---------- compact dock (Mateusz): kind markers on the timeline, a tiny tooltip "HH:MM · short title", a ticker of the last
-// events (newest first; the current one is the #clock line). Cards stay behind ☰ Sygnały. Kinds: ślad, nic (searched), pogoda,
-// zespół (live dispatch / report), znaleziono (TOPR red), baza (terrain / rings / cost at the start, a small dot).
-function evKind(s) {
-  const k = s.kind || "";
-  if (k === "found" || s.source === "Found" || /^ZNALEZIONO/i.test(s.label || "")) return "found";
-  if (k === "searched") return "nic";
-  if (k === "weather" || k === "conditions") return "pogoda";
-  if (["terrain", "cost", "difficulty", "rings", "behaviour"].includes(k)) return "baza";
-  return "slad";
-}
-function shortEv(label, k) {
-  const t = String(label || "").replace(/\s+/g, " ").trim(), w = (x) => x.split(" ").filter(Boolean), cut = (a) => a.join(" ").replace(/[,.;:]+$/, "");
-  if (k === "found") return "Znaleziono";
-  const [p, ...r] = t.split(": "), rest = r.join(": ").split(",")[0];
-  if (k === "nic") return cut(w(p).slice(0, 2)) + " - nic";
-  if (rest && w(p).length <= 3) return w(p).length >= 2 ? cut(w(p)) : p + ": " + cut(w(rest).slice(0, 3));
-  return cut(w(t.split(",")[0]).slice(0, 4));
-}
-// marker colour per step kind from the --rl-ev-* tokens (ported from b069c21, AI Andrzeja); our kind class keeps the shape
-const EV_COL = { terrain: "--rl-ev-terrain", cost: "--rl-ev-terrain", difficulty: "--rl-ev-terrain", conditions: "--rl-ev-weather", weather: "--rl-ev-weather",
-  rings: "--rl-ev-rings", route: "--rl-ev-route", containment: "--rl-ev-car", sector: "--rl-ev-phone", corridor: "--rl-ev-phone", fix: "--rl-ev-phone",
-  searched: "--rl-ok", found: "--rl-danger", clue: "--rl-accent", report: "--rl-accent" };
-// event groups (Mateusz): events at (nearly) the same moment - the start setup (terrain, weather, rings, IPP) or several events within
-// EV_GROUP_MIN minutes of the group's first one - are ONE marker on the timeline (count badge, tooltip lists them all), one ticker
-// item and one event card; a click lands on the group's last minute, so all of its events are in force. Steps without a minute
-// are groups of their own. Same rule for Kino (AI Andrzeja): window.rescueApp.eventGroups().
-const EV_GROUP_MIN = 2;
-function evGroups(R) {
-  const out = [];
-  (R && R.steps || []).forEach((s, i) => {
-    const m = Number.isFinite(s.minute) ? s.minute : null, g = out[out.length - 1];
-    if (g && m != null && g.first != null && m - g.first <= EV_GROUP_MIN) { g.ks.push(i + 1); g.minute = m; }
-    else out.push({ first: m, minute: m, ks: [i + 1] });
-  });
-  return out;
-}
-const groupOf = (gs, k) => gs.findIndex((g) => g.ks.includes(k));
-// the kind a group's marker shows: a find wins, else the last event that is not background ("baza")
-function grpKind(R, g) { const ks = g.ks.map((k) => evKind(R.steps[k - 1])); return ks.includes("found") ? "found" : [...ks].reverse().find((x) => x !== "baza") || ks[ks.length - 1]; }
 function renderDock() {
   const R = D(); if (!R || !R.steps || !$("tlMarks")) return;
   const n = R.steps.length, S = curStep(), T = tlScrub(), G = evGroups(R), N = G.length, cg = groupOf(G, store.step);
-  $("tlMarks").innerHTML = G.map((g, j) => {
-    const last = g.ks[g.ks.length - 1], kind = grpKind(R, g), ks = R.steps[(g.ks.find((k) => evKind(R.steps[k - 1]) === kind) || last) - 1];
-    const fut = T ? g.first != null && g.first > store.minute : g.ks[0] > store.step;
-    const left = T && g.minute != null ? (tlFrac(T, g.minute) * 100).toFixed(2) : N > 1 ? (j / (N - 1) * 100).toFixed(2) : 50;
-    return `<i class="tlk k-${kind}${g.ks.length > 1 ? " grp" : ""}${j === cg ? " cur" : fut ? " fut" : ""}"${g.ks.length > 1 ? ` data-n="${g.ks.length}"` : ""} style="left:${left}%${kind !== "found" && EV_COL[ks.kind] ? `;--c:var(${EV_COL[ks.kind]})` : ""}"></i>`;
-  }).join("");
+  $("tlMarks").innerHTML = marksHTML(R, G, cg,
+    (g) => T ? g.first != null && g.first > store.minute : g.ks[0] > store.step,
+    (g, j) => T && g.minute != null ? (tlFrac(T, g.minute) * 100).toFixed(2) : N > 1 ? (j / (N - 1) * 100).toFixed(2) : 50);
   if (S) $("clock").title = S.t + " · " + S.label;
   // step counter "k/n · HH:MM" (ported from b069c21, AI Andrzeja); Na żywo: "teraz HH:MM"
   if (S) $("dkStep").innerHTML = liveOn() ? `teraz <b>${esc(S.t)}</b>` : T ? `<b>${esc(tlClock(T, store.minute))}</b> · ${store.step}/${n}` : `<b>${store.step}</b>/${n} · ${esc(S.t)}`;
@@ -998,7 +956,7 @@ function renderDock() {
     ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, title: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title), ...liveEvTarget(e) }))
     : G.slice(0, Math.max(0, cg)).slice(-4).reverse().map((g) => { const last = g.ks[g.ks.length - 1], s = R.steps[last - 1];
       return { at: s.t, label: s.label, more: g.ks.length - 1, title: g.ks.map((k) => R.steps[k - 1].t + " · " + R.steps[k - 1].label).join("\n"), k: grpKind(R, g), step: last, min: g.minute }; });
-  $("ticker").innerHTML = items.map((it) => `<span class="tk k-${it.k}"${it.step ? ` data-step="${it.step}"` : ""}${it.min != null ? ` data-min="${it.min}"` : ""} title="${esc(it.title.includes("\n") ? it.title : it.at + " · " + it.title)}"><i></i><b>${esc(it.at)}</b><span class="tx">${esc(shortEv(it.label, it.k))}${it.more ? ` <em class="more">+${it.more}</em>` : ""}</span></span>`).join("");
+  $("ticker").innerHTML = tickerHTML(items);
 }
 // group number (1-based) under the pointer: the nearest marker
 function tlIndexAt(x) {
@@ -1010,7 +968,7 @@ function tlIndexAt(x) {
 function tlTip(j) {
   const tip = $("tlTip"), R = D(), g = j && R && evGroups(R)[j - 1], m = g && $("tlMarks").children[j - 1];
   if (!m) { tip.hidden = true; return; }
-  tip.innerHTML = g.ks.map((k) => { const s = R.steps[k - 1]; return `<div>${esc(s.t)} · ${esc(shortEv(s.label, evKind(s)))}</div>`; }).join("");
+  tip.innerHTML = tipHTML(R, g);
   tip.hidden = false;
   const r = m.getBoundingClientRect();
   tip.style.left = Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left + r.width / 2 - tip.offsetWidth / 2)) + "px";
