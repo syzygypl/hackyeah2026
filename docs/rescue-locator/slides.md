@@ -65,7 +65,7 @@ Outline for the PDF deck. One idea per slide. Numbers: blind-test ablation `resc
     - Team, contact.
     - Repo link, demo video link.
     - Credits: R. J. Koester, *Lost Person Behavior* / ISRID (dbS Productions), statistics used approximately with attribution.
-    - Dane i licencje: OpenStreetMap (ODbL), Copernicus DEM, podkład offline Protomaps / OSM (ODbL), Sentinel-2 cloudless 2016 by EOX IT Services GmbH (CC BY 4.0), three.js (MIT), MapLibre GL JS (BSD).
+    - Dane i licencje: OpenStreetMap (ODbL), Copernicus DEM GLO-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA (free use with attribution), podkład offline Protomaps / OSM (ODbL), Sentinel-2 cloudless 2016 by EOX IT Services GmbH (CC BY 4.0), three.js (MIT), MapLibre GL JS (BSD).
     - Disclosure (open-task AI rule): built during HackYeah 2026; AI tools used (Claude Code); all data mocked and fictitious; libraries and sources listed in the repo.
 
 Category: DEFENCE open task. Criteria mapping and what to say per slide: [`pitch.md`](pitch.md#judging-criteria---demo-moment-default-open-task-criteria). Slide 2 should quote the brief's "information is incomplete, resources are limited" to score Relation to Category (20%).
