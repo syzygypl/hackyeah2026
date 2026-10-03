@@ -109,6 +109,7 @@
   $("team").onchange = e => { team = e.target.value; store.set(TKEY, team); renderTask(); };
 
   const segById = Object.fromEntries(step.segments.map(s => [s.id, s]));
+  const atClock = at => { const d = new Date(at); return /T/.test(at) && !isNaN(d) ? d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) : at; };   // ISO from rescue-server -> 16:29
   const teamName = () => (teams.find(t => t.id === team) || {}).name || team;
   const shortTeam = () => teamName().replace(/\s*\(.*\)\s*/, "");
   // Operator override (shell drag & drop or the server): {segmentId, at, by}; newer than the plan, wins.
@@ -118,7 +119,7 @@
     const o = overrides[team];
     if (o && segById[o.segmentId]) {
       const s = segById[o.segmentId];
-      return { segmentId: s.id, segmentName: s.name, poa: s.poa, reason: `Przydział od operatora${o.by ? " (" + o.by + ")" : ""}${o.at ? ", " + o.at : ""}`, safety: [], fromOperator: true };
+      return { segmentId: s.id, segmentName: s.name, poa: s.poa, reason: `Przydział od operatora${o.by ? " (" + o.by + ")" : ""}${o.at ? ", " + atClock(o.at) : ""}`, safety: [], fromOperator: true };
     }
     return planned();
   };
