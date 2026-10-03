@@ -260,7 +260,7 @@ class SemanticGuard:
                 self._warming.discard(model)
         threading.Thread(target=run, daemon=True).start()
 
-    def _stage(self, name, stage, cfg, allowed, text, res, context=None):
+    def _stage(self, name, stage, cfg, allowed, text, res, context=None, phase="prompt"):
         """Run one tier, walking the fallback chain. Returns results (one per criterion) or raises StageUnavailable."""
         flags = []
         cands = self._candidates(stage, cfg, allowed, flags)
@@ -278,7 +278,7 @@ class SemanticGuard:
             blocked = set(cfg.get("blocked_categories", LLAMA_GUARD_CATEGORIES))
             try:
                 out = []
-                for crit in stage.get("criteria") or [None]:
+                for crit in (stage.get("criteria_by_phase") or {}).get(phase) or stage.get("criteria") or [None]:  # F7
                     r = self._call(cfg, model, text, timeout / 1000, system=crit,
                                    context=context if fmt == "granite_guardian" else None,
                                    cacheable=model == stage.get("model"), max_chars=stage.get("max_input_chars", 6000))
@@ -328,7 +328,7 @@ class SemanticGuard:
                     or ("heuristic_signal" in esc and bool(signals)))
         if jd.get("enabled", True) and jd.get("model") and (high_risk or escalate):
             try:
-                j = self._stage("judge", jd, cfg, allowed, text, res, context=context)
+                j = self._stage("judge", jd, cfg, allowed, text, res, context=context, phase=phase)
                 used.append(j[0]["model"])
             except StageUnavailable as e:
                 suspicious = high_risk or controversial or bool(signals)
