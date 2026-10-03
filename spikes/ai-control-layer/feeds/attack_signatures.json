@@ -1,30 +1,134 @@
 {
-  "_doc": "Externally managed attack-signature feed (stand-in for a threat-intel system). The control layer reloads it when it changes. Each signature: id, name, category, severity (low|medium|high|critical), regex (case-insensitive, matched on normalized tool args, prompts and outputs), ref.",
-  "feed_version": "2026-10-03.1",
-  "signatures": [
-    {"id": "SIG-PICKLE-RCE", "name": "Pickle opcode RCE payload", "category": "unsafe_deserialization", "severity": "critical",
-     "regex": "(c__builtin__|cbuiltins|\\bcos\\s*\\n\\s*system|cposix\\s*\\n|__reduce__|GLOBAL\\s+'os'|pickle\\.loads?\\()", "ref": "Malicious pickles on model hubs (JFrog 2024)"},
-    {"id": "SIG-TORCH-UNSAFE", "name": "torch.load without weights_only", "category": "unsafe_deserialization", "severity": "high",
-     "regex": "torch\\.load\\((?![^)]*weights_only\\s*=\\s*True)", "ref": "CVE-2025-32434 class"},
-    {"id": "SIG-YAML-PYOBJ", "name": "Unsafe YAML python object tag", "category": "unsafe_deserialization", "severity": "high",
-     "regex": "!!python/(object|name|module)|yaml\\.unsafe_load|yaml\\.load\\((?![^)]*SafeLoader)", "ref": "PyYAML full_load RCE"},
-    {"id": "SIG-REMOTE-CODE", "name": "trust_remote_code enabled", "category": "supply_chain", "severity": "high",
-     "regex": "trust_remote_code\\s*=\\s*True", "ref": "Hugging Face remote code execution"},
-    {"id": "SIG-MODEL-UNTRUSTED", "name": "Model weights from untrusted host or raw pickle format", "category": "supply_chain", "severity": "medium",
-     "regex": "https?://(?!huggingface\\.co/(meta-llama|mistralai|Qwen)/)[^\\s\"']+\\.(pkl|pickle|pt|pth|bin|ckpt)\\b", "ref": "Model repo supply-chain attacks"},
-    {"id": "SIG-TYPOSQUAT", "name": "Typosquatted model org", "category": "supply_chain", "severity": "high",
-     "regex": "\\b(meta-llarna|meta_llama|mistral-ai|0penai|facebok|huggingface-co)/", "ref": "Typosquatting on model hubs"},
-    {"id": "SIG-CODE-EXEC", "name": "Python code execution primitive", "category": "code_execution", "severity": "critical",
-     "regex": "(__import__\\(\\s*['\"](os|subprocess)|os\\.system\\(|subprocess\\.(Popen|run|call)\\(|\\beval\\(|\\bexec\\()", "ref": "LangChain PALChain CVE-2023-29374, LLM code-exec tools"},
-    {"id": "SIG-PIPE-SHELL", "name": "Download piped to shell", "category": "code_execution", "severity": "critical",
-     "regex": "(curl|wget)\\s+[^|]+\\|\\s*(ba|z)?sh", "ref": "Classic dropper"},
-    {"id": "SIG-SHADOWRAY", "name": "Ray Jobs API abuse (ShadowRay)", "category": "ai_infrastructure", "severity": "critical",
-     "regex": "/api/jobs/?|entrypoint\"?\\s*:\\s*\"(bash|sh|python)", "ref": "CVE-2023-48022"},
-    {"id": "SIG-JNDI", "name": "Log4Shell JNDI lookup", "category": "code_execution", "severity": "critical",
-     "regex": "\\$\\{jndi:", "ref": "CVE-2021-44228"},
-    {"id": "SIG-MCP-POISON", "name": "MCP tool-description poisoning marker", "category": "prompt_injection", "severity": "high",
-     "regex": "<IMPORTANT>|before using this tool,? (read|send)|~/.ssh/id_rsa|mcp\\.json", "ref": "Invariant Labs MCP tool poisoning 2025"},
-    {"id": "SIG-PATH-TRAVERSAL", "name": "Path traversal to sensitive files", "category": "access", "severity": "high",
-     "regex": "\\.\\./\\.\\./|/etc/(passwd|shadow)|\\.aws/credentials", "ref": "Agent file-tool abuse"}
-  ]
+ "_doc": "Externally managed attack-signature feed (stand-in for a threat-intel system). The control layer reloads it when it changes. Each signature: id, name, category, severity (low|medium|high|critical), regex (case-insensitive, matched on normalized tool args, prompts and outputs), ref.",
+ "feed_version": "2026-10-03.2",
+ "signatures": [
+  {
+   "id": "SIG-PICKLE-RCE",
+   "name": "Pickle opcode RCE payload",
+   "category": "unsafe_deserialization",
+   "severity": "critical",
+   "regex": "(c__builtin__|cbuiltins|\\bcos\\s*\\n\\s*system|cposix\\s*\\n|__reduce__|GLOBAL\\s+'os'|pickle\\.loads?\\()",
+   "ref": "Malicious pickles on model hubs (JFrog 2024)"
+  },
+  {
+   "id": "SIG-TORCH-UNSAFE",
+   "name": "torch.load without weights_only",
+   "category": "unsafe_deserialization",
+   "severity": "high",
+   "regex": "torch\\.load\\((?![^)]*weights_only\\s*=\\s*True)",
+   "ref": "CVE-2025-32434 class"
+  },
+  {
+   "id": "SIG-YAML-PYOBJ",
+   "name": "Unsafe YAML python object tag",
+   "category": "unsafe_deserialization",
+   "severity": "high",
+   "regex": "!!python/(object|name|module)|yaml\\.unsafe_load|yaml\\.load\\((?![^)]*SafeLoader)",
+   "ref": "PyYAML full_load RCE"
+  },
+  {
+   "id": "SIG-REMOTE-CODE",
+   "name": "trust_remote_code enabled",
+   "category": "supply_chain",
+   "severity": "high",
+   "regex": "trust_remote_code\\s*=\\s*True",
+   "ref": "Hugging Face remote code execution"
+  },
+  {
+   "id": "SIG-MODEL-UNTRUSTED",
+   "name": "Model weights from untrusted host or raw pickle format",
+   "category": "supply_chain",
+   "severity": "medium",
+   "regex": "https?://(?!huggingface\\.co/(meta-llama|mistralai|Qwen)/)[^\\s\"']+\\.(pkl|pickle|pt|pth|bin|ckpt)\\b",
+   "ref": "Model repo supply-chain attacks"
+  },
+  {
+   "id": "SIG-TYPOSQUAT",
+   "name": "Typosquatted model org",
+   "category": "supply_chain",
+   "severity": "high",
+   "regex": "\\b(meta-llarna|meta_llama|mistral-ai|0penai|facebok|huggingface-co)/",
+   "ref": "Typosquatting on model hubs"
+  },
+  {
+   "id": "SIG-CODE-EXEC",
+   "name": "Python code execution primitive",
+   "category": "code_execution",
+   "severity": "critical",
+   "regex": "(__import__\\(\\s*['\"](os|subprocess)|os\\.system\\(|subprocess\\.(Popen|run|call)\\(|\\beval\\(|\\bexec\\()",
+   "ref": "LangChain PALChain CVE-2023-29374, LLM code-exec tools"
+  },
+  {
+   "id": "SIG-PIPE-SHELL",
+   "name": "Download piped to shell",
+   "category": "code_execution",
+   "severity": "critical",
+   "regex": "(curl|wget)\\s+[^|]+\\|\\s*(ba|z)?sh",
+   "ref": "Classic dropper"
+  },
+  {
+   "id": "SIG-SHADOWRAY",
+   "name": "Ray Jobs API abuse (ShadowRay)",
+   "category": "ai_infrastructure",
+   "severity": "critical",
+   "regex": "/api/jobs/?|entrypoint\"?\\s*:\\s*\"(bash|sh|python)",
+   "ref": "CVE-2023-48022"
+  },
+  {
+   "id": "SIG-JNDI",
+   "name": "Log4Shell JNDI lookup",
+   "category": "code_execution",
+   "severity": "critical",
+   "regex": "\\$\\{jndi:",
+   "ref": "CVE-2021-44228"
+  },
+  {
+   "id": "SIG-MCP-POISON",
+   "name": "MCP tool-description poisoning marker",
+   "category": "prompt_injection",
+   "severity": "high",
+   "regex": "<IMPORTANT>|before using this tool,? (read|send)|~/.ssh/id_rsa|mcp\\.json",
+   "ref": "Invariant Labs MCP tool poisoning 2025"
+  },
+  {
+   "id": "SIG-PATH-TRAVERSAL",
+   "name": "Path traversal to sensitive files",
+   "category": "access",
+   "severity": "high",
+   "regex": "\\.\\./\\.\\./|/etc/(passwd|shadow)|\\.aws/credentials",
+   "ref": "Agent file-tool abuse"
+  },
+  {
+   "id": "SIG-SSRF-METADATA",
+   "name": "SSRF to cloud metadata, loopback or private network",
+   "category": "ssrf",
+   "severity": "critical",
+   "regex": "169\\.254\\.169\\.254|metadata\\.google\\.internal|metadata\\.azure\\.com|/latest/meta-data|/computeMetadata/|https?://(localhost|127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|0\\.0\\.0\\.0|\\[::1?\\]|10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}|0x[0-9a-f]{8}|\\d{8,10})(?=[:/?#]|$|\\s)",
+   "ref": "Capital One 2019 metadata SSRF; agent web-fetch tools (OWASP LLM06)"
+  },
+  {
+   "id": "SIG-SSTI",
+   "name": "Server-side template injection",
+   "category": "code_execution",
+   "severity": "critical",
+   "regex": "\\{\\{[^}]{0,200}(__class__|__subclasses__|__globals__|__builtins__|__mro__|__init__|config\\.items|request\\.application)|\\{%[^%]{0,200}(__class__|__subclasses__|__globals__|import\\s+os)|\\{\\{\\s*\\d+\\s*\\*\\s*\\d+\\s*\\}\\}|\\$\\{\\s*\\d+\\s*\\*\\s*\\d+\\s*\\}",
+   "ref": "Jinja2 / Twig SSTI to RCE (OWASP LLM05)"
+  },
+  {
+   "id": "SIG-XXE",
+   "name": "XML external entity",
+   "category": "code_execution",
+   "severity": "high",
+   "regex": "<!DOCTYPE[\\s\\S]{0,300}<!ENTITY[\\s\\S]{0,300}(SYSTEM|PUBLIC)",
+   "ref": "XXE local file read / SSRF"
+  },
+  {
+   "id": "SIG-MD-EXFIL",
+   "name": "Markdown auto-fetch image / link carrying data in the query string",
+   "category": "data_exfiltration",
+   "severity": "medium",
+   "regex": "!\\[[^\\]]{0,100}\\]\\(\\s*https?://[^)\\s]*\\?[^)\\s]*=[^)\\s]+|\\[[^\\]]{0,100}\\]\\(\\s*https?://[^)\\s]*\\?[^)\\s]*=[A-Za-z0-9+/_=-]{16,}",
+   "ref": "Markdown image exfiltration (Bing Chat, ChatGPT plugins, Slack AI 2023-24)"
+  }
+ ]
 }

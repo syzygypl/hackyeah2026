@@ -16,7 +16,12 @@ python3 server.py                    # HTTP gateway on 127.0.0.1:8787 for ad-hoc
    - Deterministic: tool allowlist (fail-closed), forbidden actions, obfuscation, payments rules + four-eyes, SQL guard, egress allowlist, secrets/PII with Luhn/PESEL checks and base64 decoding, loop detection.
    - Semantic: local guard models via Ollama (qwen3guard pre-filter, granite-guardian judge, llama-guard fallback) plus a heuristic injection scorer, on prompts, tool calls and tool outputs. An unsafe tool output taints the session, so later high-risk calls need a human.
 3. **Budgets**: calls, tokens, USD for paid models and compute ms for local models, per session, plus a model allowlist.
-4. **Historical attacks**: an external signature feed (`feeds/attack_signatures.json`, a file or an http URL, hot-reloaded). It covers pickle/torch/YAML deserialization, trust_remote_code, typosquatted model orgs, untrusted weights, code exec, curl|sh, ShadowRay, Log4Shell, MCP tool poisoning and path traversal.
+4. **Historical attacks**: an external signature feed (`feeds/attack_signatures.json`, a file or an http URL, hot-reloaded), with 16 signatures:
+   - pickle/torch/YAML deserialization, trust_remote_code, typosquatted model orgs, untrusted weights
+   - code exec, curl|sh, ShadowRay, Log4Shell, MCP tool poisoning, path traversal
+   - SSRF to cloud metadata / loopback / private ranges (incl. decimal IPs), SSTI, XXE, markdown-image exfiltration
+
+   Signatures run before business rules, and all matches are reported. Detection runs on decoded layers: URL-encoding (incl. double), HTML entities, `\u`/`\x` escapes, hex and base64. The heuristic also covers Polish injection phrasing (see `docs/research/detection-plan.md`).
 5. **Reporting**:
    - a hash-chained, exportable audit log (JSONL, raw secrets never stored)
    - real-time metrics (`/metrics`)

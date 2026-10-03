@@ -44,6 +44,13 @@ SIGNALS = [
     (0.25, "exfil_action", re.compile(r"(?i)\b(wire|transfer|send|email|upload|post|forward)\b.{0,60}(\biban\b|\baccount\b|@[a-z0-9-]+\.|https?://)")),
     (0.15, "urgency", re.compile(r"(?i)\b(immediately|urgent(ly)?|right now|asap|maintenance mode)\b")),
     (0.15, "hidden_content", re.compile(r"<!--|white-on-white|font-size:\s*0|display:\s*none")),
+    # Polish phrasing: the fast offline tier must not depend on the model tier for PL injections.
+    # Targets are agent-instruction nouns, so "zignorować poprzednią fakturę" (a business correction) does not fire.
+    (0.55, "pl_override_instructions", re.compile(r"(?i)\b(zignoruj|zignorować|zapomnij|pomiń|pomin|olej|nadpisz)\w*\b.{0,30}\b(instrukcj|polece|zasad|regu[łl]|prompt|wytyczn|ogranicze)\w*")),
+    (0.45, "pl_role_hijack", re.compile(r"(?i)\bjeste[śs]\s+teraz\b|\btryb\w*\s+(developera|dewelopera|deweloperski|administratora|bez\s+ogranicze[ńn])|\budawaj,?\s+[żz]e\s+jeste[śs]")),
+    (0.30, "pl_secrecy", re.compile(r"(?i)\bnie\s+(m[óo]w|informuj|powiadamiaj|wspominaj)\w*\b.{0,20}\b(u[żz]ytkownik|cz[łl]owiek|operator|nikomu)\w*|\bw\s+tajemnicy\b")),
+    (0.30, "pl_prompt_leak", re.compile(r"(?i)\b(ujawnij|poka[żz]|wypisz|wy[śs]wietl|powt[óo]rz)\b.{0,25}\b(prompt\w*\s+systemow|instrukcj\w*\s+systemow|swoje\s+instrukcj)")),
+    (0.25, "pl_exfil_action", re.compile(r"(?i)\b(wy[śs]lij|prze[śs]lij|przelej|wyeksportuj|przeka[żz])\b.{0,60}(\biban\b|\bkonto\b|\brachun|e-?mail|@[a-z0-9-]+\.|https?://|na\s+zewn[ąa]trz|list\w*\s+klient)")),
 ]
 
 

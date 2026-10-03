@@ -12,13 +12,16 @@ Pipeline per call (each stage timed, each stage switchable in policy.json):
 Policy and signature feed are hot-reloaded on every request (mtime check). Stdlib only.
 """
 import base64
+import codecs
 import hashlib
+import html
 import json
 import os
 import re
 import threading
 import time
 import unicodedata
+import urllib.parse
 import urllib.request
 
 from semantic import SemanticGuard
@@ -85,9 +88,40 @@ def _b64_layers(text):
     return out
 
 
+def _decoded_layers(t):
+    """Undo the cheap evasions: URL-encoding (also double), HTML entities, \\u / \\x escapes, hex, base64."""
+    out = []
+    if "%" in t:
+        u = urllib.parse.unquote_plus(t)
+        if u != t:
+            out.append(u)
+            u2 = urllib.parse.unquote_plus(u)
+            if u2 != u:
+                out.append(u2)
+    if "&" in t and ";" in t:
+        h = html.unescape(t)
+        if h != t:
+            out.append(h)
+    if ("\\u" in t or "\\x" in t) and t.isascii():
+        try:
+            e = codecs.decode(t, "unicode_escape")
+            if e != t:
+                out.append(e)
+        except Exception:
+            pass
+    for tok in re.findall(r"(?<![0-9A-Fa-f])(?:[0-9A-Fa-f]{2}){8,}(?![0-9A-Fa-f])", t):
+        try:
+            dec = bytes.fromhex(tok).decode("utf-8")
+            if dec.isprintable() and sum(c.isalpha() for c in dec) >= 3:
+                out.append(dec)
+        except Exception:
+            pass
+    return out + _b64_layers(t)
+
+
 def layers(text):
     t = normalize_text(text)
-    return [t] + _b64_layers(t)
+    return [t] + [normalize_text(x) for x in _decoded_layers(t)]
 
 
 def find_sensitive(text, pii_types=tuple(PII_PATTERNS)):
@@ -289,8 +323,8 @@ class ControlLayer:
             name, rule = self._timed(ev, "tool_authz", self._resolve, tool, ev)
             self._timed(ev, "budget", self._budget, session, name, args, ev)
             self._timed(ev, "loop_detection", self._loop, session, name, args, ev)
+            self._timed(ev, "attack_signatures", self._signatures, args, ev)  # known exploits first: most specific reason
             decision = self._timed(ev, "business_rules", self._rules, session, name, rule, args, ev)
-            self._timed(ev, "attack_signatures", self._signatures, args, ev)
             args = self._timed(ev, "dlp_input", self._dlp_inputs, name, rule, args, ev)
             pi = self._c("semantic")
             if pi and pi.get("scan_tool_args", True) and decision != APPROVAL:
@@ -494,11 +528,12 @@ class ControlLayer:
             return
         floor = SEV.get(c.get("min_severity", "low"), 1)
         texts = [l for s in _strings(args) for l in layers(s)]
-        for sig in self.store.signatures:
-            if SEV.get(sig.get("severity"), 2) >= floor and any(sig["rx"].search(t) for t in texts):
-                self._block(ev, "attack_signature",
-                            f"{sig['id']} {sig['name']} [{sig['category']}, {sig['severity']}] ref: {sig.get('ref', '')}",
-                            c.get("action", "block"))
+        hits = [sig for sig in self.store.signatures
+                if SEV.get(sig.get("severity"), 2) >= floor and any(sig["rx"].search(t) for t in texts)]
+        if hits:  # report every matching signature in one decision
+            self._block(ev, "attack_signature", "; ".join(
+                f"{sig['id']} {sig['name']} [{sig['category']}, {sig['severity']}] ref: {sig.get('ref', '')}" for sig in hits),
+                c.get("action", "block"))
 
     def _dlp_inputs(self, name, rule, args, ev):
         sec, pii = self._c("secrets"), self._c("pii")
