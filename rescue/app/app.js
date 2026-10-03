@@ -30,6 +30,11 @@ async function api(path, body) {
   return JSON.parse(text);
 }
 const tryJSON = async (path) => { try { return await api(path); } catch (e) { return null; } };
+// perf: the run of ?sc= (default zawrat) is requested right away, next to the module graph, the basemap and /api/scenarios
+// (boot used to wait for all three first); the first loadScenario takes it when the URL matches, otherwise it is dropped
+let PRE_RUN = (() => { const sc = new URLSearchParams(location.search).get("sc") || "zawrat"; if (!/^[\w-]+$/.test(sc) || /blind|^studio$/i.test(sc)) return null;
+  const u = "/api/run/" + sc + (initTime() === "hist" ? "?live=0" : ""), p = api(u); p.catch(() => {}); return { u, p }; })();
+async function preRun(u) { const P = PRE_RUN; PRE_RUN = null; if (!P || P.u !== u) return null; try { return await P.p; } catch (e) { return null; } }
 // friendly Polish text for any error (network errors from fetch come as TypeError "Failed to fetch")
 function plErr(e) {
   const m = String((e && e.message) || e || "");
@@ -70,7 +75,7 @@ async function loadScenario(id) {
   teamOps = []; closePop();
   let run, backend;
   if (s.id === "studio") { run = await api("/story"); backend = "studio"; }
-  else if (s.api) { const u = runUrlFor(s.run); run = await api(u); backend = "api"; store.runUrl = u; store.assessUrl = s.assessment; }
+  else if (s.api) { const u = runUrlFor(s.run); run = (await preRun(u)) || await api(u); backend = "api"; store.runUrl = u; store.assessUrl = s.assessment; }
   else { run = await (await fetch(STATIC[s.id].run, { cache: "no-cache" })).json(); backend = "static"; }
   $("scen").value = s.id;
   applyRun(run, { scenario: s.id, backend, editable: backend === "studio" }, "load");
