@@ -174,14 +174,15 @@ const WAVE_GLSL = `
       return r;
     }`;
 // expects waveEdge (0 calm .. 1 full waves), waterDeep (0 shallow .. 1 deep), waterShore (foam band) and wv = fxWave(...)
-const WATER_COLOR = `{
+const WATER_COLOR = `float waterFoam; {
       vec3 deep = vec3(0.01, 0.07, 0.12), shallow = vec3(0.06, 0.32, 0.34);
       diffuseColor.rgb = mix(shallow, deep, waterDeep);
       float near = 1.0 - smoothstep(1.5, 6.0, length(fxWorld - cameraPosition)); // crest foam only where it reads as foam
       float streak = smoothstep(0.62, 0.9, fxNoise(fxWorld.xz * vec2(900.0, 300.0) + uTime * 1.5) * fxNoise(fxWorld.xz * 140.0 - uTime * 0.4) * 1.6);
       float crest = smoothstep(0.7, 1.0, wv.x / fxWaveAmp()) * streak * smoothstep(0.03, 0.09, uWind) * near;
       float shore = waterShore * (0.35 + 0.65 * fxNoise(fxWorld.xz * 380.0 - uTime * 0.8));
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 0.95), clamp(shore * 0.8 + crest * 0.55, 0.0, 1.0));
+      waterFoam = clamp(shore * 0.8 + crest * 0.55, 0.0, 1.0);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 0.95), waterFoam);
     }`;
 const WATER_NORMAL = `
     vec3 waterN;
@@ -550,6 +551,27 @@ export const FX = {
       normal: WATER_NORMAL,
       emissive: WATER_GLITTER,
     } }),
+
+  // planar reflection: app3d renders the terrain mirrored about the water plane y = uReflY into uReflTex (reduced
+  // resolution, uReflMat = its texture projection). Blended over the lit water by a Fresnel term (stronger at grazing
+  // angles and on calm water), distorted by the wave normal, only on water lying in that plane (other lakes keep the sky
+  // reflection of the environment map), never on foam; the sky itself is not in the target (alpha 0), so it stays the
+  // environment map's. base: the water effect it rides on ('waves' or 'sea'), which declares waterN and waterFoam.
+  waterReflect: (U, base) => ({ name: 'refl', requires: [base],
+    uniforms: { uReflTex: U.uReflTex, uReflMat: U.uReflMat, uReflY: U.uReflY, uReflOn: U.uReflOn, uWind: U.uWind },
+    hooks: { output: `
+    if (uReflOn > 0.5) {
+      float plane = 1.0 - smoothstep(0.006, 0.016, abs(fxWorld.y - uReflY));
+      if (plane > 0.0) {
+        vec3 V = cameraPosition - fxWorld; float dist = length(V), nv = clamp(dot(waterN, V / dist), 0.0, 1.0);
+        vec4 rp = uReflMat * vec4(fxWorld.x, uReflY, fxWorld.z, 1.0);
+        vec2 ruv = rp.xy / rp.w + waterN.xz * (0.18 / (1.0 + dist * 0.5));
+        vec4 rc = texture2D(uReflTex, clamp(ruv, 0.001, 0.999));
+        // where the mirrored terrain hides the sky, its light replaces the sky's environment reflection
+        float F = (0.45 + 0.55 * pow(1.0 - nv, 3.0)) * mix(1.0, 0.65, smoothstep(0.02, 0.1, uWind)), k = rc.a * plane * (1.0 - waterFoam);
+        gl_FragColor.rgb = mix(max(gl_FragColor.rgb - reflectedLight.indirectSpecular * k, 0.0), rc.rgb / max(rc.a, 0.02), F * k);
+      }
+    }` } }),
 
   // rain / snow: GPU particles in a box around the orbit target (uCenter, size uBox), falling and drifting with the
   // wind entirely in the vertex shader; rain as slanted streaks, snow as soft flakes

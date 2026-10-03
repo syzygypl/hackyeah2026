@@ -13,7 +13,7 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { colorFor, gradientCSS, STOPS } from '../scale.js'; // shared heat scale (decision S2), same as 2D
-import { FX, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
+import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
 
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
@@ -484,7 +484,9 @@ const heatTex = () => { const t = new THREE.CanvasTexture(document.createElement
 const heatU = { uHeatFrom: { value: heatTex() }, uHeatTo: { value: heatTex() }, uHeatT: { value: 1 }, uHeatOn: { value: new THREE.Vector2() },
   uHeatRect: { value: new THREE.Vector4() }, uHeatEdges: { value: new THREE.Vector3() }, uTime: { value: 0 }, uEmis: { value: 0 },
   uSnowY: { value: ((2350 - zMin) * EX) / 1000 }, uWind: { value: 0.03 },
-  uDay: { value: 1 }, uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() }, uSunDir: { value: SUN_DIR } }; // shared by every fx3d effect
+  uDay: { value: 1 }, uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() }, uSunDir: { value: SUN_DIR }, // shared by every fx3d effect
+  // water reflection (see "water reflection"): mirrored terrain, its texture projection, the mirror plane, on/off
+  uReflTex: { value: Object.assign(new THREE.DataTexture(new Uint8Array(4), 1, 1), { needsUpdate: true }) }, uReflMat: { value: new THREE.Matrix4() }, uReflY: { value: -99 }, uReflOn: { value: 0 } };
 Object.assign(precipMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 Object.assign(snowNearMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 
@@ -569,6 +571,7 @@ scene.add(terrain);
 // only where isWater says water, so the coast and lake shapes match the 2D map; the mask is blurred so its edge is a
 // smooth shore line (the scenario waterMask is a coarse grid) and the 0.5..0.9 band carries the surf
 let seaMesh = null;
+const WATER = []; // water bodies for the reflection plane: { x, z, r, y (surface without waves), sea }
 if (WM || LOW) {
   const C = 512, Rw = Math.max(2, Math.round((C * HKM) / WKM)), m = new Float32Array(C * Rw); let n = 0;
   for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { if (isWater(latN - ((r + 0.5) / Rw) * (latN - latS), lonW + ((c + 0.5) / C) * (lonE - lonW))) { m[r * C + c] = 1; n++; } }
@@ -579,8 +582,13 @@ if (WM || LOW) {
     for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { const o = ((Rw - 1 - r) * C + c) * 4; data[o] = data[o + 1] = data[o + 2] = mb[r * C + c] * 255; data[o + 3] = 255; } // row 0 = south
     const tex = new THREE.DataTexture(data, C, Rw, THREE.RGBAFormat); tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
     const seaMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
-    applyFx(seaMat, [FX.seaWaves(heatU, tex, new THREE.Vector4(-WKM / 2, HKM / 2, WKM, HKM))]);
+    applyFx(seaMat, [FX.seaWaves(heatU, tex, new THREE.Vector4(-WKM / 2, HKM / 2, WKM, HKM)), FX.waterReflect(heatU, 'sea')]);
     seaMesh = new THREE.Mesh(terrainGeo, seaMat); seaMesh.position.y = 0.003; seaMesh.receiveShadow = true; seaMesh.renderOrder = 1; scene.add(seaMesh);
+    const st = Math.max(1, Math.round(Math.sqrt(n / 1500))); // ~1500 samples of open water (blurred mask > 0.9) with their surface height
+    for (let r = 0; r < Rw; r += st) for (let c = 0; c < C; c += st) if (mb[r * C + c] > 0.9) {
+      const la = latN - ((r + 0.5) / Rw) * (latN - latS), lo = lonW + ((c + 0.5) / C) * (lonE - lonW);
+      WATER.push({ x: toX(lo), z: toZ(la), r: (st * WKM) / C, y: hAt(la, lo) + 0.003, sea: true });
+    }
   }
 }
 {
@@ -780,11 +788,12 @@ for (const s of TER?.streams || []) {
 }
 // lakes: a polar grid (unit radius, 24 rings) so the vertex shader has vertices to move; fx3d waves do the rest
 const waterMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
-applyFx(waterMat, [FX.lakeWaves(heatU)]); // fx3d: waves, foam, depth tint, sun glitter
+applyFx(waterMat, [FX.lakeWaves(heatU), FX.waterReflect(heatU, 'waves')]); // fx3d: waves, foam, depth tint, sun glitter, mirrored mountains
 const lakeGeo = new THREE.RingGeometry(0.0001, 1, 96, 24).rotateX(-Math.PI / 2);
 for (const l of seaMesh ? [] : TER?.lakes || []) { // regions: lakes come with the sea surface above
   const m = new THREE.Mesh(lakeGeo, waterMat), r = l.radiusM / 1000;
   m.scale.set(r, 1, r); m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
+  WATER.push({ x: m.position.x, z: m.position.z, r, y: m.position.y, sea: false });
 }
 for (const h of TER?.huts || []) statics.add(pin(h.at[0], h.at[1], '#7f5539', 0.07, esc(h.name), 'hut', 0.011));
 for (const g of segs.values()) drapeRuns(ringLL(g.polygon), 0.016, { color: '#2b2f33', width: 1, opacity: 0.28 }, statics);
@@ -1083,6 +1092,80 @@ const buildings = (() => {
   m.castShadow = true; m.receiveShadow = true; scene.add(m);
   return m;
 })();
+// ---------- water reflection: the mountains mirrored in the lakes and the sea (fx3d.waterReflect) ----------
+// One planar mirror at a time: the water body nearest the orbit target that is on screen sets the plane y. The terrain
+// and buildings (layer 1, with the lights: no trees, lines, labels or sky; the sky stays the environment map's) are
+// rendered from the camera mirrored about it (three's Reflector: oblique near plane = water plane) into an 8-bit RGBA
+// target at half the canvas size (no MSAA, no half float: both break on the Asahi GPU), scissored to the lakes lying in
+// that plane, only when the camera moved or every 0.4 s. ?fx=-refl, or a target the GPU cannot render into: current look.
+const REFL = { ok: false, tried: false, at: 0, rt: null, cam: new THREE.PerspectiveCamera(), v: new THREE.Vector3(), f: new THREE.Vector3(), q: new THREE.Vector4(), p4: new THREE.Vector4(), pl: new THREE.Plane(), cc: new THREE.Color() };
+REFL.cam.layers.set(1); terrain.layers.enable(1); buildings?.layers.enable(1);
+if (WATER.length && !FX_OFF.has('refl') && renderer.capabilities.isWebGL2) {
+  try {
+    REFL.rt = new THREE.WebGLRenderTarget(256, 256, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, samples: 0, depthBuffer: true, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+    REFL.rt.texture.colorSpace = THREE.SRGBColorSpace; // SRGB8_ALPHA8: 8 bits without banding in the dark (night) reflections
+    REFL.ok = true;
+  } catch (e) { console.warn('3d: water reflection off', e); }
+}
+function reflPick() {
+  const t = controls.target, v = REFL.v, px = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360)); let best = null, bd = Infinity;
+  for (const w of WATER) {
+    if (camera.position.y < w.y + 0.01 || (!w.sea && (w.r * px) / Math.hypot(w.x - camera.position.x, w.y - camera.position.y, w.z - camera.position.z) < 12)) continue; // under it, or a lake under 12 px
+    v.set(w.x, w.y, w.z).project(camera);
+    if (v.z > 1 || Math.abs(v.x) > 1.6 || Math.abs(v.y) > 1.6) continue;
+    const d = Math.max(0, Math.hypot(w.x - t.x, w.z - t.z) - w.r);
+    if (d < bd) { bd = d; best = w; }
+  }
+  return best;
+}
+function reflRender(moved, now) {
+  if (!REFL.ok || (!moved && now - REFL.at < 400)) return;
+  REFL.at = now;
+  const w = reflPick(); heatU.uReflOn.value = w ? 1 : 0; if (!w) return;
+  const h = w.y + ((0.0012 + heatU.uWind.value * 0.02) / Math.sqrt(w.sea ? 0.27 : 1)) * 2.7; // the waves' mean lift (fx3d)
+  heatU.uReflY.value = h;
+  const rt = REFL.rt, cv = renderer.domElement, W = clamp(Math.round(cv.width * 0.5), 64, 1024), H = clamp(Math.round((W * cv.height) / Math.max(cv.width, 1)), 64, 1024);
+  if (rt.width !== W || rt.height !== H) rt.setSize(W, H);
+  // mirrored camera: eye and look-at point reflected about y = h, up reflected
+  const c = REFL.cam, e = camera.matrixWorld.elements;
+  c.position.set(camera.position.x, 2 * h - camera.position.y, camera.position.z);
+  REFL.f.set(camera.position.x - e[8], camera.position.y - e[9], camera.position.z - e[10]); REFL.f.y = 2 * h - REFL.f.y;
+  c.up.set(e[4], -e[5], e[6]); c.lookAt(REFL.f); c.far = camera.far; c.updateMatrixWorld();
+  c.projectionMatrix.copy(camera.projectionMatrix);
+  const M = heatU.uReflMat.value.set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1).multiply(c.projectionMatrix).multiply(c.matrixWorldInverse);
+  // oblique near plane on the water surface: nothing under it is mirrored
+  const pl = REFL.pl.set(REFL.v.set(0, 1, 0), -h).applyMatrix4(c.matrixWorldInverse), P = c.projectionMatrix.elements, q = REFL.q;
+  const cp = REFL.p4.set(pl.normal.x, pl.normal.y, pl.normal.z, pl.constant);
+  q.set((Math.sign(cp.x) + P[8]) / P[0], (Math.sign(cp.y) + P[9]) / P[5], -1, (1 + P[10]) / P[14]);
+  cp.multiplyScalar(2 / cp.dot(q));
+  P[2] = cp.x; P[6] = cp.y; P[10] = cp.z + 1 - 0.0005; P[14] = cp.w;
+  c.projectionMatrixInverse.copy(c.projectionMatrix).invert();
+  // scissor: the texture area the lakes in this plane sample (the sea uses all of it)
+  rt.scissorTest = false;
+  if (!w.sea) {
+    let x0 = 1, y0 = 1, x1 = 0, y1 = 0, full = false;
+    for (const b of WATER) if (!b.sea && Math.abs(b.y - w.y) < 0.016) for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2, p = REFL.p4.set(b.x + Math.cos(a) * b.r * 1.1, h, b.z + Math.sin(a) * b.r * 1.1, 1).applyMatrix4(M);
+      if (p.w <= 0.001) { full = true; break; }
+      x0 = Math.min(x0, p.x / p.w); x1 = Math.max(x1, p.x / p.w); y0 = Math.min(y0, p.y / p.w); y1 = Math.max(y1, p.y / p.w);
+    }
+    if (!full) {
+      x0 = clamp(x0 - 0.05, 0, 1); y0 = clamp(y0 - 0.05, 0, 1); x1 = clamp(x1 + 0.05, 0, 1); y1 = clamp(y1 + 0.05, 0, 1);
+      if (x1 <= x0 || y1 <= y0) return; // in front of the camera but off screen in the mirror: nothing to draw
+      rt.scissor.set(Math.floor(x0 * W), Math.floor(y0 * H), Math.ceil((x1 - x0) * W) + 1, Math.ceil((y1 - y0) * H) + 1); rt.scissorTest = true;
+    }
+  }
+  for (const o of scene.children) if (o.isLight) o.layers.enable(1); // lights are culled by layer too
+  const shadowDue = renderer.shadowMap.needsUpdate, ca = renderer.getClearAlpha(); renderer.getClearColor(REFL.cc);
+  try {
+    renderer.shadowMap.needsUpdate = false; // the shadow map is the main camera's (it would cull the trees by layer here)
+    renderer.setRenderTarget(rt); renderer.setClearColor(0x000000, 0);
+    if (!REFL.tried) { REFL.tried = true; const gl = renderer.getContext(); if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('framebuffer incomplete'); }
+    renderer.render(scene, c);
+    heatU.uReflTex.value = rt.texture;
+  } catch (err) { REFL.ok = false; heatU.uReflOn.value = 0; console.warn('3d: water reflection off', err); }
+  finally { renderer.setRenderTarget(null); renderer.setClearColor(REFL.cc, ca); renderer.shadowMap.needsUpdate = shadowDue; }
+}
 const foundPin = foundAt ? pin(foundAt[0], foundAt[1], '#2d6a4f', 0.42, 'ZNALEZIONO · ' + esc(foundEv?.at || ''), 'found', 0.026) : null;
 if (foundPin) { foundPin.visible = false; scene.add(foundPin); }
 // blind test reveal: the hider's true spot, published with the salt after the round
@@ -1802,6 +1885,7 @@ function frame() {
   const interval = now - lastRender; lastRender = now;
   if (active) adaptResolution(now, interval);
   const c0 = performance.now();
+  reflRender(moved, now); // water reflection pass (throttled, reduced resolution)
   renderer.render(scene, camera);
   if (GPU_SYNC) renderer.getContext().finish(); // ?gpu=1: stats count the GPU time in "render" (diagnostic only)
   const c1 = performance.now();
@@ -1817,7 +1901,7 @@ function frame() {
 }
 
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, renderer, REFL, heatU, WATER, hAt, toX, toZ }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
