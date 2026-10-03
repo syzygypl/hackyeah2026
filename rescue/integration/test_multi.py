@@ -39,6 +39,7 @@ READ_ONLY = False
 RUN = time.strftime("%H%M%S") + "-" + uuid.uuid4().hex[:6]   # unique per run: clue ids, client ids, notes
 RESULTS = []          # (group, name, status PASS|FAIL|SKIP|WARN, seconds, detail)
 FINDINGS = []         # contract vs server mismatches (text), for the report
+NOTES = []            # behaviour that follows the contract but is worth knowing (text), for the report
 NOT_YET = "endpoint not on server yet"
 KIND = {"ground": "pieszy", "dog": "pies", "drone": "dron", "heli": "smiglowiec", "boat": "lodz", "diver": "nurkowie"}
 STATUS = {"wolny", "w drodze", "w akcji"}
@@ -285,6 +286,11 @@ def checks(B, G, P, start):
         assert st == 200, f"GET /api/live?sc={sc} {st}: {str(d)[:200]}"
         return d
 
+    def steps(sc):
+        st, d, _ = G(f"/api/run/{sc}")
+        assert st == 200, f"GET /api/run/{sc} {st}"
+        return d["steps"]
+
     A, B1, B2 = "gopr-a", "kasprowy", "morskie-oko"   # team defined in several scenario files, two Tatra incidents
 
     @check("roster", "attach_then_segment_status")
@@ -303,21 +309,22 @@ def checks(B, G, P, start):
         assert t["sc"] == B1 and t["segmentId"] == seg0[B1] and t["status"] == "w akcji", f"after dispatch: {t}"
         return f"{A} -> {B1}: w drodze; dispatched to {seg0[B1]}: w akcji"
 
-    @check("roster", "attach_moves_only_that_team")
+    def file_teams(sc):
+        return {r["id"] for r in nonblind[sc].get("resources", [])}
+
+    def attached_to(sc):
+        return {tid for tid, t in teams_now().items() if t["sc"] == sc}
+
+    @check("roster", "first_touch_attaches_free_file_teams")
     def _():
+        # CONTRACT "First touch of an incident": its own scenario-file teams that are still free are attached first
         if needs("/api/teams", write=True):
             return needs("/api/teams", write=True)
         if REMOTE and not_fresh():
             return not_fresh()
-        extra = sorted(t["id"] for t in teams_now().values() if t["sc"] == B1 and t["id"] != A)
-        if extra:
-            FINDINGS.append(f"POST /api/teams/assign {{team: {A}, sc: {B1}}} on a fresh roster also attached {extra} to {B1} "
-                            f"(status 'w drodze'). Contract: the call moves the team; 'untouched' incidents plan with their file teams, "
-                            "touched ones only with teams attached to them. Not in the contract: auto-attaching the incident's other "
-                            "file teams on first touch. Side effect: shared ids (drone, heli) become busy for other incidents, and an "
-                            "incident touched later can lose its file teams (morskie-oko planned with 1 team after gopr-a moved in).")
-            return ("WARN", f"{A} -> {B1} also attached {extra} (server auto-attaches the incident's file teams on first touch)")
-        return f"only {A} attached to {B1}"
+        got, exp = attached_to(B1), file_teams(B1)
+        assert got == exp, f"{A} -> {B1} (first touch): attached {sorted(got)}, expected the free file teams of {B1} {sorted(exp)}"
+        return f"{A} -> {B1}: first touch also attached {sorted(got - {A})} (all free file teams of {B1})"
 
     @check("roster", "move_detaches_and_clears_segment")
     def _():
@@ -337,6 +344,39 @@ def checks(B, G, P, start):
         assert evs[B1], f"no dispatch event for {A} on old incident {B1}"
         assert evs[B2], f"no dispatch event for {A} on new incident {B2}"
         return f"{A} {B1} -> {B2}: segment cleared on {B1}; dispatch events: {B1} {evs[B1][-1].get('title')!r}, {B2} {evs[B2][-1].get('title')!r}"
+
+    @check("roster", "move_in_takes_only_free_file_teams")
+    def _():
+        # B2's file teams overlap B1's (gopr-b, dog, drone, heli are B1's now): first touch of B2 by the move-in of A
+        # attaches only those still free. By the contract B2 then plans with A alone (plan shrinks from its file's 5 teams).
+        if needs("/api/teams", write=True):
+            return needs("/api/teams", write=True)
+        if REMOTE and not_fresh():
+            return not_fresh()
+        got = attached_to(B2)
+        taken = file_teams(B2) & attached_to(B1)
+        exp = (file_teams(B2) - taken) | {A}
+        assert got == exp, f"{B2} after {A} moved in: attached {sorted(got)}, expected {sorted(exp)} ({sorted(taken)} stay on {B1})"
+        plan = {r["id"] for r in steps(B2)[-1].get("resources", [])}
+        assert plan == got, f"{B2} plans with {sorted(plan)}, attached {sorted(got)}"
+        return f"{B2}: attached and planning with {sorted(got)}; {sorted(taken)} stay on {B1} (by design, CONTRACT first touch)"
+
+    @check("roster", "shared_ids_stay_with_first_incident")
+    def _():
+        # zawrat shares drone/heli/dog with kasprowy: its first touch takes only its own still-free teams
+        if needs("/api/teams", write=True):
+            return needs("/api/teams", write=True)
+        if REMOTE and not_fresh():
+            return not_fresh()
+        before_b1 = attached_to(B1)
+        st, d, _ = P("/api/teams/assign", {"team": "topr-a", "sc": "zawrat", "by": "operator"})
+        assert st == 200, f"POST /api/teams/assign topr-a -> zawrat {st}"
+        shared = file_teams("zawrat") & before_b1
+        got = attached_to("zawrat")
+        exp = file_teams("zawrat") - before_b1
+        assert got == exp, f"zawrat attached {sorted(got)}, expected {sorted(exp)} (shared {sorted(shared)} stay on {B1})"
+        assert shared <= attached_to(B1), f"shared {sorted(shared)} left {B1}: {sorted(attached_to(B1))}"
+        return f"zawrat first touch: {sorted(got)}; shared {sorted(shared)} stay on {B1}"
 
     @check("roster", "null_releases")
     def _():
@@ -377,11 +417,6 @@ def checks(B, G, P, start):
     # ---------------- sc filters (clue, live, assignments)
     print("sc")
     Z, K = "zawrat", "kasprowy"
-
-    def steps(sc):
-        st, d, _ = G(f"/api/run/{sc}")
-        assert st == 200, f"GET /api/run/{sc} {st}"
-        return d["steps"]
 
     @check("sc", "clue_goes_only_to_its_incident")
     def _():
@@ -457,7 +492,11 @@ def checks(B, G, P, start):
         got = {r["id"] for r in steps(sc)[-1].get("resources", [])}
         exp = {r["id"] for r in nonblind[sc]["resources"]}
         assert got == exp, f"{sc}: planner teams {sorted(got)}, scenario file {sorted(exp)}"
-        return f"{sc} (untouched): plans with its file's teams {sorted(got)}"
+        elsewhere = sorted(tid for tid, t in teams_now().items() if tid in got and t["sc"] and t["sc"] != sc)
+        if elsewhere:
+            NOTES.append(f"An untouched incident ({sc}) plans with its file teams even when some are attached to another incident "
+                         f"({elsewhere}): shared ids can be double-booked until {sc} is touched (CONTRACT: untouched = file teams).")
+        return f"{sc} (untouched): plans with its file's teams {sorted(got)}" + (f"; {elsewhere} are attached elsewhere" if elsewhere else "")
 
     @check("planner", "touched_plans_only_attached_teams")
     def _():
@@ -484,6 +523,11 @@ def write_report(where, t_suite, log):
         L.append(f"| {g} | {name} | {st} | {dt:.1f} | {det.replace('|', '/')[:220]} |")
     if FINDINGS:
         L += ["", "## Contract vs server", ""] + [f"- {f}" for f in FINDINGS]
+    L += ["", "## Notes (by design, per CONTRACT)", "",
+          "- First touch of an incident (a team moved in or away) attaches its own still-free scenario-file teams "
+          "(CONTRACT 'First touch of an incident'). Shared ids (drone, heli, dog) stay with the incident that took them first; "
+          "an incident touched later by a move-in gets only what is still free (morskie-oko after gopr-a: 1 team)."]
+    L += [f"- {n}" for n in NOTES]
     if log:
         L += ["", f"Server log: `{log}` (temporary)."]
     open(os.path.join(HERE, "report-multi.md"), "w", encoding="utf-8").write("\n".join(L) + "\n")
