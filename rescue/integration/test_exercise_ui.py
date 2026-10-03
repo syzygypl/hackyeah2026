@@ -153,6 +153,9 @@ def main():
         check("dock_cursor", bool(c.until("parseFloat(getComputedStyle(document.getElementById('tlFill')).width)>0", 5)))
         tip = c.js("(()=>{const m=document.querySelector('#tlMarks .tlk');const r=m.getBoundingClientRect();document.getElementById('tl').dispatchEvent(new PointerEvent('pointermove',{clientX:r.left+r.width/2,clientY:r.top,bubbles:true,pointerType:'mouse'}));const t=document.getElementById('tlTip');return t.hidden?'':t.innerText})()")
         check("dock_group_card", bool(tip), (tip or "")[:80])
+        # step 2 (as in Akcja): the sector list shows the place and the sector, no map-weight percentages
+        check("sectors_without_weight_pct", c.js("[...document.querySelectorAll('#pSegs li')].every(l=>!/\\d%/.test(l.innerText))") is True,
+              (c.js("document.querySelector('#pSegs li').innerText") or "")[:60])
         check("event_list_with_kinds", bool(c.js("document.querySelectorAll('#pFeed li[data-seq] > i').length")))
         team = c.js("(()=>{const li=document.querySelector('#pTeams li.free');if(!li)return null;li.click();return li.dataset.team})()")
         check("team_marked", bool(team) and bool(c.until(f"[...document.querySelectorAll('#pTeams li.sel')].some(l=>l.dataset.team==={json.dumps(team)})", 5)), str(team))

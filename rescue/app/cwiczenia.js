@@ -191,7 +191,7 @@ function renderPlay() {
     const cls = [no ? "no" : "", G.seg === g.id ? "sel" : "", G.pending && G.pending.seg === g.id ? "pending" : ""].filter(Boolean).join(" ");
     const etaTxt = eta == null ? "nie dojdzie" : tr != null ? `dojście ${tr} min` : eta + " min";
     const etaTip = eta == null ? "" : tr != null ? `dojście ${tr} min + przeszukanie ${eta - tr} min` : `dojście i przeszukanie ${eta} min`;
-    return `<li class="${cls}" data-seg="${esc(g.id)}" title="${esc(g.name)}${etaTip ? " - " + etaTip : ""}"><span class="rk">${g.rank}</span><span class="w">${pct(g.weight)}</span>
+    return `<li class="${cls}" data-seg="${esc(g.id)}" title="${esc(g.name)}${etaTip ? " - " + etaTip : ""}"><span class="rk">${g.rank}</span>
       <span class="nm"><b>${esc(g.id)}</b> ${esc(g.name)}</span>${where[g.id] ? `<span class="who">${esc(where[g.id].join(", "))}</span>` : ""}
       ${sel ? `<span class="eta">${etaTxt}</span>` : ""}</li>`;
   }).join("");
