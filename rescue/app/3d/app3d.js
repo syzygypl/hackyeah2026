@@ -1773,7 +1773,8 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
   onCamera: (on, actorId) => { fppHeat = on ? 0.3 : 1; compose(); toParent({ type: 'fpp', on, actorId }); },
   onActor: (id) => toParent({ type: 'actor', id }),
   getFrame: async (t) => {
-    const f = await getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}`, true);
+    const history = new URL(P.run, location.href).searchParams.get('live') === '0' ? '&live=0' : '';
+    const f = await getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}${history}`, true);
     return f?.schema === 'rescue-frame/1' && Number.isFinite(f.minute) ? f : null;
   },
 });
