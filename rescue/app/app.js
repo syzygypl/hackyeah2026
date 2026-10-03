@@ -953,10 +953,13 @@ boot();
   };
   const row = (title, sub, url) => `<div class="shr"><div class="shq">${qrSVG(url)}</div><div><b>${esc(title)}</b><div class="help">${esc(sub)}</div>
     <input readonly value="${esc(url)}" onfocus="this.select()"><button data-copy="${esc(url)}">Kopiuj link</button></div></div>`;
-  $("shareBtn").onclick = () => {
-    $("shareBody").innerHTML = (PIN ? "" : `<p class="help">Na tym urządzeniu nie ma klucza akcji, więc linki są tylko do podglądu. Wpisz klucz w polu Klucz albo otwórz link od kierownika akcji.</p>`)
-      + row("Ratownik (telefon)", "Zeskanuj telefonem: rola ratownik, ta akcja, może wysyłać meldunki i ślady.", link("ratownik", true))
-      + row("Operator (drugi komputer)", "Pełny dostęp: przydziały, Studio, Centrum.", link("operator", true))
+  $("shareBtn").onclick = async () => {
+    // rescuers get the field key (reports and clues only), never the operator key; only an operator can fetch it
+    let field = ""; if (PIN) { try { field = (await api("/api/join")).fieldKey || ""; } catch (e) {} }
+    const rescuer = (() => { const u = new URL(link("ratownik", false)); if (field) u.searchParams.set("key", field); return u.toString(); })();
+    $("shareBody").innerHTML = (PIN && field ? "" : `<p class="help">Na tym urządzeniu nie ma klucza operatora, więc linki są tylko do podglądu. Wpisz klucz w polu Klucz albo otwórz link operatora.</p>`)
+      + row("Ratownik (telefon)", "Zeskanuj telefonem: rola ratownik, ta akcja. Klucz ratownika: tylko meldunki i ślady.", rescuer)
+      + row("Operator (drugi komputer)", "Pełny dostęp: przydziały, Studio, Centrum, czyszczenie akcji. Nie pokazuj na rzutniku.", link("operator", !!field))
       + row("Podgląd (jury, bez zapisu)", "Widzi mapę i plan na żywo, nie może niczego zmienić.", link("", false));
     $("shareDlg").showModal();
   };

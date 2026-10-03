@@ -8,6 +8,8 @@ public struct ServerGuard: Sendable {
     public let port: UInt16?
     public let pin: String?            // nil = loopback-only server
     public let pinGenerated: Bool
+    /// Public deploy: a second, narrower key for rescuers' phones (reports and clues only); nil = the PIN does everything.
+    public let fieldPin: String? = ProcessInfo.processInfo.environment["RESCUE_FIELD_PIN"].flatMap { $0.isEmpty ? nil : $0 }
 
     public init(args: [String], defaultPort: UInt16) {
         func val(_ flag: String) -> String? {
@@ -54,13 +56,16 @@ public struct ServerGuard: Sendable {
     }
 
     /// The key alone, no loopback exemption (public deploy: the platform proxy may connect from loopback).
-    public func keyMatches(headers: [String: String], body: Data) -> Bool {
+    /// fieldScope: the request is one a rescuer may make, so the field key is accepted too.
+    public func keyMatches(headers: [String: String], body: Data, fieldScope: Bool = false) -> Bool {
         guard let pin else { return false }
         var given = headers["x-rescue-pin"] ?? ""
         if given.isEmpty, let o = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
             given = (o["pin"] as? String) ?? (o["pin"] as? Int).map(String.init) ?? ""
         }
-        return ServerGuard.constantTimeEqual(given, pin)
+        if ServerGuard.constantTimeEqual(given, pin) { return true }
+        if fieldScope, let fieldPin { return ServerGuard.constantTimeEqual(given, fieldPin) }
+        return false
     }
 
     /// true if the request may proceed. Loopback always passes.

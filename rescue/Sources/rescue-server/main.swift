@@ -218,11 +218,16 @@ actor SharedState {
 }
 let shared = SharedState()
 
-/// Requests that change shared state. On the public deploy only these need the action key.
+/// Requests that change shared state: every POST except pure computation (/api/run, /story/assessment) and the
+/// metrics ping (/client-event). On the public deploy only these need a key; GET /api/join (the rescuer key) too.
 func isWrite(_ q: Req) -> Bool {
+    if q.method == "GET" && q.path == "/api/join" { return true }
     guard q.method == "POST" else { return false }
-    return q.path == "/report" || q.path == "/api/assignments" || q.path == "/api/reset" || (q.path.hasPrefix("/story") && q.path != "/story/assessment")
+    return !["/api/run", "/story/assessment", "/client-event"].contains(q.path)
 }
+/// What a rescuer's phone may do with the field key (RESCUE_FIELD_PIN): send reports and clues. Everything else
+/// (assignments, roster, Studio, reset) needs the operator key (RESCUE_PIN).
+func isFieldWrite(_ q: Req) -> Bool { q.method == "POST" && (q.path == "/report" || q.path == "/api/clue") }
 func duplicateReport() -> Data {
     Metrics.shared.inc("reports_rejected_total", ["reason": "duplicate"])
     return response("200 OK", json, Data(#"{"duplicate":true,"hints":[],"parsedBy":"duplicate"}"#.utf8))
@@ -516,7 +521,7 @@ func handle(_ q: Req) async -> Data {
     let isApi = q.path.hasPrefix("/api/") || q.path.hasPrefix("/story") || ["/modules", "/report", "/live-events", "/client-event", "/metrics"].contains(q.path)
     let loopScrape = q.method == "GET" && q.path == "/metrics" && ServerGuard.isRealLoopbackPeer(q.peer) && !publicMode
     let needsKey = publicMode ? isWrite(q) : isApi && q.method != "OPTIONS" && !loopScrape
-    if needsKey && !(publicMode ? guardian.keyMatches(headers: q.headers, body: q.body) : guardian.authorized(peer: q.peer, headers: q.headers, body: q.body)) {
+    if needsKey && !(publicMode ? guardian.keyMatches(headers: q.headers, body: q.body, fieldScope: isFieldWrite(q)) : guardian.authorized(peer: q.peer, headers: q.headers, body: q.body)) {
         Metrics.shared.inc("reports_rejected_total", ["reason": "pin"])
         ServerGuard.logReject(401, peer: q.peer, method: q.method, path: q.path)
         return jsonErr("401 Unauthorized", publicMode ? "action key required (X-Rescue-Pin header or JSON pin)" : "PIN required (X-Rescue-Pin header or JSON pin)")
@@ -564,6 +569,8 @@ func route(_ q: Req) async -> Data {
         let step = ((try? JSONSerialization.jsonObject(with: q.body)) as? [String: Any])?["step"] as? Int
         let run = await studio.get()
         return response("200 OK", json, await Assessment.assess(run: run, step: step))
+    case ("GET", "/api/join"):   // operator only (key checked above): the key for rescuers' join links / QR
+        return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["fieldKey": guardian.fieldPin ?? guardian.pin ?? ""])) ?? Data("{}".utf8))
     case ("POST", "/api/reset"):
         do { try await store.reset() } catch { return jsonErr("500 Internal Server Error", "reset failed") }
         await studio.resetAll(); await roster.importState(Data("{}".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear()
