@@ -16,6 +16,9 @@ public struct FieldHint: Codable, Sendable {
     public var lon: Double?
     public var description: String?
     public var strength: String?      // weak | medium | strong
+    public var radiusM: Double?       // clue with a point: uncertainty radius (citizen GPS sighting 150 m)
+    public var seenAt: String?        // clue: when it was observed "HH:mm" (time in the text, else report time)
+    public var clueKind: String?      // clue: "sighting" (person seen) | "trace" (item / track)
     // weatherObs
     public var visibilityM: Double?
     public var windMs: Double?
@@ -60,7 +63,8 @@ public struct FieldReportParser: Sendable {
         var note: String? = nil
         if !LLM.off {
             do {
-                let hints = try await parseLLM(text)
+                // the model has no point field: a "widziałem ... GPS lat, lon" text still gets its exact point
+                let hints = withSighting(try await parseLLM(text), text: text, at: at)
                 let ms = Int(Date().timeIntervalSince(t0) * 1000)
                 Metrics.shared.inc("llm_requests_total", ["model": model, "result": "ok"])
                 return FieldReport(t: iso, at: at, text: text, parsedBy: "\(LLM.tag):\(model)", latencyMs: ms, hints: hints)
@@ -72,7 +76,7 @@ public struct FieldReportParser: Sendable {
             note = "RESCUE_LLM_OFF"
             Metrics.shared.inc("llm_requests_total", ["model": model, "result": "off"])
         }
-        let hints = parseRules(text)
+        let hints = parseRules(text, at: at)
         let ms = Int(Date().timeIntervalSince(t0) * 1000)
         return FieldReport(t: iso, at: at, text: text, parsedBy: "rules", latencyMs: ms, note: note, hints: hints)
     }
@@ -266,7 +270,59 @@ public struct FieldReportParser: Sendable {
         return Double(f[rr].replacingOccurrences(of: ",", with: "."))
     }
 
-    public func parseRules(_ text: String) -> [FieldHint] {
+    /// Coordinate pairs in the text: "GPS 49.2312, 20.0101", "49,2312 20,0101", "49.23120, 20.01010". A pair after "GPS" wins.
+    static let coordRe = try! NSRegularExpression(pattern: #"(?<![\d.,])(-?\d{1,2}[.,]\d{3,})\s*(?:[,;]\s*|\s+)(-?\d{1,3}[.,]\d{3,})(?![\d])"#)
+
+    public static func coordinates(_ text: String) -> (lat: Double, lon: Double)? {
+        let ns = text as NSString
+        var best: (Double, Double)? = nil
+        for m in coordRe.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+            guard let lat = Double(ns.substring(with: m.range(at: 1)).replacingOccurrences(of: ",", with: ".")),
+                  let lon = Double(ns.substring(with: m.range(at: 2)).replacingOccurrences(of: ",", with: ".")),
+                  abs(lat) <= 90, abs(lon) <= 180, lat != 0 || lon != 0 else { continue }
+            let before = fold(ns.substring(with: NSRange(location: max(0, m.range.location - 6), length: min(6, m.range.location))))
+            if before.contains("gps") { return (lat, lon) }
+            if best == nil { best = (lat, lon) }
+        }
+        return best.map { ($0.0, $0.1) }
+    }
+
+    /// First clock time in the text ("18:40", "ok. 18.40"), coordinates and dates ignored -> "HH:mm".
+    public static func clockTime(_ text: String) -> String? {
+        let t = coordRe.stringByReplacingMatches(in: text, range: NSRange(location: 0, length: (text as NSString).length), withTemplate: " ")
+        guard let re = try? NSRegularExpression(pattern: #"(?<![\d.,\:])([01]?\d|2[0-3])[.\:]([0-5]\d)(?![.,\:]?\d)"#),
+              let m = re.firstMatch(in: t, range: NSRange(location: 0, length: (t as NSString).length)) else { return nil }
+        let ns = t as NSString
+        return String(format: "%02d:%@", Int(ns.substring(with: m.range(at: 1))) ?? 0, ns.substring(with: m.range(at: 2)))
+    }
+
+    /// Witness sighting with a position ("widziałem / widziała / widziałam / widzieliśmy ... GPS 49.2312, 20.0101 ... 18:40"):
+    /// a clue of kind "sighting" at that exact point, 150 m, seenAt from the text (else the report time). Merges into an
+    /// existing point-less clue (the LLM's or the rules'), else adds one. No sighting verb or no coordinates: hints unchanged.
+    public func withSighting(_ hints: [FieldHint], text: String, at: String?) -> [FieldHint] {
+        let f = Self.fold(text)
+        guard f.contains("widzial") || f.contains("widziel"), !f.contains("nie widzial"), !f.contains("nie widziel"),
+              let (lat, lon) = Self.coordinates(text) else { return hints }
+        var out = hints.filter { $0.type != "segmentSearched" }   // a sighting is not a negative search
+        let i = out.firstIndex { $0.type == "clue" && $0.lat == nil }
+        var h = i.map { out[$0] } ?? FieldHint(type: "clue")
+        h.lat = lat; h.lon = lon; h.radiusM = 150
+        h.seenAt = Self.clockTime(text) ?? at
+        h.clueKind = "sighting"
+        h.description = h.description ?? text
+        h.strength = h.strength ?? "medium"
+        if h.segmentId == nil {   // nearest segment seed, for views that group clues by segment
+            h.segmentId = segments.min { Geo.meters(Coord($0.seed), Coord(lat, lon)) < Geo.meters(Coord($1.seed), Coord(lat, lon)) }?.id
+        }
+        if let i { out[i] = h } else { out.append(h) }
+        return out
+    }
+
+    public func parseRules(_ text: String, at: String? = nil) -> [FieldHint] {
+        withSighting(parseRulesBase(text), text: text, at: at)
+    }
+
+    func parseRulesBase(_ text: String) -> [FieldHint] {
         let f = Self.fold(text)
         var hints: [FieldHint] = []
         let segs = findSegments(f)

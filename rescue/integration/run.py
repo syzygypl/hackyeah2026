@@ -500,6 +500,8 @@ def suite(srv, B, live, llm, tmp):
             return f"kept: {d}"
         return ("WARN", "server restart cleared operator assignments (in memory, as documented) - re-assign after a restart")
 
+    citizen_gps_sighting(B, G)
+
     @check("offline", "znaleziono_rules_closes_case")
     def _():
         st, d, _ = http(B, "POST", "/report", {"text": "Pies: ZNALEZIONO osobę w Żlebie pod Zawratem, przytomna", "at": "19:55"}, pin=PIN,
@@ -530,6 +532,24 @@ def suite(srv, B, live, llm, tmp):
                     "Fix idea: the patrol (or the app shell that embeds it) should send the scenario clock of the current step "
                     "(run.steps[last].t + elapsed), or the server should clamp/shift `at` into the scenario window.")
         return ("WARN", f"lands at scenario minute {s['minute']} (before startClock) - see bugs")
+
+
+def citizen_gps_sighting(B, G):
+    """web/seen sends 'widziałem ... GPS lat, lon ... HH:MM' with X-Rescue-Source: citizen; rules parser -> sighting clue at the point."""
+    @check("offline", "citizen_gps_sighting_rules")
+    def _():
+        text = "GPS 49.2312, 20.0101 - widziałem mężczyznę w czerwonej kurtce ok. 18:40"
+        st, d, _ = http(B, "POST", "/report", {"text": text, "at": "19:00", "sc": "zawrat"}, pin=PIN,
+                        headers={"X-Rescue-Client": "phone-citizen", "X-Rescue-Team": "mieszkaniec", "X-Rescue-Source": "citizen"})
+        assert st == 200 and d["parsedBy"] == "rules", f"{st} {d}"
+        c = [h for h in d["hints"] if h["type"] == "clue"]
+        assert c and c[0].get("lat") == 49.2312 and c[0].get("lon") == 20.0101, f"hints {d['hints']}"
+        assert c[0].get("radiusM") == 150 and c[0].get("seenAt") == "18:40" and c[0].get("clueKind") == "sighting", f"clue {c[0]}"
+        r = G("/api/run/zawrat")[1]
+        clue = [s for s in r["steps"] if s["source"] == "Clue" and "Świadek (meldunek)" in s["label"]]
+        lkp = [s for s in r["steps"] if s["kind"] == "lkp" and "18:40" in s["label"]]
+        assert clue and lkp, f"no sighting/LKP step: {[s['label'][:50] for s in r['steps'] if s['source'] == 'Clue']}"
+        return f"clue at 49.2312, 20.0101 r=150 m seenAt 18:40; run: '{clue[0]['label'][:40]}' + '{lkp[0]['label'][:60]}'"
 
 
 def write_report(port, t_suite, llm, log):

@@ -109,8 +109,13 @@ func liveEvents(_ reports: [FieldReport], segments: Set<String>, seeds: [String:
                 // ZNALEZIONO in the raw text closes the case even when the LLM's description drops the word
                 let f = r.text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
                 let found = ["znaleziono", "znaleziony", "znaleziona", "odnaleziono"].contains { f.contains($0) } && !f.contains("nie znalez") && !f.contains("nie odnalez")
-                if let p { out.append(["provider": "Clue", "at": at, "title": "\(found ? "ZNALEZIONO" : "Ślad") (meldunek): \(h.description ?? "?")", "detail": "Meldunek: \(r.text)", "point": p,
-                                       "radiusM": h.strength == "strong" ? 300 : h.strength == "medium" ? 500 : 800, "found": found]) }
+                if let p {
+                    var e: [String: Any] = ["provider": "Clue", "at": at, "title": "\(found ? "ZNALEZIONO" : h.clueKind == "sighting" ? "Świadek" : "Ślad") (meldunek): \(h.description ?? "?")", "detail": "Meldunek: \(r.text)", "point": p,
+                                            "radiusM": h.radiusM ?? (h.strength == "strong" ? 300 : h.strength == "medium" ? 500 : 800), "found": found]
+                    if let k = h.clueKind { e["clueKind"] = k }   // citizen GPS sighting: kind + observation time from the parser
+                    if let t = h.seenAt { e["seenAt"] = mapAt(t) }
+                    out.append(e)
+                }
             case "weatherObs":
                 var w: [String: Any] = ["provider": "WeatherConditions", "at": at, "title": "Pogoda (meldunek)", "detail": "Meldunek: \(r.text)"]
                 if let v = h.visibilityM { w["visibilityM"] = v }

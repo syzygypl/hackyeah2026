@@ -75,7 +75,7 @@ public struct FieldReportProvider: HintProvider {
                 let at = (f.lat != nil && f.lon != nil) ? Coord(f.lat!, f.lon!) : seed(f.segmentId)
                 guard let at else { continue }
                 // soft sector around the clue: strong clue = tight, weak = wide
-                let r = f.strength == "strong" ? 300.0 : f.strength == "medium" ? 500 : 800
+                let r = f.radiusM ?? (f.strength == "strong" ? 300.0 : f.strength == "medium" ? 500 : 800)
                 ev = .sector(center: at, radiusM: r)
                 marker = at
                 title = "\(who)Ślad: \(f.description ?? "?")"
