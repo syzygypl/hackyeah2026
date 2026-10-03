@@ -104,6 +104,35 @@ public struct FOVParams: Sendable {
         if let v = d("podCap") { podCap = v }
     }
 
+    /// fov-params.json rescue-fov/1 `kinds.<kind>` entry (Gaussian profile): W_open = pmax x radiusM x sqrt(pi),
+    /// W_forest = W_open x forestRadius x forestPmax, other classes keep their default ratio to open, darkRadius = night factor,
+    /// land / water false = W 0 there, scent cone = halfAngleDeg with range upwindRadius x radiusM (one band).
+    public mutating func mergeKind(_ o: [String: Any]?) {
+        guard let o else { return }
+        func d(_ k: String) -> Double? { (o[k] as? NSNumber)?.doubleValue }
+        if let v = o["type"] as? String { type = v }
+        if let r = d("radiusM"), let pm = d("pmax") {
+            let oldOpen = sweepWidthM["open"] ?? 0
+            let wOpen = pm * r * Double.pi.squareRoot()
+            for k in sweepWidthM.keys where k != "water" || (sweepWidthM["water"] ?? 0) <= oldOpen {
+                sweepWidthM[k] = oldOpen > 0 ? (sweepWidthM[k] ?? 0) / oldOpen * wOpen : wOpen
+            }
+            if let fr = d("forestRadius"), let fp = d("forestPmax") { sweepWidthM["forest"] = wOpen * fr * fp }
+            detectionRangeM = r
+            maxRangeM = max(maxRangeM, 3 * r)
+        }
+        if o["land"] as? Bool == false { for k in sweepWidthM.keys where k != "water" { sweepWidthM[k] = 0 } }
+        if o["water"] as? Bool == false { sweepWidthM["water"] = 0 }
+        if let v = d("darkRadius") { nightFactor = v }
+        if let v = d("eyeM") { eyeM = v }
+        if let v = o["los"] as? Bool { los = v }
+        if let v = d("speedKmh") { speedKmh = v }
+        if let h = d("halfAngleDeg"), let u = d("upwindRadius") {
+            let range = u * detectionRangeM
+            windCone = [WindBand(maxMs: 1, rangeM: min(40, range), halfAngleDeg: 180), WindBand(maxMs: 99, rangeM: range, halfAngleDeg: h)]
+        }
+    }
+
     /// W (m) for a grid cell: the forest overlay replaces land classes (not water).
     public func width(_ d: ProbabilityGrid.Difficulty, forest: Bool) -> Double {
         if forest && d != .water { return sweepWidthM["forest"] ?? 0 }
@@ -148,7 +177,8 @@ public struct TrackSet: Sendable {
     public static func parse(_ doc: Any, scenario s: Scenario, fovParams: Any? = nil) -> TrackSet? {
         guard let o = doc as? [String: Any] else { return nil }
         let fp = fovParams as? [String: Any]
-        let units = (fp?["units"] as? [String: Any]) ?? [:]
+        let units = (fp?["units"] as? [String: Any]) ?? [:]   // research shape (sweepWidthM per class)
+        let kinds = (fp?["kinds"] as? [String: Any]) ?? [:]   // rescue-fov/1 contract shape (radiusM, pmax, ...)
         let podCap = ((fp?["pod"] as? [String: Any])?["cap"] as? NSNumber)?.doubleValue
         let list = (o["actors"] as? [Any]) ?? (o["units"] as? [Any]) ?? []
         var actors: [TrackActor] = []
@@ -167,6 +197,7 @@ public struct TrackSet: Sendable {
             if let k = kindOfType[kind] { kind = k }
             var fov = FOVParams.defaults(kind)
             fov.merge(units[fov.unit] as? [String: Any])
+            fov.mergeKind((kinds[kind] ?? (kind == "nurkowie" ? kinds["nurek"] : nil)) as? [String: Any])
             if let c = podCap { fov.podCap = c }
             fov.merge(a["fov"] as? [String: Any])
             if let v = (a["speedKmh"] as? NSNumber)?.doubleValue { fov.speedKmh = v }
