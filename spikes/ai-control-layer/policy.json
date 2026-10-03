@@ -3,10 +3,11 @@
   "mode": "enforce",
 
   "models": {
-    "_doc": "Allowed LLMs for the llm_complete tool. Paid models are budgeted in USD, local models in compute time.",
-    "allowed": ["sileader/qwen3guard:0.6b", "ibm/granite3.3-guardian:8b", "llama-guard3:1b", "llama3.2:3b", "qwen2.5:7b", "claude-sonnet-5-5"],
-    "pricing_usd_per_1k_tokens": {"claude-sonnet-5-5": 0.009, "llama-guard3:1b": 0, "llama3.2:3b": 0, "qwen2.5:7b": 0},
-    "local": ["sileader/qwen3guard:0.6b", "ibm/granite3.3-guardian:8b", "llama-guard3:1b", "llama3.2:3b", "qwen2.5:7b"]
+    "_doc": "Allowed LLMs (llm_complete tool, Ollama proxy). roles: agent = the model the agent talks to (qwen3:4b-instruct via the proxy), guard = used only by the semantic layer. Digests for local models are pinned in controls.semantic.pinned_digests (the proxy refuses a model whose digest changed). Paid models are budgeted in USD, local models in compute time.",
+    "allowed": ["qwen3:4b-instruct-2507-q4_K_M", "sileader/qwen3guard:0.6b", "ibm/granite3.3-guardian:8b", "llama-guard3:1b", "llama3.2:3b", "qwen2.5:7b", "claude-sonnet-5-5"],
+    "roles": {"qwen3:4b-instruct-2507-q4_K_M": "agent", "sileader/qwen3guard:0.6b": "guard", "ibm/granite3.3-guardian:8b": "guard", "llama-guard3:1b": "guard"},
+    "pricing_usd_per_1k_tokens": {"qwen3:4b-instruct-2507-q4_K_M": 0, "claude-sonnet-5-5": 0.009, "llama-guard3:1b": 0, "llama3.2:3b": 0, "qwen2.5:7b": 0},
+    "local": ["qwen3:4b-instruct-2507-q4_K_M", "sileader/qwen3guard:0.6b", "ibm/granite3.3-guardian:8b", "llama-guard3:1b", "llama3.2:3b", "qwen2.5:7b"]
   },
 
   "budgets": {
@@ -116,7 +117,7 @@
         "on_no_quorum": "heuristic"
       },
       "blocked_categories": ["S1", "S2", "S3", "S4", "S5", "S9", "S10", "S11", "S12", "S14"],
-      "pinned_digests": {"llama-guard3:1b": "494147e06bf9", "sileader/qwen3guard:0.6b": "6e7ffdf64920", "ibm/granite3.3-guardian:8b": "90a8aabc98eb"},
+      "pinned_digests": {"llama-guard3:1b": "494147e06bf9", "sileader/qwen3guard:0.6b": "6e7ffdf64920", "ibm/granite3.3-guardian:8b": "90a8aabc98eb", "qwen3:4b-instruct-2507-q4_K_M": "0edcdef34593"},
       "prefilter": {
         "model": "sileader/qwen3guard:0.6b",
         "fallback_models": ["llama-guard3:1b"],
