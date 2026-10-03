@@ -27,6 +27,8 @@ public struct Scenario: Codable, Sendable {
     public struct Spot: Codable, Sendable {
         public let name: String
         public let at: [Double]
+        /// IPP only: when the person was there (optional, "HH:mm").
+        public var seenAt: String? = nil
     }
     public struct Terrain: Codable, Sendable {
         public let trails: [Named]
@@ -74,6 +76,9 @@ public struct Scenario: Codable, Sendable {
         public var precip: String?     // none | rain | snow
         public var dark: Bool?
         public var ice: Bool?
+        /// When the thing reported was observed (witness saw her at 13:40, BTS logged at 14:48), "HH:mm".
+        /// `at` is when the report reached the search leader. Falls back to "o HH:mm" in the title.
+        public var seenAt: String?
         /// Clue only: this report closes the case (person found).
         public var found: Bool?
         /// Optional epilogue event (e.g. a late Ratunek ping): skipped unless --epilogue / showEpilogue.
@@ -153,6 +158,13 @@ public struct Scenario: Codable, Sendable {
     public func clock(_ minute: Int) -> String {
         let t = ((Scenario.hm(startClock) + minute) % 1440 + 1440) % 1440
         return String(format: "%02d:%02d", t / 60, t % 60)
+    }
+
+    /// Observation time of an event: `seenAt`, else "o HH:mm" / "HH:mm" in the title, else the report time.
+    public func observedMinute(_ e: Event) -> Int {
+        if let s = e.seenAt { return minutePast(s) }
+        if let r = e.title.range(of: #"\b(\d{1,2}):(\d{2})\b"#, options: .regularExpression) { return minutePast(String(e.title[r])) }
+        return minute(e.at)
     }
 
     public func events(for provider: String) -> [Event] {

@@ -6,6 +6,10 @@ public struct LocationHint: Sendable {
     public enum Evidence: Sendable {
         /// Koester / ISRID distance rings from the IPP (25/50/75/95% quantiles, km).
         case rings(center: Coord, quantilesKm: [Double])
+        /// Last known point: a later, precise sighting moves the rings. Correction layer so that
+        /// rings(IPP) x this = (1 - w) rings(IPP) + w rings(LKP).
+        /// `previous` = the last known point this one replaces (its correction is divided out), nil for the first.
+        case lastKnownPoint(ipp: Coord, lkp: Coord, previous: Coord?, quantilesKm: [Double], weight: Double)
         /// Where people of this category are found: trails, drainages, huts. Lakes low.
         case terrainFeatures
         /// Very steep / impassable ground (ridge walls off-trail) is unlikely.
@@ -51,9 +55,15 @@ public struct LocationHint: Sendable {
     /// Extra marker for the map (e.g. the car at the trailhead).
     public var marker: Coord? = nil
 
+    public init(id: String, source: String, minute: Int, clock: String, title: String, detail: String, evidence: Evidence, marker: Coord? = nil) {
+        self.id = id; self.source = source; self.minute = minute; self.clock = clock
+        self.title = title; self.detail = detail; self.evidence = evidence; self.marker = marker
+    }
+
     public var kind: String {
         switch evidence {
         case .rings: "rings"
+        case .lastKnownPoint: "lkp"
         case .terrainFeatures: "terrain"
         case .terrainCost: "cost"
         case .route: "route"

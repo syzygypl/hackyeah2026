@@ -90,19 +90,31 @@ public final class ProbabilityGrid {
         return f
     }
 
+    /// Koester rings: probability mass per band spread evenly over the band's area (density per m2).
+    func ringDensity(_ center: Coord, _ q: [Double]) -> [Double] {
+        let qm = [0.0] + q.map { $0 * 1000 }
+        let mass = [0.25, 0.25, 0.25, 0.20]
+        return centers.map { p in
+            let d = Geo.meters(p, center)
+            for k in 0..<(qm.count - 1) where d < qm[k + 1] {
+                return mass[k] / (.pi * (qm[k + 1] * qm[k + 1] - qm[k] * qm[k]))
+            }
+            return 0.05 / (.pi * 3 * qm.last! * qm.last!)
+        }
+    }
+
     public func factor(for h: LocationHint) -> [Double] {
         let n = count
         switch h.evidence {
         case let .rings(center, q):
-            // Probability mass per band spread evenly over the band's area (density per m2).
-            let qm = [0.0] + q.map { $0 * 1000 }
-            let mass = [0.25, 0.25, 0.25, 0.20]
+            return ringDensity(center, q)
+        case let .lastKnownPoint(ipp, lkp, prev, q, w):
+            let a = ringDensity(ipp, q), b = ringDensity(lkp, q)
+            let p = prev.map { ringDensity($0, q) }
             return (0..<n).map { i in
-                let d = Geo.meters(centers[i], center)
-                for k in 0..<(qm.count - 1) where d < qm[k + 1] {
-                    return mass[k] / (.pi * (qm[k + 1] * qm[k + 1] - qm[k] * qm[k]))
-                }
-                return 0.05 / (.pi * 3 * qm.last! * qm.last!)
+                let mixNew = (1 - w) * a[i] + w * b[i]
+                let mixOld = p.map { (1 - w) * a[i] + w * $0[i] } ?? a[i]
+                return mixNew / mixOld
             }
         case .terrainFeatures:
             // Hikers: ~50% found within 100 m of a linear feature (Jacobs), drainages next, huts attract.
