@@ -1516,7 +1516,7 @@ function hover() {
   html += `<div><b>${Math.round(elevM(lat, lon))} m n.p.m.</b></div>`;
   if (k >= 0) {
     const g = segs.get(R.segOf[k]), grid = G.phase === 'search' || G.phase === 'done' ? G.grid : R.steps[STEP].poaGrid;
-    if (G.phase !== 'hide') html += `<div>${esc(g?.name || R.segOf[k])} · komórka 100 m: <b>${(grid[k] * 100).toFixed(2)}%</b></div>`;
+    if (G.phase !== 'hide') html += `<div>${esc(g?.name || R.segOf[k])} · waga komórki × średnia: <b>${nf(grid[k] * R.rows * R.cols, 2)}×</b></div>`;
     else html += `<div>${esc(g?.name || R.segOf[k])}</div>`;
     const sl = TER?.slopeDeg?.[k], d = R.difficulty?.[k];
     html += `<div>${sl != null ? `nachylenie ${Math.round(sl)}°` : ''}${d != null && diffLabel.has(d) ? ` · ${esc(diffLabel.get(d))}` : ''}</div>`;
