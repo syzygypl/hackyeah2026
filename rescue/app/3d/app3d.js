@@ -898,6 +898,155 @@ const forest = new THREE.Group(); scene.add(forest);
     m.name = k; m.receiveShadow = true; m.castShadow = false; forest.add(m);
   }
 }
+// ---------- near grass: instanced tufts and dwarf pine around the orbit target ----------
+// Only when zoomed in (camera within ~2 km of the target, uGrassFade grows them out of the ground). Placement is a
+// jittered grid anchored in world space (cell -> hashed position, size, colour, keep), so a cell that stays inside the
+// disc keeps its tuft when the target moves and only the rim changes. A new set is computed a few thousand cells per
+// frame into staging arrays and uploaded in one go once the target has moved 120 m; nothing runs per frame otherwise.
+// Ground: not water or lakes, not steep (rock), not built-up (OSM landAt residential / industrial / cemetery / sand),
+// not on trails, streams or roads; meadows, grass, heath and scrub first, a little under forest; without land cover by
+// elevation (Tatras: meadow up to ~2200 m, dwarf pine in the 1450-1850 m belt). Heights sit on the mesh's own
+// triangles, so nothing floats. Pools: 20k tufts (12 triangles each), 2.4k dwarf pines; shadows not cast.
+const nearGrass = (() => {
+  if (FLAT) return null;
+  const MAXG = 20000, MAXP = 2400, CG = 0.005, CP = 0.02, RAD = 0.45; // pool sizes, cell sizes and disc radius (km)
+  heatU.uGrassC = { value: new THREE.Vector3(1e3, 0, 1e3) }; heatU.uGrassR = { value: RAD }; heatU.uGrassFade = { value: 0 };
+  let seed = 777; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  // tuft: 6 leaning blades, both windings (FrontSide, so both faces keep the up normal and light like the ground)
+  const tuft = (() => {
+    const pos = [], col = [];
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * 6.283 + rnd() * 0.7, r = 0.04 + rnd() * 0.12, lean = 0.15 + rnd() * 0.3, h = 0.65 + rnd() * 0.35, w = 0.06 + rnd() * 0.04;
+      const cx = Math.cos(a) * r, cz = Math.sin(a) * r, tx = Math.cos(a) * (r + lean), tz = Math.sin(a) * (r + lean), px = -Math.sin(a) * w, pz = Math.cos(a) * w;
+      const A = [cx - px, 0, cz - pz], B = [cx + px, 0, cz + pz], T = [tx, h, tz];
+      pos.push(...A, ...B, ...T, ...B, ...A, ...T);
+      for (let k = 0; k < 2; k++) col.push(0.5, 0.5, 0.45, 0.5, 0.5, 0.45, 1.08, 1.04, 0.86);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(new Array(pos.length / 3).fill([0, 1, 0]).flat(), 3)); return g;
+  })();
+  // dwarf pine (kosodrzewina): three flattened, jittered blobs, darker underneath
+  const pine = (() => {
+    const parts = [[0.5, 0, 0.2, 0, 0.42], [0.36, 0.3, 0.14, 0.12, 0.5], [0.32, -0.28, 0.12, -0.16, 0.46]].map(([r, x, y, z, sy]) => {
+      const g = new THREE.IcosahedronGeometry(r, 0); g.scale(1, sy, 1); // already non-indexed g.translate(x, y + r * sy * 0.6, z);
+      const p = g.attributes.position; for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + (rnd() - 0.5) * 0.08, p.getY(i) + (rnd() - 0.5) * 0.05, p.getZ(i) + (rnd() - 0.5) * 0.08);
+      return g;
+    });
+    const n = parts.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), col = new Float32Array(n * 3); let o = 0;
+    for (const g of parts) { pos.set(g.attributes.position.array, o * 3); o += g.attributes.position.count; }
+    for (let i = 0; i < n; i++) { const v = 0.6 + 0.4 * Math.min(1, Math.max(0, pos[i * 3 + 1] / 0.5)); col.set([v, v, v], i * 3); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
+  })();
+  const gMat = applyFx(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), [FX.grassField(heatU, 1), FX.snowCover(heatU, 0.5)]);
+  const pMat = applyFx(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true }), [FX.grassField(heatU, 0.25), FX.snowCover(heatU, 0.5)]);
+  const meshes = [new THREE.InstancedMesh(tuft, gMat, MAXG), new THREE.InstancedMesh(pine, pMat, MAXP)];
+  for (const m of meshes) {
+    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color()); m.instanceColor.setUsage(THREE.DynamicDrawUsage);
+    m.count = 0; m.visible = false; m.frustumCulled = false; m.castShadow = false; m.receiveShadow = true; scene.add(m);
+  }
+  // October: dry, yellowing grass (greener under trees and on wet ground), dark dwarf pine
+  const GPAL = ['#9c9a52', '#a89f58', '#8d9148', '#b3a262', '#7e8a46', '#a08a50', '#94a050'].map((c) => new THREE.Color(c)), GLUSH = new THREE.Color('#5f7a38');
+  const PPAL = ['#2f4a2a', '#36502c', '#2b4426', '#3c5a32', '#33502f'].map((c) => new THREE.Color(c));
+  // integer hash of a cell (deterministic: the same cell always gets the same tuft)
+  const h32 = (x, z, s) => { let h = Math.imul(x, 0x27d4eb2d) ^ Math.imul(z, 0x165667b1) ^ Math.imul(s + 1, 0x9e3779b1); h = Math.imul(h ^ (h >>> 15), 0x85ebca6b); h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const patch = (x, z) => { // value noise on a 40 m lattice: tufts grow in clumps, not as an even carpet
+    const fx = x / 0.04, fz = z / 0.04, ix = Math.floor(fx), iz = Math.floor(fz), u = fx - ix, v = fz - iz, su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+    return (h32(ix, iz, 9) * (1 - su) + h32(ix + 1, iz, 9) * su) * (1 - sv) + (h32(ix, iz + 1, 9) * (1 - su) + h32(ix + 1, iz + 1, 9) * su) * sv;
+  };
+  // the terrain mesh's own surface (PlaneGeometry triangles a-b-d / b-c-d), plus its slope in degrees (real, not exaggerated)
+  const C1 = DEM.cols - 1, R1 = DEM.rows - 1, Y = (r, c) => ((DEM.z[r][c] - zMin) * EX) / 1000;
+  const ground = (x, z) => {
+    const fc = clamp(((x + WKM / 2) / WKM) * C1, 0, C1 - 1e-6), fr = clamp(((z + HKM / 2) / HKM) * R1, 0, R1 - 1e-6), c = Math.floor(fc), r = Math.floor(fr), u = fc - c, v = fr - r;
+    const ha = Y(r, c), hb = Y(r + 1, c), hc = Y(r + 1, c + 1), hd = Y(r, c + 1);
+    const y = u + v <= 1 ? ha + (hd - ha) * u + (hb - ha) * v : hc + (hb - hc) * (1 - u) + (hd - hc) * (1 - v);
+    const gx = ((hd - ha + hc - hb) / 2) / (WKM / C1), gz = ((hb - ha + hc - hd) / 2) / (HKM / R1);
+    return [y, (Math.atan(Math.hypot(gx, gz) / EX) * 180) / Math.PI];
+  };
+  const lakes = (TER?.lakes || []).map((l) => ({ x: toX(l.center[1]), z: toZ(l.center[0]), r: (l.radiusM + 15) / 1000 }));
+  const NOGRASS = new Set(['water', 'residential', 'industrial', 'cemetery', 'beach', 'sand', 'rock']);
+  const GP = { meadow: 1, grass: 1, heath: 0.85, scrub: 0.65, park: 0.7, orchard: 0.8, wetland: 0.6, farmland: 0.25, forest: 0.3, wood: 0.3 };
+  const PP = { heath: 0.35, scrub: 0.45, meadow: 0.06, grass: 0.04, forest: 0.05, wood: 0.05 };
+  // chance of a tuft / a dwarf pine at a spot: [grass, pine, lush 0..1]
+  const chance = (x, z, slope) => {
+    if (slope > 34 || lakes.some((l) => Math.hypot(x - l.x, z - l.z) < l.r)) return null;
+    const la = toLat(z), lo = toLon(x), lc = landAt(la, lo);
+    if (lc ? NOGRASS.has(lc) : isWater(la, lo)) return null;
+    const flat = 1 - smooth(20, 34, slope), e = elevM(la, lo);
+    if (lc) return [(GP[lc] ?? 0.5) * flat, (PP[lc] ?? 0) * (e > 900 ? 1.6 : 0.6) * flat, lc === 'forest' || lc === 'wood' || lc === 'wetland' ? 0.7 : 0];
+    if (LOW) return [0.6 * flat, 0, 0.2];
+    return [(1 - smooth(2050, 2300, e)) * flat, (e > 1400 && e < 1900 ? 0.4 * smooth(1400, 1500, e) * (1 - smooth(1800, 1900, e)) : 0) * flat, e < 1300 ? 0.5 : 0];
+  };
+  const mat = new Float32Array(16);
+  const put = (S, i, x, y, z, a, w, h) => { const c = Math.cos(a), s = Math.sin(a), o = i * 16; mat.set([c * w, 0, -s * w, 0, 0, h, 0, 0, s * w, 0, c * w, 0, x, y, z, 1]); S.m.set(mat, o); };
+  // a placement job: both grids over the disc, a slice of cells per frame. Rows run even ones first, then odd ones, so
+  // a full pool thins the whole disc evenly instead of cutting off its far side. Staging arrays are allocated once.
+  const STAGE = [[MAXG, CG], [MAXP, CP]].map(([max, cs], k) => ({ k, max, cs, m: new Float32Array(max * 16), c: new Float32Array(max * 3) }));
+  // paths kept clear (trails, streams, OSM roads; width in km), as scene x/z with a bounding box; drawn per job into a
+  // small mask around the disc (2 m per pixel), read once
+  const PATHS = [...(TER?.trails || []).map((t) => [t.points.flat(), 0.004]), ...(TER?.streams || []).map((s) => [s.points.flat(), 0.004]),
+    ...(OSM?.roads || []).map((r) => [r.l, ({ major: 0.014, minor: 0.01, service: 0.006, track: 0.005, rail: 0.006 })[r.c] || 0.008])].map(([ll, w]) => {
+    const xz = new Float32Array(ll.length); let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (let i = 0; i < ll.length; i += 2) { const x = toX(ll[i + 1]), z = toZ(ll[i]); xz[i] = x; xz[i + 1] = z; x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    return { xz, w, x0, x1, z0, z1 };
+  });
+  const MPX = 450, mg = Object.assign(document.createElement('canvas'), { width: MPX, height: MPX }).getContext('2d', { willReadFrequently: true });
+  const maskFor = (cx, cz) => {
+    const s = MPX / (2 * RAD); mg.setTransform(1, 0, 0, 1, 0, 0); mg.clearRect(0, 0, MPX, MPX); mg.setTransform(s, 0, 0, s, (RAD - cx) * s, (RAD - cz) * s);
+    mg.strokeStyle = '#fff'; mg.lineCap = 'round'; mg.lineJoin = 'round';
+    for (const p of PATHS) {
+      if (p.x1 < cx - RAD || p.x0 > cx + RAD || p.z1 < cz - RAD || p.z0 > cz + RAD) continue;
+      mg.beginPath(); for (let i = 0; i < p.xz.length; i += 2) i ? mg.lineTo(p.xz[i], p.xz[i + 1]) : mg.moveTo(p.xz[i], p.xz[i + 1]);
+      mg.lineWidth = Math.max(p.w, 2 / s); mg.stroke();
+    }
+    return mg.getImageData(0, 0, MPX, MPX).data;
+  };
+  const jobFor = (t) => ({ cx: t.x, cz: t.z, mask: PATHS.length ? maskFor(t.x, t.z) : null, grids: STAGE.map((S) => {
+    const ix0 = Math.floor((t.x - RAD) / S.cs), iz0 = Math.floor((t.z - RAD) / S.cs), nx = Math.ceil((2 * RAD) / S.cs) + 1, nz = nx;
+    return Object.assign(S, { ix0, iz0, nx, nz, i: 0, n: 0 });
+  }) });
+  const onPath = (job, x, z) => { if (!job.mask) return false; const s = MPX / (2 * RAD), px = Math.floor((x - job.cx + RAD) * s), pz = Math.floor((z - job.cz + RAD) * s);
+    return px >= 0 && pz >= 0 && px < MPX && pz < MPX && job.mask[(pz * MPX + px) * 4 + 3] > 0; };
+  const col = new THREE.Color();
+  const work = (job, budget) => {
+    for (const S of job.grids) {
+      const half = Math.ceil(S.nz / 2);
+      while (budget > 0 && S.i < S.nx * S.nz) {
+        const { cs, k } = S, row = Math.floor(S.i / S.nx), ix = S.ix0 + (S.i % S.nx), iz = S.iz0 + (row < half ? row * 2 : (row - half) * 2 + 1);
+        S.i++; budget--;
+        if (S.n >= S.max) continue;
+        const x = (ix + 0.1 + 0.8 * h32(ix, iz, k * 7 + 1)) * cs, z = (iz + 0.1 + 0.8 * h32(ix, iz, k * 7 + 2)) * cs;
+        if (Math.hypot(x - job.cx, z - job.cz) > RAD || Math.abs(x) > WKM / 2 - 0.01 || Math.abs(z) > HKM / 2 - 0.01 || onPath(job, x, z)) continue;
+        const [y, slope] = ground(x, z), p = chance(x, z, slope); if (!p) continue;
+        const keep = h32(ix, iz, k * 7 + 3);
+        if (keep > p[k] * clamp((patch(x + k * 7, z) - 0.2) * 2.2, 0.08, 1.3)) continue; // in clumps
+        const r4 = h32(ix, iz, k * 7 + 4), r5 = h32(ix, iz, k * 7 + 5), r6 = h32(ix, iz, k * 7 + 6), shade = 0.55 + 0.45 * sunAt(toLat(z), toLon(x));
+        if (k === 0) { const h = 0.003 + r4 * 0.0026; put(S, S.n, x, y - 0.0004, z, r5 * 6.283, h * (0.8 + r6 * 0.4), h); col.copy(GPAL[Math.floor(r6 * GPAL.length)]).lerp(GLUSH, p[2] * r5); }
+        else { const h = 0.008 + r4 * 0.006; put(S, S.n, x, y - 0.0008, z, r5 * 6.283, h * (0.45 + r6 * 0.2), h); col.copy(PPAL[Math.floor(r6 * PPAL.length)]); }
+        col.multiplyScalar(shade * (0.9 + r4 * 0.2)); S.c.set([col.r, col.g, col.b], S.n * 3); S.n++;
+      }
+    }
+    return job.grids.every((S) => S.i >= S.nx * S.nz);
+  };
+  let job = null, placed = null, fade = 0, eager = Q.has('zoom'); // ?zoom start: first set at once, already grown (screenshots)
+  const commit = () => {
+    job.grids.forEach((S, i) => {
+      const m = meshes[i]; m.instanceMatrix.array.set(S.m.subarray(0, S.n * 16)); m.instanceColor.array.set(S.c.subarray(0, S.n * 3));
+      m.count = S.n; m.instanceMatrix.clearUpdateRanges(); m.instanceMatrix.addUpdateRange(0, S.n * 16); m.instanceMatrix.needsUpdate = true;
+      m.instanceColor.clearUpdateRanges(); m.instanceColor.addUpdateRange(0, S.n * 3); m.instanceColor.needsUpdate = true;
+    });
+    heatU.uGrassC.value.set(job.cx, 0, job.cz); placed = { x: job.cx, z: job.cz }; job = null; wake();
+  };
+  // per frame: the fade, and a re-placement only after the target moved far (the work itself is sliced)
+  return function tick(dt) {
+    const t = controls.target, want = forest.visible ? 1 - smooth(1.5, 2.1, camera.position.distanceTo(t)) : 0;
+    if (eager && !want) eager = false; // started too far out: grow in normally later
+    fade += (want - fade) * (1 - Math.exp(-dt * 3)); if (Math.abs(want - fade) < 0.002 || eager) fade = want;
+    if (want > 0 && !job && (!placed || Math.hypot(t.x - placed.x, t.z - placed.z) > 0.12)) job = jobFor(t);
+    if (job && work(job, eager ? Infinity : 2500)) { commit(); eager = false; }
+    heatU.uGrassFade.value = fade;
+    for (const m of meshes) m.visible = fade > 0.005 && m.count > 0;
+  };
+})();
 // ---------- buildings: one merged mesh, footprints from OSM extruded to their height (levels x 3 m, or by type) ----------
 const buildings = (() => {
   if (!OSM || !OSM.bld.length) return null;
@@ -1639,6 +1788,7 @@ function frame() {
     else { m.t = (m.t + dt * 0.15) % 1; m.dot.position.copy(m.curve.getPoint(m.t)); m.mat.dashOffset -= dt * 0.08; }
   }
   for (const m of flowMats) m.dashOffset -= dt * 0.05; // streams run downstream
+  nearGrass?.(dt); // near grass: fade with the zoom, re-placed in slices when the target moved far
   if (precip.visible) {
     const u = precipMat.uniforms; u.uCenter.value.copy(controls.target);
     u.uBox.value = clamp(camera.position.distanceTo(controls.target) * 0.9, 0.8, 8);

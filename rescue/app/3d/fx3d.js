@@ -595,4 +595,30 @@ export const FX = {
       transformed.x += bend * (sin(uTime * 1.7 + ph.x) * 0.6 + sin(uTime * 3.1 + ph.y) * 0.25);
       transformed.z += bend * sin(uTime * 2.3 + ph.y) * 0.4;
     }` } }),
+
+  // near grass tufts and dwarf pine (app3d near-grass block, unit-height instances): each instance grows out of the
+  // ground with the zoom fade (uGrassFade) and shrinks towards the rim of the placed disc (centre uGrassC, radius
+  // uGrassR), so the set never ends in a hard ring; it bends downwind in one world direction (the clouds' drift), gusts
+  // running across the meadow as waves, plus a little per-tuft flutter. uSway: 1 grass, less for the stiff dwarf pine.
+  // Snow cover (uSnowCover) buries the grass and the lower part of the dwarf pine.
+  grassField: (U, sway = 1) => ({ name: 'grass', uniforms: { uTime: U.uTime, uWind: U.uWind, uGrassC: U.uGrassC, uGrassR: U.uGrassR, uGrassFade: U.uGrassFade,
+    uSnowCover: U.uSnowCover, uSway: { value: sway } },
+    hooks: { vertex: `
+    {
+    #ifdef USE_INSTANCING
+      vec3 ip = instanceMatrix[3].xyz; mat3 im = mat3(instanceMatrix);
+    #else
+      vec3 ip = vec3(0.0); mat3 im = mat3(1.0);
+    #endif
+      float gs = uGrassFade * (1.0 - smoothstep(0.72, 1.0, length(ip.xz - uGrassC.xz) / uGrassR));
+      vec2 wd = vec2(0.8, 0.6);
+      float gust = 0.6 + 0.4 * sin(dot(ip.xz, wd) * 160.0 - uTime * 2.4) * (0.6 + 0.4 * sin(dot(ip.xz, vec2(-0.6, 0.8)) * 40.0 + uTime * 0.5));
+      float bend = position.y * position.y * (0.1 + uWind * 6.0) * gust * uSway;
+      vec3 od = transpose(im) * vec3(wd.x, 0.0, wd.y); od.y = 0.0; od /= max(length(od), 1e-6); // downwind in object space
+      float fl = sin(uTime * 3.7 + ip.x * 2300.0 + position.x * 9.0) * 0.12 * uSway * position.y;
+      transformed.xz += od.xz * (bend + fl * 0.5) + vec2(-od.z, od.x) * fl;
+      transformed.y -= bend * bend * 0.35; // a bent blade is shorter
+      transformed.y *= 1.0 - uSnowCover * 0.8 * min(uSway, 1.0);
+      transformed *= gs;
+    }` } }),
 };
