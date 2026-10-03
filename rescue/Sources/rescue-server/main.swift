@@ -98,10 +98,10 @@ func scenarioNames() -> [String] {
 func validName(_ n: String) -> Bool { !n.isEmpty && n.count <= 60 && n.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" } }
 
 /// Live field reports -> scenario events (same mapping as the Studio's FieldReport module).
-func liveEvents(segments: Set<String>, seeds: [String: [Double]]) -> [[String: Any]] {
+func liveEvents(segments: Set<String>, seeds: [String: [Double]], mapAt: (String) -> String = { $0 }) -> [[String: Any]] {
     var out: [[String: Any]] = []
     for r in FieldReportProvider.load(livePath) {
-        guard let at = r.at else { continue }   // reports without scenario time cannot be placed on the timeline
+        guard let at = r.at.map(mapAt) else { continue }   // reports without scenario time cannot be placed on the timeline
         for h in r.hints {
             switch h.type {
             case "segmentSearched":
@@ -136,8 +136,19 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
     var nLive = 0
     if live {
         let segs = (d["segments"] as? [[String: Any]]) ?? []
+        // Phones stamp reports with their wall clock (e.g. 11:05), not the scenario clock: a time outside the scenario window
+        // [startClock, last event] lands at the scenario's live moment = the last event before the case was found.
+        let mins = { (t: String) -> Int? in let p = t.split(separator: ":").compactMap { Int($0) }; return p.count == 2 ? p[0] * 60 + p[1] : nil }
+        let start = mins(d["startClock"] as? String ?? "") ?? 0
+        let rel = { (t: String) -> Int in ((mins(t) ?? start) - start + 1440) % 1440 }   // minutes since start, wraps past midnight
+        let evs = (d["events"] as? [[String: Any]]) ?? []
+        let isFind = { (e: [String: Any]) -> Bool in e["provider"] as? String == "Found" || e["found"] as? Bool == true || (e["title"] as? String ?? "").lowercased().contains("znaleziono") }
+        let end = evs.compactMap { ($0["at"] as? String).map(rel) }.max() ?? 0
+        let firstFind = evs.filter(isFind).compactMap { ($0["at"] as? String).map(rel) }.min() ?? Int.max
+        let liveAt = evs.compactMap { $0["at"] as? String }.filter { rel($0) < firstFind }.max { rel($0) < rel($1) } ?? (d["startClock"] as? String ?? "00:00")
         let ev = liveEvents(segments: Set(segs.compactMap { $0["id"] as? String }),
-                            seeds: Dictionary(segs.compactMap { s in (s["id"] as? String).flatMap { id in (s["seed"] as? [Double]).map { (id, $0) } } }, uniquingKeysWith: { a, _ in a }))
+                            seeds: Dictionary(segs.compactMap { s in (s["id"] as? String).flatMap { id in (s["seed"] as? [Double]).map { (id, $0) } } }, uniquingKeysWith: { a, _ in a }),
+                            mapAt: { rel($0) <= end ? $0 : liveAt })
         nLive = ev.count
         d["events"] = ((d["events"] as? [[String: Any]]) ?? []) + ev
     }

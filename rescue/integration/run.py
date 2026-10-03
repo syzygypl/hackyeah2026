@@ -517,7 +517,9 @@ def suite(srv, B, live, llm, tmp):
         r = G("/api/run/zawrat")[1]
         s = next((s for s in r["steps"] if s["t"] == "11:05"), None)
         if s is None:
-            return ("WARN", "a wall-clock report at 11:05 did not show up in the zawrat run (scenario 17:40-20:05)")
+            neg = [x["t"] for x in r["steps"] if x.get("minute", 0) < 0]
+            assert not neg, f"steps before startClock: {neg}"
+            return "wall-clock 11:05 mapped into the scenario window (zawrat 17:40-20:05, lands at the last event before the find), no step before startClock"
         BUGS.append("web/patrol/index.html sends at = phone wall clock (hhmm()), but /api/run/<sc> treats `at` as the SCENARIO clock. During a "
                     f"live demo (e.g. Sun 11:05) a report on zawrat (startClock 17:40) becomes a step at minute {s['minute']} - before the "
                     "incident starts, before the Koester rings - and after 20:03 (Found) it lands after the case is closed. "
