@@ -47,7 +47,7 @@ fn event_label(t: &str) -> Option<&'static str> {
 /// params.json merged over the defaults: {staleMin, kinds: {kind: {key: value}}, sources}
 pub fn inv_params() -> Obj {
     let p = inv_dir().join("params.json");
-    let f = read_obj(&p);
+    let f = read_obj_cached(&p);
     let fk = f.get("kinds").and_then(|k| k.as_object()).cloned().unwrap_or_default();
     let mut all: Vec<String> = KINDS.iter().map(|s| s.to_string()).collect();
     for k in fk.keys() {
@@ -90,9 +90,13 @@ fn inv_p(params: &Obj, kind: &str, key: &str) -> f64 {
 
 /// inventory.json units by id; None = no file (units then carry roster data only, "inventory": false)
 fn inv_file_units() -> Option<HashMap<String, Obj>> {
-    let d = std::fs::read(inv_dir().join("inventory.json")).ok()?;
+    let p = inv_dir().join("inventory.json");
+    if !p.is_file() {
+        return None;
+    }
+    let d = read_obj_cached(&p);
     let mut out = HashMap::new();
-    for u in objs(jobj(&d).get("units")) {
+    for u in objs(d.get("units")) {
         if let Some(id) = gs(&u, "id") {
             out.insert(id.to_string(), u.clone());
         }
@@ -175,7 +179,7 @@ async fn inv_dem(sc: &str) -> Option<Arc<DEM>> {
 
 /// scenario clock helpers (minutes since startClock, wraps past midnight; "+1 HH:MM", plain minutes and ISO accepted)
 pub fn inv_start(sc: &str) -> i64 {
-    let d = read_obj(&scn_path(sc));
+    let d = read_obj_cached(&scn_path(sc));
     hm_min(gs(&d, "startClock").unwrap_or("00:00")).unwrap_or(0)
 }
 pub fn inv_min(start: i64, t: Option<&str>) -> Option<i64> {
@@ -247,7 +251,7 @@ async fn inv_live_minute(sc: &str) -> Option<i64> {
 }
 /// raw tracks file actor (fixes, legs; never truth)
 fn inv_track_actor(sc: &str, id: &str) -> Option<Obj> {
-    let d = read_obj(&tracks_path(sc));
+    let d = read_obj_cached(&tracks_path(sc));
     let list = d.get("actors").or(d.get("units"));
     objs(list).into_iter().find(|a| gs(a, "id") == Some(id))
 }
@@ -951,7 +955,7 @@ async fn inv_actor_log(q: &Req, id: &str) -> Resp {
         add(&mut entries, f.0, "fix", title, &f.6, vec![("lat", json!(f.3)), ("lon", json!(f.4)), ("feed", json!(feed)), ("detail", or_null(f.5.clone()))]);
     }
     // scripted scenario events naming the actor
-    let scn = read_obj(&scn_path(&sc));
+    let scn = read_obj_cached(&scn_path(&sc));
     let res = objs(scn.get("resources"));
     let kind_words: HashMap<&str, Vec<&str>> = HashMap::from([
         ("dron", vec!["dron"]),

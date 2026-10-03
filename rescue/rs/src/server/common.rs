@@ -80,6 +80,24 @@ pub fn jobj(d: &[u8]) -> Obj {
 }
 pub fn read_json(p: &Path) -> Option<Value> { std::fs::read(p).ok().and_then(|d| serde_json::from_slice(&d).ok()) }
 pub fn read_obj(p: &Path) -> Obj { std::fs::read(p).map(|d| jobj(&d)).unwrap_or_default() }
+/// read_obj memoized per path while its size and mtime stay the same (scenario, tracks, inventory files on hot paths)
+pub fn read_obj_cached(p: &Path) -> Arc<Obj> {
+    static MEMO: Lazy<Mutex<HashMap<PathBuf, (u64, std::time::SystemTime, Arc<Obj>)>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+    let Ok(m) = std::fs::metadata(p) else { return Arc::new(Obj::new()) };
+    let st = (m.len(), m.modified().unwrap_or(std::time::UNIX_EPOCH));
+    if let Some((l, t, o)) = MEMO.lock().get(p) {
+        if (*l, *t) == st {
+            return o.clone();
+        }
+    }
+    let o = Arc::new(read_obj(p));
+    let mut g = MEMO.lock();
+    if g.len() > 256 {
+        g.clear();
+    }
+    g.insert(p.to_path_buf(), (st.0, st.1, o.clone()));
+    o
+}
 pub fn gs<'a>(o: &'a Obj, k: &str) -> Option<&'a str> { o.get(k).and_then(|v| v.as_str()) }
 pub fn gf(o: &Obj, k: &str) -> Option<f64> { o.get(k).and_then(|v| v.as_f64()) }
 /// Swift `as? Int`: integral JSON numbers only

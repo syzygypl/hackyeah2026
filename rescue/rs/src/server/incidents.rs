@@ -127,7 +127,7 @@ pub async fn incident_base(sc: &str, n_live: i64) -> Option<Bytes> {
 
 /// cheap card for an incident whose engine run has not finished yet (?fast=1): title, place, clock from the scenario file
 fn incident_placeholder(sc: &str) -> Obj {
-    let d = read_obj(&scn_path(sc));
+    let d = read_obj_cached(&scn_path(sc));
     let (title, place, _) = incident_title_place(gs(&d, "incident").unwrap_or(sc), sc);
     let v = json!({"title": title, "place": place, "top3": [], "found": false, "replayFound": false,
         "at": gs(&d, "startClock").unwrap_or(""), "total": arr_len(d.get("resources")), "pending": true});
