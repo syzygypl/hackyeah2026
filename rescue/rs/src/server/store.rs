@@ -296,6 +296,24 @@ impl NeonStore {
         }
         m
     }
+    /// SharedState.pull in one round trip: version of every document in `keys` and every saved scenario ("scn:<name>"),
+    /// with the body only where the version differs from `known` (k -> version this instance holds). k -> (version, body).
+    pub async fn doc_changes(&self, keys: &[&str], known: &HashMap<String, i64>) -> Result<HashMap<String, (i64, Option<String>)>, String> {
+        let known: Map<String, Value> = known.iter().map(|(k, v)| (k.clone(), json!(v))).collect();
+        let rows = self
+            .sql(
+                "SELECT k, version, CASE WHEN version IS DISTINCT FROM (($2::jsonb) ->> k)::bigint THEN v END AS v FROM rescue_docs WHERE k = ANY($1) OR k LIKE 'scn:%'",
+                vec![json!(format!("{{{}}}", keys.join(","))), json!(Value::Object(known).to_string())],
+            )
+            .await?;
+        let mut m = HashMap::new();
+        for r in rows {
+            if let Some(k) = r.get("k").and_then(|k| k.as_str()) {
+                m.entry(k.to_string()).or_insert((int(r.get("version")), r.get("v").and_then(|v| v.as_str()).map(String::from)));
+            }
+        }
+        Ok(m)
+    }
     pub async fn doc_versions(&self, keys: &[&str]) -> HashMap<String, i64> {
         let rows = self
             .sql("SELECT k, version FROM rescue_docs WHERE k = ANY($1)", vec![json!(format!("{{{}}}", keys.join(",")))])

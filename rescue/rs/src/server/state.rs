@@ -312,6 +312,8 @@ pub struct SharedInner {
     versions: HashMap<String, i64>,
     last: HashMap<String, Vec<u8>>,
     scn_versions: HashMap<String, i64>,
+    /// start of the last completed pull (see pull)
+    pulled_from: Option<std::time::Instant>,
 }
 pub const SHARED_KEYS: [&str; 5] = ["story", "assign", "roster", "acks", "cursor"];
 async fn export(k: &str) -> Vec<u8> {
@@ -338,29 +340,54 @@ impl SharedState {
         g.versions.clear();
         g.last.clear();
     }
+    /// One Neon round trip: the versions of the shared documents and saved scenarios, with the bodies of the ones that
+    /// moved. Concurrent callers share a pull: one that began after this caller arrived has seen every write before it.
     pub async fn pull(&self) {
         let Some(neon) = STORE.neon() else { return };
+        let arrived = std::time::Instant::now();
         let mut g = self.0.lock().await;
+        if g.pulled_from.map(|t| t >= arrived).unwrap_or(false) {
+            return;
+        }
+        g.pulled_from = Some(std::time::Instant::now());
+        let mut known: HashMap<String, i64> = g.scn_versions.iter().map(|(n, v)| (format!("scn:{n}"), *v)).collect();
+        for k in SHARED_KEYS {
+            known.insert(k.to_string(), g.versions.get(k).copied().unwrap_or(0));
+        }
+        let ch = match neon.doc_changes(&SHARED_KEYS, &known).await {
+            Ok(c) => c,
+            Err(_) => {
+                g.pulled_from = None; // nothing learned: the next caller asks again
+                return;
+            }
+        };
         // Studio saves from any instance -> this instance's scenarios/ (RESCUE_DIR is a writable copy)
-        let mut saved: Vec<(String, i64)> = neon.saved_scenario_versions().await.into_iter().collect();
+        let mut saved: Vec<(String, i64, Option<&String>)> =
+            ch.iter().filter_map(|(k, (v, d))| k.strip_prefix("scn:").map(|n| (n.to_string(), *v, d.as_ref()))).collect();
         saved.sort();
-        for (name, v) in saved {
+        for (name, v, d) in saved {
             if g.scn_versions.get(&name) == Some(&v) || !valid_name(&name) {
                 continue;
             }
-            if let Some((ver, d)) = neon.doc(&format!("scn:{name}")).await {
-                let _ = std::fs::write(scn_path(&name), &d);
-                g.scn_versions.insert(name, ver);
+            if let Some(d) = d {
+                // same bytes on disk: no rewrite, so file stamps (and the caches keyed by them) stay valid
+                let p = scn_path(&name);
+                if std::fs::read(&p).ok().as_deref() != Some(d.as_bytes()) {
+                    let _ = std::fs::write(&p, d.as_bytes());
+                }
+                g.scn_versions.insert(name, v);
             }
         }
-        let vs = neon.doc_versions(&SHARED_KEYS).await;
         for k in SHARED_KEYS {
-            if vs.get(k).copied().unwrap_or(0) == g.versions.get(k).copied().unwrap_or(0) {
+            let (v, d) = match ch.get(k) {
+                Some((v, d)) => (*v, d.clone()),
+                None => (0, None), // gone (reset) -> empty state
+            };
+            if v == g.versions.get(k).copied().unwrap_or(0) {
                 continue;
             }
-            let d = neon.doc(k).await; // gone (reset) -> empty state
-            load(k, d.as_ref().map(|x| x.1.clone()).unwrap_or_else(|| b"{}".to_vec())).await;
-            g.versions.insert(k.to_string(), d.map(|x| x.0).unwrap_or(0));
+            load(k, d.map(|x| x.into_bytes()).unwrap_or_else(|| b"{}".to_vec())).await;
+            g.versions.insert(k.to_string(), v);
             let e = export(k).await;
             g.last.insert(k.to_string(), e);
         }
