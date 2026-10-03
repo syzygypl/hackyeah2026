@@ -65,7 +65,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     fpp = null; controls.enabled = true;
     if (savedCamera) { camera.position.copy(savedCamera.position); controls.target.copy(savedCamera.target);
       camera.near = savedCamera.near; camera.updateProjectionMatrix(); controls.update(); }
-    savedCamera = null; button.classList.remove('on'); button.textContent = 'FPP'; onCamera(false); wake();
+    savedCamera = null; button.classList.remove('on'); button.textContent = 'FPP'; trail.visible = area.visible = visible; onCamera(false); wake();
   }
   function startFpp(id) {
     const a = actors.find((a) => a.id === id);
@@ -73,6 +73,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     if (!fpp) savedCamera = { position: camera.position.clone(), target: controls.target.clone(), near: camera.near };
     onStopCamera(); fpp = a.id; select.value = a.id; controls.enabled = false;
     camera.near = 0.0002; camera.updateProjectionMatrix();
+    trail.visible = area.visible = false; // tracks and accuracy rings are lifted 25 m: wires across an eye-level view
     button.classList.add('on'); button.textContent = 'Wróć do mapy'; onCamera(true, a.id); wake(); return true;
   }
   button.onclick = () => { if (fpp) stopFpp(); else startFpp(select.value); };

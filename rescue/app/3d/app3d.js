@@ -297,7 +297,8 @@ renderer.toneMappingExposure = 1.15;
 host.appendChild(renderer.domElement);
 const labels = new CSS2DRenderer();
 labels.setSize(innerWidth, innerHeight);
-Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
+// zIndex 1: its own stacking context, so the labels' depth z-indexes stay below the Kino caption and the panels
+Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none', zIndex: '1' });
 host.appendChild(labels.domElement);
 
 const ATMO = installHeightFog(); // fx3d: aerial perspective, valley fog, alpenglow, before any material compiles
@@ -1909,7 +1910,8 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
     compose();
   },
   onStopCamera: () => { if (CINE.on && !CINE.inserting) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
-  onCamera: (on, actorId) => { fppHeat = on ? 0.3 : 1; compose(); toParent({ type: 'fpp', on, actorId }); },
+  // FPP: the outlines float metres above the ground and cross an eye-level view like wires, so they step aside
+  onCamera: (on, actorId) => { fppHeat = on ? 0.3 : 1; for (const g of [dyn.top, dyn.searched, dyn.teams, dyn.sel]) g.visible = !on; compose(); toParent({ type: 'fpp', on, actorId }); },
   onActor: (id) => toParent({ type: 'actor', id }),
   getFrame: async (t) => {
     const history = new URL(P.run, location.href).searchParams.get('live') === '0' ? '&live=0' : '';
