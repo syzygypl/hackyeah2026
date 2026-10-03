@@ -12,10 +12,14 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 **Adresy**
 | Co | URL |
 |---|---|
-| Operator | https://rescue-locator.vercel.app/app/?sc=zawrat |
+| Operator, Historia od początku | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=hist&step=0 |
+| Operator, Na żywo | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=live |
 | Centrum | https://rescue-locator.vercel.app/app/centrum.html |
 | Ratownik (bez klucza, tylko podgląd) | https://rescue-locator.vercel.app/app/?role=ratownik |
 | Widziałem (mieszkańcy, Kraków) | https://rescue-locator.vercel.app/web/seen/ |
+| Porównanie (jedna relacja zmienia top 3) | https://rescue-locator.vercel.app/app/porownanie.html |
+| Odprawa (A4 dla kierownika) | https://rescue-locator.vercel.app/app/odprawa.html?sc=zawrat |
+| Ktoś zaginął (rodzina) | https://rescue-locator.vercel.app/app/rodzina.html |
 | Stan serwera | https://rescue-locator.vercel.app/health (ma być `"llm":"llm-openai"`, `"store":"shared"`) |
 
 **Klucz akcji (zapis).** Na Vercel odczyt jest otwarty, każdy zapis wymaga klucza. Dwa klucze żyją tylko w zmiennych Vercel: operatora `RESCUE_PIN` (wszystko) i terenowy `RESCUE_FIELD_PIN` (tylko meldunki i ślady). Klucz operatora weź od Mateusza prywatnie (nigdy w wątku ani w repo).
@@ -30,6 +34,8 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 - Produkcja jest wspólna: każdy, kto ma klucz, może coś dopisać. Poproś zespół, żeby nikt nie pisał na produkcję od T-15 min.
 
 **Po resecie: jeden przydział.** Na żywo, Zawrat, panel *Na żywo* -> **Wyślij zespół** -> Patrol TOPR A -> S7 Żleb pod Zawratem. Telefon w ciągu 10-15 s pokazuje "Moje zadanie: S7".
+
+**Zawsze jawne `sc=zawrat`.** Na produkcji akcja LIVE w Centrum to inny scenariusz (2026-10-04 01:30: Połonina Wetlińska), a aplikacja bez `sc=` pamięta ostatni scenariusz i tryb. Historia bez `&step=0` otwiera się na **końcu** nagrania (20:03 ZNALEZIONO): użyj URL-a z tabeli albo kliknij ⏮ w doku przed pokazem.
 
 **Rozgrzanie (pierwsze wejście jest wolne: mapa 15-25 s, `/api/incidents` na zimno ~17 s).** Otwórz i zostaw w kartach: (1) operator Zawrat w **Historia**, (2) Centrum, (3) operator `?sc=sniardwy`, (4) `?sc=krakow-nowa-huta`. Na telefonie: ekran ratownika + karta z Widziałem.
 
@@ -49,13 +55,21 @@ Kryteria (DEFENCE): **I** innowacja 30%, **K** związek z kategorią 20%, **U** 
 
 | # | Czas | Klik / URL | Co widać | Zdanie (PL) | Kryt. |
 |---|---|---|---|---|---|
-| 1 | 0:00-0:20 | Karta 1: Zawrat, **Historia**, oś na początku | mapa Doliny Pięciu Stawów, IPP przy schronisku, pierścienie | "Sobota 17:40, żona dzwoni: mąż poszedł sam na Zawrat. Mgła, zaraz zmrok, a ratownik ma tylko okruchy informacji." | K |
+| 1 | 0:00-0:20 | Karta 1: Zawrat, **Historia**, oś na początku (URL z `&step=0` albo ⏮) | mapa Doliny Pięciu Stawów, IPP przy schronisku, pierścienie | "Sobota 17:40, żona dzwoni: mąż poszedł sam na Zawrat. Mgła, zaraz zmrok, a ratownik ma tylko okruchy informacji." | K |
 | 2 | 0:20-0:50 | Przesuń oś czasu do 18:30 (plan trasy, auto na Palenicy, BTS 14:12, mgła); odznacz jedną wskazówkę na liście po lewej i zaznacz z powrotem | mapa przelicza się po każdej wskazówce, top 3 sektory po prawej | "Każda wskazówka to osobny moduł, mapa liczy się na żywo i od razu mówi, gdzie szukać najpierw." | I, D |
 | 3 | 0:50-1:20 | **▶** albo przesuń oś 18:40 -> 20:03 | sektory wracają puste, dron nic, Żleb pod Zawratem wskakuje na #1, śmigłowiec, **ZNALEZIONO** | "Brak wyniku to też informacja. Prawdopodobieństwo spływa do żlebu, plan wysyła tam śmigłowiec - 20:03, znaleziony." | I |
 | 4 | 1:20-1:55 | Przełącz na **Na żywo** (19:45). Telefon: **Pogoda · status · meldunek** -> wpisz `S8 pusto, widoczność 50 m` -> **Wyślij meldunek** | na laptopie w ciągu ~3 s wpis w panelu *Na żywo* (podświetlony, "Niepotwierdzone: 1"), mapa się przelicza; kliknij **Potwierdź wszystkie** -> na telefonie do 15 s "Operator potwierdził Twój meldunek ✓" | "Ratownik pisze zwykłym zdaniem, model zamienia to w dowód, kierownik potwierdza jednym klikiem." | U, C |
-| 5 | 1:55-2:15 | Link **Centrum - wszystkie akcje** (karta 2). Przeciągnij wolny zespół na kartę Morskiego Oka. Telefon: **ŚLAD / ZNALEZIONO** -> **poszkodowany ZNALEZIONY** -> Wyślij | 11 akcji na mapie Polski; po kilku-kilkunastu s Zawrat przechodzi do **Zakończone**, zespoły wracają do puli, telefon: "Akcja zakończona" | "Centrala widzi wszystkie akcje i jedną pulę zespołów. Znalezienie w terenie zamyka akcję i zwalnia ludzi do następnej." | K, U |
+| 5 | 1:55-2:15 | Link **Centrum - wszystkie akcje** (karta 2). Przeciągnij wolny zespół na kartę Morskiego Oka. Telefon: **ŚLAD / ZNALEZIONO** -> **poszkodowany ZNALEZIONY** -> Wyślij | 18 akcji na mapie Polski (1 LIVE); po kilku-kilkunastu s Zawrat przechodzi do **Zakończone**, zespoły wracają do puli, telefon: "Akcja zakończona" | "Centrala widzi wszystkie akcje i jedną pulę zespołów. Znalezienie w terenie zamyka akcję i zwalnia ludzi do następnej." | K, U |
 | 6 | 2:15-2:35 | Karta 3 (Śniardwy), karta 4 (Kraków). Telefon 2: Widziałem -> wskaż miejsce -> **Wyślij zgłoszenie**. Opcjonalnie 3 s widoku 3D | dryf łodzi na jeziorze; senior w Nowej Hucie, zgłoszenie mieszkańca wpada do feedu | "Ten sam silnik na wodzie i w mieście - mieszkaniec zgłasza, że widział seniora, i to staje się dowodem." | K, D |
 | 7 | 2:35-3:00 | Bez klikania (albo slajd z liczbami) | - | "Na tysiącu symulowanych zaginięć właściwy sektor jest w pierwszej trójce w 66%, u doświadczonego kierownika w 56%, od ostatniego punktu w 43%. To symulacja, nie prawdziwe akcje. Planer jest najsłabszy - decyduje człowiek. Rescue Locator: gdzie szukać najpierw." | C |
+
+Jeśli zostaje czas albo jury pyta (każde ~10 s):
+- **Czat** (czerwony przycisk w prawym dolnym rogu operatora, `?chat=1`): zdarzenie zwykłym zdaniem, karta z mini mapą, po "Dodaj" nowe top 3 i co się przesunęło. W Historii to "co by było, gdyby", bez zapisu.
+- **Porównanie** (`porownanie.html`): ta sama akcja o 19:22 bez i z relacją turystki, top 3 zmienia się z S4/S7/S3 na S7/S6/S9.
+- **Odprawa** (`odprawa.html?sc=zawrat`): cała odprawa kierownika na jednej stronie A4 do druku.
+- **Rodzina** (`rodzina.html`): "Ktoś zaginął - co robić": najpierw 112, potem lista tego, o co pyta dyspozytor.
+
+Uwaga do kroku 2 (stan na `1db6bc4`): odznaczenie wskazówki przelicza dziś tylko widok 3D, a mapa 2D i panel zostają bez zmian (qa-demo-path.md, B1/B2). Dopóki to nie jest poprawione, w kroku 2 tylko przesuwaj oś, bez odznaczania.
 
 Nie pokazujemy: procentów POA jako szansy, trybu Walidacja, oceny LLM, Monitoringu, "+ Nowa akcja" (patrz `najmocniejsze-funkcje.md`, "Czego NIE pokazywać").
 
