@@ -622,7 +622,20 @@ function stepMood(dt) {
   sun.color.copy(cur.sun); sun.intensity = cur.sunI; hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hI;
   starMat.opacity = cur.stars; terrainMat.emissiveIntensity = cur.emis; renderer.toneMappingExposure = cur.exp;
   skyMat.uniforms.sunCol.value.copy(cur.sun); skyMat.uniforms.sunAmt.value = clamp(1.4 - cur.stars * 1.6, 0.15, 1.2) * (cur.near < 7 ? 0.45 : 1);
+  hemi.intensity = cur.hI * 0.45; // the sky environment map carries the rest of the ambient light
+  if ((Math.abs(cur.top.r - tgt.top.r) + Math.abs(cur.bottom.g - tgt.bottom.g) + Math.abs(cur.fog.b - tgt.fog.b) > 0.004 && performance.now() - envAt > 250) || envAt < 0) updateEnv();
 }
+// image-based light from the sky dome: prefiltered with PMREM, re-baked only while the mood (day/fog/night) is changing
+const pmrem = new THREE.PMREMGenerator(renderer), envScene = new THREE.Scene(), envSkyMat = skyMat.clone();
+envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), envSkyMat));
+let envRT = null, envAt = -1;
+function updateEnv() {
+  const u = envSkyMat.uniforms;
+  u.top.value.copy(cur.top); u.bottom.value.copy(cur.bottom).lerp(cur.hg, 0.55); u.sunDir.value.copy(SUN_DIR); u.sunCol.value.copy(cur.sun); u.sunAmt.value = skyMat.uniforms.sunAmt.value * 0.15;
+  const rt = pmrem.fromScene(envScene, 0, 0.1, 50);
+  scene.environment = rt.texture; envRT?.dispose(); envRT = rt; envAt = performance.now();
+}
+scene.environmentIntensity = 0.7;
 
 // ---------- source signals ----------
 function anchorOf(e) {
