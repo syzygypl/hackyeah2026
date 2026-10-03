@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rescue Locator - gdzie szukać najpierw</title>
+<meta name="description" content="Rescue Locator: mapa, która podpowiada ratownikom, gdzie szukać zaginionej osoby najpierw. Prototyp z HackYeah 2026.">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* Landing page (rescue/app/landing/). Two audiences behind one switch: ?dla=sar (rescue teams) and ?dla=turysci (hikers, families).
+   Only --rl-* tokens (docs/rescue-locator/ui-design.md). Static, no build, works offline from rescue-server and on Vercel (/app/landing/). */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--rl-bg);color:var(--rl-ink);font:var(--rl-fs)/1.55 var(--rl-font);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+a{color:var(--rl-accent)}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:max(16px,4vw)}
+header.top{position:sticky;top:0;z-index:5;background:var(--rl-panel);backdrop-filter:blur(var(--rl-blur));-webkit-backdrop-filter:blur(var(--rl-blur));border-bottom:1px solid var(--rl-line)}
+header.top .wrap{display:flex;align-items:center;gap:12px;min-height:58px;flex-wrap:wrap;padding-block:8px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:var(--rl-fs-l);text-decoration:none;color:var(--rl-ink);margin-right:auto}
+.brand svg{flex:none}
+.switch{display:flex;background:var(--rl-panel-2);border:1px solid var(--rl-line);border-radius:999px;padding:3px}
+.switch a{padding:8px 16px;border-radius:999px;text-decoration:none;color:var(--rl-ink-2);font-weight:600;font-size:var(--rl-fs-s);white-space:nowrap}
+.switch a[aria-current=page]{background:var(--rl-chrome);color:var(--rl-on-chrome)}
+section{padding-block:clamp(28px,6vw,64px)}
+h1{font-size:clamp(28px,5.2vw,46px);line-height:1.12;margin:0 0 14px;letter-spacing:-.01em}
+h2{font-size:clamp(21px,3vw,28px);line-height:1.2;margin:0 0 14px}
+h3{font-size:var(--rl-fs-l);margin:0 0 6px}
+p{margin:0 0 12px}
+.lead{font-size:clamp(16px,2vw,19px);color:var(--rl-ink-2);max-width:60ch}
+.muted{color:var(--rl-mute)}
+.small{font-size:var(--rl-fs-s)}
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:clamp(20px,4vw,48px);align-items:center}
+.shot{display:block;width:100%;height:auto;border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);border:1px solid var(--rl-line);background:var(--rl-card)}
+figure{margin:0}
+figcaption{font-size:var(--rl-fs-s);color:var(--rl-mute);margin-top:8px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:12px 20px;border-radius:12px;font-weight:700;text-decoration:none;font-size:var(--rl-fs);border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink)}
+.btn.primary{background:var(--rl-danger);color:var(--rl-on-danger);border-color:transparent}
+.btn.navy{background:var(--rl-accent);color:var(--rl-on-accent);border-color:transparent}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);padding:18px}
+.card p:last-child{margin-bottom:0}
+.tag{display:inline-block;font:600 var(--rl-fs-xs)/1 var(--rl-mono);text-transform:uppercase;letter-spacing:.04em;color:var(--rl-accent);margin-bottom:8px}
+.proof{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
+.num{font:700 clamp(34px,6vw,52px)/1 var(--rl-font-num);color:var(--rl-ink)}
+.num.win{color:var(--rl-ok)}
+.honest{border-left:4px solid var(--rl-warn);background:var(--rl-card);padding:12px 16px;border-radius:0 var(--rl-radius) var(--rl-radius) 0;color:var(--rl-ink-2)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,4vw,40px);align-items:start}
+ol.steps,ul.list{margin:0;padding-left:1.2em}
+ol.steps li,ul.list li{margin-bottom:8px}
+/* families: emergency first */
+.alarm{background:var(--rl-danger);color:var(--rl-on-danger);border-radius:var(--rl-radius-l);padding:clamp(18px,4vw,30px);box-shadow:var(--rl-shadow)}
+.alarm h1{color:var(--rl-on-danger);margin-bottom:8px}
+.alarm p{color:var(--rl-on-danger);opacity:.95}
+.call{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.call a{display:flex;flex-direction:column;justify-content:center;min-height:84px;padding:12px 16px;border-radius:12px;background:var(--rl-card);color:var(--rl-ink);text-decoration:none;border:2px solid transparent}
+.call a b{font:700 clamp(26px,5vw,34px)/1.05 var(--rl-font-num);color:var(--rl-danger)}
+.call a span{font-size:var(--rl-fs-s);color:var(--rl-ink-2)}
+.call a:focus-visible,.btn:focus-visible,.switch a:focus-visible{outline:3px solid var(--rl-select);outline-offset:2px}
+.phone{max-width:300px;margin-inline:auto}
+footer{border-top:1px solid var(--rl-line);background:var(--rl-panel-2);font-size:var(--rl-fs-s);color:var(--rl-ink-2)}
+footer .wrap{padding-block:24px}
+footer p{margin-bottom:8px}
+[hidden]{display:none!important}
+@media (max-width:820px){
+  .hero,.two{grid-template-columns:1fr}
+  .grid,.proof{grid-template-columns:1fr}
+  .call{grid-template-columns:1fr}
+  .switch a{padding:8px 12px}
+  .brand span{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./"><svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><path d="M1 21 10 6l5 7 4-5 10 13z" fill="var(--rl-chrome)"/><circle cx="23" cy="4" r="3" fill="var(--rl-danger)"/></svg><span>Rescue Locator</span></a>
+    <nav class="switch" aria-label="Wersja strony">
+      <a href="?dla=sar" data-v="sar">Dla zespołów SAR</a>
+      <a href="?dla=turysci" data-v="turysci">Dla turystów i rodzin</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ============ SAR ============ -->
+<div data-for="sar">
+  <section>
+    <div class="wrap hero">
+      <div>
+        <span class="tag">Dla TOPR, GOPR, WOPR, PSP, Policji i dyspozytorów</span>
+        <h1>Gdzie szukać najpierw - w pierwszych godzinach akcji</h1>
+        <p class="lead">Rescue Locator łączy statystykę zachowań zaginionych, teren i ślady z akcji w jedną mapę, która pokazuje, gdzie szukać najpierw. Mapa przelicza się sama z każdym meldunkiem. Decyzje podejmuje kierownik akcji.</p>
+        <div class="btns">
+          <a class="btn navy" href="../start.html">Zobacz pokaz (90 s)</a>
+          <a class="btn" href="../?sc=zawrat&amp;role=operator&amp;time=hist&amp;tour=1">Przewodnik: akcja na Zawracie</a>
+        </div>
+      </div>
+      <figure><img class="shot" src="img/02-akcja-3d-zawrat.jpg" alt="Widok 3D akcji pod Zawratem: teren, szlaki i trzy sektory, w których warto szukać najpierw" width="1400" height="787"><figcaption>Akcja pod Zawratem w 3D: trzy sektory na pierwsze zadania (scenariusz fikcyjny).</figcaption></figure>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap">
+      <h2>Problem pierwszych godzin</h2>
+      <p class="lead">Zgłoszenie przychodzi późno, ludzi jest mało, teren duży, pogoda się psuje. Kierownik akcji układa w głowie dziesiątki sygnałów: plan wycieczki, ostatni kontakt, logowanie telefonu, świadków, przeszukane już sektory. Rescue Locator zbiera je w jednym miejscu i liczy, które fragmenty terenu mają największą wagę.</p>
+      <div class="grid" style="margin-top:18px">
+        <div class="card"><span class="tag">Mapa</span><h3>Waga mapy z zachowań, terenu i śladów</h3><p>Pierścienie odległości wg statystyk zaginięć (Koester / ISRID) dla danego typu osoby, trudność terenu z modelu wysokości, szlaki i potoki. Każdy ślad ma wagę: wiarygodność źródła, dokładność, czas, potwierdzenia.</p></div>
+        <div class="card"><span class="tag">Oś czasu</span><h3>Trasy zespołów i pole widzenia</h3><p>Pozycje GPS co kilka minut, szacowana trasa między nimi i pole widzenia każdej jednostki (pieszo, pies, dron, śmigłowiec, łódź). Z tego rośnie przeszukany obszar - i spada waga tam, gdzie już patrzono.</p></div>
+        <div class="card"><span class="tag">Na żywo</span><h3>Telefony ratowników w akcji</h3><p>Zespół dołącza kodem QR, wysyła meldunki, ślady i pozycję. Operator przydziela sektory, widzi stan zespołów (zmęczenie, bateria drona, paliwo) i dziennik każdej jednostki.</p></div>
+        <div class="card"><span class="tag">Centrum</span><h3>Kilka akcji naraz</h3><p>Wszystkie trwające akcje na jednej mapie i wspólna pula zespołów. Doradca podpowiada, gdy kilka zgłoszeń może mieć wspólną przyczynę (np. fala po awarii zapory).</p></div>
+        <div class="card"><span class="tag">Ćwiczenia</span><h3>Trening na scenariuszach</h3><p>Przejmij akcję w połowie, podejmuj decyzje i porównaj je z silnikiem, heurystyką eksperta i podejściem naiwnym.</p></div>
+        <div class="card"><span class="tag">Teren</span><h3>Działa offline</h3><p>Cała aplikacja uruchamia się z laptopa w bazie, bez internetu, z lokalnym modelem językowym do meldunków. Wersja w chmurze służy do pokazu.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap two">
+      <div>
+        <h2>Uczciwy dowód</h2>
+        <p>Na 1000 symulowanych przypadkach w górach: jak często prawdziwy sektor jest w pierwszej trójce podpowiedzi.</p>
+        <div class="proof">
+          <div class="card"><div class="num win">66%</div><div class="small">Rescue Locator</div></div>
+          <div class="card"><div class="num">56%</div><div class="small">heurystyka eksperta</div></div>
+          <div class="card"><div class="num">43%</div><div class="small">najbliżej punktu wyjścia</div></div>
+        </div>
+        <p>Na wodzie (600 przypadków): 91% wobec 81%. Mediana obszaru do przeszukania do znalezienia: 5,5% wobec 22,6% przy szukaniu od punktu wyjścia.</p>
+        <p class="honest"><b>To symulacja, nie prawdziwe akcje.</b> Symulator i silnik powstały w tym samym zespole, więc to test spójności, a nie walidacja w terenie. Procenty na mapie to waga, nie szansa - są zawyżone, dlatego pokazujemy kolejność i obszar. Są miejsca, gdzie nie pomaga (np. Bieszczady, pływak na jeziorze) - piszemy o nich w aplikacji, zakładka Walidacja.</p>
+      </div>
+      <figure><img class="shot" src="img/05-walidacja.jpg" alt="Karta walidacji: 66 procent wobec 43 procent w górach i 91 wobec 81 procent na wodzie, z wykresem i listą miejsc, gdzie nie pomaga" width="1400" height="787" loading="lazy"><figcaption>Zakładka Walidacja w aplikacji.</figcaption></figure>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap two">
+      <figure><img class="shot" src="img/04-centrum.jpg" alt="Centrum: wszystkie trwające akcje na mapie Polski i lista zespołów" width="1400" height="787" loading="lazy"><figcaption>Centrum - kilka akcji i wspólna pula zespołów.</figcaption></figure>
+      <div>
+        <h2>Jak spróbować</h2>
+        <ol class="steps">
+          <li><a href="../start.html">Strona startowa</a> - krótki pokaz z przewodnikiem po akcji na Zawracie.</li>
+          <li><a href="../?sc=zawrat&amp;role=operator&amp;time=hist">Aplikacja operatora</a> - przełącz 2D / 3D, w widoku 3D przycisk <b>Kino</b> odtwarza akcję jak film.</li>
+          <li><a href="../centrum.html">Centrum</a> - kilka akcji naraz.</li>
+          <li>W bazie bez internetu: <code>bash docs/submission/hackathon/rescue-locator/v3/start.sh</code> z repozytorium.</li>
+        </ol>
+        <p class="muted small" style="margin-top:12px">Wszystkie akcje w pokazie są fikcyjne. Aplikacja to narzędzie pomocnicze - nie zastępuje doświadczenia kierownika akcji ani procedur służb.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ TURYŚCI I RODZINY ============ -->
+<div data-for="turysci" hidden>
+  <section>
+    <div class="wrap">
+      <div class="alarm" role="region" aria-label="Numery alarmowe">
+        <h1>Zgubiłeś kogoś? Dzwoń 112</h1>
+        <p>Nie czekaj do rana. Ratownicy wolą przyjechać niepotrzebnie niż za późno.</p>
+        <div class="call">
+          <a href="tel:112"><b>112</b><span>numer alarmowy - zawsze, także przy słabym zasięgu</span></a>
+          <a href="tel:985"><b>985</b><span>ratownictwo w górach (TOPR, GOPR)</span></a>
+          <a href="tel:+48601100300"><b>601 100 300</b><span>ratownictwo w górach (TOPR, GOPR)</span></a>
+        </div>
+        <div class="call" style="grid-template-columns:1fr">
+          <a href="tel:+48601100100"><b>601 100 100</b><span>ratownictwo nad wodą (WOPR)</span></a>
+        </div>
+        <p class="small" style="margin-top:12px">Numery wg <a href="https://topr.pl" style="color:inherit">topr.pl</a>, <a href="https://www.gopr.pl" style="color:inherit">gopr.pl</a> i <a href="https://www.gov.pl/web/kppsp-bialogard/bezpieczne-wakacje-2026" style="color:inherit">gov.pl</a> (stan na 3.10.2026). TOPR: przy słabym zasięgu lub jego braku dzwoń na 112.</p>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap two">
+      <div class="card">
+        <h2>Nie szukaj sam po zmroku</h2>
+        <p>Po zmroku, we mgle i w trudnym terenie łatwo samemu stać się drugą osobą do ratowania. Zostań w bezpiecznym miejscu, miej telefon przy sobie i odbieraj połączenia od ratowników.</p>
+        <p>Jeśli szukasz w dzień przy szlaku - nigdy w pojedynkę, powiedz komuś, gdzie idziesz, i dzwoń, gdy coś znajdziesz. Nie ruszaj znalezionych rzeczy.</p>
+      </div>
+      <div class="card">
+        <h2>Co powiedzieć ratownikom</h2>
+        <ul class="list">
+          <li><b>Kto:</b> wiek, stan zdrowia, leki, doświadczenie w górach lub w wodzie.</li>
+          <li><b>Gdzie i kiedy:</b> miejsce i godzina ostatniego kontaktu, planowana trasa, gdzie stoi auto.</li>
+          <li><b>Jak wygląda:</b> ubiór i jego kolory, plecak, obuwie.</li>
+          <li><b>Telefon:</b> numer, operator, ile baterii, czy jest włączony.</li>
+          <li><b>Sprzęt:</b> latarka, ciepłe ubranie, jedzenie, woda.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap two">
+      <div>
+        <h2>Przed wyjściem w góry</h2>
+        <ul class="list">
+          <li>Zostaw komuś trasę i godzinę powrotu.</li>
+          <li>Naładuj telefon, weź powerbank i czołówkę.</li>
+          <li>Zainstaluj darmową aplikację <b>Ratunek</b> (polecaną przez <a href="https://www.gopr.pl">GOPR</a>) - przyda się, gdy trzeba wezwać pomoc.</li>
+          <li>Sprawdź pogodę i komunikaty ratowników. We mgle nie schodź ze szlaku.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">W pokazie</span>
+        <h3>Tak ratownicy mogliby poprosić o pomoc mieszkańców</h3>
+        <p>W demonstracji Rescue Locator ma stronę "Widziałem": karta osoby zaginionej i przycisk do zgłoszenia obserwacji z lokalizacją. Ratownicy dostają je od razu na mapie.</p>
+        <p class="honest small"><b>To pokaz z fikcyjną osobą, nie prawdziwa usługa.</b> Jeśli naprawdę widzisz zaginioną osobę - zadzwoń na 112.</p>
+        <div class="btns"><a class="btn" href="../../web/seen/?sc=krakow-nowa-huta">Zobacz stronę z pokazu</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-top:0">
+    <div class="wrap two">
+      <figure class="phone"><img class="shot" src="img/09a-widzialem-karta.jpg" alt="Strona Widziałem z pokazu: karta fikcyjnej osoby zaginionej, przycisk Widziałem tę osobę i Zadzwoń 112" width="600" height="1298" loading="lazy"><figcaption>Strona "Widziałem" z pokazu (osoba fikcyjna).</figcaption></figure>
+      <div>
+        <h2>Czym jest Rescue Locator</h2>
+        <p>To narzędzie dla ratowników: podpowiada, gdzie szukać najpierw, na podstawie statystyk, terenu i śladów. Szukają zawsze ratownicy - aplikacja nikogo sama nie znajdzie i nie zastępuje telefonu na 112.</p>
+        <p class="muted">Prototyp z hackathonu HackYeah 2026. Wszystkie akcje w pokazie są fikcyjne.</p>
+        <div class="btns"><a class="btn" href="?dla=sar">Wersja dla ratowników</a></div>
+      </div>
+    </div>
+  </section>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b>Rescue Locator</b> - prototyp z HackYeah 2026, nie służba ratunkowa. Scenariusze, osoby, zespoły i sprzęt w pokazie są fikcyjne; wyniki to symulacje.</p>
+    <p>Dane mapowe: © współtwórcy OpenStreetMap (ODbL). Model terenu: Copernicus DEM GLO-30 (© DLR e.V. 2010-2014 i © Airbus Defence and Space GmbH 2014-2018, w ramach programu Copernicus UE i ESA). Zdjęcia lotnicze: Sentinel-2 cloudless 2016 - s2maps.eu, EOX IT Services GmbH (CC BY 4.0, zawiera zmodyfikowane dane Copernicus Sentinel).</p>
+    <p>Kod: <a href="https://github.com/syzygypl/hackyeah2026">github.com/syzygypl/hackyeah2026</a></p>
+  </div>
+</footer>
+
+<script>
+// ?dla=sar | ?dla=turysci (default sar); the switch keeps the address shareable and works without reloading.
+(function () {
+  var params = new URLSearchParams(location.search);
+  function show(v) {
+    if (v !== "turysci") v = "sar";
+    document.querySelectorAll("[data-for]").forEach(function (el) { el.hidden = el.getAttribute("data-for") !== v; });
+    document.querySelectorAll(".switch a").forEach(function (a) {
+      if (a.getAttribute("data-v") === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+    });
+    document.title = v === "turysci" ? "Rescue Locator - zgubiłeś kogoś? Dzwoń 112" : "Rescue Locator - gdzie szukać najpierw";
+  }
+  show(params.get("dla"));
+  document.querySelectorAll('a[href^="?dla="]').forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      var v = new URLSearchParams(a.getAttribute("href").slice(1)).get("dla");
+      history.replaceState(null, "", "?dla=" + v);
+      show(v);
+      window.scrollTo(0, 0);
+    });
+  });
+})();
+</script>
+</body>
+</html>
