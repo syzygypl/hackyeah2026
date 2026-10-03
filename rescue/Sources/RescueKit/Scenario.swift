@@ -57,7 +57,7 @@ public struct Scenario: Codable, Sendable {
     public let bbox: BBox
     public let cellM: Double
     public let ipp: Spot
-    public let terrain: Terrain
+    public var terrain: Terrain
     public let segments: [Segment]
     public let truth: Spot           // used ONLY for the backtest number, never fed to the grid
     public let events: [Event]

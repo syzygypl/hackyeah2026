@@ -83,7 +83,7 @@ footer{grid-column:1/4;padding:10px 16px;border-top:1px solid var(--line);displa
 footer input[type=range]{flex:1}
 button{background:var(--hot);color:#fff;border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
 #clock{font-family:ui-monospace,Menlo,monospace;font-size:16px;min-width:56px}
-#banner{position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:999;background:var(--warn);color:#000;padding:8px 14px;border-radius:8px;font-weight:700;display:none}
+#banner{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:999;background:var(--warn);color:#000;padding:8px 14px;border-radius:8px;font-weight:700;display:none}
 .lbl{background:rgba(15,20,24,.85);color:#fff;border:1px solid #fff;border-radius:4px;padding:1px 5px;font-size:11px;white-space:nowrap;font-weight:600}
 .lbl.top{background:var(--hot);border-color:var(--hot)}
 .lbl.empty{background:#334;color:#cde;border-color:#667}
@@ -115,7 +115,8 @@ let step = H.length;
 document.getElementById('inc').textContent = D.incident + ' - ' + D.date;
 document.getElementById('subj').innerHTML = `<b>${D.subject.name}</b>, ${D.subject.age} l., kategoria: ${D.subject.category}<br><small>${D.subject.note}</small>`;
 
-const map = L.map('map',{zoomControl:true}).fitBounds([[S,W],[Nn,E]]);
+const map = L.map('map',{zoomControl:true,zoomSnap:0.25}).fitBounds([[S,W],[Nn,E]]);
+setTimeout(()=>{map.invalidateSize();map.fitBounds([[S+0.008,W+0.005],[Nn-0.012,E-0.02]]);},50);
 const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'});
 const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'&copy; OpenStreetMap, SRTM | OpenTopoMap (CC-BY-SA)'});
 topo.addTo(map);
@@ -210,6 +211,7 @@ function render(){
   const searched={}; for(let k=0;k<step;k++){const h=H[k]; if(h.kind==='searched'&&!disabled.has(h.id)) h.geo.segments.forEach(id=>searched[id]=h.geo.pod);}
   segLabels.clearLayers();
   D.segments.forEach((s,i)=>{const c=segCenter[i]; if(!c[2])return; const rk=top.indexOf(i);
+    if(rk<0 && searched[s.id]===undefined) return;
     const cls=rk>=0?'lbl top':(searched[s.id]!==undefined?'lbl empty':'lbl');
     const txt=rk>=0?`#${rk+1} ${s.id} ${(sp[i]*100).toFixed(0)}%`:(searched[s.id]!==undefined?`${s.id} pusty, POD ${Math.round(searched[s.id]*100)}%`:`${s.id} ${(sp[i]*100).toFixed(0)}%`);
     L.marker([c[0]/c[2],c[1]/c[2]],{icon:L.divIcon({className:'',html:`<div class="${cls}">${txt}</div>`})}).bindTooltip(s.name).addTo(segLabels);});

@@ -5,7 +5,14 @@ import RescueKit
 let pkgDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 let args = CommandLine.arguments.dropFirst()
 let scenarioPath = args.first { !$0.hasPrefix("--") } ?? pkgDir.appendingPathComponent("scenarios/zawrat.json").path
-let scenario = try Scenario.load(scenarioPath)
+var scenario = try Scenario.load(scenarioPath)
+// Optional precomputed terrain (OSM + DEM) next to the scenario: <name>-terrain.json, same shape as scenario.terrain
+let terrainPath = scenarioPath.replacingOccurrences(of: ".json", with: "-terrain.json")
+if FileManager.default.fileExists(atPath: terrainPath),
+   let t = try? JSONDecoder().decode(Scenario.Terrain.self, from: Data(contentsOf: URL(fileURLWithPath: terrainPath))) {
+    scenario.terrain = t
+    print("Terrain: \(terrainPath)")
+}
 let clock = ScenarioClock(msPerMinute: args.contains("--fast") ? 0 : 8)
 
 let grid = ProbabilityGrid(scenario)
@@ -76,7 +83,9 @@ let summary: [String: Any] = [
     "top3poa": top3poa, "top3area": top3area, "rankFused": rankFused, "rankRings": rankRings,
     "areaFused": areaFused, "areaRings": areaRings, "truthSeg": truthSeg, "beforePing": beforePing,
 ]
+try writeRunJSON(to: out.appendingPathComponent("run.json"), scenario: scenario, grid: grid, hints: arrived, summary: summary)
 let html = renderHTML(scenario: scenario, grid: grid, hints: arrived, summary: summary)
 let file = out.appendingPathComponent("index.html")
 try html.write(to: file, atomically: true, encoding: .utf8)
 print("\nWrote \(file.path)  (open it in a browser)")
+print("Wrote \(out.appendingPathComponent("run.json").path)  (machine-readable contract)")
