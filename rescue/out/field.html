@@ -36,7 +36,7 @@
 <body>
 <main>
   <h1>Meldunki terenowe - Rescue Locator</h1>
-  <div class="sub">Działa bez internetu: lokalny model (Ollama) na laptopie kierownika akcji, a gdy go nie ma - reguły słów kluczowych. Żadnych usług w chmurze.
+  <div class="sub">Meldunek czyta model AI na serwerze akcji (bez internetu: lokalny model na laptopie kierownika akcji), a gdy go nie ma - reguły słów kluczowych.
     <span id="status" class="status">sprawdzam serwer...</span>
     <label id="pinbox" style="display:none;margin-left:8px">PIN <input id="pin" inputmode="numeric" autocomplete="off" size="8" style="font:inherit;width:7em"></label>
     <label style="margin-left:8px">Zespół <input id="team" autocomplete="off" placeholder="np. topr-a" style="font:inherit;width:8em;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 4px"></label>
@@ -105,7 +105,7 @@ function hintLine(h) {
 }
 function card(r) {
   const llm = r.parsedBy.startsWith("llm");
-  const badge = llm ? `<span class="badge b-llm">LLM lokalny · ${esc(r.parsedBy.replace("llm-local:", ""))}</span>`
+  const badge = llm ? `<span class="badge b-llm">model AI · ${esc(r.parsedBy.replace(/^llm-[a-z]+:/, ""))}</span>`
                     : `<span class="badge b-rules">reguły awaryjne${r.browser ? " (przeglądarka)" : ""}</span>`;
   const time = (r.t || "").slice(11, 19);
   return `<div class="card"><div class="text">${esc(r.text)}</div>
@@ -161,7 +161,7 @@ async function send(text) {
     if (r.status === 401) { $("msg").textContent = "zły lub brak PIN-u - wpisz PIN z terminala"; $("send").disabled = false; return; }
     if (!r.ok) throw new Error("HTTP " + r.status);
     const rep = await r.json();
-    $("msg").textContent = `${rep.parsedBy.startsWith("llm") ? "LLM lokalny" : "reguły awaryjne"} · ${rep.latencyMs} ms`;
+    $("msg").textContent = `${rep.parsedBy.startsWith("llm") ? "model AI" : "reguły awaryjne"} · ${rep.latencyMs} ms`;
     $("txt").value = "";
     await refresh();
   } catch (e) {

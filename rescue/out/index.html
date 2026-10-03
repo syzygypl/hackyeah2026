@@ -72,7 +72,7 @@ footer .tl{flex:1;display:flex;flex-direction:column}
 <div id="segs"></div>
 <h2>Przydział zespołów</h2><div id="surv" class="surv"></div><div id="teams"></div>
 <small>Prędkości, POD i progi pogodowe ilustracyjne, nie procedury TOPR/GOPR.</small>
-<div id="assessWrap" style="display:none"><h2>Ocena sytuacji (lokalny model)</h2>
+<div id="assessWrap" style="display:none"><h2>Ocena sytuacji (model AI)</h2>
 <button id="assessBtn">Oceń bieżący krok</button> <small>rescue-server, qwen3 lokalnie</small><div id="assess" class="value" style="display:none;border-color:#2a343d"></div></div>
 <h2>Backtest (fikcyjne miejsce odnalezienia)</h2><div id="bt"></div>
 <h2>Osoba</h2><div id="subj"></div></div>
@@ -265,7 +265,7 @@ function renderAssessment(el, d) {
   const a = d.assessment || {}, llm = String(d.source).startsWith("llm");
   const ev = d.evidenceIndex || {};
   const evs = (ids) => (ids || []).map((i) => `<span title="${e(ev[i])}" style="border:1px solid #556;border-radius:4px;padding:0 4px;font-size:11px;margin-right:3px">${e(i)}</span>`).join("");
-  el.innerHTML = `<div style="font-size:12px;margin-bottom:6px"><b style="color:${llm ? "#3ee08f" : "#f2b134"}">${llm ? "LLM lokalny" : "reguły"}</b> · ${e(llm ? d.source.replace("llm-local:", "") : "szablon deterministyczny")} · ${d.latencyMs} ms · krok ${d.step}/${d.steps} (${e(d.t)})${d.note ? ` · <span title="${e(d.note)}">${e(d.note.slice(0, 80))}</span>` : ""}</div>
+  el.innerHTML = `<div style="font-size:12px;margin-bottom:6px"><b style="color:${llm ? "#3ee08f" : "#f2b134"}">${llm ? "model AI" : "reguły"}</b> · ${e(llm ? d.source.replace("llm-local:", "") : "szablon deterministyczny")} · ${d.latencyMs} ms · krok ${d.step}/${d.steps} (${e(d.t)})${d.note ? ` · <span title="${e(d.note)}">${e(d.note.slice(0, 80))}</span>` : ""}</div>
     <div style="margin-bottom:6px">${e(a.sytuacja)}</div>
     ${(a.hipotezy || []).length ? `<div style="font-weight:700;margin-top:6px">Hipotezy</div>` + a.hipotezy.map((h, k) => `<div style="margin:3px 0">${k + 1}. <b>${e(h.segment)}</b> ${e(h.nazwa || "")}: ${e(h.opis)} ${evs(h.dowody)}</div>`).join("") : ""}
     ${(a.rekomendacje || []).length ? `<div style="font-weight:700;margin-top:6px">Następna godzina</div>` + a.rekomendacje.map((r) => `<div style="margin:3px 0"><b>${e(r.zespol)}</b> -> ${e(r.segment)} ${r.zgodnie_z_planem ? '<span style="color:#3ee08f">zgodnie z planerem</span>' : `<span style="color:#f2b134">odstępstwo (planer: ${e(r.planer || "?")})</span>`}: ${e(r.dzialanie)}<br><span style="color:#93a1ad;font-size:12px">${e(r.uzasadnienie)}${r.uwaga ? " · " + e(r.uwaga) : ""}</span></div>`).join("") : ""}
@@ -276,7 +276,7 @@ function renderAssessment(el, d) {
 
 if (location.protocol.startsWith('http')) fetch('/health').then(r=>r.json()).then(h=>{ if(h.server==='rescue-server'){
   document.getElementById('assessWrap').style.display='block';
-  document.getElementById('assessBtn').onclick=async()=>{const el=document.getElementById('assess');el.style.display='block';el.textContent='lokalny model ocenia sytuację...';
+  document.getElementById('assessBtn').onclick=async()=>{const el=document.getElementById('assess');el.style.display='block';el.textContent='model AI ocenia sytuację...';
     const url=`/api/assessment/${D.scenarioName}?step=${step}&live=0&wait=0`;
     try{for(let i=0;i<40;i++){const d=await (await fetch(url)).json();renderAssessment(el,d);if(!d.pending)break;await new Promise(r=>setTimeout(r,d.retryAfterMs||5000));}}catch(e){el.textContent='Ocena niedostępna: '+e;}};
 }}).catch(()=>{});

@@ -251,12 +251,12 @@ public actor Studio {
         snapshot()
         let segPairs: [[String]] = segments.map { [$0["id"] as? String ?? "", $0["name"] as? String ?? ""] }
         var (narr, note) = await parseNarrativeLLM(text, segs: segPairs)
-        var by = "llm-local"
+        var by = LLM.tag
         let rules = parseNarrativeRules(text)
         if narr.isEmpty { narr = rules; by = "rules"; note = note ?? "LLM nic nie zwrócił" }
         else {
             // hybrid: LLM decides what happened; rules fill numbers the small model dropped and add items it missed
-            by = "llm-local+rules"
+            by = LLM.tag + "+rules"
             var used = Set<Int>()
             for k in narr.indices {
                 guard let j = rules.indices.first(where: { !used.contains($0) && rules[$0].type == narr[k].type && (rules[$0].at == narr[k].at || narr[k].at == nil) }) else { continue }

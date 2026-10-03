@@ -115,7 +115,7 @@ body.dragging,body.dragging *{cursor:grabbing!important}
   <div class="box"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
   <div id="segs"></div>
   <h2>Przydział zespołów</h2><div id="surv" class="help"></div><div id="teams"></div>
-  <h2>Ocena sytuacji (lokalny model)</h2>
+  <h2>Ocena sytuacji (model AI)</h2>
   <div class="row"><button id="assessBtn">Oceń wybrany krok</button><span class="help">qwen3 lokalnie, ~20-40 s; bez Ollamy: reguły</span></div>
   <div id="assess" class="box" style="display:none"></div>
 </div>
@@ -309,7 +309,7 @@ $("add").onclick = async () => {
 };
 $("narrBtn").onclick = async () => {
   const text = $("narr").value.trim(); if (!text) return;
-  $("narrBtn").disabled = true; $("narrInfo").textContent = "lokalny model czyta historię...";
+  $("narrBtn").disabled = true; $("narrInfo").textContent = "model AI czyta historię...";
   const d = await run(() => api("/story/narrate", { text }));
   $("narrBtn").disabled = false;
   if (d && d.narrative) { const n = d.narrative; $("narrInfo").textContent = `${n.items.length} zdarzeń · ${n.parsedBy}${n.note ? " · " + n.note : ""}`; }
@@ -550,7 +550,7 @@ function renderAssessment(el, d) {
   const a = d.assessment || {}, llm = String(d.source).startsWith("llm");
   const ev = d.evidenceIndex || {};
   const evs = (ids) => (ids || []).map((i) => `<span title="${e(ev[i])}" style="border:1px solid #556;border-radius:4px;padding:0 4px;font-size:11px;margin-right:3px">${e(i)}</span>`).join("");
-  el.innerHTML = `<div style="font-size:12px;margin-bottom:6px"><b style="color:${llm ? "#3ee08f" : "#f2b134"}">${llm ? "LLM lokalny" : "reguły"}</b> · ${e(llm ? d.source.replace("llm-local:", "") : "szablon deterministyczny")} · ${d.latencyMs} ms · krok ${d.step}/${d.steps} (${e(d.t)})${d.note ? ` · <span title="${e(d.note)}">${e(d.note.slice(0, 80))}</span>` : ""}</div>
+  el.innerHTML = `<div style="font-size:12px;margin-bottom:6px"><b style="color:${llm ? "#3ee08f" : "#f2b134"}">${llm ? "model AI" : "reguły"}</b> · ${e(llm ? d.source.replace("llm-local:", "") : "szablon deterministyczny")} · ${d.latencyMs} ms · krok ${d.step}/${d.steps} (${e(d.t)})${d.note ? ` · <span title="${e(d.note)}">${e(d.note.slice(0, 80))}</span>` : ""}</div>
     <div style="margin-bottom:6px">${e(a.sytuacja)}</div>
     ${(a.hipotezy || []).length ? `<div style="font-weight:700;margin-top:6px">Hipotezy</div>` + a.hipotezy.map((h, k) => `<div style="margin:3px 0">${k + 1}. <b>${e(h.segment)}</b> ${e(h.nazwa || "")}: ${e(h.opis)} ${evs(h.dowody)}</div>`).join("") : ""}
     ${(a.rekomendacje || []).length ? `<div style="font-weight:700;margin-top:6px">Następna godzina</div>` + a.rekomendacje.map((r) => `<div style="margin:3px 0"><b>${e(r.zespol)}</b> -> ${e(r.segment)} ${r.zgodnie_z_planem ? '<span style="color:#3ee08f">zgodnie z planerem</span>' : `<span style="color:#f2b134">odstępstwo (planer: ${e(r.planer || "?")})</span>`}: ${e(r.dzialanie)}<br><span style="color:#93a1ad;font-size:12px">${e(r.uzasadnienie)}${r.uwaga ? " · " + e(r.uwaga) : ""}</span></div>`).join("") : ""}
@@ -560,7 +560,7 @@ function renderAssessment(el, d) {
 }
 
 $("assessBtn").onclick = async () => {
-  const el = $("assess"); el.style.display = "block"; el.innerHTML = '<span class="help">lokalny model ocenia sytuację...</span>';
+  const el = $("assess"); el.style.display = "block"; el.innerHTML = '<span class="help">model AI ocenia sytuację...</span>';
   $("assessBtn").disabled = true;
   try { renderAssessment(el, await api("/story/assessment", { step })); }
   catch (e) { el.innerHTML = `<span class="help">Ocena niedostępna: ${esc(e.message || e)} (uruchom swift run rescue-server)</span>`; }

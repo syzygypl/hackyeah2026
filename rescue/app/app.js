@@ -250,7 +250,7 @@ function renderAssess() {
       ${sec("Rekomendacje na następną godzinę", A.rekomendacje, (r) => typeof r === "string" ? esc(r) : `<b>${esc(r.zespol || r.team || "")}</b> ${esc(r.segment || "")} ${esc(r.dzialanie || r.opis || r.text || "")}${r.dlaczego ? ` - ${esc(r.dlaczego)}` : ""}`)}
       ${sec("Ryzyka", A.ryzyka, (r) => esc(typeof r === "string" ? r : r.opis || r.text || JSON.stringify(r)))}
       ${sec("Czego brakuje", A.brakuje, (r) => esc(typeof r === "string" ? r : `${r.informacja}${r.dlaczego ? " - " + r.dlaczego : ""}`))}
-      <div class="help">${/reg/i.test(assessment.source || "") ? "Ocena z reguł" : "Ocena lokalnego modelu AI"}${assessment.latencyMs > 1000 ? ` · ${Math.round(assessment.latencyMs / 1000)} s` : ""}${assessment.pending ? " · model AI jeszcze myśli…" : ""}${(assessment.dropped || []).length ? ` · odrzucono ${assessment.dropped.length} niepotwierdzonych` : ""}</div>`;
+      <div class="help">${/reg/i.test(assessment.source || "") ? "Ocena z reguł" : "Ocena modelu AI"}${assessment.latencyMs > 1000 ? ` · ${Math.round(assessment.latencyMs / 1000)} s` : ""}${assessment.pending ? " · model AI jeszcze myśli…" : ""}${(assessment.dropped || []).length ? ` · odrzucono ${assessment.dropped.length} niepotwierdzonych` : ""}</div>`;
     $("assess").querySelectorAll(".seglink").forEach((x) => x.onclick = () => { selectSeg(x.dataset.seg, "panel"); flyToSeg(x.dataset.seg); });
     return;
   }

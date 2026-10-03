@@ -32,7 +32,7 @@ public struct FieldReport: Codable, Sendable {
     public var at: String?            // optional scenario clock HH:mm
     public var source: String = "field"
     public var text: String
-    public var parsedBy: String       // "llm-local:<model>" | "rules"
+    public var parsedBy: String       // "llm-openai:<model>" | "llm-local:<model>" | "rules"
     public var latencyMs: Int
     public var note: String?          // why fallback was used, if it was
     public var hints: [FieldHint]

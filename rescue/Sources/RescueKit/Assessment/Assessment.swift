@@ -76,7 +76,7 @@ public enum Assessment {
         var source = "reguły", note: String? = nil, dropped: [String] = []
         var body: [String: Any]
         if useLLM && ProcessInfo.processInfo.environment["RESCUE_LLM_OFF"] != "1", let (b, d) = await llm(f) {
-            body = b; dropped = d; source = "llm-local:\(model)"
+            body = b; dropped = d; source = "\(LLM.tag):\(model)"
         } else {
             body = rules(f)
             note = useLLM ? "ocena z reguł: \(ProcessInfo.processInfo.environment["RESCUE_LLM_OFF"] == "1" ? "RESCUE_LLM_OFF=1" : lastFailure)" : "ocena z reguł (llm=0)"

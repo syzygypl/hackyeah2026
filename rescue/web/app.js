@@ -1074,7 +1074,7 @@
     const d = new Date(s); return isNaN(d) ? s : d.toTimeString().slice(0, 5);
   }
   const plMeldunek = (n) => (n === 1 ? 'meldunek' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'meldunki' : 'meldunków');
-  const parsedShort = (p) => (/^llm/i.test(p) ? 'LLM lokalny' : /rule|reguł/i.test(p) ? 'reguły' : p);
+  const parsedShort = (p) => (/^llm/i.test(p) ? 'model AI' : /rule|reguł/i.test(p) ? 'reguły' : p);
   const STRENGTH = { strong: 'silny', medium: 'średni', weak: 'słaby' };
   const PRECIP = { none: 'bez opadu', rain: 'deszcz', snow: 'śnieg' };
   function liveHint(h) {

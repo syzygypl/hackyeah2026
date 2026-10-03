@@ -106,7 +106,7 @@ async function poll() {
   const thr = sum(ms, "rescue_silent_threshold_seconds") || 600;
   $("srv").className = "pill ok"; $("srv").textContent = "serwer OK " + new Date(now * 1000).toLocaleTimeString("pl-PL");
   const llmUp = sum(ms, "rescue_llm_up") >= 1;
-  $("llm").className = "pill " + (llmUp ? "ok" : "warn"); $("llm").textContent = llmUp ? "LLM lokalny działa" : "LLM niedostępny - parsują reguły";
+  $("llm").className = "pill " + (llmUp ? "ok" : "warn"); $("llm").textContent = llmUp ? "Model AI działa" : "LLM niedostępny - parsują reguły";
 
   // clients
   const cl = ms.filter(m => m.name === "rescue_client_last_report_timestamp_seconds").map(m => ({
@@ -150,7 +150,7 @@ async function poll() {
   const al = [];
   for (const c of silent) al.push(`Cisza: ${esc(c.id)} (${esc(c.team)}) - ostatni meldunek ${ago(c.age)}`);
   if (rejpm > 5) al.push(`Skok odrzuceń: ${rejpm.toFixed(0)} / min - możliwy atak na serwer`);
-  if (!llmUp) al.push("LLM lokalny niedostępny - meldunki parsują reguły awaryjne");
+  if (!llmUp) al.push("Model AI niedostępny - meldunki parsują reguły awaryjne");
   $("alerts").innerHTML = al.map(a => `<div class="card">${a}</div>`).join("");
   $("foot").textContent = `wersja ${(ms.find(m => m.name === "rescue_build_info") || { labels: {} }).labels.version || "?"} · zdarzeń w live-events: ${sum(ms, "rescue_live_events_total")}`;
 }
