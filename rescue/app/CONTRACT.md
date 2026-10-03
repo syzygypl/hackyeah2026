@@ -55,7 +55,7 @@ After `ready` the shell sends the current `step` and `select` (and `run` if it c
 |---|---|
 | 3D | `../web/3d/index.html?embed=scene&sc=<sc>&run=<url>&step=<i>` - the shell uses `embed=scene` (3D buttons Kino/Trudność/Las..., no timeline, no progress panel). `embed=1` hides header and side panels, `embed=bare` leaves only the scene; `runInline=1` = run from sessionStorage |
 | Patrol (Teren, role Ratownik) | `../web/patrol/index.html?embed=1&api=<origin>&run=<run url>&team=<id>` |
-| 2D | `../web/index.html?embed=1&parentOrigin=<origin>` (in progress, AI Marcina) |
+| 2D | `../web/index.html?embed=scene&sc=<sc>&parentOrigin=<origin>&run=<url>&step=<i>` - the shell uses `embed=scene` (map, legend, map controls; no step card, no timeline). `embed=1` = previous embed with side panels |
 
 Run URLs per backend: Studio live story `run=/story&scenario=/story/scenario` (with `sc=zawrat` for terrain); rescue-server `run=/api/run/<sc>`; static `sc=<sc>` only.
 
