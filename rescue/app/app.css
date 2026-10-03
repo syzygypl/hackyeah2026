@@ -336,10 +336,10 @@ body.role-operator header #status{display:none}
 #centrumLink:hover{border-color:var(--rl-accent)}
 
 /* "+ Nowa akcja" (AI Michała): operator starts a new search - who, where, when -> /story/new. Tokens only. */
-#newActionBtn{min-height:40px;border-radius:20px;padding:0 16px;font-weight:700;background:var(--rl-danger);color:var(--rl-on-danger);border:0;white-space:nowrap}
+#newActionBtn{min-height:40px;border-radius:20px;padding:0 16px;font-weight:600;white-space:nowrap}
 body.role-ratownik #newActionBtn{display:none}
-#newAction{border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);background:var(--rl-panel-solid);color:var(--rl-ink);box-shadow:var(--rl-shadow);width:min(560px,94vw);padding:18px 20px}
-#newAction::backdrop{background:rgba(20,24,27,.45)}
+#newAction{border:0;border-radius:20px;background:var(--rl-panel-solid);color:var(--rl-ink);box-shadow:var(--rl-shadow);width:min(560px,94vw);padding:18px 20px}
+#newAction::backdrop{background:color-mix(in srgb,var(--rl-ink) 55%,transparent)}
 #newAction h2{margin:0 0 10px;font-size:var(--rl-fs-xl)}
 #newAction label{display:block;margin:12px 0 4px;font-size:var(--rl-fs-s);color:var(--rl-mute);text-transform:uppercase;letter-spacing:.5px}
 #newAction input,#newAction select{width:100%;box-sizing:border-box;min-height:42px;padding:8px 10px;border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius);background:var(--rl-card);color:var(--rl-ink);font:inherit}
