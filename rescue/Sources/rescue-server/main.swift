@@ -253,7 +253,15 @@ func landing() -> Data {
 struct LiveFeedEvent: Codable, Sendable {
     var seq = 0, kind = "", t = "", by = "operator", title = ""
     var team: String?, type: String?, segmentId: String?, note: String?, lat: Double?, lon: Double?, sc: String?
+    var acked: Bool?   // set on the way out of GET /api/live (operator ACK, see Acks)
 }
+/// operator acknowledgements of feed events (POST /api/ack): seq numbers, in memory
+actor Acks {
+    var seqs: Set<Int> = []
+    func add(_ s: [Int]) -> Int { let before = seqs.count; seqs.formUnion(s); return seqs.count - before }
+    func has(_ s: Int) -> Bool { seqs.contains(s) }
+}
+let acks = Acks()
 /// The operator/rescuer event feed. Shared deploy: rows in the store (every instance sees one sequence). Laptop: in memory.
 actor LiveFeed {
     var seq = 0
@@ -426,7 +434,9 @@ func addClue(_ q: Req) async -> Data {
     return response("200 OK", json, Data(#"{"ok":true,"seq":\#(e.seq),"event":\#(jsonString(e))}"#.utf8))
 }
 func liveFeedData(_ since: Int, sc: String?) async -> Data {
-    let (seq, evs) = await liveFeed.since(since, sc: sc)
+    let (seq, raw) = await liveFeed.since(since, sc: sc)
+    var evs: [LiveFeedEvent] = []
+    for var e in raw { e.acked = await acks.has(e.seq); evs.append(e) }
     let asg = String(decoding: await assignmentsByTeam(sc: sc), as: UTF8.self)
     let now = ISO8601DateFormatter().string(from: Date())
     return response("200 OK", json, Data(#"{"seq":\#(seq),"now":"\#(now)","events":\#(jsonString(evs)),"assignments":\#(asg)}"#.utf8))
@@ -650,7 +660,7 @@ func route(_ q: Req) async -> Data {
         Metrics.shared.inc("client_reports_total", ["client_id": cid, "team": team])
         Metrics.shared.set("client_last_report_timestamp_seconds", ["client_id": cid, "team": team], Date().timeIntervalSince1970)
         print("[report \(r.parsedBy) \(r.latencyMs) ms] \(text) -> \(r.hints.map(\.type))")
-        var fe = LiveFeedEvent(kind: "report", by: "ratownik", title: "Meldunek: \(text.prefix(80))"); fe.team = team == "-" ? nil : team; fe.note = String(text.prefix(200))
+        var fe = LiveFeedEvent(kind: "report", by: "ratownik", title: "Meldunek: \(text.prefix(80))"); fe.team = team == "-" ? nil : team; fe.note = String(text.prefix(200)); fe.sc = reportSc
         _ = await liveFeed.add(fe)
         return response("200 OK", json, Data(jsonString(r).utf8))
 
@@ -665,6 +675,12 @@ func route(_ q: Req) async -> Data {
         await feedDispatch(b); return response("200 OK", json, await studio.assignTeam(b))
     case ("POST", "/api/clue"): return await addClue(q)
     case ("GET", "/api/live"): return await liveFeedData(Int(q.query["since"] ?? "") ?? 0, sc: scParam(q))
+    case ("POST", "/api/ack"):   // {sc?, seq?}: operator confirms one feed event, or every event of the incident so far
+        let o = jsonObject(q.body)
+        let seqs: [Int]
+        if let one = (o["seq"] as? NSNumber)?.intValue { seqs = [one] } else { seqs = (await liveFeed.since(0, sc: scParam(q, o)).1).map(\.seq) }
+        let n = await acks.add(seqs)
+        return response("200 OK", json, Data(#"{"ok":true,"acked":\#(n)}"#.utf8))
     case ("GET", "/api/incidents"): return await incidentsData()
     case ("GET", "/api/teams"): return await teamsData()
     case ("POST", "/api/teams/assign"): return await rosterAssign(q)

@@ -372,3 +372,14 @@ body.role-ratownik #shareBtn{display:none}
 #shareDlg input{width:100%;box-sizing:border-box;margin:6px 0;padding:6px 8px;border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius);background:var(--rl-card);color:var(--rl-ink);font:inherit;font-size:var(--rl-fs-s)}
 #shareDlg .shfoot{display:flex;gap:8px;margin-top:12px}
 @media (max-width:520px){#shareDlg .shr{flex-direction:column;align-items:stretch}#shareDlg .shq{margin:0 auto}}
+
+/* LIVE blinks only at the end of the timeline (Mateusz): back in time the dot stays still and the badge dims */
+.lbadge.live:not(.atend) i{animation:none;opacity:.55}
+.lbadge.live:not(.atend){opacity:.75}
+
+/* operator ACK of live messages (Mateusz) */
+.lfi.unack{border-left:3px solid var(--rl-danger);padding-left:6px;font-weight:600}
+.lfi .ack1{min-height:26px;padding:0 9px;border-radius:13px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ok);font-weight:700;cursor:pointer}
+.lfi .ackd{color:var(--rl-ok)}
+.ackrow{margin:4px 0 6px}
+#liveAckAll{min-height:32px;border-radius:16px;padding:0 12px}

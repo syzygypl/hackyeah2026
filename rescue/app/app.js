@@ -790,7 +790,11 @@ function renderLiveHead() {
   const tip = { LIVE: "Akcja na żywo: zmiany z terenu i od operatora przeliczają mapę co kilka sekund", PLAN: "Plan / edycja historii - nie akcja na żywo", ODTWORZENIE: "Odtworzenie zapisanego scenariusza - bez połączenia na żywo" }[mode];
   for (const [b, t] of [["modeBadge", "scenTitle"], ["rModeBadge", "rScenTitle"]]) {
     const el = $(b); if (!el) continue;
-    el.className = "lbadge " + mode.toLowerCase(); el.innerHTML = `<i></i>${mode}`; el.title = tip;
+    // LIVE blinks only at the live moment (timeline at its end); scrolled back in time = steady dot + hint (Mateusz)
+    const atEnd = !D() || !D().steps || store.step >= D().steps.length;
+    el.className = "lbadge " + mode.toLowerCase() + (atEnd ? " atend" : "");
+    el.innerHTML = `<i></i>${mode}`;
+    el.title = mode === "LIVE" && !atEnd ? "Oglądasz wcześniejszy moment akcji - przewiń oś czasu do końca, aby wrócić na żywo" : tip;
     $(t).textContent = scenTitle(); $(t).title = (D() && D().incident) || "";
   }
   if ($("liveBox")) $("liveBox").hidden = !(store.backend === "api" && live.ok) || store.mode === "edycja";
@@ -799,9 +803,23 @@ const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : String(d
 function renderLiveFeed() {
   const el = $("liveFeed"); if (!el) return;
   const K = { clue: "ślad", dispatch: "przydział", report: "meldunek" };
-  el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi"><span class="lft">${esc(hhmm(e.t))}</span> <b>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}</div>`).join("")
+  // operator ACK (Mateusz): unconfirmed messages stand out, ✓ confirms one, "Potwierdź wszystkie" confirms the rest (POST /api/ack)
+  const unacked = live.events.filter((e) => !e.acked && e.by !== "operator");
+  el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"><span class="lft">${esc(hhmm(e.t))}</span> <b>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`).join("")
     || `<div class="help">Brak zdarzeń na żywo. Dodaj ślad albo wyślij zespół - mapa przeliczy się od razu.</div>`;
+  if ($("ackCount")) $("ackCount").textContent = unacked.length ? `Niepotwierdzone: ${unacked.length}` : "Wszystko potwierdzone";
+  if ($("liveAckAll")) $("liveAckAll").disabled = !unacked.length;
+  el.querySelectorAll(".ack1").forEach((b) => b.onclick = () => ackEvents(+b.dataset.seq));
 }
+async function ackEvents(seq) {
+  try {
+    await api("/api/ack", seq ? { seq } : { sc: live.sc });
+    for (const e of live.events) if (!seq || e.seq === seq) e.acked = true;
+    renderLiveFeed();
+    if (!seq) toast("Wszystkie wiadomości potwierdzone");
+  } catch (e) { toast(plErr(e)); }
+}
+if ($("liveAckAll")) $("liveAckAll").onclick = () => ackEvents(null);
 async function pollLive() {
   clearTimeout(pollLive.h);
   const sc = store.backend === "api" ? store.scenario : null;
@@ -862,7 +880,7 @@ $("liveSend").onclick = () => {
   $("ldSeg").innerHTML = S.segments.map((s, k) => `<option value="${esc(s.id)}" ${s.id === store.selSeg ? "selected" : ""}>#${k + 1} ${esc(s.id)} ${esc(s.name)}</option>`).join("");
 };
 $("ldGo").onclick = async () => { const t = $("ldTeam").value, s = $("ldSeg").value; if (!t || !s) return; await assignTeam(t, s); $("liveDispatch").hidden = true; toast(`${t} → ${s}`); pollLive(); };
-subs.push((why) => { if (why === "load" || why === "mode" || why === "run" || why === "edit") renderLiveHead(); });
+subs.push((why) => { if (why === "load" || why === "mode" || why === "run" || why === "edit" || why === "step") renderLiveHead(); });
 
 // ---------- wiring
 subs.push((why) => {

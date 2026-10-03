@@ -406,6 +406,20 @@
     } catch {}
   }
   setInterval(pollEnded, 20000); pollEnded();
+  // Operator ACK of this team's reports (GET /api/live, "acked"): short confirmation on the phone
+  let lastAck = store.get("rescue-patrol-lastack", 0);
+  async function pollAcks() {
+    try {
+      const r = await fetch(API + "/api/live?since=0" + (SCN ? "&sc=" + encodeURIComponent(SCN) : ""), { headers: headers(), signal: AbortSignal.timeout(5000) });
+      if (!r.ok) return;
+      const mine = ((await r.json()).events || []).filter((e) => e.kind === "report" && e.team === team && e.acked && e.seq > lastAck);
+      if (!mine.length) return;
+      lastAck = Math.max(...mine.map((e) => e.seq)); store.set("rescue-patrol-lastack", lastAck);
+      toast(mine.length > 1 ? `Operator potwierdził ${mine.length} meldunki` : "Operator potwierdził Twój meldunek ✓");
+      $("last").textContent = $("last").textContent.replace(/ · potwierdzone$/, "") + " · potwierdzone";
+    } catch {}
+  }
+  setInterval(pollAcks, 15000);
   $("sendFree").onclick = () => { const t = $("free").value.trim(); if (!t) return; report(`${shortTeam()}: ${t}`); $("free").value = ""; $("more").close(); };
   navigator.geolocation?.watchPosition(p => {
     window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
