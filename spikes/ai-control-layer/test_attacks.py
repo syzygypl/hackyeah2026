@@ -845,6 +845,19 @@ class JudgeCriteriaByPhase(unittest.TestCase):
             self.fake.stop()
 
 
+class WarmupAll(unittest.TestCase):
+    def test_warmup_loads_every_referenced_model(self):  # F9
+        fake = FakeOllama({QWEN: "q", LLAMA: "l", GRANITE: "g"}, reply="safe")
+        try:
+            layer, s, _ = fresh(edit=semantic_env(fake.url, warmup_timeout_ms=2000))
+            layer._load_policy()
+            out = layer.semantic.warmup(layer.policy["controls"]["semantic"], layer.policy["models"]["allowed"])
+            self.assertEqual({m for _, m, *_ in out}, {QWEN, LLAMA, GRANITE})  # prefilter, its fallback, judge
+            self.assertEqual(layer.semantic.warm, {QWEN, LLAMA, GRANITE})
+        finally:
+            fake.stop()
+
+
 class SemanticCache(unittest.TestCase):
     def tearDown(self):
         self.fake.stop()
@@ -1405,7 +1418,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization", "InjectionNotHiddenByPii": "injection not hidden behind PII",
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "AuditPrivacy": "audit privacy: HMAC, no bare PII hashes (7c)", "Performance": "performance"}
 
 

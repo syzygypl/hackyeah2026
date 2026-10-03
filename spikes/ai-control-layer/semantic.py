@@ -481,26 +481,43 @@ class SemanticGuard:
         return res
 
     def warmup(self, cfg, allowed=None):
-        """Load every tier's first usable model into memory (cold start) so request-time timeouts stay tight."""
+        """F9: load EVERY model the policy can call (prefilter + fallbacks, judge, consensus guards, arbiter) so no
+        request meets a cold load. Warm-up calls run in parallel; Ollama loads different models concurrently."""
         if cfg.get("backend", "auto") == "heuristic":
             return []
         self._refresh(cfg.get("ollama_url", "http://localhost:11434"))
         if self.installed is None:
             return [("all", "ollama", "unreachable", 0)]
-        done = []
+        roles = []
         for name in ("prefilter", "judge"):
-            stage = cfg.get(name) or {}
-            if not stage.get("enabled", True) or not stage.get("model"):
+            st = cfg.get(name) or {}
+            if st.get("enabled", True):
+                roles += [(name, m) for m in [st.get("model")] + list(st.get("fallback_models", [])) if m]
+        cc = cfg.get("consensus") or {}
+        roles += [("consensus", g["model"]) for g in list(cc.get("guards", [])) + list(cc.get("high_risk_guards", []))]
+        if (cc.get("arbiter") or {}).get("model"):
+            roles.append(("arbiter", cc["arbiter"]["model"]))
+        seen, todo = set(), []
+        for role, model in roles:
+            if model in seen:
                 continue
-            for model, digest in self._candidates(stage, cfg, allowed, []):
-                t = time.perf_counter_ns()
-                try:
-                    self._call(cfg, model, "warm-up", max(stage.get("timeout_ms", 1000), cfg.get("warmup_timeout_ms", 20000)) / 1000)
-                    self.warm.add(model)
-                    done.append((name, model, digest[:12], round((time.perf_counter_ns() - t) / 1e6)))
-                    break
-                except Exception as e:
-                    done.append((name, model, f"failed: {type(e).__name__}", round((time.perf_counter_ns() - t) / 1e6)))
+            seen.add(model)
+            cands = self._candidates({"model": model}, cfg, allowed, [])
+            if cands:
+                todo.append((role, cands[0]))
+        done = [None] * len(todo)
+
+        def warm(i, role, model, digest):
+            t = time.perf_counter_ns()
+            try:
+                self._call(cfg, model, "warm-up", cfg.get("warmup_timeout_ms", 20000) / 1000)
+                self.warm.add(model)
+                done[i] = (role, model, digest[:12], round((time.perf_counter_ns() - t) / 1e6))
+            except Exception as e:
+                done[i] = (role, model, f"failed: {type(e).__name__}", round((time.perf_counter_ns() - t) / 1e6))
+        threads = [threading.Thread(target=warm, args=(i, r, m, d)) for i, (r, (m, d)) in enumerate(todo)]
+        [th.start() for th in threads]
+        [th.join() for th in threads]
         return done
 
     def _fail(self, res, name, stage, err, mode):
