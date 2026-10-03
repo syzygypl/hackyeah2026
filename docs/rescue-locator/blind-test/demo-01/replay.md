@@ -52,15 +52,16 @@ Czas scenariusza / czas demo. Uzupełniane z wątku.
 | - | ... | AI Michała: pierścienie startują od schroniska 11:50, a powinny od ostatniego znanego punktu (świadek 13:40, S5). Silnik zamrożony do odsłonięcia, zasadę LKP szukający stosują ręcznie | kierownik, mapa z pierścieniami | 14:52 |
 | ... | ... | Przeliczenie: top 3 = ... | kierownik, mapa | |
 | ... | ... | ... (kolejne fale) | | |
-| ... | ... | ZNALEZIONO albo koniec czasu | widok patrolu | |
+| 19:35-00:55 | ... | Fala 3: start od ostatniego znanego punktu (świadek 13:40, S5), zastosowany ręcznie. Dron -> S12 (planer: S3 trzeci raz); pies -> S5; TOPR A -> S4; TOPR B -> S7 | kierownik, przydział zespołów | 14:57 |
+| 19:35 | ... | **ZNALEZIONO w S12** (dron). Pozostałe: nic. Koniec rundy po 12 przydziałach | widok patrolu -> kierownik | ok. 14:58 |
 | - | ... | Odsłonięcie: miejsce, sól, hash zgodny? | terminal | (po odsłonięciu) |
 
 ## Metryki (po odsłonięciu)
 
 | Metryka | Wartość |
 |---|---|
-| Znaleziony | |
-| Patrole do znalezienia | |
+| Znaleziony | tak, S12, fala 3, dron (miejsce po odsłonięciu) |
+| Patrole do znalezienia | 12 przydziałów w 3 falach |
 | Ranga prawdziwego segmentu przed 1. patrolem | |
 | Procent obszaru przeszukany do znalezienia | |
 | Czas do znalezienia vs naiwne przeszukiwanie | |
@@ -69,6 +70,6 @@ Czas scenariusza / czas demo. Uzupełniane z wątku.
 
 ## Lektor (30 s, PL)
 
-Wersja robocza. Nawiasy kwadratowe uzupełniamy po odsłonięciu, porażkę mówimy wprost.
+Nawias kwadratowy uzupełniamy po odsłonięciu.
 
-> Nie wiemy, gdzie jest [imię]. Wie tylko AI, które ją schowało, i zapisało to miejsce jako hash, zanim zaczęliśmy. Mamy to, co ratownik miałby naprawdę: plan od rodziny, auto na parkingu, sektor BTS, pogodę. Mapa wskazuje trzy sektory. Wysyłamy patrole. "Nic." Mapa się przelicza. [Po N falach: znaleziona w sektorze X / Nie znaleźliśmy jej w sześć godzin.] Odsłonięcie: hash się zgadza. [Metryka jednym zdaniem.]
+> Nie wiemy, gdzie jest Ewa. Wie tylko AI, które ją schowało, i zapisało to miejsce jako hash, zanim zaczęliśmy. Mamy to, co ratownik miałby naprawdę: plan od partnera, świadka w schronisku, sektor BTS, mgłę. Dwie fale patroli, osiem razy "nic". Wtedy liczymy od ostatniego miejsca, gdzie ktoś ją widział, a nie od schroniska. Trzecia fala: dron nad Szpiglasową Przełęczą. Znaleziona. Uczciwie: planer wysłałby drona gdzie indziej, tę poprawkę zrobiliśmy ręcznie. [Odsłonięcie: hash się zgadza.]

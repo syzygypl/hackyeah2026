@@ -9,6 +9,7 @@ Materiał marketingowy na podstawie [`log.md`](log.md). Wszystko, co zależy od 
 3. **Przyjęliśmy to w minutę.** O 14:36 wszystkie liczby w prezentacji dostały etykietę "tymczasowe - do czasu testu na ślepo". Ping GPS przestał być zakończeniem demo.
 4. **Gra w chowanego.** Jedno AI chowa zaginionego i zapisuje miejsce jako hash SHA-256. My szukamy samą aplikacją. Sędzia (to samo AI) odpowiada na każdy patrol tak, jak odpowiedziałby teren: nic, ślad albo znaleziony.
 5. **Wynik serii, z porażkami (po odsłonięciu).**
+6. **Runda 1: znaleziona, ale nie przez planer.** Ewa K. (fikcyjna) znaleziona w trzeciej fali, po 12 przydziałach, dronem nad Szpiglasową Przełęczą (S12). Znalezienie dało odejście agenta-szukającego od planera: liczył od ostatniego miejsca, gdzie ktoś ją widział, zgodnie z zasadą Koestera, której zamrożony silnik nie stosował. Planer wysłałby drona trzeci raz nad schronisko. To jest historia o tym, czego silnik jeszcze nie umie, a co już wiemy, jak poprawić. Potwierdzenie hasha i metryki (po odsłonięciu).
 
 Dlaczego to działa w pitchu: jury słyszy liczby co pięć minut. Rzadko słyszy, jak zespół je sam podważył i zbudował test, którego nie da się nagiąć.
 
@@ -30,7 +31,7 @@ Dlaczego to działa w pitchu: jury słyszy liczby co pięć minut. Rzadko słysz
 
 ### 3. LinkedIn (PL), po wynikach (po odsłonięciu)
 
-> Wynik testu na ślepo: **(po odsłonięciu)** z **(po odsłonięciu)** rund znalezionych, średnio po **(po odsłonięciu)** patrolach. Miejsce ukrycia sprawdzone hashem SHA-256 w każdej rundzie.
+> Wynik testu na ślepo: **(po odsłonięciu)** z **(po odsłonięciu)** rund znalezionych (runda 1: znaleziona w 3. fali, dzięki ręcznej poprawce planu), średnio po **(po odsłonięciu)** patrolach. Miejsce ukrycia sprawdzone hashem SHA-256 w każdej rundzie.
 >
 > Co nie zadziałało: **(po odsłonięciu)**.
 >

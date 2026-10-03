@@ -134,7 +134,24 @@ Agent-szukający AI Mateusza odszedł od planera w 1 z 4 przydziałów fali 2 (T
 
 **Decyzja AI Mateusza jako koordynatora:** silnik zostaje zamrożony do odsłonięcia. Szukający mogą stosować zasadę LKP ręcznie przy wyborze patroli, a każde odejście od planera jest zapisywane z powodem.
 
-**Fala 3:** w obliczeniach. ...
+**Fala 3** (wysłana w wątku ok. 14:57 przez AI Mateusza, z agenta-szukającego).
+
+Uzasadnienie agenta-szukającego: punkt startu = ostatni znany punkt (świadek 13:40, S5), zastosowany ręcznie zgodnie z zasadą zamrożonego silnika. Nocleg w pobliżu miejsca, gdzie gubi się szlak. S12 i S13 dominują w części okręgu BTS, która leży w siatce (spostrzeżenie AI Michała).
+
+Rozważany i nie wysłany wariant: dron S5, pies S12 + górna część S13, TOPR A poza siatką, TOPR B S7. Sędzia orzekł, że zaginiona jest w obrębie mapy (nie poza siatką).
+
+| # | Start | Zespół | Planer proponował | Wysłane | POD | Odpowiedź sędziego |
+|---|---|---|---|---|---|---|
+| 9 | 19:35 | Dron | S3 (trzeci raz) | **S12** (odejście od planera) | 0,35 | **ZNALEZIONO w S12** |
+| 10 | 21:50 | Pies | S2 | **S5** (odejście od planera) | 0,55 | nic |
+| 11 | 23:10 | Patrol TOPR A | S4 | S4 (jak planer) | 0,46 | nic |
+| 12 | 00:55 | Patrol TOPR B | S5 | **S7** (odejście od planera) | 0,40 | nic |
+
+**ok. 14:58, wynik rundy:** ZNALEZIONO w fali 3, przy 12. przydziale łącznie. Dron w S12, start 19:35.
+
+**Uczciwie:** znalezienie przyszło z odejścia agenta-szukającego od planera, opartego na zasadzie Koestera (start od ostatniego znanego punktu), której zamrożony silnik nie stosował. Planer silnika wysłałby drona po raz trzeci do S3. Uwaga: S12 przeszły już dwa patrole w fali 1 (łączny POD ok. 0,70) z wynikiem "nic". Dopiero trzecie przejście znalazło zaginioną, co jest zgodne z POD poniżej 1.
+
+**Odsłonięcie:** sól, `reveal.py`, metryki i pełna oś czasu (po odsłonięciu).
 
 ### Uwagi do silnika (backlog, wdrażane dopiero po odsłonięciu)
 
@@ -150,14 +167,14 @@ Znalezione w trakcie rundy. Nie poprawiamy silnika w trakcie gry, żeby nie dopa
 
 - **Miejsce i sól:** ...
 - **Weryfikacja hasha:** ... (zgodny / niezgodny)
-- **Wynik:** znaleziony / nieznaleziony
+- **Wynik:** znaleziona w S12, fala 3, dron, po 12 przydziałach w 3 falach (potwierdzenie miejsca po odsłonięciu)
 
 ### Metryki
 
 | Metryka | Wartość |
 |---|---|
-| Znaleziony | ... |
-| Liczba patroli do znalezienia | ... |
+| Znaleziony | tak, fala 3, S12, dron (miejsce po odsłonięciu) |
+| Liczba patroli do znalezienia | 12 przydziałów w 3 falach; znalazł dron z fali 3 |
 | Ranga prawdziwego segmentu przed pierwszym patrolem | ... |
 | Procent obszaru przeszukany do znalezienia | ... |
 | Czas do znalezienia vs naiwne przeszukiwanie | ... |
