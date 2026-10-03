@@ -7,7 +7,7 @@
 .unit.ok{border-left-color:var(--rl-ok)}
 .u-top{display:flex;gap:8px;align-items:baseline}
 .u-top h3{margin:0;font-size:var(--rl-fs-l);line-height:1.2}
-.u-top .id{font-family:var(--rl-mono);font-size:var(--rl-fs-xs);color:var(--rl-mute);margin-left:auto}
+.u-top .id{font-family:var(--rl-mono);font-size:var(--rl-fs-xs);color:var(--rl-mute);margin-left:auto;flex:none;border:1px solid var(--rl-line);border-radius:4px;padding:0 5px;white-space:nowrap}   /* callsign: small secondary tag (raw id only in the tooltip) */
 .u-sub{font-size:var(--rl-fs-s);color:var(--rl-ink-2);margin:2px 0 6px}
 .st{font-size:var(--rl-fs-xs);font-weight:700;padding:1px 6px;border-radius:6px;border:1px solid var(--rl-line-strong);color:var(--rl-ink-2)}
 .st.akcja{border-color:var(--rl-accent);color:var(--rl-accent)}

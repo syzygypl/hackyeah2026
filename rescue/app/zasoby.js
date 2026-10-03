@@ -41,10 +41,11 @@ function render() {
   });
 }
 async function addEvent(id, sc, type, label) {
-  const note = type === "fault" ? prompt(`Usterka: ${id} - opis (krótko)`, "") : "";
+  const nm = ((state.data && state.data.units || []).find((u) => u.id === id) || {}).name || id;   // people read the unit name, not its id
+  const note = type === "fault" ? prompt(`Usterka: ${nm} - opis (krótko)`, "") : "";
   if (note === null) return;
   const body = { type, by: "operator" }; if (note) body.note = note; if (sc) body.sc = sc; if (state.at) body.at = state.at;
-  try { const r = await api(`/api/inventory/${encodeURIComponent(id)}/event`, body); toast(`${id}: ${label} (${r.event.at}) zapisane`); load(); }
+  try { const r = await api(`/api/inventory/${encodeURIComponent(id)}/event`, body); toast(`${nm}: ${label} (${r.event.at}) zapisane`); load(); }
   catch (e) { toast("Nie zapisano: " + e.message, 4000); }
 }
 async function init() {
