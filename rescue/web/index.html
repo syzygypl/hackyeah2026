@@ -3,6 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* /app is the canonical screen: a direct visit (not inside the app's iframe, no ?embed) opens the app on the same scenario,
+   step and view. ?standalone=1 keeps this page; blind-test rounds stay here (the app does not list them). */
+(function () {
+  var q = new URLSearchParams(location.search), sc = q.get('sc') || '';
+  if (window.top !== window || q.has('embed') || q.has('standalone') || /blind/i.test(sc)) return;
+  var a = new URLSearchParams({ mode: 'akcja', view: '2d' });
+  if (sc) a.set('sc', sc);
+  if (q.get('step')) a.set('step', q.get('step'));
+  location.replace('../app/?' + a);
+})();
+</script>
 <title>Rescue Locator - mapa prawdopodobieństwa</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
 <link rel="stylesheet" href="style.css">
