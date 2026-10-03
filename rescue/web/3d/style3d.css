@@ -258,3 +258,13 @@ body.embed .tick.past b { background: var(--rl-accent); }
 body.embed #game .stat, body.embed #game code { background: var(--rl-panel-2, #1b242c); }
 body.embed .lbl3d { background: color-mix(in srgb, var(--rl-panel, #151c22) 90%, transparent); color: var(--ink); border-color: var(--line); }
 body.embed .tip, body.embed .toast { background: var(--rl-panel, #151c22); color: var(--ink); }
+
+/* evidence toggle */
+#offbanner { top: 74px; left: 50%; transform: translateX(-50%); max-width: min(640px, calc(100vw - 760px)); padding: 7px 12px; font-size: 12.5px; border-left: 4px solid #b8860b; z-index: 6; }
+#offbanner .btn.sm { margin: 0 0 0 8px; }
+#signals .use { display: flex; gap: 10px; align-items: center; margin-top: 4px; font-size: 11.5px; color: var(--mute); }
+#signals .use label { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+#signals .use input { accent-color: var(--blue); margin: 0; }
+#signals .lnk { background: none; border: 0; padding: 0; font: inherit; color: var(--blue); cursor: pointer; text-decoration: underline; }
+#signals li.off .tt { text-decoration: line-through; color: var(--mute); }
+@media (max-width: 1250px) { #offbanner { left: 364px; right: 12px; transform: none; max-width: none; } }

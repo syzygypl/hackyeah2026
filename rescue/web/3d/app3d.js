@@ -182,6 +182,26 @@ function influence(k) {
   return best && best.d > 0.004 ? best : null;
 }
 
+// ---------- evidence toggle ("uwzględnij"), same model as 2D compute() ----------
+// A hint's layer is recovered as poaGrid[k] / poaGrid[k-1] (uniform prior for k = 0); switching a hint off divides the
+// current map by its layer and renormalises. Exact for the engine's multiplicative model up to run.json rounding.
+const OFF = new Set(); // step indices switched off
+const layerCache = new Map();
+function layerOf(k) {
+  if (layerCache.has(k)) return layerCache.get(k);
+  const N = R.rows * R.cols, L = new Float64Array(N), prev = k ? R.steps[k - 1].poaGrid : null, cur = R.steps[k].poaGrid;
+  for (let i = 0; i < N; i++) { const a = prev ? prev[i] : 1 / N, b = cur[i]; L[i] = a > 0 && b > 0 ? b / a : 1; }
+  layerCache.set(k, L); return L;
+}
+function gridFor(i) {
+  const off = [...OFF].filter((k) => k <= i);
+  if (!off.length) return null;
+  const p = Float64Array.from(R.steps[i].poaGrid);
+  for (const k of off) { const L = layerOf(k); for (let c = 0; c < p.length; c++) p[c] /= L[c]; }
+  let sum = 0; for (const v of p) sum += v; for (let c = 0; c < p.length; c++) p[c] /= sum;
+  return p;
+}
+
 // ---------- operation progress (from the timeline, nothing new is computed about the person) ----------
 const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
 const PROG = (() => {
@@ -584,12 +604,19 @@ function renderSignals(i) {
   list.innerHTML = EVENTS.map((e, k) => {
     const [badge, col, name] = sigOf(e), inf = e.step >= 0 ? influence(e.step) : null;
     const cls = e.step < 0 || e.step > i ? 'future' : e.step === i ? 'cur' : '';
-    return `<li class="${cls}" data-ev="${k}"><span class="ic" style="background:${col}">${esc(badge)}</span><div><div class="tt">${esc(e.title)}</div><div class="meta"><span class="t">${esc(e.at)}</span>${esc(name)}${e.wave ? ` · fala ${e.wave}` : ''}${e.pod ? ` · POD ${Math.round(e.pod * 100)}%` : ''}${e.step < 0 ? ' · poza osią czasu' : ''}</div>${inf ? `<div class="inf">wpływ: ${esc(inf.name)} +${(inf.d * 100).toFixed(1)} pp</div>` : ''}</div></li>`;
+    const ctl = e.step >= 0 ? `<div class="use"><label><input type="checkbox" data-off="${e.step}" ${OFF.has(e.step) ? '' : 'checked'}> uwzględnij</label><button class="lnk" data-go="${Math.max(0, e.step - 1)}">Przed</button><button class="lnk" data-go="${e.step}">Po</button></div>` : '';
+    return `<li class="${cls}${OFF.has(e.step) ? ' off' : ''}" data-ev="${k}"><span class="ic" style="background:${col}">${esc(badge)}</span><div><div class="tt">${esc(e.title)}</div><div class="meta"><span class="t">${esc(e.at)}</span>${esc(name)}${e.wave ? ` · fala ${e.wave}` : ''}${e.pod ? ` · POD ${Math.round(e.pod * 100)}%` : ''}${e.step < 0 ? ' · poza osią czasu' : ''}</div>${inf ? `<div class="inf">wpływ: ${esc(inf.name)} ${pp(inf.d)}</div>` : ''}${ctl}</div></li>`;
   }).join('');
   list.querySelector('li.cur')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 $('signals').addEventListener('click', (ev) => {
-  const li = ev.target.closest('li'); if (!li || G.phase !== 'off') return;
+  if (G.phase !== 'off') return;
+  const cb = ev.target.closest('input[data-off]');
+  if (cb) { const k = +cb.dataset.off; if (cb.checked) OFF.delete(k); else OFF.add(k); const cur = STEP; STEP = -1; setStep(cur, false); ev.stopPropagation(); return; }
+  if (ev.target.closest('label')) return; // label click is forwarded to the checkbox
+  const go = ev.target.closest('[data-go]');
+  if (go) { stopPlay(); setStep(+go.dataset.go); return; }
+  const li = ev.target.closest('li'); if (!li) return;
   if (li.dataset.step) { stopPlay(); setStep(+li.dataset.step); return; }
   const e = EVENTS[+li.dataset.ev]; if (e.step >= 0) { stopPlay(); setStep(e.step); }
   const a = anchorOf(e) || e.point; if (a && inside(a)) flyTo(v3(a[0], a[1]), e.points?.length > 20 ? 4.2 : 2.6);
@@ -597,7 +624,16 @@ $('signals').addEventListener('click', (ev) => {
 
 // ---------- step state ----------
 let STEP = -1;
-const searchedUpTo = (i) => { const s = new Set(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i) (e.segments || []).forEach((id) => s.add(id)); }); return s; };
+const searchedUpTo = (i) => { const s = new Set(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) (e.segments || []).forEach((id) => s.add(id)); }); return s; };
+function renderOffBanner(i) {
+  const off = [...OFF].filter((k) => k <= i).sort((a, b) => a - b), el = $('offbanner');
+  el.hidden = !off.length;
+  if (!off.length) return;
+  const short = (t) => (t.length > 34 ? t.slice(0, 33) + '…' : t);
+  el.innerHTML = `Widok przeliczony w przeglądarce bez: ${off.map((k) => `<b>${esc(short(R.steps[k].label))}</b>`).join(', ')} <button class="btn sm" id="resetoff">Przywróć</button>`;
+  $('resetoff').onclick = () => { OFF.clear(); const k = STEP; STEP = -1; setStep(k, false); };
+  $('rank-scope').textContent = `Przeliczony w przeglądarce bez ${off.length} ${off.length === 1 ? 'sygnału' : 'sygnałów'} (silnik: krok ${i + 1})`;
+}
 const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
 function drawTop(ranked) {
   disposeGroup(dyn.top);
@@ -612,21 +648,22 @@ function setStep(i, animate = true) {
   if (G.phase !== 'off') return;
   i = clamp(i, 0, R.steps.length - 1);
   const prev = STEP; STEP = i;
-  const s = R.steps[i], ranked = rankedOf(s.segments);
-  WASH = new Map(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i) (e.segments || []).forEach((id) => WASH.set(id, (WASH.get(id) || 0) + 1)); });
-  showHeat(heatOf(i), animate && prev >= 0);
+  const s = R.steps[i], OG = gridFor(i), ranked = OG ? rankedOf(segPoa(OG)) : rankedOf(s.segments);
+  WASH = new Map(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) (e.segments || []).forEach((id) => WASH.set(id, (WASH.get(id) || 0) + 1)); });
+  showHeat(OG ? heatCanvasGrid(OG) : heatOf(i), animate && prev >= 0);
   drawTop(ranked);
   disposeGroup(dyn.searched);
   const searched = searchedUpTo(i);
   for (const id of searched) { const g = segs.get(id); if (g) drapeRuns(ringLL(g.polygon), 0.018, { color: '#555b61', width: 1.8, opacity: 0.9, dashed: true, dash: 0.035, gap: 0.03 }, dyn.searched); }
   disposeGroup(dyn.signals);
-  EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i) drawSignal(e, e.step === i); });
+  EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) drawSignal(e, e.step === i); });
   drawTeams(s);
   if (foundPin) foundPin.visible = foundStep >= 0 && i >= foundStep;
   if (revealPin) revealPin.visible = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1);
   setMood(s.weather);
   renderUI(i, ranked, searched, prev);
   renderSignals(i);
+  renderOffBanner(i);
   if (SEL) document.querySelectorAll('#ranklist li').forEach((li) => li.classList.toggle('sel', li.dataset.seg === SEL));
   if (prev !== i && !fromParent) toParent({ type: 'step', i, t: s.t });
 }
