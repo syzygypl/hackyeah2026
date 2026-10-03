@@ -10,3 +10,9 @@ public struct SegmentSearchedProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension SegmentSearchedProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "SegmentSearched", label: "Segment przeszukany, nic",
+        help: "Zespół przeszukał segment(y) bez wyniku. POA x (1 - POD).",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("segments", "Segmenty", "segments"), ModuleField("pod", "POD (0-1)", "number", "0.7")])
+}

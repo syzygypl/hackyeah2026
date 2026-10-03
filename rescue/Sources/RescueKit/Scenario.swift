@@ -82,7 +82,7 @@ public struct Scenario: Codable, Sendable {
     public let ipp: Spot
     public var terrain: Terrain
     public let segments: [Segment]
-    public let truth: Spot           // used ONLY for the backtest number, never fed to the grid
+    public let truth: Spot?           // used ONLY for the backtest number, never fed to the grid
     public let events: [Event]
     public var resources: [Resource]? = nil
 

@@ -10,3 +10,10 @@ public struct TripPlanProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension TripPlanProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "TripPlan", label: "Plan wycieczki (od rodziny)",
+        help: "Tekst wywiadu (nazwy miejsc -> trasa po szlakach) albo trasa klikana na mapie.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("text", "Wywiad / opis trasy", "textarea", "Szedł z Palenicy przez Roztokę do Pięciu Stawów i na Zawrat."),
+                 ModuleField("radiusM", "Bufor trasy [m]", "number", "300")])
+}

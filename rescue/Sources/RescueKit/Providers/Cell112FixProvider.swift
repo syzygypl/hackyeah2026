@@ -10,3 +10,10 @@ public struct Cell112FixProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension Cell112FixProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "Cell112Fix", label: "Lokalizacja 112 (sektor BTS)",
+        help: "Zgrubna lokalizacja sieciowa z CPR 112.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("latlon", "Środek sektora (kliknij mapę)", "latlon"),
+                 ModuleField("radiusM", "Promień błędu [m]", "number", "1500")])
+}

@@ -10,3 +10,9 @@ public struct RatunekPingProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension RatunekPingProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "RatunekPing", label: "Ratunek: ping GPS",
+        help: "Pozycja z aplikacji Ratunek z dokładnością.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("latlon", "Pozycja (kliknij mapę)", "latlon"), ModuleField("radiusM", "Dokładność [m]", "number", "25")])
+}

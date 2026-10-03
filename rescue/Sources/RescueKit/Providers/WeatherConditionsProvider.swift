@@ -21,3 +21,12 @@ public struct WeatherConditionsProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension WeatherConditionsProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "WeatherConditions", label: "Warunki pogodowe (dla zespołów)",
+        help: "POD zespołów, uziemienie drona/śmigłowca, zegar hipotermii. Progi ilustracyjne.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("visibilityM", "Widzialność [m]", "number", "200"),
+                 ModuleField("windMs", "Wiatr [m/s]", "number", "8"), ModuleField("tempC", "Temperatura [°C]", "number", "2"),
+                 ModuleField("precip", "Opad", "select", "none", options: ["none", "rain", "snow"]),
+                 ModuleField("dark", "Ciemno", "bool", "false"), ModuleField("ice", "Oblodzenie", "bool", "false")])
+}

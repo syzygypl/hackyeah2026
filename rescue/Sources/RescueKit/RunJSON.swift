@@ -1,8 +1,7 @@
 import Foundation
-import RescueKit
 
 /// Contract output rescue/out/run.json (schema in README "Contracts"). Keep field names stable.
-func writeRunJSON(to url: URL, scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], summary: [String: Any]) throws {
+public func runJSONObject(scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], summary: [String: Any]) -> [String: Any] {
     let n = grid.count
     // Segment polygons: convex hull of member cell corners (nearest-seed regions are convex), [lon, lat] closed ring.
     let latStep = (s.bbox.north - s.bbox.south) / Double(grid.rows)
@@ -60,20 +59,25 @@ func writeRunJSON(to url: URL, scenario s: Scenario, grid: ProbabilityGrid, hint
         "steps": steps,
         "value": summary,
     ]
+    return doc
+}
+
+public func writeRunJSON(to url: URL, scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], summary: [String: Any]) throws {
+    let doc = runJSONObject(scenario: s, grid: grid, hints: hints, plans: plans, summary: summary)
     let data = try JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])
     try data.write(to: url)
 }
 
-func weatherJSON(_ p: SearchPlanner.Plan) -> [String: Any] {
+public func weatherJSON(_ p: SearchPlanner.Plan) -> [String: Any] {
     let c = p.conditions
     return ["visibilityM": c.visibilityM, "windMs": c.windMs, "tempC": c.tempC, "precip": c.precip,
             "dark": c.dark, "ice": c.ice, "note": c.note,
             "survival": ["hoursOut": (p.survival.hoursOut * 10).rounded() / 10, "level": p.survival.level, "text": p.survival.text]]
 }
-func resourceJSON(_ r: SearchPlanner.ResourceStatus) -> [String: Any] {
+public func resourceJSON(_ r: SearchPlanner.ResourceStatus) -> [String: Any] {
     ["id": r.id, "name": r.name, "type": r.type, "available": r.available, "reason": r.reason]
 }
-func assignmentJSON(_ a: SearchPlanner.Assignment) -> [String: Any] {
+public func assignmentJSON(_ a: SearchPlanner.Assignment) -> [String: Any] {
     func r(_ x: Double) -> Double { (x * 1000).rounded() / 1000 }
     return ["resourceId": a.resourceId, "segmentId": a.segmentId, "segmentName": a.segmentName,
             "travelMin": r(a.travelMin), "sweepMin": r(a.sweepMin), "etaMin": r(a.travelMin),

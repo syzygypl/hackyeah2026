@@ -11,3 +11,10 @@ public struct KoesterRingsProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension KoesterRingsProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "KoesterRings", label: "Profil osoby (pierścienie Koestera)",
+        help: "Kategoria osoby zaginionej i IPP. Kwantyle odległości ilustracyjne.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("category", "Kategoria", "select", "hiker", options: koesterCategories.keys.sorted()),
+                 ModuleField("latlon", "IPP (kliknij mapę)", "latlon")])
+}

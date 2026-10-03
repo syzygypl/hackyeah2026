@@ -69,6 +69,8 @@ public final class ProbabilityGrid {
             if let slope = t.slopeDeg, slope.count == c.count {
                 let sl = slope[i]
                 diff.append(sl > 45 ? .cliff : sl > 35 ? .slab : sl > 28 ? .scree : sl > 15 && c[i].lat > 49.225 ? .dwarfPine : .meadow)
+            } else if t.ridges.isEmpty {
+                diff.append(.meadow)   // flat fallback terrain: no relief known
             } else {
                 diff.append(dR < 120 ? .cliff : dR < 250 ? .slab : dR < 450 ? .scree : dR > 1000 ? .dwarfPine : .meadow)
             }

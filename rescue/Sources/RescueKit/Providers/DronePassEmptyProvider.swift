@@ -10,3 +10,9 @@ public struct DronePassEmptyProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension DronePassEmptyProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "DronePassEmpty", label: "Przelot drona, nic",
+        help: "Przelot termowizyjny nad segmentami bez wyniku.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("segments", "Segmenty", "segments"), ModuleField("pod", "POD (0-1)", "number", "0.6")])
+}

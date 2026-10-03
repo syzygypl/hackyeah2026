@@ -10,3 +10,9 @@ public struct TerrainDifficultyProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension TerrainDifficultyProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "TerrainDifficulty", label: "Trudność terenu",
+        help: "Klasy terenu: ściana mało prawdopodobna, żleb pod nią bardziej. Dodawany automatycznie.",
+        fields: [ModuleField("at", "Godzina", "time")])
+}

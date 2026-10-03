@@ -11,3 +11,10 @@ public struct TrailheadCarProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension TrailheadCarProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "TrailheadCar", label: "Auto na parkingu",
+        help: "Auto nadal stoi: osoba nie zeszła. Obniża dolny korytarz wyjścia przy aucie.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("latlon", "Parking (kliknij mapę)", "latlon"),
+                 ModuleField("radiusM", "Promień korytarza wyjścia [m]", "number", "450")])
+}

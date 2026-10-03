@@ -139,7 +139,7 @@ public enum SearchPlanner {
         let to = ctx.centroid(core)
         let d = Geo.meters(from, to)
         if p.air { return p.setupMin + d / (p.travelKmh * 1000 / 60) }
-        let off = core.map { ctx.grid.dTrail[$0] }.min() ?? 0
+        let off = min(core.map { ctx.grid.dTrail[$0] }.min() ?? 0, d)   // no trails (flat terrain): all off-trail
         let offMult = core.map { max(speedMult(p, ctx.grid.difficulty[$0], c), 0.05) }.reduce(0, +) / Double(max(core.count, 1))
         let trailMult = speedMult(p, .trail, c)
         let v = p.travelKmh * 1000 / 60

@@ -10,3 +10,9 @@ public struct WeatherProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension WeatherProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "Weather", label: "Mgła / noc (zachowanie osoby)",
+        help: "W mgle ludzie zatrzymują się przy szlakach i ciekach.",
+        fields: [ModuleField("at", "Godzina", "time"), ModuleField("factor", "Siła efektu (0-2)", "number", "1.2")])
+}

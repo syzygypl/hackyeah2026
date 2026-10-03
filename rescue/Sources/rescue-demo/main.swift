@@ -16,7 +16,7 @@ if FileManager.default.fileExists(atPath: terrainPath),
 let clock = ScenarioClock(msPerMinute: args.contains("--fast") ? 0 : 8)
 
 let grid = ProbabilityGrid(scenario)
-let truthCell = grid.cellIndex(Coord(scenario.truth.at))
+let truthCell = grid.cellIndex(Coord(scenario.truth?.at ?? scenario.events.last { $0.provider == "RatunekPing" }?.point ?? scenario.ipp.at))
 let truthSeg = scenario.segments[grid.segmentOf[truthCell]].id
 
 func pct(_ x: Double) -> String { String(format: "%.0f%%", x * 100) }

@@ -12,3 +12,9 @@ public struct TerrainProvider: HintProvider {
         return scripted(items, clock: clock)
     }
 }
+
+extension TerrainProvider: StudioModule {
+    public static let schema = ModuleSchema(name: "Terrain", label: "Teren (cechy + koszt)",
+        help: "Szlaki, cieki, schroniska, strome ściany. Dodawany automatycznie w nowej historii.",
+        fields: [ModuleField("at", "Godzina", "time")])
+}
