@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 """Rescue Locator integration tests: several incidents at once (stdlib only).
 
-    python3 rescue/integration/test_multi.py              # builds rescue-server if missing
+    python3 rescue/integration/test_multi.py              # builds rescue-server if missing, starts its own
     python3 rescue/integration/test_multi.py --rebuild    # swift build first
+    python3 rescue/integration/test_multi.py --server https://<app>.vercel.app --pin 1234   # test a running server
+    RESCUE_PIN=1234 python3 rescue/integration/test_multi.py --server http://127.0.0.1:8780 --read-only
+
+Remote mode (--server): no build, no local server; PIN from --pin or RESCUE_PIN. The remote state is shared, so the run
+uses a unique run id for clue/client ids, snapshots the roster first and restores every team it moved at the end
+(POST /api/teams/assign back to the original incident / null, plus the original segment). Checks that need a fresh
+server (nothing live, all teams free) SKIP on a used server instead of failing. Clues and the phone report it adds
+cannot be deleted (the contract has no delete): they are tagged "TEST test_multi <run id>"; --read-only skips every
+check that writes.
 
 Contract: rescue/app/CONTRACT.md "Several incidents at once: optional sc", "GET /api/incidents", "Shared team roster".
 Starts its OWN rescue-server on a free port (8795+), loopback only, test PIN, RESCUE_GUARD_STRICT=1, local LLM off
@@ -13,17 +22,21 @@ A check SKIPs with "endpoint not on server yet" while the server answers 404 for
 (/api/incidents, /api/teams, /api/live, /api/clue), so the suite stays green before the server lands.
 Writes rescue/integration/report-multi.md. Exit 1 if any check FAILs.
 """
+import argparse
 import json
 import os
 import sys
 import tempfile
 import time
+import uuid
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import BIN, HERE, RESCUE, Server, ensure_binary, free_port, http  # noqa: E402
 
-PIN = "2468"
-ARGS = set(sys.argv[1:])
+PIN = "2468"          # own server; remote mode: --pin / RESCUE_PIN
+REMOTE = False
+READ_ONLY = False
+RUN = time.strftime("%H%M%S") + "-" + uuid.uuid4().hex[:6]   # unique per run: clue ids, client ids, notes
 RESULTS = []          # (group, name, status PASS|FAIL|SKIP|WARN, seconds, detail)
 FINDINGS = []         # contract vs server mismatches (text), for the report
 NOT_YET = "endpoint not on server yet"
@@ -63,7 +76,25 @@ def is_blind(name, sc):
 
 
 def main():
-    ensure_binary("--rebuild" in ARGS)
+    global PIN, REMOTE, READ_ONLY
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--rebuild", action="store_true", help="swift build first (own server only)")
+    ap.add_argument("--server", help="test this running server (e.g. https://<app>.vercel.app); no local build or start")
+    ap.add_argument("--pin", default=os.environ.get("RESCUE_PIN"), help="PIN of the --server (default: env RESCUE_PIN)")
+    ap.add_argument("--read-only", action="store_true", help="skip every check that writes (roster moves, clues, reports)")
+    a = ap.parse_args()
+    READ_ONLY = a.read_only
+    if a.server:
+        REMOTE, PIN = True, a.pin
+        base = a.server.rstrip("/")
+        st, d, dt = http(base, "GET", "/health", timeout=30)
+        print(f"remote {base}: /health HTTP {st} in {dt:.1f} s, PIN {'set' if PIN else 'none'}, run id {RUN}"
+              + (", read-only" if READ_ONLY else ""))
+        t_suite = time.time()
+        suite(base)
+        write_report(base, t_suite, None)
+        return 1 if any(r[2] == "FAIL" for r in RESULTS) else 0
+    ensure_binary(a.rebuild)
     tmp = tempfile.mkdtemp(prefix="rescue-multi-")
     live = os.path.join(tmp, "live-events.json")
     port = free_port(8795)
@@ -77,13 +108,40 @@ def main():
         suite(srv.base)
     finally:
         srv.stop()
-    write_report(port, t_suite, log)
+    write_report(f"own rescue-server on 127.0.0.1:{port} (PIN, strict, LLM off)", t_suite, log)
     return 1 if any(r[2] == "FAIL" for r in RESULTS) else 0
 
 
 def suite(B):
     G = lambda p, **k: http(B, "GET", p, pin=PIN, **k)  # noqa: E731
     P = lambda p, body, **k: http(B, "POST", p, body, pin=PIN, **k)  # noqa: E731
+    start = {}
+    if G("/api/teams")[0] == 200:
+        start = {t["id"]: (t["sc"], t["segmentId"]) for t in G("/api/teams")[1]}
+    try:
+        checks(B, G, P, start)
+    finally:
+        restore(G, P, start)
+
+
+def restore(G, P, start):
+    """Put every team this run moved back where it was (remote servers are shared; harmless on our own)."""
+    if not start or READ_ONLY:
+        return
+    st, now, _ = G("/api/teams")
+    if st != 200:
+        return
+    moved = [t for t in now if (t["sc"], t["segmentId"]) != start.get(t["id"], (None, None))]
+    for t in moved:
+        sc, seg = start.get(t["id"], (None, None))
+        P("/api/teams/assign", {"team": t["id"], "sc": sc, "by": "test_multi"})
+        if sc and seg:
+            P("/api/assignments", {"team": t["id"], "segmentId": seg, "sc": sc, "by": "test_multi"})
+    left = [t["id"] for t in G("/api/teams")[1] if (t["sc"], t["segmentId"]) != start.get(t["id"], (None, None))]
+    print(f"roster restored: {len(moved)} team(s) moved back" + (f", still different: {left}" if left else ""))
+
+
+def checks(B, G, P, start):
     files = scenario_files()
     nonblind = {n: s for n, s in files.items() if not is_blind(n, s)}
     seg0 = {n: s["segments"][0]["id"] for n, s in nonblind.items() if s.get("segments")}
@@ -92,9 +150,21 @@ def suite(B):
     have = {p: G(p)[0] != 404 for p in ("/api/incidents", "/api/teams", "/api/live")}
     print("server has: " + ", ".join(f"{p} {'yes' if v else 'no (404)'}" for p, v in have.items()))
 
-    def needs(*paths):
+    def needs(*paths, write=False):
         miss = [p for p in paths if not have[p]]
-        return ("SKIP", f"{NOT_YET}: {', '.join(miss)}") if miss else None
+        if miss:
+            return ("SKIP", f"{NOT_YET}: {', '.join(miss)}")
+        if write and READ_ONLY:
+            return ("SKIP", "--read-only: check writes to the server")
+        return None
+
+    def not_fresh():
+        """Why the server is not fresh (remote, used), or None."""
+        live = [n for n, i in fresh.items() if i["live"]]
+        busy = [tid for tid, (sc, _) in start.items() if sc]
+        if live or busy:
+            return ("SKIP", f"remote server not fresh (live: {live[:4]}, attached teams: {busy[:4]})")
+        return None
 
     # ---------------- GET /api/incidents (fresh server: nothing happened yet)
     print("incidents")
@@ -133,6 +203,8 @@ def suite(B):
     def _():
         if needs("/api/incidents"):
             return needs("/api/incidents")
+        if REMOTE and not_fresh():
+            return not_fresh()
         live = [n for n, i in fresh.items() if i["live"] or i["seq"] or i["lastEventAt"]]
         assert not live, f"live/seq/lastEventAt set on a fresh server: {live}"
         return "every incident live=false, seq=0, lastEventAt=null before any event"
@@ -194,6 +266,8 @@ def suite(B):
     def _():
         if needs("/api/teams"):
             return needs("/api/teams")
+        if REMOTE and not_fresh():
+            return not_fresh()
         busy = [f"{t['id']}={t['status']}/{t['sc']}" for t in roster.values() if t["status"] != "wolny" or t["sc"] or t["segmentId"]]
         assert not busy, f"not free on a fresh server: {busy}"
         return "all wolny, sc=null, segmentId=null"
@@ -215,8 +289,10 @@ def suite(B):
 
     @check("roster", "attach_then_segment_status")
     def _():
-        if needs("/api/teams"):
-            return needs("/api/teams")
+        if needs("/api/teams", write=True):
+            return needs("/api/teams", write=True)
+        if REMOTE and not_fresh():
+            return not_fresh()
         st, d, _ = P("/api/teams/assign", {"team": A, "sc": B1, "by": "operator"})
         assert st == 200 and isinstance(d, list), f"POST /api/teams/assign {st}: {str(d)[:200]}"
         t = {x["id"]: x for x in d}[A]
@@ -229,8 +305,10 @@ def suite(B):
 
     @check("roster", "attach_moves_only_that_team")
     def _():
-        if needs("/api/teams"):
-            return needs("/api/teams")
+        if needs("/api/teams", write=True):
+            return needs("/api/teams", write=True)
+        if REMOTE and not_fresh():
+            return not_fresh()
         extra = sorted(t["id"] for t in teams_now().values() if t["sc"] == B1 and t["id"] != A)
         if extra:
             FINDINGS.append(f"POST /api/teams/assign {{team: {A}, sc: {B1}}} on a fresh roster also attached {extra} to {B1} "
@@ -243,8 +321,10 @@ def suite(B):
 
     @check("roster", "move_detaches_and_clears_segment")
     def _():
-        if needs("/api/teams", "/api/live"):
-            return needs("/api/teams", "/api/live")
+        if needs("/api/teams", "/api/live", write=True):
+            return needs("/api/teams", "/api/live", write=True)
+        if teams_now()[A]["sc"] != B1:
+            P("/api/teams/assign", {"team": A, "sc": B1, "by": "operator"})
         before = {s: live_events(s)["seq"] for s in (B1, B2)}
         st, d, _ = P("/api/teams/assign", {"team": A, "sc": B2, "by": "operator"})
         assert st == 200, f"POST /api/teams/assign {st}: {str(d)[:200]}"
@@ -260,8 +340,10 @@ def suite(B):
 
     @check("roster", "null_releases")
     def _():
-        if needs("/api/teams", "/api/live"):
-            return needs("/api/teams", "/api/live")
+        if needs("/api/teams", "/api/live", write=True):
+            return needs("/api/teams", "/api/live", write=True)
+        if teams_now()[A]["sc"] != B2:
+            P("/api/teams/assign", {"team": A, "sc": B2, "by": "operator"})
         since = live_events(B2)["seq"]
         st, d, _ = P("/api/teams/assign", {"team": A, "sc": None})
         assert st == 200, f"{st}: {str(d)[:200]}"
@@ -273,17 +355,17 @@ def suite(B):
 
     @check("roster", "unknown_team_or_sc_400")
     def _():
-        if needs("/api/teams"):
-            return needs("/api/teams")
-        a = P("/api/teams/assign", {"team": "no-such-team", "sc": B1})[0]
+        if needs("/api/teams", write=True):
+            return needs("/api/teams", write=True)
+        a = P("/api/teams/assign", {"team": f"no-such-team-{RUN}", "sc": B1})[0]
         b = P("/api/teams/assign", {"team": A, "sc": "no-such-incident"})[0]
         assert (a, b) == (400, 400), f"unknown team -> {a}, unknown sc -> {b} (expected 400, 400)"
         return "unknown team 400, unknown sc 400"
 
     @check("roster", "incidents_reflect_roster")
     def _():
-        if needs("/api/teams", "/api/incidents"):
-            return needs("/api/teams", "/api/incidents")
+        if needs("/api/teams", "/api/incidents", write=True):
+            return needs("/api/teams", "/api/incidents", write=True)
         P("/api/teams/assign", {"team": "gopr-b", "sc": B1})
         P("/api/assignments", {"team": "gopr-b", "segmentId": seg0[B1], "sc": B1})
         st, d, _ = G("/api/incidents")
@@ -303,11 +385,11 @@ def suite(B):
 
     @check("sc", "clue_goes_only_to_its_incident")
     def _():
-        if needs("/api/live"):
-            return needs("/api/live")
+        if needs("/api/live", write=True):
+            return needs("/api/live", write=True)
         nz, nk = len(steps(Z)), len(steps(K))
-        st, d, _ = P("/api/clue", {"type": "odziez", "segmentId": seg0[Z], "note": "test: czerwona czapka", "by": "ratownik",
-                                   "team": "topr-a", "sc": Z, "id": "multi-clue-1"})
+        st, d, _ = P("/api/clue", {"type": "odziez", "segmentId": seg0[Z], "note": f"TEST test_multi {RUN}: czerwona czapka",
+                                   "by": "ratownik", "team": "topr-a", "sc": Z, "id": f"multi-clue-{RUN}"})
         assert st == 200 and d.get("ok"), f"POST /api/clue {st}: {str(d)[:200]}"
         seq = d["seq"]
         ez = [e for e in live_events(Z)["events"] if e.get("seq") == seq]
@@ -321,11 +403,12 @@ def suite(B):
 
     @check("sc", "live_includes_events_without_sc")
     def _():
-        if needs("/api/live"):
-            return needs("/api/live")
+        if needs("/api/live", write=True):
+            return needs("/api/live", write=True)
         since = {s: live_events(s)["seq"] for s in (Z, K)}
-        st, d, _ = http(B, "POST", "/report", {"text": "Patrol B: sprawdzony odcinek przy schronisku, nic.", "at": "19:50"},
-                        {"X-Rescue-Team": "topr-b", "X-Rescue-Client": "multi-phone", "X-Rescue-Source": "patrol"}, pin=PIN, timeout=60)
+        st, d, _ = http(B, "POST", "/report", {"text": f"TEST test_multi {RUN}: Patrol B, sprawdzony odcinek przy schronisku, nic.",
+                                               "at": "19:50"},
+                        {"X-Rescue-Team": "topr-b", "X-Rescue-Client": f"multi-phone-{RUN}", "X-Rescue-Source": "patrol"}, pin=PIN, timeout=60)
         assert st == 200, f"POST /report {st}: {str(d)[:200]}"
         got = {s: [e for e in live_events(s, since[s])["events"] if e.get("kind") == "report" and not e.get("sc")] for s in (Z, K)}
         assert got[Z] and got[K], f"phone report (no sc) in live?sc={Z}: {len(got[Z])}, ?sc={K}: {len(got[K])} (expected both)"
@@ -346,8 +429,8 @@ def suite(B):
 
     @check("sc", "assignments_filter")
     def _():
-        if needs("/api/live"):
-            return needs("/api/live")
+        if needs("/api/live", write=True):
+            return needs("/api/live", write=True)
         P("/api/assignments", {"team": "topr-a", "segmentId": seg0[Z], "sc": Z})
         P("/api/assignments", {"team": "heli", "segmentId": seg0[K], "sc": K})
         az, ak, aa = (G(p)[1] for p in (f"/api/assignments?sc={Z}", f"/api/assignments?sc={K}", "/api/assignments"))
@@ -363,7 +446,13 @@ def suite(B):
     def _():
         if needs("/api/teams"):
             return needs("/api/teams")
-        sc = next((n for n in ("bieszczady-wetlinska", "karkonosze-sniezka", "sniardwy") if n in nonblind), None)
+        st, inc, _ = G("/api/incidents")
+        live = {i["sc"] for i in inc if i["live"]} if st == 200 else set()
+        attached = {t["sc"] for t in teams_now().values() if t["sc"]}
+        sc = next((n for n in ("bieszczady-wetlinska", "karkonosze-sniezka", "sniardwy", "miedzyzdroje", "morzycko")
+                   if n in nonblind and n not in live and n not in attached), None)
+        if not sc and REMOTE:
+            return ("SKIP", "remote server not fresh: no untouched incident left to check")
         assert sc, "no untouched candidate scenario"
         got = {r["id"] for r in steps(sc)[-1].get("resources", [])}
         exp = {r["id"] for r in nonblind[sc]["resources"]}
@@ -372,8 +461,8 @@ def suite(B):
 
     @check("planner", "touched_plans_only_attached_teams")
     def _():
-        if needs("/api/teams"):
-            return needs("/api/teams")
+        if needs("/api/teams", write=True):
+            return needs("/api/teams", write=True)
         # K = kasprowy: gopr-b attached (incidents_reflect_roster), gopr-a moved away earlier
         attached = {t["id"] for t in teams_now().values() if t["sc"] == K}
         got = {r["id"] for r in steps(K)[-1].get("resources", [])}
@@ -382,20 +471,21 @@ def suite(B):
         return f"{K} (touched): plans only with {sorted(got)}"
 
 
-def write_report(port, t_suite, log):
+def write_report(where, t_suite, log):
     n = {k: sum(1 for r in RESULTS if r[2] == k) for k in ("PASS", "FAIL", "WARN", "SKIP")}
     total = time.time() - t_suite
     print(f"\n{len(RESULTS)} checks: {n['PASS']} pass, {n['FAIL']} fail, {n['WARN']} warn, {n['SKIP']} skip in {total:.0f} s")
     L = ["# Integration: several incidents at once", "",
-         f"`python3 rescue/integration/test_multi.py`, {time.strftime('%Y-%m-%d %H:%M')}, own rescue-server on 127.0.0.1:{port} "
-         "(PIN, strict, LLM off). Contract: rescue/app/CONTRACT.md (several incidents, /api/incidents, shared roster).", "",
+         f"`python3 rescue/integration/test_multi.py`, {time.strftime('%Y-%m-%d %H:%M')}, {where}, run id {RUN}"
+         + (", read-only" if READ_ONLY else "") + ". Contract: rescue/app/CONTRACT.md (several incidents, /api/incidents, shared roster).", "",
          f"**{len(RESULTS)} checks: {n['PASS']} pass, {n['FAIL']} fail, {n['WARN']} warn, {n['SKIP']} skip, {total:.0f} s.**", "",
          "| Group | Check | Result | s | Detail |", "|---|---|---|---|---|"]
     for g, name, st, dt, det in RESULTS:
         L.append(f"| {g} | {name} | {st} | {dt:.1f} | {det.replace('|', '/')[:220]} |")
     if FINDINGS:
         L += ["", "## Contract vs server", ""] + [f"- {f}" for f in FINDINGS]
-    L += ["", f"Server log: `{log}` (temporary)."]
+    if log:
+        L += ["", f"Server log: `{log}` (temporary)."]
     open(os.path.join(HERE, "report-multi.md"), "w", encoding="utf-8").write("\n".join(L) + "\n")
 
 
