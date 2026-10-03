@@ -1158,7 +1158,8 @@
         const mod = await import(new URL(dir + 'basemap.js', location.href).href);
         const file = SC.basemapFile && (!CUSTOM_RUN || Q.get('sc') === SC.id) ? SC.basemapFile : undefined;   // regional PMTiles outside the Tatras (?sc= also with ?run=)
         await mod.loadBasemap(window.maplibregl, file);
-        const style = mod.offlineStyle(file ? { flavor: CFG.flavor, file } : { flavor: CFG.flavor });
+        const hillshade = mod.hillshadeFor ? await mod.hillshadeFor(S.M && S.M.bbox) : null;   // soft DEM relief (basemap/hillshade/)
+        const style = mod.offlineStyle(file ? { flavor: CFG.flavor, file, hillshade } : { flavor: CFG.flavor, hillshade });
         if (style && style.layers) { S.basemapSrc = dir + 'basemap.js'; return style; }
       }
     } catch (e) { warn('basemap.js: ' + e.message); }

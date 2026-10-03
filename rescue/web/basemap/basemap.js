@@ -87,18 +87,42 @@ function flavorOf(bm, flavor) {
 }
 
 // flavor: "paper" (default, app look), "light" (Protomaps original), "white", "grayscale", "dark"
-export function offlineStyle({ flavor = "paper", lang = "pl", file = "tatry.pmtiles", mountain = true } = {}) {
+// hillshade: optional { url, bounds:[[w,s],[e,n]] } (from hillshadeFor) - soft DEM relief drawn over land/landuse, under water and roads.
+export function offlineStyle({ flavor = "paper", lang = "pl", file = "tatry.pmtiles", mountain = true, hillshade = null } = {}) {
   const bm = globalThis.basemaps;
   const layers = bm.layers("protomaps", flavorOf(bm, flavor), { lang });
+  const sources = { protomaps: { type: "vector", url: "pmtiles://" + BASE + file, attribution: ATTRIBUTION } };
+  if (hillshade && hillshade.url && hillshade.bounds) {
+    const [[w, s], [e, n]] = hillshade.bounds;
+    sources.hillshade = { type: "image", url: new URL(hillshade.url, BASE).href, coordinates: [[w, n], [e, n], [e, s], [w, s]] };
+    const at = layers.findIndex((l) => l.id === "water");
+    layers.splice(at < 0 ? layers.length : at, 0, { id: "hillshade", type: "raster", source: "hillshade",
+      paint: { "raster-opacity": flavor === "dark" ? 0.6 : 0.9, "raster-resampling": "linear", "raster-fade-duration": 0 } });
+  }
   return {
     version: 8,
     glyphs: BASE + "fonts/{fontstack}/{range}.pbf",
     sprite: BASE + "sprites/light",   // only the light sprite is bundled offline; icons read fine on the dark flavor too
-    sources: {
-      protomaps: { type: "vector", url: "pmtiles://" + BASE + file, attribution: ATTRIBUTION },
-    },
+    sources,
     layers: mountain ? layers.concat(mountainLayers(flavor === "dark")) : layers,
   };
+}
+
+// Hillshade overlay (hillshade/<scenario>.png from hillshade.py) whose bounds contain the bbox centre (nearest crop centre); null if none.
+// bbox: {west,south,east,north}. Returns { id, url, bounds } ready for offlineStyle({ hillshade }).
+let hsIndex = null;
+export async function hillshadeFor(bb) {
+  try {
+    hsIndex = hsIndex || await (await fetch(BASE + "hillshade/index.json")).json();
+  } catch (e) { return null; }
+  if (!bb) return null;
+  const x = (bb.west + bb.east) / 2, y = (bb.south + bb.north) / 2;
+  let best = null, bestA = Infinity;
+  for (const [id, h] of Object.entries(hsIndex)) {
+    const [[w, s], [e, n]] = h.bounds, a = ((w + e) / 2 - x) ** 2 + ((s + n) / 2 - y) ** 2;   // closest crop centre wins
+    if (x >= w && x <= e && y >= s && y <= n && a < bestA) { best = { id, url: BASE + h.file, bounds: h.bounds }; bestA = a; }
+  }
+  return best;
 }
 
 // Extra layers for mountain rescue on top of the Protomaps style: trails a rescuer can read at a glance,

@@ -115,7 +115,7 @@
 
 <script type="module">
   import * as maplibregl from "../vendor/maplibre-gl.mjs";
-  import { offlineStyle, loadBasemap, regionFor } from "../basemap/basemap.js";
+  import { offlineStyle, loadBasemap, regionFor, hillshadeFor } from "../basemap/basemap.js";
   maplibregl.setWorkerUrl(new URL("maplibre-gl-worker.mjs", location.href).href);   // in the SW scope, so the map works offline (sw.js)
 
   const $ = id => document.getElementById(id);
@@ -231,7 +231,8 @@
   // Regional offline basemap from the run's bbox (Tatry, Bieszczady, Karkonosze, Śniardwy, Mamry, Morzycko, Międzyzdroje).
   const bb = run.bbox, file = regionFor(bb)?.file || "tatry.pmtiles";
   await loadBasemap(maplibregl, file);
-  map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: THEME === "dark" ? "dark" : "paper", file }),
+  const hs = await hillshadeFor(bb);
+  map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: THEME === "dark" ? "dark" : "paper", file, hillshade: hs }),
     bounds: [[bb.west, bb.south], [bb.east, bb.north]], attributionControl: { compact: true } });
   map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "top-right");
   map.on("load", () => {
