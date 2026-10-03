@@ -249,6 +249,15 @@
     return out;
   }
 
+  // parity with 3D: "wpływ" = the segment that gained most when the hint arrived (engine steps k-1 -> k)
+  function influence(k) {
+    const R = S.M.R; if (k <= 0) return null;
+    const prev = new Map(R.steps[k - 1].segments.map((s) => [s.id, s.poa]));
+    let best = null;
+    for (const s of R.steps[k].segments) { const d = s.poa - (prev.get(s.id) || 0); if (!best || d > best.d) best = { d, id: s.id, name: s.name }; }
+    return best && best.d > 0.004 ? best : null;
+  }
+
   function taskFor(name) {
     const n = name.toLowerCase();
     if (n.includes('żleb') || n.includes('potok') || n.includes('roztok')) return 'Zespół + pies: zejście wzdłuż żlebu / cieku, sprawdzić progi';
@@ -689,10 +698,12 @@
       const future = h.k > step, isNew = h.k === step, off = S.disabled.has(h.id);
       const det = h.ev && h.ev.detail ? `<div class="c-det">${esc(h.ev.detail)}</div>` : '';
       const status = future ? `<span class="c-status">jeszcze nie dotarła</span>` : isNew ? '<span class="c-status new">nowa</span>' : '';
+      const inf = future ? null : influence(h.k);
+      const infl = inf ? `<div class="c-inf" title="Segment, który zyskał najwięcej po dodaniu tej wskazówki (silnik)">wpływ: ${esc(inf.id)} ${esc(inf.name)} ${pp(inf.d)}</div>` : '';
       return `<div class="card${future ? ' future' : ''}${isNew ? ' new' : ''}${off ? ' off' : ''}" data-k="${h.k}">
         <div class="c-top"><span class="ic k-${esc(h.kind)}" title="${esc(kindOf(h.kind).pl)}">${kindOf(h.kind).icon}</span>
           <span class="c-meta">${esc(h.t)} · ${esc(h.source)}</span>${status}</div>
-        <div class="c-title">${esc(h.label)}</div>${det}
+        <div class="c-title">${esc(h.label)}</div>${det}${infl}
         <div class="c-act">
           <label class="chk"><input type="checkbox" data-act="toggle" ${off ? '' : 'checked'} ${future ? 'disabled' : ''}> uwzględnij</label>
           <button class="ghost sm" data-act="before" ${h.k === 0 ? 'disabled' : ''} title="Skocz do kroku przed tą wskazówką">Przed</button>

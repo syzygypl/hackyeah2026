@@ -73,6 +73,7 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 .c-status.new { color: var(--warn); font-weight: 700; }
 .c-title { font-weight: 650; margin-top: 3px; }
 .c-det { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+.c-inf { color: var(--bad); font-size: 12px; margin-top: 3px; }
 .c-act { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
 .c-act .chk { flex: 1; }
 .chk { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
