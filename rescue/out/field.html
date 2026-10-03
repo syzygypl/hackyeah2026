@@ -37,7 +37,8 @@
 <main>
   <h1>Meldunki terenowe - Rescue Locator</h1>
   <div class="sub">Działa bez internetu: lokalny model (Ollama) na laptopie kierownika akcji, a gdy go nie ma - reguły słów kluczowych. Żadnych usług w chmurze.
-    <span id="status" class="status">sprawdzam serwer...</span></div>
+    <span id="status" class="status">sprawdzam serwer...</span>
+    <label id="pinbox" style="display:none;margin-left:8px">PIN <input id="pin" inputmode="numeric" autocomplete="off" size="8" style="font:inherit;width:7em"></label></div>
 
   <textarea id="txt" placeholder="np. Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"></textarea>
   <div class="row">
@@ -63,6 +64,16 @@ const EXAMPLES = [
 const API = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8770";
 const SEG = {S1:"Dolina Roztoki (dolna)",S2:"Siklawa / Roztoka górna",S3:"Schronisko i Przedni Staw",S4:"Wielki Staw",S5:"Czarny i Zadni Staw",S6:"Szlak niebieski pod Zawratem",S7:"Żleb pod Zawratem",S8:"Zawrat - Świnica, grań",S9:"Zmarzły Staw / Kozia Dolinka",S10:"Kozi Wierch - Orla Perć",S11:"Granaty / Buczynowa Dolinka",S12:"Szpiglasowa Przełęcz",S13:"Morskie Oko",S14:"Droga do Morskiego Oka",S15:"Hala Gąsienicowa / Murowaniec",S16:"Wołoszyn",S17:"Czarny Staw Gąsienicowy",S18:"Dolina za Mnichem",S19:"Las nad Wodogrzmotami"};
 const $ = id => document.getElementById(id);
+// PIN: needed only when the page talks to the server over the LAN (rescue-field serve --host ... --pin)
+const LOOPBACK = !location.protocol.startsWith("http") || ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
+let PIN = "";
+try { PIN = localStorage.getItem("rescue-pin") || ""; } catch (e) {}
+function hdrs(extra) { return Object.assign({}, extra || {}, !LOOPBACK && PIN ? { "X-Rescue-Pin": PIN } : {}); }
+if (!LOOPBACK) {
+  $("pinbox").style.display = "";
+  $("pin").value = PIN;
+  $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} refresh(); };
+}
 let local = []; // reports parsed in the browser when the local server is down
 try { local = JSON.parse(localStorage.getItem("field-local") || "[]"); } catch (e) {}
 
@@ -94,7 +105,8 @@ function render() {
 }
 async function refresh() {
   try {
-    const r = await fetch(API + "/live-events", { cache: "no-store" });
+    const r = await fetch(API + "/live-events", { cache: "no-store", headers: hdrs() });
+    if (r.status === 401) { $("status").textContent = "podaj PIN serwera (wyświetlony w terminalu)"; render(); return; }
     server = await r.json();
     $("status").textContent = "serwer lokalny: OK";
   } catch (e) {
@@ -130,7 +142,8 @@ async function send(text) {
   $("send").disabled = true; $("msg").textContent = "parsuję lokalnie...";
   const t0 = performance.now();
   try {
-    const r = await fetch(API + "/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    const r = await fetch(API + "/report", { method: "POST", headers: hdrs({ "Content-Type": "application/json" }), body: JSON.stringify({ text }) });
+    if (r.status === 401) { $("msg").textContent = "zły lub brak PIN-u - wpisz PIN z terminala"; $("send").disabled = false; return; }
     if (!r.ok) throw new Error("HTTP " + r.status);
     const rep = await r.json();
     $("msg").textContent = `${rep.parsedBy.startsWith("llm") ? "LLM lokalny" : "reguły awaryjne"} · ${rep.latencyMs} ms`;
