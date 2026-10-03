@@ -682,7 +682,15 @@ function syncFrame(k, why) {
     return;
   }
   clearTimeout(F.h);
-  F.h = setTimeout(() => { F.src = u; F.ready = false; F.el.src = u; F.dirty = false; }, why === "step" ? 700 : 50);
+  F.h = setTimeout(() => {
+    F.src = u; F.ready = false; F.dirty = false;
+    if (k !== "2da" || !F.el.getAttribute("src") || !F.visible()) { F.el.src = u; return; }
+    // double buffer (2D): the old map stays on screen until the new view says "ready", then a 200 ms crossfade - no blank 2D
+    if (F.next) F.next.remove();
+    const n = F.next = F.el.cloneNode(false); n.removeAttribute("id");
+    n.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;transition:opacity .2s";
+    n.src = u; F.el.after(n);
+  }, why === "step" ? 700 : 50);
   const R = D(), out = k === "3d" && R && R.bbox && (R.bbox.west > 20.09 || R.bbox.east < 20.0 || R.bbox.north < 49.19 || R.bbox.south > 49.25) && store.backend === "studio";
   F.note.textContent = out ? "3D: teren Zawratu - historia poza tym obszarem nie ma jeszcze modelu 3D" : "";
 }
@@ -696,6 +704,12 @@ function warmOther(k) {
 function postTo2(F, msg) { F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
 function sync3d(why) { for (const k in FRAMES) syncFrame(k, why); }
 addEventListener("message", (e) => {
+  const nk = Object.keys(FRAMES).find((x) => FRAMES[x].next && FRAMES[x].next.contentWindow === e.source);
+  if (nk) {   // the buffered 2D view: only its "ready" counts, and it swaps in
+    if (!e.data || e.data.source !== FRAMES[nk].source || e.data.type !== "ready") return;
+    const F = FRAMES[nk], o = F.el, n = F.next; F.next = null; F.el = n; n.id = o.id; n.style.opacity = "1";
+    setTimeout(() => { o.remove(); n.style.cssText = ""; }, 220);
+  }
   const k = Object.keys(FRAMES).find((x) => FRAMES[x].el.contentWindow === e.source);
   if (!k || e.origin !== location.origin || !e.data || typeof e.data !== "object" || e.data.source !== FRAMES[k].source) return;
   const m = e.data, F = FRAMES[k];
@@ -795,6 +809,7 @@ function setMode(m, v) {
   if (m === "edycja" && store.backend !== "studio" && store.hasStudio) loadScenario("studio").catch((e) => toast(plErr(e)));
   try { localStorage.setItem("rescue-app-mode", m); } catch (e) {}
   setFloat(); // before setView: the frames are created with the floating insets
+  setTimeout(pushInsets, 260);   // the dock height animates (app.css): scene padding once more at the end
   setView(v || lastView[m] || (views[0] || [""])[0]);
   if (store.run) renderPanels();
   if (m === "teren") showTeren();

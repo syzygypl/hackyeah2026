@@ -158,6 +158,8 @@ body.role-ratownik #rescuer{display:flex;flex-direction:column;gap:8px;padding:8
   body.float .note3d{left:calc(var(--float-gap) * 2 + var(--rail-l-w) + 8px);bottom:calc(var(--float-gap) * 2 + var(--dock-h) + 8px)}
   /* Kino (3D cinema mode, {type:'cinema'} from the frame): the panels step aside, the scene takes the screen */
   body.float header,body.float #left,body.float #right,body.float #bottom{transition:opacity .6s,transform .6s}
+  /* Akcja <-> Plan: the dock grows/shrinks (--dock-h) and the rails follow, animated instead of a jump */
+  body.float #bottom{transition:opacity .6s,transform .6s,height .22s ease}body.float #left,body.float #right{transition:opacity .6s,transform .6s,bottom .22s ease}
   body.float.cinema header,body.float.cinema #left,body.float.cinema #right,body.float.cinema #bottom{opacity:0;pointer-events:none}
 }
 
