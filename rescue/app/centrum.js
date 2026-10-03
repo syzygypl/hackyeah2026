@@ -3,8 +3,8 @@
 // Data: GET /api/incidents + GET /api/teams + POST /api/teams/assign (CONTRACT.md "Live mode"). Until the server has them,
 // the adapter below falls back to GET /api/scenarios + lazy GET /api/run/<sc> (+ GET /api/live if present) and an
 // in-memory team roster mock seeded from the scenario files. Switching is automatic: a 404 means "not there yet".
-import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
-import { offlineStyle, loadBasemap, REGIONS } from "../web/basemap/basemap.js";
+// MapLibre (~300 kB) is imported dynamically (initMap at the bottom): cards and roster render from the API without waiting for it.
+let maplibregl, offlineStyle, loadBasemap, REGIONS;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -101,12 +101,15 @@ async function pollLive() {
 }
 
 // ---------- scenario files (IPP, bbox, resources): /scenarios/<sc>.json, small, fetched once
-const meta = {};
-async function loadMeta(sc) {
-  if (meta[sc] !== undefined) return meta[sc];
-  meta[sc] = null;
-  try { const s = await api("/scenarios/" + encodeURIComponent(sc) + ".json"); meta[sc] = { ipp: s.ipp && s.ipp.at, bbox: s.bbox, resources: s.resources || [] }; } catch (e) {}
-  return meta[sc];
+const meta = {}, metaP = {};
+// one request per scenario, and every caller waits for it: the first-paint skeleton and the first poll ask at the same time,
+// and a caller that got null for an in-flight request rendered the cards without map dots until the next poll (5 s)
+function loadMeta(sc) {
+  return metaP[sc] ||= (async () => {
+    meta[sc] = null;
+    try { const s = await api("/scenarios/" + encodeURIComponent(sc) + ".json"); meta[sc] = { ipp: s.ipp && s.ipp.at, bbox: s.bbox, resources: s.resources || [] }; } catch (e) {}
+    return meta[sc];
+  })();
 }
 
 // ---------- team roster: real API or in-memory mock (same shapes as CONTRACT.md)
@@ -125,7 +128,7 @@ async function loadTeams(scsP) {   // scsP: promise of incident ids, needed only
     try { const a = await api("/api/teams"); has.teams = true; return Array.isArray(a) ? a : a.teams || []; }
     catch (e) { if (e.status === 404) missing("teams"); else throw e; }
   }
-  if (!mock || !mock.length) mock = seedMock(await scsP);
+  if (!mock || !mock.length) { const scs = await scsP; await Promise.all(scs.map(loadMeta)); mock = seedMock(scs); }
   return mock;
 }
 async function assignTeam(team, sc) {
@@ -250,17 +253,26 @@ function setHl(sc) {
 
 // ---------- map: paper ground + rough outline of Poland; regional offline basemaps (web/basemap) load when zoomed in
 const POLAND = [[14.22,53.93],[15.0,54.2],[16.2,54.45],[17.0,54.7],[18.3,54.83],[18.6,54.43],[19.6,54.45],[20.8,54.35],[22.8,54.36],[23.5,54.0],[23.9,53.2],[23.6,52.6],[23.2,52.3],[23.6,52.08],[23.7,51.6],[24.1,50.8],[23.5,50.4],[22.7,49.6],[22.9,49.1],[22.0,49.2],[21.0,49.4],[20.4,49.38],[20.0,49.18],[19.6,49.4],[19.2,49.45],[18.85,49.5],[18.6,49.9],[18.0,50.05],[17.6,50.27],[16.9,50.45],[16.7,50.2],[16.2,50.6],[15.8,50.74],[15.5,50.8],[14.8,50.85],[14.95,51.4],[14.7,52.1],[14.55,52.6],[14.15,52.85],[14.4,53.3],[14.25,53.7],[14.22,53.93]];
-const base = offlineStyle();
-const map = new maplibregl.Map({
-  container: "map", attributionControl: { compact: true }, center: [19.4, 52.0], zoom: 5.3, minZoom: 4,
-  style: { version: 8, glyphs: base.glyphs, sprite: base.sprite,
-    sources: { pl: { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [POLAND] } } } },
-    layers: [{ id: "bg", type: "background", paint: { "background-color": css("--rl-bg") } },
-      { id: "pl-fill", type: "fill", source: "pl", maxzoom: 8, paint: { "fill-color": css("--rl-panel-solid"), "fill-opacity": 0.75 } },
-      { id: "pl-line", type: "line", source: "pl", maxzoom: 8, paint: { "line-color": css("--rl-line-strong"), "line-width": 1.5 } }] },
-});
-map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-let mapReady = false; map.on("load", () => { mapReady = true; fitAll(); loadRegions(); stackLabels(); });
+let mapReady = false, map = null;
+async function initMap() {
+  const [m, b] = await Promise.all([import("../web/vendor/maplibre-gl.mjs"), import("../web/basemap/basemap.js")]);
+  maplibregl = m; ({ offlineStyle, loadBasemap, REGIONS } = b);
+  const base = offlineStyle();
+  map = new maplibregl.Map({
+    container: "map", attributionControl: { compact: true }, center: [19.4, 52.0], zoom: 5.3, minZoom: 4,
+    style: { version: 8, glyphs: base.glyphs, sprite: base.sprite,
+      sources: { pl: { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [POLAND] } } } },
+      layers: [{ id: "bg", type: "background", paint: { "background-color": css("--rl-bg") } },
+        { id: "pl-fill", type: "fill", source: "pl", maxzoom: 8, paint: { "fill-color": css("--rl-panel-solid"), "fill-opacity": 0.75 } },
+        { id: "pl-line", type: "line", source: "pl", maxzoom: 8, paint: { "line-color": css("--rl-line-strong"), "line-width": 1.5 } }] },
+  });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+  map.on("load", () => { mapReady = true; renderMarkers(); fitAll(); loadRegions(); stackLabels(); advMap(); });
+  map.on("moveend", loadRegions);
+  map.on("zoom", () => document.body.classList.toggle("zin", map.getZoom() >= 9));   // zoomed in: labels next to their own dots
+  map.on("zoomend", stackLabels);
+  map.on("resize", stackLabels);
+}
 const loaded = new Set();
 async function loadRegions() {
   if (!mapReady || map.getZoom() < 7) return;
@@ -277,10 +289,9 @@ async function loadRegions() {
     } catch (err) { console.warn("basemap " + id, err); }
   }
 }
-map.on("moveend", loadRegions);
-map.on("zoom", () => document.body.classList.toggle("zin", map.getZoom() >= 9));   // zoomed in: labels next to their own dots
 const markers = new Map();
 function renderMarkers() {
+  if (!map) return;   // before initMap: the map's load handler renders them
   for (const x of incidents) {
     const md = meta[x.sc]; if (!md || !md.ipp) continue;
     let m = markers.get(x.sc);
@@ -329,8 +340,6 @@ function stackLabels() {
     el.style.setProperty("--k", k ?? 0);
   }
 }
-map.on("zoomend", stackLabels);
-map.on("resize", stackLabels);
 function fitAll() {
   if (fitted || !mapReady) return;
   const pts = incidents.map((x) => meta[x.sc] && meta[x.sc].ipp).filter(Boolean);
@@ -459,7 +468,6 @@ function advFit() {
   const wide = innerWidth > 900;
   map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: wide ? { left: 440, right: 340, top: 90, bottom: Math.round(innerHeight * 0.48) } : 30, maxZoom: 11, duration: 600 });
 }
-map.on("load", () => advMap());
 setInterval(advTick, 60000);
 advTick();
 
@@ -475,9 +483,9 @@ async function tick() {
     if (first && has.incidents !== false) skeleton(teamP);
     const fresh = await incP;
     if (!first) for (const x of fresh) if (x.found && !wasFound.has(x.sc)) announceEnded(x);
-    await Promise.all(fresh.map((x) => loadMeta(x.sc)));
     incidents = fresh; teams = await teamP;
-    render();
+    render();   // cards and roster now, map dots once the scenario files are in (render's signature counts them)
+    Promise.all(fresh.map((x) => loadMeta(x.sc))).then(render);
   } catch (e) {
     console.warn(e);
     toast(e.status === 401 ? "Podaj PIN akcji (pole PIN u góry)." : "Brak połączenia z serwerem akcji - ponawiam co 5 s.");
@@ -489,15 +497,16 @@ async function skeleton(teamP) {
   try {
     const a = await api("/api/scenarios");
     const list = (Array.isArray(a) ? a : a.scenarios || []).map((s) => typeof s === "string" ? { name: s } : s).filter((s) => s.name && !/blind/i.test(s.name));
-    await Promise.all(list.map((s) => loadMeta(s.name)));
     if (incidents.length) return;   // /api/incidents was faster
     incidents = list.map((s) => ({ sc: s.name, ...splitIncident(s.incident, s.name), live: false, found: false, replayFound: false, mode: null, lastEventAt: null,
       lastClock: s.startClock || null, top3: [], teams: null, pending: true }));
     teams = await teamP.catch(() => teams);
     if (incidents.every((x) => x.pending)) render();
+    Promise.all(list.map((s) => loadMeta(s.name))).then(render);   // map dots
   } catch (e) {}
 }
 setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("pl-PL"); }, 1000);
 setInterval(tick, POLL_MS);
 tick();
-window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, map };   // tests
+window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, get map() { return map; } };   // tests
+initMap().catch((e) => console.warn("[centrum] map", e));
