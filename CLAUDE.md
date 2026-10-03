@@ -1,6 +1,8 @@
 # HackYeah 2026
 
-24-hour hackathon project. The task is not known yet; fill in the sections marked TBD as soon as it is.
+24-hour hackathon project at HackYeah 2026 (Tauron Arena Kraków, Oct 3-4). Coding starts Sat 11:00, **submission closes Sun 11:00 on HackTribe**. Fill in the sections marked TBD as soon as the task is picked.
+
+Event schedule, all tasks, judging criteria, deliverables and IP terms: [`docs/hackyeah-2026.md`](docs/hackyeah-2026.md). Full rules PDFs and grep-friendly text: [`docs/rules/`](docs/rules/). Read the chosen task's judging criteria before building anything.
 
 ## The main rule
 
@@ -118,14 +120,17 @@ Five people each running agents produce code faster than anyone can review it. T
 
 ## Timeline
 
-| Time | Must be true |
-|---|---|
-| T+2h | Task picked, demo script written, task mentor consulted, skeleton deployed |
-| T+6h | Happy path works end to end, ugly is fine |
-| T+12h | Core value is real, the rest is faked |
-| T+18h | Feature freeze |
-| T+20h | Backup demo video recorded |
-| T+20-24h | Polish, pitch rehearsed 3 times, submitted |
+| Time | Clock | Must be true |
+|---|---|---|
+| T+2h | Sat 13:00 | Task picked, demo script written, task mentor consulted, skeleton deployed |
+| T+6h | Sat 17:00 | Happy path works end to end, ugly is fine |
+| T+9h | **Sat 20:00** | **Official project checkpoint (organizer deadline)** |
+| T+12h | Sat 23:00 | Core value is real, the rest is faked |
+| T+18h | Sun 05:00 | Feature freeze |
+| T+20h | Sun 07:00 | Demo video recorded (required MP4 max 3 min for HubMI/Cracow, backup otherwise), PDF slides drafted |
+| T+22h | **Sun 09:00** | **Submitted on HackTribe** (2h buffer before the hard deadline) |
+| T+24h | **Sun 11:00** | **Hard deadline. No changes accepted after.** |
+| | Sun 11:00-16:00 | Rehearse the pitch 3 times. Finalists announced 15:00, pitching 16:00 |
 
 Missed checkpoint → cut scope, not sleep.
 
@@ -169,8 +174,9 @@ Boring and known to everyone on the team.
 ## Demo-day risk
 
 - Venue wifi will fail: phone hotspot ready, local fallback, cached LLM responses for the demo inputs.
-- Backup demo video recorded by T+20h.
-- Submit early. Check the HackYeah rules for the exact submission deadline and required materials (repo, slides, video).
+- Demo video recorded by T+20h (Sun 07:00).
+- Submission package (see `docs/hackyeah-2026.md`): title, team name/ID, member list, description, **PDF max 10 slides** (with repo and demo links), plus **MP4 max 3 min** for HubMI/Cracow. Language: Polish for HubMI/Cracow, English for Huawei, either for the rest.
+- Submit by Sun 09:00. HackTribe closes at 11:00 and nothing can be changed after.
 
 ## Working with AI agents
 
@@ -181,7 +187,7 @@ Boring and known to everyone on the team.
 
 ## Legal and hygiene
 
-- Follow the HackYeah IP terms and confirm with SYZYGY / Ars Thanea what applies to ownership of what we build.
+- Follow the HackYeah IP terms and confirm with SYZYGY / Ars Thanea what applies to ownership of what we build. Winning HubMI or Cracow **transfers copyright** (to PROIDEA / the City of Kraków); the other tasks don't.
 - No client code, client data or company credentials in this repo. Assume it will be public at submission.
 - Secrets live in `.env`, which is never committed.
 - Datasets and APIs we use must have licenses that allow it.
