@@ -1669,6 +1669,18 @@ const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const bc = [(B.north + B.south) / 2, (B.east + B.west) / 2];
 const center = new THREE.Vector3(toX(bc[1]), hAt(bc[0], bc[1]) * 0.6, toZ(bc[0]));
 const SPAN = Math.max((B.east - B.west) * KX * KM, (B.north - B.south) * KM) * 1.15;
+// frame a bbox ({south, west, north, east} or [s, w, n, e]) from the current azimuth, looking down ~42 degrees; the fly keeps the
+// camera above the ground on the way (aboveGround in frame()), so it never passes through a ridge
+function focusArea(bb) {
+  const [s, w, n, e] = Array.isArray(bb) ? bb : [bb.south, bb.west, bb.north, bb.east];
+  if (![s, w, n, e].every(Number.isFinite) || n <= s || e <= w) return;
+  const la = (s + n) / 2, lo = (w + e) / 2, t = v3(clamp(la, latS, latN), clamp(lo, lonW, lonE));
+  const wk = (e - w) * KX * KM, hk = (n - s) * KM, half = Math.tan((camera.fov * Math.PI) / 360);
+  const d = clamp((Math.max(wk / Math.max(camera.aspect, 0.3), hk) / (2 * half)) * 1.25, 0.6, Math.max(WKM, HKM) * 1.4);
+  const az = camera.position.clone().sub(controls.target).setY(0); if (az.lengthSq() < 1e-8) az.set(0, 0, 1); az.normalize();
+  const el = (42 * Math.PI) / 180, p1 = t.clone().addScaledVector(az, Math.cos(el) * d); p1.y += Math.sin(el) * d;
+  TL3D?.stopFpp(); fly = { t: 0, dur: 1.6, p0: camera.position.clone(), t0: controls.target.clone(), p1: aboveGround(p1, 0.4), t1: t };
+}
 function overview(dur = 1.8) {
   TL3D?.stopFpp();
   // oblique view from the south-east, the whole massif in frame
@@ -2123,7 +2135,12 @@ addEventListener('message', (e) => {
     else if (m.type === 'time' && Number.isFinite(m.minute)) TL3D?.setTime(m.minute, m.t, true, m.frame, m.frameMinute);
     else if (m.type === 'fpp') { if (m.on === false) TL3D?.stopFpp(); else TL3D?.startFpp(m.actorId); }
     else if (m.type === 'actor' && (m.id === null || typeof m.id === 'string')) TL3D?.selectActor(m.id, false);
-    else if (m.type === 'highlight' && typeof m.actor === 'string') TL3D?.selectActor(m.actor, false);
+    else if (m.type === 'highlight' && typeof m.actor === 'string') {
+      TL3D?.selectActor(m.actor, false);
+      const f = m.fly ? TL3D?.actorFocus?.(m.actor) : null; if (f && inside([f.lat, f.lon])) flyTo(v3(f.lat, f.lon), 1.6);
+    }
+    else if (m.type === 'focusArea' && m.bbox) focusArea(m.bbox);
+    else if (m.type === 'visible') { shellHidden = m.on === false; if (!shellHidden) wake(); }
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
     else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
     else if (m.type === 'evidence' && (typeof m.id === 'string' || Number.isInteger(m.id))) setEvidence(m.id, m.on !== false);
@@ -2163,6 +2180,7 @@ function fitShadow(now) {
 // CPU split, draw calls and resolution (?gpu=1 adds a gl.finish so "render" includes GPU time).
 const DPR_AUTO = Q.get('dpr') === 'auto', DPR_PIN = Q.has('dpr') && !DPR_AUTO;
 const DPR_MAX = DPR_PIN ? +Q.get('dpr') : Math.min(devicePixelRatio, 1.5), DPR_MIN = DPR_AUTO ? Math.max(0.75, DPR_MAX * 0.6) : DPR_MAX;
+let shellHidden = false; // {type:'visible', on:false} from /app: 2D is shown, the scene stays built but nothing ticks or renders
 let dpr = DPR_MAX, offscreen = false, lastRender = 0, lastLabels = 0, ema = 16, slowFor = 0, fastFor = 0, upWait = 4000, upAt = 0;
 renderer.setPixelRatio(dpr);
 new IntersectionObserver(([en]) => { offscreen = !en.isIntersecting; if (!offscreen) wake(); }).observe(host);
@@ -2188,7 +2206,7 @@ let statN = 0, statT = 0, statAt = 0, statCalls = 0, statTris = 0, cpuR = 0, cpu
 function frame() {
   requestAnimationFrame(frame);
   const now = performance.now();
-  if (document.hidden || offscreen) { clock.getDelta(); return; }
+  if (document.hidden || offscreen || shellHidden) { clock.getDelta(); return; } // also stops water, PMREM, Kino and timeline ticks
   const dt = Math.min(clock.getDelta(), 0.1);
   if (heatT < 1) { heatT = Math.min(1, heatT + dt / 0.7); heatU.uHeatT.value = heatT; }
   heatU.uTime.value += dt;

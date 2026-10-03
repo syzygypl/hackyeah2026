@@ -210,6 +210,13 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       if (!hide) placed.push(r);
     }
   }
-  return { setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, fields, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
+  // where to look for a unit (shell {type:'highlight', fly}): its position now, else the middle of its track so far
+  function actorFocus(id) {
+    const a = actors.find((x) => x.id === id); if (!a || !a.path?.length) return null;
+    const now = shown != null ? sampleAt(a.path, shown) : null; if (now) return { lat: now.lat, lon: now.lon };
+    const pts = a.path.filter((q) => shown == null || q[2] <= shown), use = pts.length ? pts : a.path;
+    return { lat: use.reduce((s, q) => s + q[0], 0) / use.length, lon: use.reduce((s, q) => s + q[1], 0) / use.length };
+  }
+  return { setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, fields, actorFocus, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
     get following() { return fpp; }, get actorCount() { return actors.filter((a) => a.g.visible).length; } };
 }
