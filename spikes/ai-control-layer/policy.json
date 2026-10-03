@@ -11,12 +11,12 @@
   },
 
   "budgets": {
-    "_doc": "Per session (one agent run). Any limit hit = DENY with guardrail 'budget'.",
+    "_doc": "Per session (one agent run). Any limit hit = DENY with guardrail 'budget'. max_compute_ms is 120000 in this demo policy (policy.paid-example.json keeps 30000): since F16 prompt checks count local-model time too, and a judges' session of ~25-30 prompts with guard models would hit 30 s. With 120 s, max_calls (40) is the limit a live session reaches first.",
     "enabled": true,
     "max_calls": 40,
     "max_tokens": 6000,
     "max_usd": 0.06,
-    "max_compute_ms": 30000,
+    "max_compute_ms": 120000,
     "usd_per_1k_tokens_default": 0.01
   },
 

@@ -71,7 +71,7 @@ Config lives in `policy.json` under `controls.semantic`, and models must also ap
   - `keep_alive` keeps models loaded.
   - A model that times out goes on `cooldown_s` (circuit breaker) and the next fallback model is tried in the same call.
   - Verdicts are cached by model + text.
-- **Budget:** model time counts against `budgets.max_compute_ms`.
+- **Budget:** model time counts against `budgets.max_compute_ms`, for tool calls, tool outputs and (since F16) prompt checks. The demo `policy.json` allows 120 s per session (a judges' session of ~25-30 prompts with models would hit the old 30 s); `policy.paid-example.json` keeps 30 s.
 - **Telemetry:** `semantic_heuristic`, `semantic_prefilter` and `semantic_judge` are reported separately from the deterministic checks.
 - **`backend`:**
   - `auto` skips (and flags) tiers whose model isn't pulled.
@@ -122,6 +122,8 @@ Why different families (team swarm math): guards trained on similar data make co
 - So the guard list mixes Qwen, Llama and Granite, and the per-guard vote counts in `/metrics` show which guard actually carries information. In the live run llama-guard abstained on 7 of 11 votes.
 
 ## Try it live (judges)
+
+**Start every show from a fresh session.** Budgets (40 calls, 120 s of local-model time in the demo `policy.json`), loop counters, taint and the IBAN vault are per session and live in memory. Restart `server.py` right before the judges arrive, or give the dashboard console a new session name, so a rehearsal never eats into the judges' budget or leaves the session tainted.
 
 ```sh
 python3 server.py &
