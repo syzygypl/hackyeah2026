@@ -1168,7 +1168,7 @@
         { type: 'Feature', properties: { id: a.id }, geometry: { type: 'LineString', coordinates: coords } },
         { type: 'Feature', properties: { id: a.id }, geometry: { type: 'Point', coordinates: last } }] });
       const b = coords.reduce((bb, c) => [[Math.min(bb[0][0], c[0]), Math.min(bb[0][1], c[1])], [Math.max(bb[1][0], c[0]), Math.max(bb[1][1], c[1])]], [last, last]);
-      map.fitBounds(b, { padding: 80, maxZoom: 15, duration: 600 });
+      map.fitBounds(b, { padding: { top: 80, bottom: 80, left: 80, right: 80 + Math.max(0, +m.padRight || 0) }, maxZoom: 15, duration: 600 });
     } catch (err) { warn('highlight: ' + err.message); }
   }
   // insets (plumbing): in /app the shell's floating panels cover the frame's edges (?insets=T,R,B,L px, then {type:'insets'});

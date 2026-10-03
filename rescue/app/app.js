@@ -1419,13 +1419,18 @@ subs.push((why) => {
   subs.push(upd); upd();
   const atNow = () => { const T = tlDoc(); return T && store.minute != null ? tlClock(T, store.minute) : curClock(); };   // timeline minute when scrubbing
   // straight to the 2D frame (not postTo: its ready flag drops while a run reloads; the view queues messages until it is ready)
-  const highlight = (a) => { const f = $("frame2d"); try { f && f.contentWindow && f.contentWindow.postMessage({ source: "rescue-app", type: "highlight", actor: a, sc: store.scenario, at: atNow() }, location.origin); } catch (e) {} };
+  // padRight: how far the open actor drawer reaches past the map's own right inset, so fitBounds keeps the track out from under it
+  const padRight = () => { const d = $("alDrawer"); if (!d || d.getAttribute("aria-hidden") === "true") return 0; return Math.max(0, Math.round(innerWidth - d.getBoundingClientRect().left) - insets()[1]); };
+  const highlight = (a) => { const f = $("frame2d"); try { f && f.contentWindow && f.contentWindow.postMessage({ source: "rescue-app", type: "highlight", actor: a, sc: store.scenario, at: atNow(), padRight: padRight() }, location.origin); } catch (e) {} };
+  // "Ślad na mapie": back to Akcja if needed, 2D fits the track; in 3D the view selects the team ({type:"highlight", actor, fly})
+  const focusTrack = (a) => { if (store.mode !== "akcja") setMode("akcja"); if (store.view === "3d" || store.view === "split") postTo("3d", { type: "highlight", actor: a, fly: true }); highlight(a); };
   const showActor = (id) => import("./actorlog.js").then((m) => m.openActor(id, { sc: store.backend === "api" ? store.scenario : undefined, at: liveOn() ? undefined : atNow(),
-    onTrack: (a) => { if (store.mode !== "akcja" || store.view === "3d") toast("Ślad zespołu rysuje widok 2D (Akcja, 2D)"); highlight(a); }, onClose: () => highlight(null) }));
+    onTrack: focusTrack, onClose: () => highlight(null) }));
   $("liveFeed") && $("liveFeed").addEventListener("click", (e) => { const b = e.target.closest("[data-actor]"); if (b) { showActor(b.dataset.actor); highlight(b.dataset.actor); } });
   addEventListener("message", (e) => { if (e.origin === location.origin && e.data && (e.data.source === "rescue2d" || e.data.source === "rescue3d") && e.data.type === "actor" && typeof e.data.id === "string") showActor(e.data.id); });
   const qa = new URLSearchParams(location.search).get("actor");
-  if (qa) setTimeout(() => { showActor(qa); highlight(qa); }, 2500);
+  // ?actor=<id> (link from Zasoby / Centrum): wait for the 2D view, open the drawer, then fit the track beside it
+  if (qa) { const t0 = Date.now(), go = () => { if (!FRAMES["2da"].ready && Date.now() - t0 < 20000) return setTimeout(go, 300); showActor(qa).then(() => focusTrack(qa)); }; setTimeout(go, 300); }
   // "Zasoby akcji" under the top 3 (Akcja): every unit of the incident, status, one health chip, GPS feed dot (GET /api/inventory?sc=&at=)
   const AK = { pieszy: "PP", pies: "K9", dron: "DR", smiglowiec: "SM", lodz: "ŁD", nurkowie: "NU" };
   const chip = (u) => {
