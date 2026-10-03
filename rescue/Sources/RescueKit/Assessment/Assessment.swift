@@ -99,7 +99,7 @@ public enum Assessment {
         let w = f.weather, surv = (w["survival"] as? [String: Any]) ?? [:]
         var sit = f.found.map { "Akcja zamknięta o \(f.t): \($0)." } ?? ""
         if f.found == nil, let a = top.first {
-            sit = "Stan o \(f.t): najwyższe prawdopodobieństwo \(a.id) \(a.name) (\(pct(a.poa))); top 3 segmenty mają \(pct(top.map(\.poa).reduce(0, +))) w \(String(format: "%.0f", top.map(\.area).reduce(0, +)))% obszaru."
+            sit = "Stan o \(f.t): najwyższe prawdopodobieństwo \(Scenario.segLabel(a.id, a.name)) (\(pct(a.poa))); top 3 segmenty mają \(pct(top.map(\.poa).reduce(0, +))) w \(String(format: "%.0f", top.map(\.area).reduce(0, +)))% obszaru."
             let n = f.searched.count
             sit += n > 0 ? " Przeszukano bez wyniku \(n) segment(y)." : " Nic jeszcze nie przeszukano."
             if let txt = surv["text"] as? String { sit += " \(txt)." }
@@ -116,7 +116,7 @@ public enum Assessment {
         }
         let recs: [[String: Any]] = f.assignments.map { a in
             ["zespol": a["resourceId"] as? String ?? "", "segment": a["segmentId"] as? String ?? "", "zgodnie_z_planem": true,
-             "dzialanie": "\(a["resourceId"] as? String ?? "") -> \(a["segmentId"] as? String ?? "") \(a["segmentName"] as? String ?? ""), ETA \(Int((a["travelMin"] as? Double ?? 0).rounded())) min",
+             "dzialanie": "\(a["resourceId"] as? String ?? "") -> \(Scenario.segLabel(a["segmentId"] as? String ?? "", a["segmentName"] as? String ?? "")), ETA \(Int((a["travelMin"] as? Double ?? 0).rounded())) min",
              "uzasadnienie": a["reason"] as? String ?? ""]
         }
         var risks: [[String: Any]] = []
@@ -142,7 +142,7 @@ public enum Assessment {
 
     static func llm(_ f: Facts) async -> ([String: Any], [String])? {
         guard let url = URL(string: ollamaURL + "/api/chat"), ["localhost", "127.0.0.1"].contains(url.host ?? "") else { return nil }
-        let segList = f.segments.prefix(8).map { "\($0.id) \($0.name): \(pct($0.poa)), \(String(format: "%.1f", $0.area))% obszaru, przeszukany POD \(pct(f.searched[$0.id] ?? 0))" }
+        let segList = f.segments.prefix(8).map { "\(Scenario.segLabel($0.id, $0.name)): \(pct($0.poa)), \(String(format: "%.1f", $0.area))% obszaru, przeszukany POD \(pct(f.searched[$0.id] ?? 0))" }
         let ev = f.evidence.map { "\($0.id) [\($0.t) \($0.source)] \($0.label)" }
         let plan = f.assignments.map { a in
             "\(a["resourceId"] ?? "") -> \(a["segmentId"] ?? "") (ETA \(Int((a["travelMin"] as? Double ?? 0).rounded())) min, szansa \(pct(a["expectedFind"] as? Double ?? 0)))" +

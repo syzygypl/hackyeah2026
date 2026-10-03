@@ -41,7 +41,7 @@ let truthSeg = blind ? "" : scenario.segments[grid.segmentOf[truthCell]].id
 
 func pct(_ x: Double) -> String { String(format: "%.0f%%", x * 100) }
 func top3Line(_ segs: [ProbabilityGrid.SegmentScore]) -> String {
-    segs.prefix(3).map { "\($0.id) \($0.name) \(pct($0.poa))" }.joined(separator: " | ")
+    segs.prefix(3).map { "\(Scenario.segLabel($0.id, $0.name)) \(pct($0.poa))" }.joined(separator: " | ")
 }
 
 print("== RESCUE LOCATOR == \(scenario.incident)")
@@ -101,9 +101,9 @@ let areaFused = areaToFind(snaps[beforePing].poa), areaRings = areaToFind(ringsP
 
 print("\n== VALUE (state at \(arrived[beforePing].clock), before \(StoryPipeline.decisiveIndex(arrived).map { arrived[$0].kind == "found" ? "the find" : "the Ratunek ping" } ?? "the end")) ==")
 print("Top 3 segments hold \(pct(top3poa)) of probability in \(pct(top3area)) of the area (\(String(format: "%.0f", Double(grid.count) * scenario.cellM * scenario.cellM / 1e6)) km2 grid).")
-print("  1. \(fused[0].id) \(fused[0].name): \(pct(fused[0].poa)) in \(pct(fused[0].areaFrac)) area")
-print("  2. \(fused[1].id) \(fused[1].name): \(pct(fused[1].poa)) in \(pct(fused[1].areaFrac)) area")
-print("  3. \(fused[2].id) \(fused[2].name): \(pct(fused[2].poa)) in \(pct(fused[2].areaFrac)) area")
+print("  1. \(Scenario.segLabel(fused[0].id, fused[0].name)): \(pct(fused[0].poa)) in \(pct(fused[0].areaFrac)) area")
+print("  2. \(Scenario.segLabel(fused[1].id, fused[1].name)): \(pct(fused[1].poa)) in \(pct(fused[1].areaFrac)) area")
+print("  3. \(Scenario.segLabel(fused[2].id, fused[2].name)): \(pct(fused[2].poa)) in \(pct(fused[2].areaFrac)) area")
 if blind {
     print("BLIND MODE: the scenario has no find spot (truth), backtest skipped.")
 } else {
@@ -132,7 +132,7 @@ if let seg = find["findSeg"] as? String {
     if let p = find["pingClock"] { print("Epilogue: Ratunek ping at \(p) - the map had \(seg) as #1 since \(find["findRank1Since"] ?? "-")") }
 }
 let finalTop = snaps.last!.segs[0]
-print("Final state: \(finalTop.id) \(finalTop.name) \(pct(finalTop.poa)).")
+print("Final state: \(Scenario.segLabel(finalTop.id, finalTop.name)) \(pct(finalTop.poa)).")
 
 // HTML
 let out = pkgDir.appendingPathComponent("out")

@@ -255,7 +255,7 @@ function render(){
   const tp=top.reduce((s,i)=>s+sp[i],0), ta=top.reduce((s,i)=>s+sa[i],0)/N;
   document.getElementById('vbig').textContent=`${Math.round(tp*100)}% prawdopodobieństwa w ${Math.round(ta*100)}% obszaru`;
   document.getElementById('vsub').innerHTML=`<small>Top 3 segmenty z ${D.segments.length}, siatka ${D.rows} x ${D.cols} komórek</small>`;
-  document.getElementById('segs').innerHTML=top.map((i,k)=>`<div class="seg"><span class="rank">${k+1}</span><b>${D.segments[i].id} ${D.segments[i].name}</b>
+  document.getElementById('segs').innerHTML=top.map((i,k)=>`<div class="seg"><span class="rank">${k+1}</span><b>${D.segments[i].name.startsWith(D.segments[i].id+' ')?D.segments[i].name:D.segments[i].id+' '+D.segments[i].name}</b>
     <div class="big">${(sp[i]*100).toFixed(0)}% <small>w ${(sa[i]/N*100).toFixed(1)}% obszaru</small></div>
     <div class="bar"><i style="width:${Math.min(100,sp[i]*100)}%"></i></div><div class="task">${taskFor(i)}</div></div>`).join('');
   // searched segments

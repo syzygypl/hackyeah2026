@@ -87,6 +87,9 @@ public struct Scenario: Codable, Sendable {
         /// When the thing reported was observed (witness saw her at 13:40, BTS logged at 14:48), "HH:mm".
         /// `at` is when the report reached the search leader. Falls back to "o HH:mm" in the title.
         public var seenAt: String?
+        /// Clue only: "sighting" (person seen at seenAt) or "trace" (item / track found, dropped at an unknown time).
+        /// Missing = guessed from the title (feature traceWindow), else treated as a sighting (v2.1).
+        public var clueKind: String?
         /// Clue only: this report closes the case (person found).
         public var found: Bool?
         /// Optional epilogue event (e.g. a late Ratunek ping): skipped unless --epilogue / showEpilogue.
@@ -204,6 +207,11 @@ public struct Scenario: Codable, Sendable {
         let balzer: [Coord] = [[49.2546, 20.1020], [49.24695, 20.08604], [49.23383, 20.08747], [49.21873, 20.08716], [49.2100, 20.0790],
                                [49.20118, 20.07083]].map(Coord.init)
         return balzer.contains { $0.lat > bbox.south && $0.lat < bbox.north && $0.lon > bbox.west && $0.lon < bbox.east } ? [balzer] : []
+    }
+
+    /// "D13 Kosodrzewina" instead of "D13 D13 Kosodrzewina" when the segment name already starts with its id.
+    public static func segLabel(_ id: String, _ name: String) -> String {
+        name.hasPrefix(id + " ") || name == id ? name : "\(id) \(name)"
     }
 
     public func events(for provider: String) -> [Event] {

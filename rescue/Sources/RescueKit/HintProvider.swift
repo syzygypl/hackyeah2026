@@ -52,8 +52,12 @@ public enum HintStream {
 
 /// Shared helper so each provider file stays tiny.
 func hint(_ s: Scenario, _ e: Scenario.Event, _ i: Int, _ evidence: LocationHint.Evidence, marker: Coord? = nil) -> LocationHint {
-    let m = s.minute(e.at)
-    var h = LocationHint(id: "\(e.provider)-\(i)", source: e.provider, minute: m, clock: s.clock(m),
+    var m = s.minute(e.at)
+    // eventsBeforeStart: a report from before the call (family searched at 16:30, call at 16:40) is accepted at the
+    // stream start; its own clock is kept in the title/clock (v2.1: negative minute, rejected by the validator)
+    let early = m < 0 && s.has("eventsBeforeStart")
+    if early { m = 0 }
+    var h = LocationHint(id: "\(e.provider)-\(i)", source: e.provider, minute: m, clock: early ? e.at : s.clock(m),
                          title: e.title, detail: e.detail, evidence: evidence)
     h.marker = marker
     return h

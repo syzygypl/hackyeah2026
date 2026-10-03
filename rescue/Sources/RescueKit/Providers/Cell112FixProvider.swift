@@ -24,6 +24,7 @@ public struct Cell112FixProvider: HintProvider {
             let seen = s.observedMinute(e)
             let sightings = s.events(for: "Clue").filter {
                 !ClueProvider.isFind($0) && ($0.radiusM ?? 500) <= 500 && $0.point != nil && s.observedMinute($0) < seen
+                    && !(s.has("traceWindow") && ClueProvider.isTrace($0))
             }
             let last = sightings.max { s.observedMinute($0) < s.observedMinute($1) }
             let from = last.map { Coord($0.point!) } ?? ipp
