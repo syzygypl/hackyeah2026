@@ -60,6 +60,7 @@
 .ch-top li:hover{outline:1px solid var(--rl-accent)}
 .ch-top .area{color:var(--rl-ink-2);font-size:var(--rl-fs-s);white-space:nowrap}
 .ch-top .up{color:var(--rl-danger);font-size:var(--rl-fs-xs);font-weight:700;white-space:nowrap} .ch-top .down{color:var(--rl-ok);font-size:var(--rl-fs-xs);font-weight:700;white-space:nowrap} .ch-top .same{color:var(--rl-mute);font-size:var(--rl-fs-xs);white-space:nowrap}
+.ch-head1{font-size:var(--rl-fs-l);margin-bottom:6px;color:var(--rl-danger)} .ch-head1.same{color:var(--rl-ink-2);font-size:var(--rl-fs)}
 .ch-moves{margin-top:5px;font-size:var(--rl-fs-s);font-weight:600}
 .ch-note{font-size:var(--rl-fs-s);color:var(--rl-ink-2);margin-bottom:5px}
 .ch-chips{display:flex;gap:6px;overflow-x:auto;padding:6px 14px;border-top:1px solid var(--rl-line);scrollbar-width:thin}

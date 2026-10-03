@@ -45,6 +45,7 @@ export function gazetteer(scn, run) {
     const parts = String(t.name || "").split(":").pop().split(/\s+-\s+/).map((x) => x.trim()).filter(Boolean), P = t.points || [];
     if (P.length < 2 || parts.length < 2) continue;
     parts.forEach((n, i) => add(n, P[Math.round(i * (P.length - 1) / (parts.length - 1))], "szlak", 250, 3));
+    const col = String(t.name || "").split(":")[0]; if (/^(niebieski|zielony|czerwony|zolty|zółty|żółty|czarny)/i.test(col)) add("szlak " + col.split("/")[0], P[Math.floor(P.length / 2)], "szlak", 700, 2);   // "na szlaku niebieskim"
   }
   for (const s of segs) {   // each part of a sector name ("Zmarzły Staw / Kozia Dolinka") points at the sector
     add(s.name, s.c, "sektor", 500, 1);
@@ -99,14 +100,14 @@ const RX = {
   sight: /(widzia|widzie|widziano|spotka|zauwaz|rozmawia|minal|minela|mijal|mijala|swiade|swiadk|widzial|wypatrz|slysza|slyszal|machal|wolal o pomoc)/,
   item: /(plecak|kurtk|czapk|rekawic|rekawiczk|\bbut\b|\bbuty\b|\bbuta\b|kijek|kijki|\bkij\b|latark|butelk|portfel|okular|\bmap[aeęy]\b|polar|szalik|chust|kask|czolowk|ubrani|odziez|sweter|bluz|termos|kurtke|telefon\w* (lezal|znalez)|dokument)/,
   cloth: /(kurtk|czapk|rekawic|\bbut\b|\bbuty\b|\bbuta\b|polar|szalik|chust|ubrani|odziez|sweter|bluz)/,
-  trace: /(slad|odcisk|trop|krzyk|wolani|wolal|glos|gwizd|swiatl|blysk|zapach)/,
+  trace: /(slad|odcisk|trop|krzyk|wolani|wolal|glos|gwizd|swiatl|swiecil|swiecila|blysk|zapach)/,
   phone: /(telefon|komork|bts|logowal|sygnal|112|gps z telefonu)/,
   weather: /(mgl|deszcz|snieg|wiatr|burz|widocznos|zmrok|ciemn|mroz|oblodz|temperatur|°|stopni|zadymk|whiteout|pada|leje|mzawk|grad|wichur|lod\b|oblodzenie|noc\b|zapada)/,
   status: /(uziemion|nie poleci|nie leci|nie moze|wraca|zawraca|wycofa|awari|bateri|rozladowa|gotow|dostepn|startuje|w drodze|wylecial|zmeczon|kontuzj|odpoczyn|przerw|niedostep|wystartowal|laduje|wymiana)/,
   dispatch: /(wyslij|skieruj|przydziel|niech\s+\w+\s+(idzie|sprawdzi|przeszuka)|posl[ij]|wysylam|kieruje)/,
   unsure: /(chyba|moze\b|mozliwe|prawdopodob|wydaje|nie jestem pew|z daleka|niepewn|podobn|jakby|raczej|nie wiem)/,
   sure: /(na pewno|dokladnie|pewn[aey]\b|gps|rozpoznal|na sto procent|wyraznie)/,
-  move: /\b(szedl|szla\b|idzie|szli\b|schodzil|schodzila|wchodzil|wchodzila|zmierzal|zmierzala|kierowal|kierowala|wracal|wracala|poszedl|poszla|ruszyl|ruszyla|zszedl|zeszla|podchodzil|uciekal|biegl|szedl)/,
+  move: /\b(szedl|szla\b|idzie|szli\b|schodzil|schodzila|wchodzil|wchodzila|zmierzal|zmierzala|kierowal|kierowala|wracal|wracala|poszedl|poszla|ruszyl|ruszyla|zszedl|zeszla|podchodzil|uciekal|biegl|wychodzil|wychodzila|wyszedl|wyszla|wyruszyl|wyruszyla|kierujac|idac)/,
   dirCue: /^(strone|kierunku|kierunek|ku)$/,
 };
 const BEAR = [["polnocny wschod", 45], ["polnocno wschod", 45], ["polnocny zachod", 315], ["polnocno zachod", 315], ["poludniowy wschod", 135], ["poludniowo wschod", 135], ["poludniowy zachod", 225], ["poludniowo zachod", 225], ["polnoc", 0], ["poludni", 180], ["wschod", 90], ["zachod", 270]];
@@ -147,7 +148,7 @@ export function parse(text, ctx) {
   else if (RX.weather.test(f)) ev.kind = "weather";
   else if (/(kogos|ktos|osob|turyst|mezczyzn|kobiet|\bgo\b|\bja\b|\bbyl\b|\bbyla\b)/.test(f) && (RX.move.test(f) || /\b(byl|byla|stal|stala|siedzial|siedziala|lezal|lezala|odpoczywal|czekal)\b/.test(f))) ev.kind = "sighting";
   if (ev.kind === "clue") {
-    ev.clueType = RX.cloth.test(f) ? "odziez" : isItem ? "znalezisko" : RX.phone.test(f) && !isTrace ? "telefon" : "slad";
+    ev.clueType = /(swiecil|swiecila|blysk|swiatl)/.test(f) ? "slad" : RX.cloth.test(f) ? "odziez" : isItem ? "znalezisko" : RX.phone.test(f) && !isTrace ? "telefon" : "slad";
     const it = f.match(/(plecak|kurtk\w*|czapk\w*|rekawiczk\w*|rekawic\w*|\bbut\w*|kij\w*|latark\w*|butelk\w*|portfel|okular\w*|map[aey]|polar|szalik|chust\w*|kask|czolowk\w*|termos|telefon|sweter|bluz\w*|slad\w*|trop|krzyk|wolanie|glos|gwizd\w*|swiatl\w*|odcisk\w*)/);
     ev.item = it ? text.slice(f.indexOf(it[0]), f.indexOf(it[0]) + it[0].length) : null;
   }
@@ -195,6 +196,7 @@ export function parse(text, ctx) {
     const s = segAt(ctx.segs, ev.place.p); if (s) ev.place.seg = s.id;
   }
   // sectors for "przeszukane, nic": ids, else the sectors of the named places
+  if (ev.kind === "search" && !ids.length && !P.length && !res) ev.kind = null;   // "nic nie wiem"
   if (ev.kind === "search") {
     const set = new Set(ids);
     for (const h of P) { const s = h.g.kind === "sektor" ? ctx.segs.find((x) => x.name === h.g.name || x.name.includes(h.g.name)) || segAt(ctx.segs, h.g.p) : segAt(ctx.segs, h.g.p); if (s) set.add(s.id); }
@@ -295,8 +297,9 @@ function diffHTML(before, after, ev) {
   for (const s of before.slice(0, 3)) { const a = ra.get(s.id), b = rb.get(s.id); if (a > 3) moves.push(`${s.id} spadł z ${b}. na ${a}. miejsce`); }
   for (const s of after.slice(0, 3)) { const a = ra.get(s.id), b = rb.get(s.id); if (b > 3) moves.push(`${s.id} awansował z ${b}. na ${a}. miejsce`); }
   for (const id of (ev.segs || [])) { const a = ra.get(id), b = rb.get(id); if (a && b && a !== b && !moves.some((m) => m.startsWith(id + " "))) moves.push(`${id} ${a > b ? "spadł" : "awansował"} z ${b}. na ${a}. miejsce`); }
-  const same = after.slice(0, 3).every((s, i) => rb.get(s.id) === i + 1);
-  return `<div class="ch-top"><div class="ch-h">Gdzie szukać najpierw - teraz</div><ol>${top}</ol>${moves.length ? `<div class="ch-moves">${moves.map(esc).join(" · ")}</div>` : same ? `<div class="ch-moves">Kolejność top 3 bez zmian - wskazówka wzmocniła obecny plan.</div>` : ""}</div>`;
+  const same = after.slice(0, 3).every((s, i) => rb.get(s.id) === i + 1), a0 = after[0];
+  const head = !a0 ? "" : rb.get(a0.id) !== 1 ? `<div class="ch-head1">Nowy nr 1: <b>${esc(a0.id)} ${esc(a0.name)}</b>${rb.get(a0.id) ? ` (było ${rb.get(a0.id)}.)` : ""}</div>` : `<div class="ch-head1 same">Nr 1 bez zmian: <b>${esc(a0.id)} ${esc(a0.name)}</b></div>`;
+  return `<div class="ch-top">${head}<div class="ch-h">Gdzie szukać najpierw - teraz</div><ol>${top}</ol>${moves.length ? `<div class="ch-moves">${moves.map(esc).join(" · ")}</div>` : same ? `<div class="ch-moves">Kolejność top 3 bez zmian - wskazówka wzmocniła obecny plan.</div>` : ""}</div>`;
 }
 
 // ---------------------------------------------------------------- mini map (SVG, no tiles): sectors, trails, lakes, the point
