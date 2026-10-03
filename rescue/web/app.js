@@ -919,9 +919,9 @@
       $('#legend').innerHTML = `<div class="lg-title">Trudność terenu (silnik)</div><div class="lg-diff">${cls.map((c) => `<span><i class="lg-sw" style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`;
       return;
     }
-    $('#legend').innerHTML = `<div class="lg-title">Prawdopodobieństwo × średnia komórka</div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
+    $('#legend').title = `Waga mapy w komórce 100 x 100 m względem średniej: 1× = średnio ${pct(1 / S.M.N, 3)} na komórkę; poniżej 0,5× bez koloru`;
+    $('#legend').innerHTML = `<div class="lg-title">Waga mapy <span class="lg-sub">× średnia</span></div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
       <div class="lg-stops">${SCALE.STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
-      <div class="lg-note">1× = średnio ${pct(1 / S.M.N, 3)} na komórkę 100 x 100 m; poniżej 0,5× bez koloru</div>
       <div class="lg-keys"><span><i class="k ln-seg"></i>top 3</span><span><i class="k ln-srch"></i>przeszukany</span></div>`;
   }
 

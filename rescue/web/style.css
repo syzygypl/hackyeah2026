@@ -185,7 +185,7 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 #netnote { left: 50%; transform: translateX(-50%); top: 10px; padding: 6px 12px; font-size: 13px; border-color: var(--warn); color: var(--ink); z-index: 6; }
 #legend { left: 10px; bottom: 26px; padding: 6px 9px; font-size: 12px; }
 /* same box as the 3D #sceneLegend (377px wide, ramp across it), so switching 2D/3D in the shell doesn't resize the legend */
-body.embed-scene #legend { width: 377px; }
+body.embed-scene #legend { width: 236px; }
 body.embed-scene .lg-title { white-space: nowrap; }
 body.embed-scene .lg-ramp, body.embed-scene .lg-stops { width: 100%; }
 .lg-title { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
@@ -319,3 +319,10 @@ body.embed .ctl-row { gap: 4px 12px; }
 body.embed .ctl-row .chk { font-size: 13.5px; min-height: 28px; }
 body.embed .ctl-row .chk input { width: 16px; height: 16px; accent-color: var(--rl-accent, #1f4e79); }
 body.embed .tip { background: var(--rl-panel-solid, #faf8f3); border-radius: 10px; box-shadow: var(--rl-shadow); }
+
+/* compact heat legend: short title, ramp + stops, details in the title tooltip */
+.lg-title .lg-sub { font-weight: 400; color: var(--ink-2); }
+body.embed-scene #legend { padding: 6px 9px; font-size: 11.5px; }
+body.embed-scene .lg-title { font-size: 12px; margin-bottom: 3px; }
+body.embed-scene .lg-stops { font-size: 10px; }
+body.embed-scene .lg-keys { gap: 10px; margin-top: 3px; font-size: 11px; }

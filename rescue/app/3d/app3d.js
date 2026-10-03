@@ -1220,9 +1220,8 @@ function drawTeams(s) {
 }
 
 // ---------- legend (shared scale) ----------
-const LEGEND_HEAT = `<div class="lg-title">Prawdopodobieństwo × średnia komórka</div><i class="ramp" style="background:${gradientCSS()}"></i>
+const LEGEND_HEAT = `<div class="lg-title" title="Waga mapy w komórce 100 x 100 m względem średniej: 1× = średnio ${nf(100 / (R.rows * R.cols), 3)}% na komórkę; poniżej 0,5× bez koloru">Waga mapy <span class="lg-sub">× średnia</span></div><i class="ramp" style="background:${gradientCSS()}"></i>
     <div class="stops">${STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
-    <div class="lg-note">1× = średnio ${nf(100 / (R.rows * R.cols), 3)}% na komórkę 100 x 100 m; poniżej 0,5× bez koloru</div>
     <div class="lg-keys"><span><i class="k-top"></i>top 3</span><span><i class="k-srch"></i>przeszukany</span></div>`;
 const LEGEND_DIFF = `<div class="lg-title">Trudność terenu (silnik)</div><div class="lg-diff">${(R.difficultyClasses || []).map((c) => `<span><i style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`;
 // embed=scene: legend box top-left and controls top-right, laid out like the 2D screen's #legend / #mapctl
