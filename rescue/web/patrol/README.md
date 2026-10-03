@@ -19,6 +19,10 @@ cd rescue && python3 -m http.server 8772           # then http://127.0.0.1:8772/
   sent automatically when `/health` answers again, marked as delayed with the original time.
 - Map: offline basemap from `../basemap/`, zero internet requests.
 
+Every request carries the monitoring headers from `rescue/README.md`: `X-Rescue-Client` (random id kept on the phone),
+`X-Rescue-Team`, `X-Rescue-Source: patrol`. On the team network `rescue-field` also wants `X-Rescue-Pin`: on the first
+401/403 the page asks for the PIN once and keeps it on the phone.
+
 Options: `?api=http://<laptop>:8770` (field server address), `?run=<path to run.json>`.
 
 On a real phone the field server must be reachable on the team network (today `rescue-field` binds 127.0.0.1);
