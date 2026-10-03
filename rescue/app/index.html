@@ -6,6 +6,7 @@
 <title>Rescue Locator</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="../web/vendor/maplibre-gl.css">
+<link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
 </head>
 <body class="view-2d">
@@ -14,7 +15,7 @@
   <h1>Rescue Locator</h1>
   <label class="mute">Scenariusz <select id="scen"></select></label>
   <span class="views" role="tablist" aria-label="Widok">
-    <button data-view="2d" class="on" role="tab">2D</button><button data-view="3d" role="tab">3D</button><button data-view="split" role="tab">Podział</button>
+    <button data-view="2d" class="on" role="tab" title="Mapa 2D z edycją (przeciągnij i upuść)">2D</button><button data-view="2da" role="tab" title="Ekran analizy 2D (web/)">2D analiza</button><button data-view="3d" role="tab">3D</button><button data-view="split" role="tab">Podział</button>
   </span>
   <span class="edit-only"><button id="newZ" title="Nowa historia na terenie Zawratu">Nowa historia</button>
   <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button></span>
@@ -37,7 +38,8 @@
   <div id="alerts"></div>
 </aside>
 <main id="center">
-  <div id="map"><div id="toast"></div><div id="hint"></div></div>
+  <div id="map"><div id="toast"></div><div id="hint"></div><div id="legend"></div></div>
+  <div id="pane2d"><iframe id="frame2d" title="Analiza 2D" loading="lazy"></iframe><div id="note2d" class="note3d"></div></div>
   <div id="pane3d"><iframe id="frame3d" title="Widok 3D" loading="lazy"></iframe><div id="note3d" class="note3d"></div></div>
 </main>
 <aside id="right">

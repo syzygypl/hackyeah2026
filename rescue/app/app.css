@@ -1,6 +1,6 @@
-:root{--bg:#0e1317;--panel:#151c22;--panel2:#1b242c;--line:#2b3741;--ink:#eef2f5;--ink2:#b7c3cd;--mute:#8797a4;--accent:#5ce1e6;--ok:#3ee08f;--warn:#f2b134;--bad:#ff6b5a;--heat:#ef6548;--sel:#ffd84d;color-scheme:dark}
+:root,[data-theme]{--bg:var(--rl-bg);--panel:var(--rl-panel);--panel2:var(--rl-panel-2);--line:var(--rl-line);--ink:var(--rl-ink);--ink2:var(--rl-ink-2);--mute:var(--rl-mute);--accent:var(--rl-accent);--ok:var(--rl-ok);--warn:var(--rl-warn);--bad:var(--rl-danger);--heat:var(--rl-danger);--sel:var(--rl-select)}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial,sans-serif}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:var(--rl-fs)/1.4 var(--rl-font)}
 #app{display:grid;grid-template-columns:300px 1fr 330px;grid-template-rows:auto 1fr 180px;height:100vh}
 header{grid-column:1/4;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
 header h1{font-size:17px;margin:0 6px 0 0}
@@ -12,6 +12,9 @@ header h1{font-size:17px;margin:0 6px 0 0}
 #frame3d{width:100%;height:100%;border:0;display:block;background:#0b0f12}
 body.view-3d #map{display:none}body.view-3d #pane3d{display:block;border-left:0}
 body.view-split #pane3d{display:block}
+#pane2d{position:relative;flex:1;display:none;min-width:0}#frame2d{width:100%;height:100%;border:0;display:block;background:var(--bg)}
+body.view-2da #map{display:none}body.view-2da #pane2d{display:block}
+#legend{position:absolute;right:10px;top:10px;z-index:3;background:rgba(14,19,23,.88);border:1px solid var(--line);border-radius:8px;padding:5px 8px;width:220px}
 .note3d{position:absolute;left:8px;bottom:8px;z-index:3;font-size:11px;color:var(--ink2);background:rgba(14,19,23,.85);border-radius:6px;padding:3px 8px;pointer-events:none;max-width:80%}
 .note3d:empty{display:none}
 #bottom{grid-column:1/4;border-top:1px solid var(--line);background:var(--panel);overflow:auto;padding:6px 12px}

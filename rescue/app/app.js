@@ -3,6 +3,7 @@
 // else static run files from out/. Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "../web/basemap/basemap.js";
+import { paintGrid, legendHTML } from "./scale.js";   // shared heat scale (decision S2), same as 3D
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -37,7 +38,7 @@ async function detect() {
   store.hasApi = !!a; store.hasStudio = !!(m && m.modules); store.mods = m ? m.modules : [];
   let list = [];
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
-  if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.name || id) + " (serwer)", api: true }); }
+  if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
   for (const [id, s] of Object.entries(STATIC)) if (!list.some((x) => x.id === id)) list.push({ id, name: s.name, static: true });
   $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("");
   store.scenList = list;
@@ -47,7 +48,7 @@ async function loadScenario(id) {
   teamOps = []; closePop();
   let run, backend;
   if (s.id === "studio") { run = await api("/story"); backend = "studio"; }
-  else if (s.api) { run = await api("/api/run/" + encodeURIComponent(s.id)); backend = "api"; }
+  else if (s.api) { run = await api(s.run); backend = "api"; store.runUrl = s.run; store.assessUrl = s.assessment; }
   else { run = await (await fetch(STATIC[s.id].run, { cache: "no-store" })).json(); backend = "static"; }
   applyRun(run, { scenario: s.id, backend, editable: backend === "studio" }, "load");
 }
@@ -72,9 +73,10 @@ async function run(fn, msg) {
 let assessment = null;
 async function fetchAssessment() {
   assessment = null;
-  if (store.hasApi) {
-    const q = `?scenario=${encodeURIComponent(store.scenario)}&step=${store.step - 1}`;
-    assessment = await tryJSON("/api/assessment" + q);
+  if (store.hasApi && store.backend === "api" && store.assessUrl) {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000), want = store.scenario;
+    try { const r = await fetch(store.assessUrl + "?step=" + (store.step - 1), { signal: ctl.signal, cache: "no-store" }); if (r.ok && want === store.scenario) assessment = await r.json(); } catch (e) {}
+    clearTimeout(t);
   }
   renderAssess();
 }
@@ -91,7 +93,7 @@ function setupLayers() {
   if (mapReady) return;
   const blank = document.createElement("canvas"); blank.width = blank.height = 2;
   map.addSource("heat", { type: "image", url: blank.toDataURL(), coordinates: [[20.005, 49.249], [20.0875, 49.249], [20.0875, 49.195], [20.005, 49.195]] });
-  map.addLayer({ id: "heat", type: "raster", source: "heat", paint: { "raster-opacity": 0.78, "raster-resampling": "linear", "raster-fade-duration": 0 } });
+  map.addLayer({ id: "heat", type: "raster", source: "heat", paint: { "raster-opacity": 1, "raster-resampling": "linear", "raster-fade-duration": 0 } });
   map.addSource("segs", { type: "geojson", data: FC([]) });
   map.addLayer({ id: "seg-fill", type: "fill", source: "segs", paint: { "fill-color": "#ffd84d", "fill-opacity": ["case", ["get", "sel"], 0.12, 0] } });
   map.addLayer({ id: "seg-line", type: "line", source: "segs", paint: { "line-color": ["case", ["get", "sel"], "#ffd84d", ["get", "top"], "#ffffff", "rgba(255,255,255,.35)"], "line-width": ["case", ["get", "sel"], 3.5, ["get", "top"], 2.5, 1] } });
@@ -120,11 +122,7 @@ function searchedUpTo() {
 }
 function renderMap() {
   const R = D(), S = curStep(); if (!mapReady || !R || !S) return;
-  const b = R.bbox, cv = document.createElement("canvas"); cv.width = R.cols; cv.height = R.rows;
-  const cx = cv.getContext("2d"), im = cx.createImageData(R.cols, R.rows);
-  let mx = 0; for (const p of S.poaGrid) mx = Math.max(mx, p);
-  S.poaGrid.forEach((p, i) => { const t = Math.sqrt(p / (mx || 1)); im.data.set([255, Math.round(230 * (1 - Math.min(1, t * 1.2)) + 25), Math.round(60 * (1 - t)), Math.round(Math.min(1, t * 1.6) * 225)], i * 4); });
-  cx.putImageData(im, 0, 0);
+  const b = R.bbox, cv = paintGrid(S.poaGrid, R.cols, R.rows);
   map.getSource("heat").updateImage({ url: cv.toDataURL(), coordinates: [[b.west, b.north], [b.east, b.north], [b.east, b.south], [b.west, b.south]] });
   const top = S.segments.slice(0, 3).map((s) => s.id), searched = searchedUpTo();
   map.getSource("segs").setData(FC(S.segments.filter((s) => s.polygon && s.polygon.length).map((s) => ({ type: "Feature", geometry: { type: "Polygon", coordinates: [s.polygon] },
@@ -141,17 +139,19 @@ function renderMap() {
 }
 map.on("click", "seg-fill", (e) => { if (armed || suppressClick || !e.features.length) return; const sg = segAt(e.lngLat.lng, e.lngLat.lat); if (sg) selectSeg(sg.id, "2d"); });
 
+$("legend").innerHTML = legendHTML();
 // ---------- selection (shared by 2D, panels and 3D)
 function selectSeg(id, from) {
-  set({ selSeg: store.selSeg === id && from !== "3d" ? null : id }, "select");
-  if (from !== "3d") post3d({ type: "select", segmentId: store.selSeg });
+  const fromFrame = from in FRAMES;
+  set({ selSeg: store.selSeg === id && !fromFrame ? null : id }, "select");
+  for (const k in FRAMES) if (k !== from && store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
 }
 function setStep(n, from) {
   const R = D(); if (!R || !R.steps) return;
   n = Math.max(1, Math.min(R.steps.length, n));
   if (n === store.step) return;
   set({ step: n }, "step");
-  if (from !== "3d") post3d({ type: "step", i: n - 1 });
+  for (const k in FRAMES) if (k !== from) { if (FRAMES[k].ready) postTo(k, { type: "step", i: n - 1 }); else syncFrame(k, "step"); }
   clearTimeout(setStep.h); setStep.h = setTimeout(fetchAssessment, 300);
 }
 
@@ -483,35 +483,59 @@ $("save").onclick = async () => {
   } catch (e) { toast(String(e.message || e), 4000); }
 };
 
-// ---------- 3D view in an iframe (CONTRACT.md). postMessage when the 3D page says "ready", else reload with URL params.
-let ready3d = false, src3d = "", dirty3d = true;
-function url3d() {
-  const i = store.step - 1;
-  if (store.backend === "studio") return `../web/3d/index.html?sc=zawrat&run=${encodeURIComponent("/story")}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
-  if (store.backend === "api") return `../web/3d/index.html?sc=${encodeURIComponent(store.scenario)}&run=${encodeURIComponent("/api/run/" + store.scenario)}&step=${i}`;
-  return `../web/3d/index.html?sc=${encodeURIComponent(store.scenario)}&step=${i}`;
+// ---------- embedded views (CONTRACT.md): 3D (web/3d, source "rescue3d") and the analysis 2D screen (web/, source "rescue2d")
+// Before a view says "ready" it is driven by reloading its URL; after "ready" by postMessage (run as URL, step, select).
+const FRAMES = {
+  "3d": { el: $("frame3d"), note: $("note3d"), src: "", ready: false, dirty: true, source: "rescue3d", visible: () => store.view === "3d" || store.view === "split" },
+  "2da": { el: $("frame2d"), note: $("note2d"), src: "", ready: false, dirty: true, source: "rescue2d", visible: () => store.view === "2da" },
+};
+// run URL the views can fetch themselves (same origin)
+function runURL() {
+  if (store.backend === "studio") return "/story";
+  if (store.backend === "api") return store.runUrl;
+  return null;
 }
-function post3d(msg) { if (ready3d) $("frame3d").contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
-function sync3d(why) {
-  if (store.view === "2d") { dirty3d = true; return; }
-  if (ready3d) {
-    if (why === "run" || why === "edit" || why === "load" || dirty3d) post3d({ type: "run", run: store.run, step: store.step - 1 });
-    if (why === "step" || dirty3d) post3d({ type: "step", i: store.step - 1 });
-    if (store.selSeg) post3d({ type: "select", segmentId: store.selSeg });
-    dirty3d = false; return;
+function frameURL(k) {
+  const i = store.step - 1, sc = encodeURIComponent(store.scenario), ru = runURL(), po = encodeURIComponent(location.origin);
+  if (k === "3d") {
+    if (store.backend === "studio") return `../web/3d/index.html?embed=1&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
+    if (store.backend === "api") return `../web/3d/index.html?embed=1&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
+    return `../web/3d/index.html?embed=1&sc=${sc}&step=${i}`;
   }
-  const u = url3d(); if (u === src3d && !(why === "edit" || why === "run") && !dirty3d) return;
-  clearTimeout(sync3d.h);
-  sync3d.h = setTimeout(() => { src3d = u; ready3d = false; $("frame3d").src = u; dirty3d = false; }, why === "step" ? 700 : 50);
-  const R = D(), out = R && R.bbox && (R.bbox.west > 20.09 || R.bbox.east < 20.0 || R.bbox.north < 49.19 || R.bbox.south > 49.25);
-  $("note3d").textContent = out ? "3D: teren Zawratu - historia poza tym obszarem nie ma jeszcze modelu 3D" : ready3d ? "" : "3D: tryb zgodności (przeładowanie przy zmianie)";
+  if (store.backend === "studio") return `../web/index.html?embed=1&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
+  if (store.backend === "api") return `../web/index.html?embed=1&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/scenarios/" + store.scenario + ".json")}&step=${i}`;
+  return `../web/index.html?embed=1&parentOrigin=${po}&sc=${sc}&step=${i}`;
 }
+function postTo(k, msg) { const F = FRAMES[k]; if (F.ready && F.el.contentWindow) F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
+function post3d(msg) { for (const k in FRAMES) postTo(k, msg); }
+function syncFrame(k, why) {
+  const F = FRAMES[k];
+  if (!F.visible()) { if (why === "edit" || why === "load" || why === "run") F.dirty = true; return; }
+  if (F.ready && !F.dirty && why !== "load") {
+    if (why === "edit" || why === "run") { const u = runURL(); if (u) { F.ready = false; postTo2(F, { type: "run", url: u }); return; } }
+    if (why === "step") postTo(k, { type: "step", i: store.step - 1 });
+    return;
+  }
+  const u = frameURL(k); if (u === F.src && !F.dirty && why !== "edit" && why !== "run") return;
+  clearTimeout(F.h);
+  F.h = setTimeout(() => { F.src = u; F.ready = false; F.el.src = u; F.dirty = false; }, why === "step" ? 700 : 50);
+  const R = D(), out = k === "3d" && R && R.bbox && (R.bbox.west > 20.09 || R.bbox.east < 20.0 || R.bbox.north < 49.19 || R.bbox.south > 49.25) && store.backend === "studio";
+  F.note.textContent = out ? "3D: teren Zawratu - historia poza tym obszarem nie ma jeszcze modelu 3D" : "";
+}
+function postTo2(F, msg) { F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
+function sync3d(why) { for (const k in FRAMES) syncFrame(k, why); }
 addEventListener("message", (e) => {
-  if (e.source !== $("frame3d").contentWindow || !e.data || typeof e.data !== "object") return;
-  const m = e.data;
-  if (m.type === "ready") { ready3d = true; $("note3d").textContent = ""; post3d({ type: "run", run: store.run, step: store.step - 1 }); if (store.selSeg) post3d({ type: "select", segmentId: store.selSeg }); }
-  if (m.type === "select" && typeof m.segmentId !== "undefined") selectSeg(m.segmentId, "3d");
-  if (m.type === "step" && Number.isInteger(m.i)) setStep(m.i + 1, "3d");
+  const k = Object.keys(FRAMES).find((x) => FRAMES[x].el.contentWindow === e.source);
+  if (!k || e.origin !== location.origin || !e.data || typeof e.data !== "object" || e.data.source !== FRAMES[k].source) return;
+  const m = e.data, F = FRAMES[k];
+  if (m.type === "ready") {
+    F.ready = true;
+    if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
+    if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
+  }
+  if (m.type === "select" && (typeof m.segmentId === "string" || m.segmentId === null)) selectSeg(m.segmentId, k);
+  // a view reloading itself reports its boot step before "ready": only user steps after "ready" count
+  if (m.type === "step" && Number.isInteger(m.i) && F.ready) setStep(m.i + 1, k);
 });
 function setView(v) {
   store.view = v;
@@ -529,11 +553,11 @@ subs.push((why) => {
   renderMap(); renderPanels(); renderAssess();
   if (why !== "select") { renderPins(); renderTokens(); renderTeams(); }
   else renderPins();
-  if (why !== "select" && why !== "selectEv") sync3d(why);
+  if (why !== "select" && why !== "selectEv" && why !== "step") sync3d(why);
 });
 $("scen").onchange = () => loadScenario($("scen").value).catch((e) => toast(String(e.message || e), 5000));
 
-window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, undo, teamOps: () => teamOps, src3d: () => src3d, ready3d: () => ready3d };   // tests
+window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
 async function boot() {
   try {
     await detect();
@@ -543,7 +567,7 @@ async function boot() {
     const q = new URLSearchParams(location.search); if (q.get("view")) v = q.get("view");
     if (q.get("sc") && store.scenList.some((s) => s.id === q.get("sc"))) $("scen").value = q.get("sc");
     await loadScenario($("scen").value);
-    setView(["2d", "3d", "split"].includes(v) ? v : "2d");
+    setView(["2d", "2da", "3d", "split"].includes(v) ? v : "2d");
     hint();
     pollAlerts();
   } catch (e) { toast("Serwer niedostępny: swift run rescue-studio, potem http://127.0.0.1:8771/app/ (" + (e.message || e) + ")", 8000); }
