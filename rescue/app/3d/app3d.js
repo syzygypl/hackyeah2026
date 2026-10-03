@@ -16,6 +16,7 @@ import { colorFor, gradientCSS, STOPS } from '../scale.js'; // shared heat scale
 import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
 import { createTimeline3D } from './timeline3d.js';
 import { createCoverage3D } from './coverage3d.js';
+import { createWalk3D } from './walk3d.js';   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
@@ -1410,7 +1411,7 @@ function drawSignal(e, isCur) {
 }
 
 // ---------- step state ----------
-let STEP = -1, TL3D = null;
+let STEP = -1, TL3D = null, WALK = null;
 const searchedUpTo = (i) => { const s = new Set(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) (e.segments || []).forEach((id) => s.add(id)); }); return s; };
 // evidence id = step's hintId (string) or step index; '*' with on:true restores all
 const stepOfEvidence = (id) => (Number.isInteger(id) ? id : R.steps.findIndex((s) => s.hintId === id));
@@ -1504,7 +1505,7 @@ if (EMB === 'scene') {
   $('sceneLegend').hidden = false; $('sceneLegend').innerHTML = LEGEND_HEAT;
   // control box like 2D #mapctl: segmented group, checkbox row, full-width button; it drives the regular HUD buttons
   const ctl = document.createElement('div'); ctl.id = 'sceneCtl'; ctl.className = 'floating';
-  ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button></div>
+  ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button><button data-b="btn-walk" title="Spacer: kliknij w teren i idź z widokiem z oczu (Esc kończy)">Spacer</button></div>
     <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label><label class="chk" hidden><input type="checkbox" data-b="btn-ortho"> zdjęcie</label></div>
     <button class="full" data-b="btn-all">Cały obszar</button><button class="full" data-b="btn-game">Test na ślepo</button>`;
   document.body.appendChild(ctl);
@@ -1513,6 +1514,7 @@ if (EMB === 'scene') {
   const syncCtl = () => {
     ctl.querySelector('[data-b="btn-cine"]').classList.toggle('on', $('btn-cine').classList.contains('on'));
     ctl.querySelector('[data-b="btn-rot"]').classList.toggle('on', $('btn-rot').classList.contains('on'));
+    ctl.querySelector('[data-b="btn-walk"]').classList.toggle('on', !!(WALK?.on || WALK?.armed));
     for (const id of ['btn-diff', 'btn-trees', 'btn-fog', 'btn-ortho']) ctl.querySelector(`input[data-b="${id}"]`).checked = $(id).classList.contains('on');
     ctl.querySelector('input[data-b="btn-ortho"]').closest('label').hidden = $('btn-ortho').hidden; // shown once the aerial photo has loaded
   };
@@ -1742,6 +1744,7 @@ host.addEventListener('pointerdown', (e) => { downAt = e.target.closest('[data-a
 host.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const h = pick(e);
+  if (WALK?.click(h)) return;   // Spacer armed: this click picks the start; walking: clicks only look around
   if (G.phase === 'off' && TL3D?.pickActor(ray, h ? ray.ray.origin.distanceTo(h.point) : Infinity)) return;
   if (!h) return;
   if (G.phase === 'hide') return hideAt(toLat(h.point.z), toLon(h.point.x));
@@ -1749,7 +1752,7 @@ host.addEventListener('pointerup', (e) => {
   if (G.phase === 'off') selectSeg(R.segOf[k], { fly: false });
   else if (G.phase === 'search') sendPatrol(R.segOf[k]); // the patrol goes to the clicked segment
 });
-host.addEventListener('dblclick', (e) => { if (e.target.closest('[data-actor-id]')) return; const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
+host.addEventListener('dblclick', (e) => { if (WALK?.on || e.target.closest('[data-actor-id]')) return; const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
 TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, line: makeLine, drape: drapeRuns,
   dispose: disposeGroup, label, esc, nf, wake,
   onFrame: (f, minute) => {
@@ -1774,6 +1777,11 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
     return f?.schema === 'rescue-frame/1' && Number.isFinite(f.minute) ? f : null;
   },
 });
+WALK = createWalk3D({ THREE, camera, controls, eyeAt, toLat, toLon, host, wake,
+  bounds: { x0: -WKM / 2 + 0.05, x1: WKM / 2 - 0.05, z0: -HKM / 2 + 0.05, z1: HKM / 2 - 0.05 },
+  onStart: () => { if (CINE.on) cinema(false); TL3D?.stopFpp(); fly = null; autoRot = false; $('btn-rot')?.classList.remove('on'); },
+});
+$('btn-walk')?.addEventListener('click', () => WALK.arm());
 function hover() {
   hoverPending = false; const e = lastEv, tip = $('tip'); if (!e) return;
   const hit = pick(e); if (!hit) { tip.hidden = true; return; }
@@ -2052,11 +2060,12 @@ function frame() {
     aboveGround(camera.position, 0.25);
     if (fly.t >= 1) { fly = null; idleAt = performance.now(); }
   }
-  controls.autoRotate = autoRot && !fly && !CINE.on && !TL3D?.following && performance.now() - idleAt > 4000;
+  controls.autoRotate = autoRot && !fly && !CINE.on && !TL3D?.following && !WALK?.on && performance.now() - idleAt > 4000;
   cineTick(dt);
   fitShadow(performance.now());
-  if ((!CINE.on || fly) && !TL3D?.following) controls.update();
+  if ((!CINE.on || fly) && !TL3D?.following && !WALK?.on) controls.update();
   const timelineMoving = TL3D?.tick(dt);
+  const walking = WALK?.tick(dt);
   const coverageMoving = POD3D?.tick(dt);
   let oneShot = false;
   for (let i = movers.length - 1; i >= 0; i--) {
@@ -2074,7 +2083,7 @@ function frame() {
   if (snowNear.visible) snowNearMat.uniforms.uPx.value = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360));
   flushLines();
   const moved = cameraMoved();
-  const active = moved || fly || CINE.on || timelineMoving || coverageMoving || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
+  const active = moved || fly || CINE.on || walking || timelineMoving || coverageMoving || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
   if (!active && now - lastRender < 1000 / 31) return; // ambient only: 30 fps
   const interval = now - lastRender; lastRender = now;
   if (active) adaptResolution(now, interval);
