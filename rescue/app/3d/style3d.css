@@ -357,3 +357,9 @@ body.embed .btn.red { background: var(--rl-danger, #b8322a); border-color: var(-
 body.embed .wchip, body.embed #game .stat, body.embed #game code { background: color-mix(in srgb, var(--rl-ink, #23272a) 6%, transparent); }
 
 #sceneLegend .lg-sub { font-weight: 400; opacity: .75; }
+/* Timeline controls stay in the 3D control box, available only with engine tracks. */
+#timeline3dCtl { position: static; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--rl-border, #bcb8ad); box-shadow: none; }
+body > #timeline3dCtl { position: fixed; right: 12px; top: 76px; z-index: 12; padding: 10px; }
+#timeline3dCtl select { width: 100%; margin: 6px 0; padding: 5px; color: inherit; background: var(--rl-surface, #f7f5ef); border: 1px solid var(--rl-border, #bcb8ad); border-radius: 4px; }
+#timeline3dCtl .tl3d-title { font-weight: 600; }
+#timeline3dCtl .tl3d-key, #timeline3dCtl .tl3d-clock { margin-top: 6px; font-size: 11px; line-height: 1.5; }

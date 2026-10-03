@@ -17,6 +17,14 @@ python3 -m http.server 8000
 - **Weather:** fog and dusk follow the step's `weather` (button "Pogoda" turns it off).
 - **Teams:** `steps[].assignments` as arcs from each resource's base to its segment.
 
+## Minute timeline and FPP
+
+When a run includes `rescue-timeline/1`, `timeline3d.js` replaces decorative team loops with the engine's `actors[].path` samples. GPS fixes are solid dots, estimated paths are dashed, circles show accuracy, and the engine frame provides FOV outlines, cumulative POD cells and the heat map. It never loads `scenarios/tracks/` or reads simulator truth. A scenario without a timeline keeps the event view.
+
+The shell sends `{type:'time', minute, t}`; one-minute advances blend for 0.5 s, large seeks and backward jumps snap. Before the first fix the actor is hidden. Heat and FOV use the most recent earlier engine frame; a run with `frames=0` fetches exact frames through `/api/run/<sc>?t=` and ignores late responses after a seek. The controls select a unit and enter FPP at its eye height (aircraft use their AGL height); Esc or overview restores the orbit camera. No client estimate is sent back to coverage.
+
+Local verification on Zawrat with the real Swift engine: no actors or coverage before the first fix, 5 actors at minute 100, fractional movement 100 -> 101, FPP disables orbit and Esc restores it; scenarios without timeline still load. Syntax and temporal boundary checks also pass.
+
 ## Blind test (button "Test na ślepo")
 You hide the person by clicking the terrain (or "Losuj"); patrols go to the leader or to the segment you click. The map keeps the engine's POA from the start step and does not know the spot; a SHA-256 commitment of spot + salt is shown first. Each patrol finds the person with probability POD (0.75, 0.6 at night) if they are in that segment; the draw is HMAC(salt, segment|attempt), so outcomes are fixed in advance. After an empty patrol the browser applies the Koopman update (segment POA x (1 - POD), renormalised) - the only computation done in the browser. The result compares with a naive search (segments by distance from the IPP, same draws) and verifies the commitment.
 
@@ -41,12 +49,15 @@ For the combined app (`rescue/app/`). Same origin only: messages from other orig
 | Direction | Message | Effect |
 |---|---|---|
 | parent -> 3D | `{type: 'step', i}` | jump to step `i` |
+| parent -> 3D | `{type: 'time', minute, t, frame?}` | scrub engine minutes; optional exact engine frame |
+| parent -> 3D | `{type: 'fpp', actorId, on?}` | follow a unit at eye height; `on:false` restores orbit |
 | parent -> 3D | `{type: 'select', segmentId}` | outline the segment in blue, highlight it in the ranking, fly to it |
 | parent -> 3D | `{type: 'evidence', id, on}` | switch a signal on/off (id = step `hintId`, or the step index; `'*'` + `on: true` restores all), map recomputed as with the checkbox |
 | parent -> 3D | `{type: 'run', url}` | reload with `?run=<url>` |
 | parent -> 3D | `{type: 'run', run}` | reload with this run object (parked in `sessionStorage`, `?runInline=1`) |
 | 3D -> parent | `{source: 'rescue3d', type: 'ready', scenario, steps, step}` | page loaded |
 | 3D -> parent | `{source: 'rescue3d', type: 'step', i, t}` | user changed the step (not echoed for parent-driven changes) |
+| 3D -> parent | `{source: 'rescue3d', type: 'fpp', on, actorId?}` | camera mode changed |
 | 3D -> parent | `{source: 'rescue3d', type: 'select', segmentId}` | user clicked a segment (ranking or terrain) |
 | 3D -> parent | `{source: 'rescue3d', type: 'evidence', id, on}` | user toggled a signal (`id` = hintId; `'*'` = Przywróć) |
 

@@ -14,6 +14,7 @@ import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { colorFor, gradientCSS, STOPS } from '../scale.js'; // shared heat scale (decision S2), same as 2D
 import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
+import { createTimeline3D } from './timeline3d.js';
 
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
@@ -638,7 +639,7 @@ function heatCanvasGrid(p) {
 }
 const heatCache = new Map();
 const heatOf = (i) => { if (!heatCache.has(i)) heatCache.set(i, heatCanvasGrid(R.steps[i].poaGrid)); return heatCache.get(i); };
-let heatFrom = null, heatTo = null, heatT = 1, WASH = new Map(); // searched segment id -> times searched
+let heatFrom = null, heatTo = null, heatT = 1, WASH = new Map(), TL_COV = []; // searched segment id -> times searched
 const llToTex = (la, lo) => [((lo - DEM.lon0) / stLon) * TS, ((DEM.lat0 - la) / stLat) * TS];
 function compose() {
   const g = compCanvas.getContext('2d');
@@ -653,6 +654,14 @@ function compose() {
     g.save(); g.clip(); g.strokeStyle = 'rgba(70, 84, 104, 0.35)'; g.lineWidth = 1.4;
     for (let x = -TH; x < TW; x += 9) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + TH, TH); g.stroke(); }
     g.restore();
+  }
+  // Engine's sparse cumulative POD: actual swept cells, independent of the old whole-segment wash.
+  for (const [k, pod] of TL_COV) {
+    const row = Math.floor(k / R.cols), col = k % R.cols;
+    const [x, y] = llToTex(R.bbox.north - row * (R.bbox.north - R.bbox.south) / R.rows,
+      R.bbox.west + col * (R.bbox.east - R.bbox.west) / R.cols);
+    const w = (R.bbox.east - R.bbox.west) / R.cols / stLon * TS, h = (R.bbox.north - R.bbox.south) / R.rows / stLat * TS;
+    g.fillStyle = `rgba(75, 160, 165, ${0.55 * pod})`; g.fillRect(x, y, w, h);
   }
   compTex.needsUpdate = true;
 }
@@ -1403,7 +1412,7 @@ function drawSignal(e, isCur) {
 }
 
 // ---------- step state ----------
-let STEP = -1;
+let STEP = -1, TL3D = null;
 const searchedUpTo = (i) => { const s = new Set(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) (e.segments || []).forEach((id) => s.add(id)); }); return s; };
 // evidence id = step's hintId (string) or step index; '*' with on:true restores all
 const stepOfEvidence = (id) => (Number.isInteger(id) ? id : R.steps.findIndex((s) => s.hintId === id));
@@ -1432,7 +1441,7 @@ function drawTop(ranked) {
     l.userData.glow = ['#fff0c8', k ? 100 : 130]; dyn.top.add(l);
   });
 }
-function setStep(i, animate = true) {
+function setStep(i, animate = true, fromTime = false) {
   if (G.phase !== 'off') return;
   i = clamp(i, 0, R.steps.length - 1);
   const prev = STEP; STEP = i;
@@ -1453,10 +1462,12 @@ function setStep(i, animate = true) {
   if (REV) { const at = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1); if (at) gamePanel(`<h3>Odsłonięcie (${esc(REV.round || '')})</h3><p>${esc(REV.story || '')}${REV.state ? ` <i>(${esc(REV.state)})</i>` : ''}</p>`); else $('game').hidden = true; }
   setMood(s.weather, i);
   renderOffBanner(i);
+  if (TL3D && !fromTime) TL3D.setTime(s.minute, s.t, false);
   if (prev !== i && !fromParent) toParent({ type: 'step', i, t: s.t });
 }
 function drawTeams(s) {
   disposeGroup(dyn.teams); movers.length = 0;
+  if (R.timeline?.actors?.length) return; // timeline tracks replace decorative assignment loops
   // history: every patrol so far, as a faint trail from its base to the searched segment
   for (const e of EVENTS) {
     if (!(e.step >= 0 && e.step <= STEP && e.segments?.length)) continue;
@@ -1513,6 +1524,7 @@ if (EMB === 'scene') {
 // ---------- camera ----------
 let fly = null;
 function flyTo(target, dist = 3, dur = 1.6) {
+  TL3D?.stopFpp();
   const dir = camera.position.clone().sub(controls.target).normalize();
   if (dir.y < 0.4) { dir.y = 0.5; dir.normalize(); }
   fly = { t: 0, dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: target.clone().add(dir.multiplyScalar(dist)), t1: target.clone() };
@@ -1522,6 +1534,7 @@ const bc = [(B.north + B.south) / 2, (B.east + B.west) / 2];
 const center = new THREE.Vector3(toX(bc[1]), hAt(bc[0], bc[1]) * 0.6, toZ(bc[0]));
 const SPAN = Math.max((B.east - B.west) * KX * KM, (B.north - B.south) * KM) * 1.15;
 function overview(dur = 1.8) {
+  TL3D?.stopFpp();
   // oblique view from the south-east, the whole massif in frame
   fly = { t: 0, dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: center.clone().add(new THREE.Vector3(SPAN * 0.42, SPAN * 0.62, SPAN * 0.92)), t1: center.clone() };
 }
@@ -1531,7 +1544,7 @@ $('btn-top').addEventListener('click', () => {
   const g = segs.get(s.id); flyTo(v3(g.center[0], g.center[1]), 2.4);
 });
 let autoRot = false, idleAt = performance.now();
-$('btn-rot').addEventListener('click', () => { autoRot = !autoRot; $('btn-rot').classList.toggle('on', autoRot); });
+$('btn-rot').addEventListener('click', () => { TL3D?.stopFpp(); autoRot = !autoRot; $('btn-rot').classList.toggle('on', autoRot); });
 $('btn-fog').addEventListener('click', () => { weatherOn = !weatherOn; $('btn-fog').classList.toggle('on', weatherOn); setMood(R.steps[Math.max(0, STEP)].weather, Math.max(0, STEP)); });
 controls.addEventListener('start', () => { idleAt = Infinity; fly = null; if (CINE.on) cinema(false); });
 controls.addEventListener('end', () => { idleAt = performance.now(); });
@@ -1623,6 +1636,7 @@ function cineShot(i) {
   $('caption').innerHTML = `<b>${esc(s.t)}</b> ${esc(s.label)}`;
 }
 function cinema(on) {
+  if (on) TL3D?.stopFpp();
   CINE.on = on; document.body.classList.toggle('cinema', on); $('btn-cine').classList.toggle('on', on);
   toParent({ type: 'cinema', on }); // /app hides its floating panels while Kino runs
   if (on) { CINE.prevRot = autoRot; CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null; cineShot(Q.has('step') ? STEP : 0); }
@@ -1692,6 +1706,24 @@ cv.addEventListener('pointerup', (e) => {
   else if (G.phase === 'search') sendPatrol(R.segOf[k]); // the patrol goes to the clicked segment
 });
 cv.addEventListener('dblclick', (e) => { const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
+TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, line: makeLine, drape: drapeRuns,
+  dispose: disposeGroup, label, esc, nf, wake,
+  onFrame: (f, minute) => {
+    TL_COV = f?.cov || [];
+    if (!f) {
+      let i = 0; R.steps.forEach((s, k) => { if (s.minute <= minute) i = k; });
+      setStep(i, false, true); return;
+    }
+    if (f.step >= 0 && STEP !== f.step) setStep(f.step, false, true);
+    if (R.timeline.searchEvents !== 'keep') WASH.clear();
+    if (f.poaGrid?.length === R.rows * R.cols) showHeat(heatCanvasGrid(f.poaGrid), true);
+    if (f.segments?.length) drawTop(rankedOf(f.segments));
+    compose();
+  },
+  onStopCamera: () => { if (CINE.on) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
+  onCamera: (on, actorId) => toParent({ type: 'fpp', on, actorId }),
+  getFrame: (t) => getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}`, true),
+});
 function hover() {
   hoverPending = false; const e = lastEv, tip = $('tip'); if (!e) return;
   const hit = pick(e); if (!hit) { tip.hidden = true; return; }
@@ -1699,9 +1731,10 @@ function hover() {
   let html = G.phase === 'hide' ? '<div><b>Kliknij, aby tu ukryć zaginionego</b></div>' : '';
   html += `<div><b>${Math.round(elevM(lat, lon))} m n.p.m.</b></div>`;
   if (k >= 0) {
-    const g = segs.get(R.segOf[k]), grid = G.phase === 'search' || G.phase === 'done' ? G.grid : R.steps[STEP].poaGrid;
+    const g = segs.get(R.segOf[k]), grid = G.phase === 'search' || G.phase === 'done' ? G.grid : TL3D?.frame?.poaGrid || R.steps[STEP].poaGrid;
     if (G.phase !== 'hide') html += `<div>${esc(g?.name || R.segOf[k])} · waga komórki × średnia: <b>${nf(grid[k] * R.rows * R.cols, 2)}×</b></div>`;
     else html += `<div>${esc(g?.name || R.segOf[k])}</div>`;
+    if (TL3D?.frame) html += `<div>pokrycie (POD): ${pct(TL_COV.find(([cell]) => cell === k)?.[1] || 0)}</div>`;
     const sl = TER?.slopeDeg?.[k], d = R.difficulty?.[k];
     html += `<div>${sl != null ? `nachylenie ${Math.round(sl)}°` : ''}${d != null && diffLabel.has(d) ? ` · ${esc(diffLabel.get(d))}` : ''}</div>`;
   }
@@ -1886,6 +1919,8 @@ addEventListener('message', (e) => {
   const m = e.data; fromParent = true;
   try {
     if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
+    else if (m.type === 'time' && Number.isFinite(m.minute)) TL3D?.setTime(m.minute, m.t, true, m.frame);
+    else if (m.type === 'fpp') { if (m.on === false) TL3D?.stopFpp(); else TL3D?.startFpp(m.actorId); }
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
     else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
     else if (m.type === 'evidence' && (typeof m.id === 'string' || Number.isInteger(m.id))) setEvidence(m.id, m.on !== false);
@@ -1961,10 +1996,11 @@ function frame() {
     aboveGround(camera.position, 0.25);
     if (fly.t >= 1) { fly = null; idleAt = performance.now(); }
   }
-  controls.autoRotate = autoRot && !fly && !CINE.on && performance.now() - idleAt > 4000;
+  controls.autoRotate = autoRot && !fly && !CINE.on && !TL3D?.following && performance.now() - idleAt > 4000;
   cineTick(dt);
   fitShadow(performance.now());
-  if (!CINE.on || fly) controls.update();
+  if ((!CINE.on || fly) && !TL3D?.following) controls.update();
+  const timelineMoving = TL3D?.tick(dt);
   let oneShot = false;
   for (let i = movers.length - 1; i >= 0; i--) {
     const m = movers[i];
@@ -1981,7 +2017,7 @@ function frame() {
   if (snowNear.visible) snowNearMat.uniforms.uPx.value = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360));
   flushLines();
   const moved = cameraMoved();
-  const active = moved || fly || CINE.on || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
+  const active = moved || fly || CINE.on || timelineMoving || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
   if (!active && now - lastRender < 1000 / 31) return; // ambient only: 30 fps
   const interval = now - lastRender; lastRender = now;
   if (active) adaptResolution(now, interval);
@@ -1991,7 +2027,7 @@ function frame() {
   renderer.render(scene, camera);
   if (GPU_SYNC) renderer.getContext().finish(); // ?gpu=1: stats count the GPU time in "render" (diagnostic only)
   const c1 = performance.now();
-  if (moved || labelsDirty || now - lastLabels > 1000) { labels.render(scene, camera); labelsDirty = false; lastLabels = now; nL++; }
+  if (moved || timelineMoving || labelsDirty || now - lastLabels > 1000) { labels.render(scene, camera); labelsDirty = false; lastLabels = now; nL++; }
   if (statsEl) {
     const c2 = performance.now();
     statN++; statT += interval; cpuR += c1 - c0; cpuL += c2 - c1; cpuF += c0 - now; statCalls = renderer.info.render.calls; statTris = renderer.info.render.triangles;
@@ -2003,7 +2039,7 @@ function frame() {
 }
 
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, timeline: TL3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
