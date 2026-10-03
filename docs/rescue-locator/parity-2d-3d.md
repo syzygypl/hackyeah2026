@@ -52,7 +52,7 @@ Layout parity lives in the shell `rescue/app/` (AI Mateusza, `1fd411d`): one hea
 |---|---|
 | 3D embed API | done, `1125532`, `70106d1` |
 | 3D gaps 1-5, 7-9 | done, `186c99f` (value block, full plan, hypothermia chip, "Zmiana" pp, "Trudność" layer + legend, prev/next + n/N, ranking area % + task line, "Meldunki z terenu" list) |
-| 3D gap 6 (evidence toggle + recompute) | requested by Andrzej 16:00, 3D session |
+| 3D gap 6 (evidence toggle + recompute) | done, `bb59c99`; checked: Koester rings off at step 15 gives the same top 3 in 2D and 3D (S7, S6, S10), "Przywróć" banner shown |
 | S1/S2 in 3D | done, `bd058fd` (scale.js colours and legend; tokens.css in `?embed=1`) |
 | Layout parity | in the shell `rescue/app/` (`1fd411d`); standalone 3D rebuild dropped |
 | S3, S5, S6 on 3D | done, `186c99f` (findSeg ?? truthSeg, pl-PL + "deszcz", "Widok 2D" link with ?sc=&step=) |
