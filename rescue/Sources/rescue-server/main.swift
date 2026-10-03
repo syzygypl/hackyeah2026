@@ -694,6 +694,7 @@ final class ExSession {
     var cells = Set<Int>(), nCells = 1, coverage = 0.0
     var probeCache: (key: String, doc: [String: Any])? = nil
     var centroid: [String: [Double]] = [:]
+    var createdAt = Date().timeIntervalSince1970, writes = 0   // public-deploy cap: TTL and writes per session (Exercises.ttl / maxWrites)
     init(sid: String, id: String, base: [String: Any], truth: [String: Any]) {
         self.sid = sid; self.id = id; self.base = base
         meta = base["exercise"] as? [String: Any] ?? [:]
@@ -726,7 +727,7 @@ final class ExSession {
                                             "truthPod": $0.truthPod, "poa": $0.poa, "cells": $0.cells, "done": $0.done] }
         let o: [String: Any] = ["sid": sid, "id": id, "events": events, "future": future, "minute": minute, "jobs": j, "decisions": decisions, "feed": feed,
                                 "found": found, "foundMinute": foundMinute ?? NSNull(), "foundBy": foundBy ?? NSNull(), "cells": Array(cells), "nCells": nCells,
-                                "coverage": coverage, "centroid": centroid]
+                                "coverage": coverage, "centroid": centroid, "createdAt": createdAt, "writes": writes]
         return (try? JSONSerialization.data(withJSONObject: o)) ?? Data("{}".utf8)
     }
     func restore(_ o: [String: Any]) {
@@ -735,6 +736,7 @@ final class ExSession {
         found = o["found"] as? Bool ?? false; foundMinute = o["foundMinute"] as? Int; foundBy = o["foundBy"] as? String
         cells = Set(o["cells"] as? [Int] ?? []); nCells = o["nCells"] as? Int ?? 1; coverage = o["coverage"] as? Double ?? 0
         centroid = o["centroid"] as? [String: [Double]] ?? [:]
+        createdAt = (o["createdAt"] as? Double) ?? (o["createdAt"] as? Int).map(Double.init) ?? createdAt; writes = o["writes"] as? Int ?? writes
         jobs = ((o["jobs"] as? [[String: Any]]) ?? []).map { j in
             let x = ExJob(team: j["team"] as? String ?? "", seg: j["seg"] as? String ?? "", start: j["start"] as? Int ?? 0, arrive: j["arrive"] as? Int ?? 0,
                           end: j["end"] as? Int ?? 0, pod: j["pod"] as? Double ?? 0, truthPod: j["truthPod"] as? Double ?? 0, poa: j["poa"] as? Double ?? 0,
@@ -763,6 +765,21 @@ func exDist(_ a: [Double], _ b: [Double]) -> Double {
 
 actor Exercises {
     var sessions: [String: ExSession] = [:]
+    // Cap for the public deploy (exercise POSTs need no action key, so "ex:*" rows are writable by anyone):
+    // at most maxActive sessions started within ttl (shared index doc "ex:index" {sid: startedEpoch} on Neon, in memory otherwise),
+    // a session expires ttl after its start (410), and takes at most maxWrites act/advance calls (429). Soft cap: two instances may race by one.
+    static let maxActive = 40, ttl: Double = 2 * 3600, maxWrites = 300
+    var startedLocal: [String: Double] = [:]
+    func admit(_ sid: String) async -> Bool {
+        let now = Date().timeIntervalSince1970
+        var idx: [String: Double] = startedLocal
+        if store.shared { idx = (await store.doc("ex:index")?.data).map(jsonObject)?.compactMapValues { ($0 as? Double) ?? ($0 as? Int).map(Double.init) } ?? [:] }
+        idx = idx.filter { now - $0.value < Exercises.ttl }
+        guard idx.count < Exercises.maxActive else { return false }
+        idx[sid] = now
+        if store.shared { _ = await store.putDoc("ex:index", (try? JSONSerialization.data(withJSONObject: idx)) ?? Data("{}".utf8)) } else { startedLocal = idx }
+        return true
+    }
     var baselines: [String: Data] = [:]
     var baselineRunning: Set<String> = []
     var runCache: [String: Data] = [:]
@@ -1018,6 +1035,10 @@ actor Exercises {
         if q.method == "GET" && q.path == "/api/exercises" { return response("200 OK", json, list()) }
         if q.method == "POST" && q.path == "/api/exercise/start" {
             guard let id = shortClean(jsonObject(q.body)["id"], 60), let s = await newSession(id, sid: UUID().uuidString.prefix(8).lowercased()) else { return jsonErr("404 Not Found", "unknown exercise") }
+            guard await admit(s.sid) else {
+                Metrics.shared.inc("reports_rejected_total", ["reason": "exercise-cap"]); ServerGuard.logReject(429, peer: q.peer, method: q.method, path: q.path)
+                return jsonErr("429 Too Many Requests", "za dużo aktywnych ćwiczeń (\(Exercises.maxActive) w ciągu 2 h) - spróbuj później")
+            }
             if sessions.count > 100 { sessions.removeAll() }
             sessions[s.sid] = s
             await save(s)
@@ -1026,6 +1047,11 @@ actor Exercises {
         }
         guard parts.count >= 3, parts[1] == "exercise", let s = await session(parts[2]) else { return jsonErr("404 Not Found", "unknown exercise session") }
         let action = parts.count > 3 ? parts[3] : ""
+        if Date().timeIntervalSince1970 - s.createdAt > Exercises.ttl { return jsonErr("410 Gone", "sesja ćwiczenia wygasła (2 h) - zacznij nowe ćwiczenie") }
+        if q.method == "POST" {
+            if s.writes >= Exercises.maxWrites { return jsonErr("429 Too Many Requests", "limit ruchów w tej sesji ćwiczenia (\(Exercises.maxWrites))") }
+            s.writes += 1
+        }
         func ok(_ o: [String: Any]) -> Data { response("200 OK", json, (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data()) }
         switch (q.method, action) {
         case ("GET", ""): return ok(await stateDoc(s))
