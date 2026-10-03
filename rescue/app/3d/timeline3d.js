@@ -15,6 +15,14 @@ export function earlierFrame(frames, minute) {
   return out;
 }
 
+export function timelineClock(timeline, minute) {
+  const m = /^(?:\+(\d+)\s+)?(\d{2}):(\d{2})$/.exec(timeline.start || '');
+  if (!m || !Number.isFinite(timeline.startMinute)) return timeline.start || '';
+  const total = Math.round((Number(m[1] || 0) * 1440 + Number(m[2]) * 60 + Number(m[3])) + minute - timeline.startMinute);
+  const day = Math.floor(total / 1440), clock = ((total % 1440) + 1440) % 1440;
+  return `${day ? (day > 0 ? '+' : '') + day + ' ' : ''}${String(Math.floor(clock / 60)).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`;
+}
+
 export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line, drape, dispose, label,
   esc, nf, wake, onFrame, onStopCamera, onCamera, onActor, getFrame }) {
   const timeline = run.timeline;
@@ -134,11 +142,12 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
     blend = animate && previous != null && Math.abs(target - previous) <= 2 ? 0 : 1;
     if (blend === 1) shown = target;
     const frame = suppliedFrame || earlierFrame(timeline.frames, target);
-    status.textContent = `${t || frame?.t || timeline.start}${frame ? ' · pokrycie (POD)' : ''}`;
+    const clock = t || timelineClock(timeline, target);
+    status.textContent = `${clock}${frame ? ' · pokrycie (POD)' : ''}`;
     apply(frame, target);
     const gen = ++request;
     // A frames=0 run still works: fetch the exact frame on this origin; ignore late responses after a scrub.
-    if (!frame && getFrame && t) getFrame(t).then((f) => { if (gen === request && f) apply(f, target); }).catch(() => {});
+    if (!frame && getFrame && clock && target >= timeline.startMinute) getFrame(clock).then((f) => { if (gen === request && f) apply(f, target); }).catch(() => {});
   }
   function tick(dt) {
     if (target == null || !visible) return false;
