@@ -359,7 +359,7 @@ terrainGeo.rotateX(-Math.PI / 2);
   terrainGeo.computeVertexNormals();
 }
 // object-space normal map from the full-resolution DEM: the mesh is averaged 2x2 for the wide cut, the shading keeps every ridge
-let terrainAO = null;
+let terrainAO = null, sunMask = null, sunAt = () => 1;
 const normalTex = (() => {
   const k = DEM_FULL.cols / DEM.cols >= 1.5 ? 2 : 1, C = DEM.cols * k, Rr = DEM.rows * k, Z = DEM_FULL.z;
   const sx = 2 * (DEM_FULL.step * KX * KM), sz = 2 * ((DEM_FULL.stepLat || DEM_FULL.step) * KM), f = EX / 1000;
@@ -372,14 +372,17 @@ const normalTex = (() => {
   }
   const t = new THREE.DataTexture(data, C, Rr, THREE.RGBAFormat);
   t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = 8; t.needsUpdate = true;
+  // flat height array in scene units, for the two bakes below
+  const H = new Float32Array(C * Rr); for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) H[r * C + c] = Z[r][c] * f;
   // baked ambient occlusion: horizon angle in 8 directions out to ~1 km, so gullies and cirques sit in their own shade
   const ao = new Uint8Array(C * Rr * 4), px = sx / 2, pz = sz / 2, DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], STEPS = [1, 2, 3, 5, 8, 12, 18, 27, 40];
+  const DL = DIRS.map(([dc, dr]) => Math.hypot(dc * px, dr * pz));
   for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) {
-    const h0 = Z[r][c] * f; let occ = 0;
-    for (const [dc, dr] of DIRS) {
-      let mx = 0; const dl = Math.hypot(dc * px, dr * pz);
-      for (const k of STEPS) { const rr = r + dr * k, cc = c + dc * k; if (rr < 0 || cc < 0 || rr >= Rr || cc >= C) break; const tn = (Z[rr][cc] * f - h0) / (dl * k); if (tn > mx) mx = tn; }
-      occ += mx / Math.hypot(1, mx); // sin(horizon angle)
+    const h0 = H[r * C + c]; let occ = 0;
+    for (let j = 0; j < 8; j++) {
+      const dc = DIRS[j][0], dr = DIRS[j][1], dl = DL[j]; let mx = 0;
+      for (const k of STEPS) { const rr = r + dr * k, cc = c + dc * k; if (rr < 0 || cc < 0 || rr >= Rr || cc >= C) break; const tn = (H[rr * C + cc] - h0) / (dl * k); if (tn > mx) mx = tn; }
+      occ += mx / Math.sqrt(1 + mx * mx); // sin(horizon angle)
     }
     const v = clamp(1 - (occ / 8) * 1.35, 0.25, 1) * 255, o = ((Rr - 1 - r) * C + c) * 4;
     ao[o] = ao[o + 1] = ao[o + 2] = v; ao[o + 3] = 255;
@@ -387,6 +390,28 @@ const normalTex = (() => {
   const a = new THREE.DataTexture(ao, C, Rr, THREE.RGBAFormat);
   a.magFilter = THREE.LinearFilter; a.minFilter = THREE.LinearMipmapLinearFilter; a.generateMipmaps = true; a.needsUpdate = true;
   terrainAO = a;
+  // baked terrain self-shadow (far cascade) on a half-resolution grid: march from every cell towards the low sun, soft penumbra
+  const C2 = C >> 1, R2 = Rr >> 1, px2 = px * 2, pz2 = pz * 2;
+  const hd = Math.hypot(SUN_DIR.x, SUN_DIR.z), stepKm = Math.min(px2, pz2), rise = (SUN_DIR.y / hd) * stepKm;
+  const dcs = (SUN_DIR.x / hd) * stepKm / px2, drs = (SUN_DIR.z / hd) * stepKm / pz2;
+  const H2 = new Float32Array(C2 * R2); let hMax = -Infinity;
+  for (let r = 0; r < R2; r++) for (let c = 0; c < C2; c++) { const v = H[2 * r * C + 2 * c]; H2[r * C2 + c] = v; if (v > hMax) hMax = v; }
+  const sm = new Float32Array(C2 * R2), smData = new Uint8Array(C2 * R2 * 4);
+  for (let r = 0; r < R2; r++) for (let c = 0; c < C2; c++) {
+    let ray = H2[r * C2 + c], lit = 1, cc = c, rr = r;
+    for (let k = 1; k < 400; k++) {
+      cc += dcs; rr += drs; ray += rise;
+      if (ray > hMax || cc < 0 || rr < 0 || cc > C2 - 1 || rr > R2 - 1) break;
+      const d = (ray - H2[Math.round(rr) * C2 + Math.round(cc)]) / (k * stepKm * 0.035); // ~2 deg penumbra
+      if (d < lit) { lit = d; if (lit <= -1) break; }
+    }
+    const v = clamp(0.5 + 0.5 * lit, 0, 1), o = ((R2 - 1 - r) * C2 + c) * 4;
+    sm[r * C2 + c] = v; smData[o] = smData[o + 1] = smData[o + 2] = v * 255; smData[o + 3] = 255;
+  }
+  sunMask = new THREE.DataTexture(smData, C2, R2, THREE.RGBAFormat);
+  sunMask.magFilter = THREE.LinearFilter; sunMask.minFilter = THREE.LinearMipmapLinearFilter; sunMask.generateMipmaps = true; sunMask.needsUpdate = true;
+  const sLat = 2 * (DEM_FULL.stepLat || DEM_FULL.step), sLon = 2 * DEM_FULL.step;
+  sunAt = (lat, lon) => sm[clamp(Math.round((DEM_FULL.lat0 - lat) / sLat - 0.5), 0, R2 - 1) * C2 + clamp(Math.round((lon - DEM_FULL.lon0) / sLon - 0.5), 0, C2 - 1)];
   return t;
 })();
 const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x000000, roughness: 0.96, metalness: 0,
@@ -399,7 +424,7 @@ terrainMat.onBeforeCompile = (sh) => {
     .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDW = (modelMatrix * vec4(transformed, 1.0)).xyz; vDN = normal;');
   sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
     varying vec3 vDW; varying vec3 vDN;
-    uniform sampler2D uHeatFrom; uniform sampler2D uHeatTo; uniform float uHeatT; uniform vec2 uHeatOn; uniform vec4 uHeatRect; uniform vec3 uHeatEdges; uniform float uTime; uniform float uEmis;
+    uniform sampler2D uHeatFrom; uniform sampler2D uHeatTo; uniform float uHeatT; uniform vec2 uHeatOn; uniform vec4 uHeatRect; uniform vec3 uHeatEdges; uniform float uTime; uniform float uEmis; uniform sampler2D uSunMask;
     float dHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float dNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       return mix(mix(dHash(i), dHash(i + vec2(1, 0)), f.x), mix(dHash(i + vec2(0, 1)), dHash(i + vec2(1, 1)), f.x), f.y); }
@@ -419,6 +444,7 @@ terrainMat.onBeforeCompile = (sh) => {
       }
     }
     vec3 heatEmit = vec3(0.0);
+    float bakedSun = texture2D(uSunMask, vMapUv).r;
     {
       vec2 hu = (vec2(vMapUv.x, 1.0 - vMapUv.y) - uHeatRect.xy) / uHeatRect.zw;
       if (hu.x > 0.0 && hu.x < 1.0 && hu.y > 0.0 && hu.y < 1.0) {
@@ -436,9 +462,14 @@ terrainMat.onBeforeCompile = (sh) => {
         }
       }
     }`)
-    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n    totalEmissiveRadiance += heatEmit * uEmis;');
+    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n    totalEmissiveRadiance += heatEmit * uEmis;')
+    // the sun's shadow is the darker of the baked far cascade and the near shadow map (which is 1 outside its box)
+    .replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin
+      .replace('? getShadow( directionalShadowMap[ i ],', '? min( bakedSun, getShadow( directionalShadowMap[ i ],')
+      .replace('vDirectionalShadowCoord[ i ] ) : 1.0;', 'vDirectionalShadowCoord[ i ] ) ) : bakedSun;'));
 };
-terrainMat.customProgramCacheKey = () => 'terrain-detail-heat-1';
+heatU.uSunMask = { value: sunMask };
+terrainMat.customProgramCacheKey = () => 'terrain-detail-heat-sun-1';
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
@@ -622,7 +653,7 @@ const forest = new THREE.Group(); scene.add(forest);
     list.forEach(([la, lo], i) => {
       const h = hMin + rnd() * (hMax - hMin);
       o.position.copy(v3(la, lo, -0.002)); o.rotation.set(0, rnd() * 6.28, 0); o.scale.set(h * (0.85 + rnd() * 0.3), h, h * (0.85 + rnd() * 0.3)); o.updateMatrix();
-      m.setMatrixAt(i, o.matrix); m.setColorAt(i, c.copy(A).lerp(Bc, rnd()));
+      m.setMatrixAt(i, o.matrix); m.setColorAt(i, c.copy(A).lerp(Bc, rnd()).multiplyScalar(0.55 + 0.45 * sunAt(la, lo))); // darker in the baked terrain shadow
     });
     m.receiveShadow = true; m.castShadow = false; forest.add(m);
   };
@@ -1275,6 +1306,22 @@ addEventListener('message', (e) => {
 
 // ---------- loop ----------
 const clock = new THREE.Clock();
+// near shadow cascade: when zoomed in, the sun's shadow map is fitted to a box around the orbit target and re-rendered
+// once the view settles (target moved or zoom changed); trees cast shadows only then. Zoomed out it covers the whole cut.
+const SH_FULL = Math.max(WKM, HKM) * 0.75;
+let shFit = { x: 0, z: 0, S: SH_FULL }, shCheckAt = 0;
+function fitShadow(now) {
+  if (now - shCheckAt < 400 || fly) return;
+  shCheckAt = now;
+  const t = controls.target, dist = camera.position.distanceTo(t), S = dist > 7 ? SH_FULL : clamp(dist * 1.1, 1.2, 6);
+  if (Math.hypot(t.x - shFit.x, t.z - shFit.z) < S * 0.2 && Math.abs(S - shFit.S) < shFit.S * 0.25) return;
+  const cx = S === SH_FULL ? 0 : t.x, cz = S === SH_FULL ? 0 : t.z, cam = sun.shadow.camera;
+  cam.left = -S; cam.right = S; cam.top = S; cam.bottom = -S; cam.updateProjectionMatrix();
+  sun.position.set(cx, 0, cz).addScaledVector(SUN_DIR, 30); sun.target.position.set(cx, 0, cz); sun.target.updateMatrixWorld();
+  sun.shadow.normalBias = 0.02 * Math.max(S / SH_FULL, 0.08);
+  forest.children.forEach((m) => { m.castShadow = S !== SH_FULL; });
+  renderer.shadowMap.needsUpdate = true; shFit = { x: cx, z: cz, S };
+}
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
   if (heatT < 1) { heatT = Math.min(1, heatT + dt / 0.7); heatU.uHeatT.value = heatT; }
@@ -1288,6 +1335,7 @@ function frame() {
   }
   controls.autoRotate = autoRot && !fly && !CINE.on && performance.now() - idleAt > 4000;
   cineTick(dt);
+  fitShadow(performance.now());
   if (!CINE.on || fly) controls.update();
   for (let i = movers.length - 1; i >= 0; i--) {
     const m = movers[i];
