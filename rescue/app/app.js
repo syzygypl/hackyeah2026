@@ -16,11 +16,11 @@ const JOINED = !!new URLSearchParams(location.search).get("key");   // opened fr
 // action key (write access): arrives once in the join link / QR (?key=), is kept on this device and removed from the address bar
 { const k = new URLSearchParams(location.search).get("key"); if (k) { try { localStorage.setItem("rescue-pin", k.trim()); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("key"); history.replaceState(null, "", u); } }
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}   // raw like field/ops/2D; web/patrol writes it JSON-quoted
-if (!LOOPBACK) { $("pinbox").style.display = ""; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} boot(); }; }
+if (!LOOPBACK) { $("pinbox").style.display = ""; if (!PIN) document.body.classList.add("pin-needed"); /* the field screen hides the box once a key came with the share link */ $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} boot(); }; }
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
   const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
-  if (r.status === 401) throw new Error("Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz.");
+  if (r.status === 401) { document.body.classList.add("pin-needed"); throw new Error("Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz."); }
   if (r.status === 404) throw new Error("Nie znaleziono danych na serwerze.");
   if (r.status >= 500) throw new Error("Serwer zgłosił błąd - spróbuj ponownie za chwilę.");
   if (!r.ok) throw new Error("Serwer odrzucił żądanie (" + r.status + ").");

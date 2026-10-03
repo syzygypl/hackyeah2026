@@ -508,3 +508,7 @@ header .livehead{overflow:hidden}
   header .scenlbl select{max-width:120px}
   body.float header{column-gap:8px!important}
 }
+/* QA mobile (qa-mobile.md "For AI Marcina" 4, 5): the field screen shows the key box only once the server asked for it (401), at touch size */
+body.role-ratownik:not(.pin-needed) header #pinbox{display:none!important}
+body.role-ratownik header #pinbox input{min-height:44px;font-size:16px}
+#firstRunOk,#roleBtn{min-height:44px}

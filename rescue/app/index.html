@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="chat.css">
 </head>
 <body class="mode-akcja view-2d">
+<script>/* first paint already in the right role (app.js setRole runs only after the run loads) */try{var r=new URLSearchParams(location.search).get("role")||localStorage.getItem("rescue-app-role");if(r==="ratownik"||r==="operator")document.body.classList.add("role-"+r)}catch(e){}</script>
 <div id="app">
 <header>
   <h1><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</h1>
