@@ -701,6 +701,7 @@
     renderPlan();
     renderRanking(st, searched);
     renderValue(st);
+    renderProgress();
     renderTimeline();
     document.body.dataset.step = String(step);
   }
@@ -813,6 +814,41 @@
     $('#plan').innerHTML = `<h2>Przydział zespołów <span class="mode">silnik, ${esc(st.t)}</span></h2>
       ${items ? `<ol class="assign">${items}</ol>` : '<p class="mute sm">Brak dostępnych zespołów w tym kroku.</p>'}
       ${down ? `<ul class="down">${down}</ul>` : ''}`;
+  }
+
+  // parity with 3D: operation progress from the timeline (searched segments, cumulative POA x POD, lead POA); nothing new about the person
+  const toMin = (t) => { const [hh, mm] = String(t).split(':').map(Number); return hh * 60 + mm; };
+  function progressOf(M) {
+    if (M.prog) return M.prog;
+    const R = M.R, t0 = toMin(R.steps[0].t), area = new Map(R.steps[0].segments.map((x) => [x.id, x.areaPct]));
+    const seen = new Set(); let pos = 0, last = t0;
+    M.prog = R.steps.map((st, k) => {
+      let m = toMin(st.t); if (m < last - 600) m += 1440; last = m; // after midnight
+      const h = M.hints[k];
+      if (h.kind === 'searched' && h.segIds.length) {
+        const prev = new Map(R.steps[Math.max(0, k - 1)].segments.map((x) => [x.id, x.poa]));
+        for (const id of h.segIds) { pos += (prev.get(id) || 0) * (h.pod != null ? h.pod : 0.7); seen.add(id); }
+      }
+      return { k, min: m - t0, lead: Math.max(...st.segments.map((x) => x.poa)), pos: Math.min(pos, 1), searched: seen.size,
+        area: [...seen].reduce((a, id) => a + (area.get(id) || 0), 0) / 100, found: isFoundHint(h) };
+    });
+    return M.prog;
+  }
+  function renderProgress() {
+    const P = progressOf(S.M), i = S.step, cur = P[i], W = 320, H = 74, maxMin = Math.max(1, P[P.length - 1].min);
+    const X = (m) => 6 + (m / maxMin) * (W - 12), Y = (v) => H - 6 - v * (H - 14);
+    const path = (f, upto) => P.slice(0, upto + 1).map((q, k) => `${k ? 'L' : 'M'}${X(q.min).toFixed(1)},${Y(f(q)).toFixed(1)}`).join('');
+    const line = (f, c, upto, w, o) => `<path d="${path(f, upto)}" fill="none" style="stroke:${c}" stroke-width="${w}" opacity="${o}"/>`;
+    const series = [[(q) => q.area, 'var(--mute)'], [(q) => q.pos, 'var(--accent)'], [(q) => q.lead, 'var(--bad)']];
+    const dots = P.map((q) => `<circle cx="${X(q.min).toFixed(1)}" cy="${H - 3}" r="${q.found ? 3.5 : 1.8}" style="fill:${q.found ? 'var(--ok)' : q.k <= i ? 'var(--ink-2)' : 'var(--line)'}"/>`).join('');
+    $('#progress').innerHTML = `<h2>Przebieg akcji <span class="mode">${Math.floor(cur.min / 60)} h ${String(cur.min % 60).padStart(2, '0')} min od zgłoszenia</span></h2>
+      <div class="pg-kpi"><div><b>${cur.searched}</b><span>segm. przeszukane</span></div><div><b>${pct(cur.area)}</b><span>obszaru</span></div>
+        <div><b class="pos">${pct(cur.pos)}</b><span>szansa znalezienia dotąd</span></div><div><b class="lead">${pctAuto(cur.lead)}</b><span>lider mapy</span></div></div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" aria-label="Wykres przebiegu akcji">
+        ${series.map(([f, c]) => line(f, c, P.length - 1, 1.2, 0.25)).join('')}${series.map(([f, c]) => line(f, c, i, 2.2, 1)).join('')}
+        <line x1="${X(cur.min)}" x2="${X(cur.min)}" y1="4" y2="${H - 6}" style="stroke:var(--ink-2)" stroke-dasharray="2 2" opacity="0.6"/>${dots}
+      </svg>
+      <div class="pg-leg"><i style="background:var(--bad)"></i>lider mapy <i style="background:var(--accent)"></i>szansa znalezienia (Σ POA×POD) <i style="background:var(--mute)"></i>przeszukany obszar</div>`;
   }
 
   function renderValue() {

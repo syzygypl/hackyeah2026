@@ -275,3 +275,13 @@ body.embed #top, body.embed #left, body.embed #right { display: none; }
 body.embed #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "map" "tl"; }
 body.embed-bare #timeline, body.embed-bare #mapctl, body.embed-bare #stepcard { display: none; }
 body.embed-bare #app { grid-template-rows: minmax(0, 1fr); grid-template-areas: "map"; }
+
+/* operation progress (parity with 3D) */
+.progress { padding: 4px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.progress .pg-kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0; }
+.progress .pg-kpi b { display: block; font: 700 16px ui-monospace, Menlo, Consolas, monospace; color: var(--ink); }
+.progress .pg-kpi b.pos { color: var(--accent); }
+.progress .pg-kpi b.lead { color: var(--bad); }
+.progress .pg-kpi span { font-size: 11px; color: var(--mute); line-height: 1.2; display: block; }
+.progress .pg-leg { font-size: 11px; color: var(--mute); display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.progress .pg-leg i { width: 10px; height: 3px; display: inline-block; border-radius: 2px; margin-left: 6px; }
