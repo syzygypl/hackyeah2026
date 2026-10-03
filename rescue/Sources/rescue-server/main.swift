@@ -167,17 +167,18 @@ actor AssessCache {
 let assessCache = AssessCache()
 
 /// Keeps this instance in step with the shared store: Vercel runs several stateless instances, so a request that touches
-/// state first pulls the documents whose version moved (Studio story, operator assignments, team roster) and a write
+/// state first pulls the documents whose version moved (Studio story, operator assignments, team roster, operator acks) and a write
 /// pushes the ones it changed. Field reports, clues and the live feed are rows, read straight from the store.
 /// The local FileStore is not shared: one process, nothing to sync.
 actor SharedState {
-    static let keys = ["story", "assign", "roster"]
+    static let keys = ["story", "assign", "roster", "acks"]
     var versions: [String: Int] = [:], last: [String: Data] = [:]
     func forget() { versions = [:]; last = [:] }
     func export(_ k: String) async -> Data {
         switch k {
         case "story": return await studio.exportStory()
         case "assign": return await studio.exportAssignments()
+        case "acks": return await acks.exportState()
         default: return await roster.exportState()
         }
     }
@@ -185,6 +186,7 @@ actor SharedState {
         switch k {
         case "story": await studio.importStory(d)
         case "assign": await studio.importAssignments(d)
+        case "acks": await acks.importState(d)
         default: await roster.importState(d)
         }
     }
@@ -255,11 +257,13 @@ struct LiveFeedEvent: Codable, Sendable {
     var team: String?, type: String?, segmentId: String?, note: String?, lat: Double?, lon: Double?, sc: String?
     var acked: Bool?   // set on the way out of GET /api/live (operator ACK, see Acks)
 }
-/// operator acknowledgements of feed events (POST /api/ack): seq numbers, in memory
+/// operator acknowledgements of feed events (POST /api/ack): seq numbers; shared deploy: document "acks" (SharedState)
 actor Acks {
     var seqs: Set<Int> = []
     func add(_ s: [Int]) -> Int { let before = seqs.count; seqs.formUnion(s); return seqs.count - before }
     func has(_ s: Int) -> Bool { seqs.contains(s) }
+    func exportState() -> Data { (try? JSONSerialization.data(withJSONObject: seqs.sorted())) ?? Data("[]".utf8) }
+    func importState(_ d: Data) { seqs = Set(((try? JSONSerialization.jsonObject(with: d)) as? [Int]) ?? []) }
 }
 let acks = Acks()
 /// The operator/rescuer event feed. Shared deploy: rows in the store (every instance sees one sequence). Laptop: in memory.
@@ -609,7 +613,7 @@ func route(_ q: Req) async -> Data {
         return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["fieldKey": guardian.fieldPin ?? guardian.pin ?? ""])) ?? Data("{}".utf8))
     case ("POST", "/api/reset"):
         do { try await store.reset() } catch { return jsonErr("500 Internal Server Error", "reset failed") }
-        await studio.resetAll(); await roster.importState(Data("{}".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear()
+        await studio.resetAll(); await roster.importState(Data("{}".utf8)); await acks.importState(Data("[]".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear()
         print("[reset] field reports, Studio story and assignments cleared")
         return response("200 OK", json, Data(#"{"reset":true}"#.utf8))
 
