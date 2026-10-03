@@ -211,7 +211,58 @@ Po odsłonięciu (lista sędziego):
 
 ## Runda blind-02
 
-*Szablon jak w blind-01.*
+Pierwsza runda na poprawionym silniku (aa18405, poprawki z blind-01). Odsłonięcie jeszcze nie nastąpiło: nikt z szukających nie czyta `rescue/blindtest/blind-02*`.
+
+- **Zobowiązanie (SHA-256):** `4af5d1ccfbe25f9c76429dda75a3c452a93606fd6f3657cbd17250c24d8e92f7`
+- **Sprawa:** Stanisław M. (osoba fikcyjna), 79 lat, wczesna demencja, bez telefonu. Wyszedł z pensjonatu przy Drodze pod Reglami ok. 14:30. Córka zgłasza o 16:40.
+- **Nowa zasada sędziego:** zapieczętowana tabela wykrywalności dla każdego zespołu (hash `16d6659a3639a43d0e7bb3456b8fb002ff412d38292a2eafff6ec3fa69fbbcd8`). Sędzia rozstrzyga według niej. POD, który deklarujemy, kształtuje tylko naszą mapę.
+- **Szukający:** agent-szukający AI Mateusza, AI Denisa, AI Michała.
+
+### Co pokazała mapa
+
+**17:45:** D13 (Dolina ku Dziurze, gdzie znaleziono jego czapkę) 87% POA. Dron (AI Denisa) -> D13: nic.
+
+### Patrole
+
+| Fala | Zespół | Wysłane | Planer czy odejście | Odpowiedź sędziego |
+|---|---|---|---|---|
+| przed 1 | Dron (AI Denisa) | D13 | planer (87%) | nic |
+| 1 (18:00) | Śmigłowiec | D12 | ... | nic |
+| 1 | Pies | D13, od czapki | ... | nic |
+| 1 | TOPR A | D13, dolina i jaskinia | ... | nic |
+| 1 | TOPR B | D12, D17 | ... | nic |
+| 2 | Pies | D8 (pensjonat) | **odejście od planera** | nic |
+| 2 | TOPR A | D14 | planer | nic |
+| 2 | TOPR B | D7 | planer | nic |
+| 2 | Śmigłowiec | uziemiony po zmroku | - | - |
+| 3 | Pies | D3 | planer | nic |
+| 3 | TOPR A | **D18**, stromy las za Jaskinią Dziura | **odejście od planera** | **ZNALEZIONO o 21:20** |
+| 3 | TOPR B | D12, D11 (na zachód od świadka) | **odejście od planera** | nic |
+| 3 | Dron (AI Denisa) | zbocza D13, termowizja nocą | ... | nic |
+
+Uzasadnienie TOPR A w fali 3 (agent-szukający AI Mateusza): czapka leżała na początku szlaku, a osoba z demencją idzie prosto, aż utknie.
+
+**15:34 (Kraków), wynik:** ZNALEZIONO przez TOPR A w D18 o 21:20, fala 3.
+
+**Ujęcie koordynatora (AI Mateusza):** Dwie rundy na ślepo, obie znalezione w 3. fali, obie dzięki decyzji agenta-szukającego AI, który odszedł od planera, stosując wiedzę o zachowaniu zaginionych (LKP Koestera, demencja: prosto do utknięcia), której silnik jeszcze nie miał. Każdą lekcję wpisujemy do silnika i mierzymy w kolejnej rundzie. Wartość dziś: aplikacja + ocena ratownika, a nie sam planer.
+
+**Drobny błąd szablonu sędziego:** tekst zdarzenia o znalezieniu brzmi "Poszkodowana odnaleziona", a zaginiony jest mężczyzną.
+
+### Uwagi do silnika z blind-02 (backlog 11-16)
+
+- Znaleziony ślad to nie to samo co obserwacja osoby.
+- POD zależny od pokrycia terenu, pogody i światła dziennego.
+- Okno dostępności śmigłowca.
+- Hipotermia liczona z minimalnej temperatury nocą i wieku.
+- Warstwa zachowania przy demencji.
+
+### Odsłonięcie
+
+(po odsłonięciu)
+
+### Metryki
+
+(po odsłonięciu): ranga prawdziwego segmentu przed 1. patrolem, procent obszaru do trafienia, porównanie z naiwnym przeszukiwaniem, odległość od szczytu mapy.
 
 ## Runda blind-03
 
@@ -228,5 +279,5 @@ Po odsłonięciu (lista sędziego):
 | Runda | Znaleziony | Patrole | Ranga przed 1. patrolem | Obszar do znalezienia | Czas vs naiwne | Odległość od szczytu |
 |---|---|---|---|---|---|---|
 | blind-01 | tak (19:35, dron, S12) | 8. przeszukanie segmentu | #5 z 20 | 4,1% (naiwnie 32,3%) | ok. 8x mniej obszaru niż naiwnie | 1,95 km |
-| blind-02 | | | | | | |
+| blind-02 | tak (21:20, TOPR A, D18, fala 3) | (po odsłonięciu) | (po odsłonięciu) | (po odsłonięciu) | (po odsłonięciu) | (po odsłonięciu) |
 | blind-03 | | | | | | |

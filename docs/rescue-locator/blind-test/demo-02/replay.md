@@ -2,16 +2,16 @@
 
 Scenariusz rundy blind-02 jako demo do obejrzenia. Jedno AI (AI Marcina) chowa zaginionego i odpowiada na patrole tak, jak odpowiedziałby teren. Pozostałe AI szukają samą aplikacją. Pełny dziennik: [`../log.md`](../log.md).
 
-**Status: szablon.** Wyniki wpisujemy dopiero z wątku. Nic tutaj nie jest zgadywane. Wszystko z oznaczeniem (po odsłonięciu) zostaje puste do odsłonięcia.
+**Status: runda zakończona (ZNALEZIONO), odsłonięcie jeszcze nie nastąpiło.** Pierwsza runda na poprawionym silniku (aa18405).
 
 ## Runda
 
-- **Start:** ... (Kraków), sędzia AI Marcina.
-- **Zobowiązanie:** `...` (SHA-256)
-- **Sprawa:** ... (osoba fikcyjna)
-- **Teren:** ...
+- **Sędzia:** AI Marcina. Zapieczętowana tabela wykrywalności zespołów (hash `16d6659a...fbbcd8`); nasz deklarowany POD kształtuje tylko naszą mapę.
+- **Zobowiązanie:** `4af5d1ccfbe25f9c76429dda75a3c452a93606fd6f3657cbd17250c24d8e92f7` (SHA-256)
+- **Sprawa:** Stanisław M. (osoba fikcyjna), 79 lat, wczesna demencja, bez telefonu. Wyszedł z pensjonatu przy Drodze pod Reglami ok. 14:30, córka zgłasza o 16:40.
+- **Teren:** Dolina ku Dziurze i okolice (D-segmenty)
 - **Szukający:** agent szukający AI Mateusza, AI Denisa, AI Michała.
-- **Koniec:** ZNALEZIONO albo ... czasu scenariusza.
+- **Wynik:** ZNALEZIONO przez TOPR A w D18 o 21:20, fala 3.
 
 ## Jak odtworzyć
 
@@ -36,25 +36,27 @@ Ekrany:
 
 ## Scenariusz minuta po minucie
 
-Czas scenariusza / czas demo. Uzupełniane z wątku.
+Czasy z wątku. Dokładne godziny startu patroli w falach 2 i 3 uzupełnimy z pliku odtworzenia po odsłonięciu.
 
-| Czas scen. | Demo | Co się dzieje | Ekran | Źródło w wątku |
-|---|---|---|---|---|
-| ... | 0:00 | Zgłoszenie: ... | kierownik, oś czasu | |
-| ... | ... | Wskazówka: ... | kierownik, mapa | |
-| ... | ... | Mapa: top 3 = ..., ..., ... | kierownik, panel top 3 | |
-| ... | ... | Fala patroli 1: `ASSIGN-PATROL` ... Dlaczego: ... | kierownik, przydział zespołów | |
-| ... | ... | Sędzia: nic / ZNALEZIONO (POD ...) | widok patrolu -> kierownik | |
-| ... | ... | Przeliczenie: top 3 = ... | kierownik, mapa | |
-| ... | ... | ... (kolejne fale) | | |
-| ... | ... | ZNALEZIONO albo koniec czasu | widok patrolu | |
-| - | ... | Odsłonięcie: miejsce, sól, hash zgodny? | terminal | (po odsłonięciu) |
+| Czas scen. | Co się dzieje | Ekran |
+|---|---|---|
+| 14:30 | Wychodzi z pensjonatu przy Drodze pod Reglami | kierownik, oś czasu |
+| 16:40 | Córka zgłasza zaginięcie. Demencja, bez telefonu | kierownik, oś czasu |
+| 17:45 | Mapa: D13 Dolina ku Dziurze 87% (tam znaleziono czapkę). Dron -> D13: nic | kierownik, mapa + top 3 |
+| 18:00 | Fala 1: śmigłowiec D12, pies D13 od czapki, TOPR A D13 (dolina i jaskinia), TOPR B D12 + D17. Wszystko: nic | przydział -> widok patrolu |
+| fala 2 | Pies D8 przy pensjonacie (odejście od planera), TOPR A D14, TOPR B D7. Śmigłowiec uziemiony po zmroku. Wszystko: nic | przydział -> widok patrolu |
+| fala 3 | Agent-szukający: czapka na początku szlaku, demencja = prosto, aż utknie. TOPR A -> D18 stromy las za Jaskinią Dziura (odejście). Pies D3, TOPR B D12 + D11, dron zbocza D13 nocą | przydział |
+| 21:20 | **ZNALEZIONO przez TOPR A w D18** | widok patrolu -> kierownik |
+
+**Odsłonięcie:** (po odsłonięciu)
+
+Wniosek do powiedzenia: Dwie rundy na ślepo, obie znalezione w 3. fali, obie dzięki decyzji agenta-szukającego AI, który odszedł od planera, stosując wiedzę o zachowaniu zaginionych (LKP Koestera, demencja: prosto do utknięcia), której silnik jeszcze nie miał. Każdą lekcję wpisujemy do silnika i mierzymy w kolejnej rundzie. Wartość dziś: aplikacja + ocena ratownika, a nie sam planer.
 
 ## Metryki (po odsłonięciu)
 
 | Metryka | Wartość |
 |---|---|
-| Znaleziony | |
+| Znaleziony | tak, 21:20, TOPR A, D18, fala 3 |
 | Patrole do znalezienia | |
 | Ranga prawdziwego segmentu przed 1. patrolem | |
 | Procent obszaru przeszukany do znalezienia | |
@@ -64,6 +66,6 @@ Czas scenariusza / czas demo. Uzupełniane z wątku.
 
 ## Lektor (30 s, PL)
 
-Wersja robocza. Nawiasy kwadratowe uzupełniamy po odsłonięciu, porażkę mówimy wprost.
+Nawias kwadratowy uzupełniamy po odsłonięciu.
 
-> Nie wiemy, gdzie jest [imię]. Wie tylko AI, które ją schowało, i zapisało to miejsce jako hash, zanim zaczęliśmy. Mamy to, co ratownik miałby naprawdę: plan od rodziny, auto na parkingu, sektor BTS, pogodę. Mapa wskazuje trzy sektory. Wysyłamy patrole. "Nic." Mapa się przelicza. [Po N falach: znaleziona w sektorze X / Nie znaleźliśmy jej w sześć godzin.] Odsłonięcie: hash się zgadza. [Metryka jednym zdaniem.]
+> Stanisław, 79 lat, wczesna demencja, bez telefonu. Wyszedł z pensjonatu po obiedzie. Mapa wskazuje dolinę, w której leżała jego czapka: 87 procent. Dron, pies, dwa patrole: nic. Druga fala: nic. Wtedy agent-szukający przypomina sobie, jak chodzą osoby z demencją: prosto, aż utkną. Trzecia fala idzie w stromy las za jaskinią. 21:20: znaleziony. [Odsłonięcie: hash się zgadza.] Uczciwie: planer by tam nie posłał. Tę wiedzę wpisujemy do silnika.

@@ -12,6 +12,9 @@ Materiał marketingowy na podstawie [`log.md`](log.md). Wszystko, co zależy od 
 6. **Runda 1.** blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. S12 miał wcześniej dwa przejścia we mgle (POD 0,45 każde), które jej nie znalazły: realistyczny POD poniżej 1.
 
    **Odsłonięcie (14:59):** hash zgodny. Zgubiła żółty szlak we mgle za Szpiglasową Przełęczą i siedziała z urazem kostki pod blokiem skalnym, ok. 280 m od szlaku. Stan mapy o 19:00, przed pierwszym patrolem: prawdziwa komórka w najlepszych 4,1% obszaru (naiwnie od schroniska 32,3%, ok. 8x lepiej), ale segment dopiero #5 z 20, a szczyt mapy 1,95 km obok. Najbardziej pomógł sektor BTS. **To jedna runda, nie liczba do pitchu** (sędzia). Liczba do pitchu to wynik serii.
+7. **Runda 2.** Stanisław M. (fikcyjny), 79 lat, demencja, bez telefonu. Pierwsza runda na poprawionym silniku. Znaleziony w 3. fali przez TOPR A w stromym lesie za Jaskinią Dziura, po tym jak agent-szukający AI odszedł od planera: osoba z demencją idzie prosto, aż utknie. Odsłonięcie i metryki (po odsłonięciu).
+
+   **Ujęcie koordynatora po dwóch rundach:** Dwie rundy na ślepo, obie znalezione w 3. fali, obie dzięki decyzji agenta-szukającego AI, który odszedł od planera, stosując wiedzę o zachowaniu zaginionych (LKP Koestera, demencja: prosto do utknięcia), której silnik jeszcze nie miał. Każdą lekcję wpisujemy do silnika i mierzymy w kolejnej rundzie. Wartość dziś: aplikacja + ocena ratownika, a nie sam planer.
 
 Dlaczego to działa w pitchu: jury słyszy liczby co pięć minut. Rzadko słyszy, jak zespół je sam podważył i zbudował test, którego nie da się nagiąć.
 
