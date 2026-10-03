@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -86,6 +87,23 @@ class Handler(SimpleHTTPRequestHandler):
         if p == "/api/rerun":
             subprocess.run([sys.executable, "demo.py"], cwd=SPIKE, capture_output=True)
             return self._json(200, {"ok": True})
+        if p.startswith("/api/approvals/"):
+            aid = p.rsplit("/", 1)[-1]
+            headers = {"Content-Type": "application/json"}
+            if self.headers.get("Authorization"):
+                headers["Authorization"] = self.headers["Authorization"]
+            req = urllib.request.Request(GATEWAY + "/v1/approvals/" + urllib.parse.quote(aid), data=body, headers=headers, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=10) as r:
+                    return self._send(r.read(), "application/json", "live")
+            except urllib.error.HTTPError as e:
+                data = e.read()
+                self.send_response(e.code)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                return self.wfile.write(data)
+            except Exception:
+                return self._json(503, {"error": f"gateway not running on {GATEWAY}"})
         if p in ("/api/prompt", "/api/tool"):
             req = urllib.request.Request(GATEWAY + ("/v1/prompt" if p == "/api/prompt" else "/v1/tool"), data=body,
                                          headers={"Content-Type": "application/json"}, method="POST")
