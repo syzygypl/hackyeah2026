@@ -610,7 +610,13 @@ export function mountAppChat() {
     mode: () => S().backend === "studio" ? "studio" : live() && !host.forceSim ? "live" : "hist",
     maxClock: () => { const R = S().run; return R && R.steps && !live() ? beforeFind(R, R.steps.length - 1).t : null; },
     clock: () => { const R = S().run; if (!R || !R.steps) return "12:00"; if (live()) return (R.liveCursor && R.liveCursor.at) || R.steps[R.steps.length - 1].t; return beforeFind(R, S().step - 1).t; },
-    async refreshLive() { if (!S().runUrl) return S().run; const r = await (await fetch(S().runUrl, { cache: "no-cache" })).json(); if (r && r.steps) A().applyRun(r, {}, "run"); return r; },
+    async refreshLive() {
+      if (!S().runUrl) return S().run;
+      // runInline (1f20792): the frames parse this copy instead of a second GET of the same run
+      const u = new URL(S().runUrl, location.href).href, text = await (await fetch(S().runUrl, { cache: "no-cache" })).text(), r = JSON.parse(text);
+      if (r && r.steps) { window.__rescueRunText = { url: u, text }; A().applyRun(r, {}, "run"); }
+      return r;
+    },
     async apply(run, info) {
       if (blob) URL.revokeObjectURL(blob);
       const text = JSON.stringify(run); blob = URL.createObjectURL(new Blob([text], { type: "application/json" }));
@@ -650,7 +656,9 @@ export async function mountStandalone() {
     if (e.source !== frame.contentWindow || e.origin !== location.origin || !e.data || e.data.source !== "rescue2d") return;
     if (e.data.type === "ready") { ready = true; const p = pending; pending = []; p.forEach(post); }
   });
-  try { run = await api(`/api/run/${encodeURIComponent(sc)}`); } catch (e) { run = null; }
+  // one GET of the run: the embedded 2D view parses the same text (runInline, window.__rescueRunText) instead of a second GET
+  const runText = async () => { const r = await fetch(`/api/run/${encodeURIComponent(sc)}`, { cache: "no-cache" }); if (!r.ok) throw new Error(r.status); const text = await r.text(); window.__rescueRunText = { url: new URL(`/api/run/${sc}`, location.href).href, text }; return JSON.parse(text); };
+  try { run = await runText(); } catch (e) { run = null; }
   const startRun = run;
   frame.src = `../web/index.html?embed=scene&sc=${encodeURIComponent(sc)}&parentOrigin=${encodeURIComponent(location.origin)}&run=${encodeURIComponent(`/api/run/${sc}`)}&scenario=${encodeURIComponent(`/scenarios/${sc}.json`)}`;
   const liveAt = () => (run && run.liveCursor && run.liveCursor.at) || (startRun && startRun.steps && beforeFind(startRun, startRun.steps.length - 1).t) || "12:00";
@@ -659,9 +667,9 @@ export async function mountStandalone() {
     mode: () => liveWanted && hasKey() && !host.forceSim ? "live" : "hist",
     clock: liveAt, maxClock: liveAt,
     simCut: () => (startRun && startRun.liveCursor && startRun.liveCursor.at) || null,
-    async refreshLive() { const r = await api(`/api/run/${encodeURIComponent(sc)}`); run = r; ready = false; frame.src = frame.src.replace(/([?&])v=\d+/, "") + "&v=" + Date.now(); return r; },
-    async apply(r) { run = r; if (blob) URL.revokeObjectURL(blob); blob = URL.createObjectURL(new Blob([JSON.stringify(r)], { type: "application/json" })); post({ type: "run", url: blob }); ready = false; },
-    async restore() { run = startRun; post({ type: "run", url: `/api/run/${sc}` }); ready = false; },
+    async refreshLive() { const r = await runText(); run = r; post({ type: "run", url: `/api/run/${sc}` }); ready = false; return r; },
+    async apply(r) { run = r; if (blob) URL.revokeObjectURL(blob); const text = JSON.stringify(r); blob = URL.createObjectURL(new Blob([text], { type: "application/json" })); window.__rescueRunText = { url: blob, text }; post({ type: "run", url: blob }); ready = false; },
+    async restore() { run = startRun; try { run = await runText(); } catch (e) {} post({ type: "run", url: `/api/run/${sc}` }); ready = false; },
     focus({ segId }) { if (segId) post({ type: "select", segmentId: segId }); document.body.classList.add("cz-map-big"); setTimeout(() => document.getElementById("czMapBox").scrollIntoView({ behavior: "smooth", block: "nearest" }), 50); },
   };
   const chat = createChat(body, host, { placeholder: "Co widziałeś? Np. „widziałem kogoś przy Wielkim Stawie 20 min temu”" });
