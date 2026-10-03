@@ -23,7 +23,7 @@ export function timelineClock(timeline, minute) {
   return `${day ? (day > 0 ? '+' : '') + day + ' ' : ''}${String(Math.floor(clock / 60)).padStart(2, '0')}:${String(clock % 60).padStart(2, '0')}`;
 }
 
-export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line, drape, dispose, label,
+export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeAt, line, drape, dispose, label,
   esc, nf, wake, onFrame, onStopCamera, onCamera, onActor, getFrame }) {
   const timeline = run.timeline;
   if (!timeline?.actors?.length) return null;
@@ -165,9 +165,9 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
       a.tag.element.title = `${a.name || a.id} · ${p.est ? 'szacunek' : 'GPS'} · dokładność ±${nf(p.accM, 0)} m · pokaż ślad i dziennik`;
       if (fpp === a.id) {
         const next = sampleAt(a.path, Math.min(shown + 0.5, a.path.at(-1)[2]));
-        const eye = v3(p.lat, p.lon, (a.fov?.eyeM || 1.7) / 1000);
+        const eye = eyeAt(p.lat, p.lon, a.fov?.eyeM || 1.7);
         const heading = lastFrame?.actors?.find((x) => x.id === a.id)?.headingDeg ?? 0;
-        let look = next ? v3(next.lat, next.lon, (a.fov?.eyeM || 1.7) / 1000) : eye.clone();
+        let look = next ? eyeAt(next.lat, next.lon, a.fov?.eyeM || 1.7) : eye.clone();
         if (look.distanceTo(eye) < 0.001) { const rad = heading * Math.PI / 180; look = eye.clone().add(new THREE.Vector3(Math.sin(rad) * 0.05, 0, -Math.cos(rad) * 0.05)); }
         camera.position.copy(eye); controls.target.copy(look); camera.lookAt(look);
       }

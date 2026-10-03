@@ -226,6 +226,9 @@ function leafAt(la, lo) {
   const v = lgAt(la, lo, LG ? LG.l : null); return v > 0 ? ['broad', 'needle', 'mixed'][Math.round(v / 60) - 1] || null : null;
 }
 const v3 = (lat, lon, lift = 0) => new THREE.Vector3(toX(lon), hAt(lat, lon) + lift, toZ(lat));
+// Flat scenarios have no grass/height mesh; otherwise nearGrass exposes its exact triangle height.
+let meshHeightAt = hAt;
+const eyeAt = (lat, lon, eyeM) => new THREE.Vector3(toX(lon), meshHeightAt(lat, lon) + eyeM / 1000, toZ(lat));
 
 // run grid helpers
 const B = R.bbox, dLat = (B.north - B.south) / R.rows, dLon = (B.east - B.west) / R.cols;
@@ -639,13 +642,13 @@ function heatCanvasGrid(p) {
 }
 const heatCache = new Map();
 const heatOf = (i) => { if (!heatCache.has(i)) heatCache.set(i, heatCanvasGrid(R.steps[i].poaGrid)); return heatCache.get(i); };
-let heatFrom = null, heatTo = null, heatT = 1, WASH = new Map(), TL_COV = []; // searched segment id -> times searched
+let heatFrom = null, heatTo = null, heatT = 1, WASH = new Map(), TL_COV = [], fppHeat = 1; // searched segment id -> times searched
 const llToTex = (la, lo) => [((lo - DEM.lon0) / stLon) * TS, ((DEM.lat0 - la) / stLat) * TS];
 function compose() {
   const g = compCanvas.getContext('2d');
   g.globalAlpha = 1; g.drawImage(ORTHO.on && ORTHO.canvas ? ORTHO.canvas : baseCanvas, 0, 0);
   if (SHOW_DIFF) g.drawImage(diffLayer(), heatRect.x, heatRect.y, heatRect.w, heatRect.h); // the heat itself is drawn by the terrain shader
-  heatU.uHeatOn.value.set(!SHOW_DIFF && heatFrom ? 1 : 0, !SHOW_DIFF && heatTo ? 1 : 0);
+  heatU.uHeatOn.value.set(!SHOW_DIFF && heatFrom ? fppHeat : 0, !SHOW_DIFF && heatTo ? fppHeat : 0);
   // searched ground: cool grey wash with hatching, stronger for repeated searches
   for (const [id, n] of WASH) {
     const sg = segs.get(id); if (!sg?.polygon?.length) continue;
@@ -984,6 +987,7 @@ const nearGrass = (() => {
     const gx = ((hd - ha + hc - hb) / 2) / (WKM / C1), gz = ((hb - ha + hc - hd) / 2) / (HKM / R1);
     return [y, (Math.atan(Math.hypot(gx, gz) / EX) * 180) / Math.PI];
   };
+  meshHeightAt = (lat, lon) => ground(toX(lon), toZ(lat))[0]; // FPP: the same surface as grass placement
   const lakes = (TER?.lakes || []).map((l) => ({ x: toX(l.center[1]), z: toZ(l.center[0]), r: (l.radiusM + 15) / 1000 }));
   const NOGRASS = new Set(['water', 'residential', 'industrial', 'cemetery', 'beach', 'sand', 'rock']);
   const GP = { meadow: 1, grass: 1, heath: 0.85, scrub: 0.65, park: 0.7, orchard: 0.8, wetland: 0.6, farmland: 0.25, forest: 0.3, wood: 0.3 };
@@ -1731,7 +1735,7 @@ host.addEventListener('pointerup', (e) => {
   else if (G.phase === 'search') sendPatrol(R.segOf[k]); // the patrol goes to the clicked segment
 });
 host.addEventListener('dblclick', (e) => { if (e.target.closest('[data-actor-id]')) return; const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
-TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, line: makeLine, drape: drapeRuns,
+TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, line: makeLine, drape: drapeRuns,
   dispose: disposeGroup, label, esc, nf, wake,
   onFrame: (f, minute) => {
     if (G.phase !== 'off') return;
@@ -1747,7 +1751,7 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, line: make
     compose();
   },
   onStopCamera: () => { if (CINE.on) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
-  onCamera: (on, actorId) => toParent({ type: 'fpp', on, actorId }),
+  onCamera: (on, actorId) => { fppHeat = on ? 0.3 : 1; compose(); toParent({ type: 'fpp', on, actorId }); },
   onActor: (id) => toParent({ type: 'actor', id }),
   getFrame: async (t) => {
     const f = await getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}`, true);
@@ -2073,7 +2077,7 @@ function frame() {
 }
 
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, timeline: TL3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
