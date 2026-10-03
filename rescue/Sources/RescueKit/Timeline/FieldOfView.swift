@@ -46,7 +46,9 @@ public struct FieldOfView {
 
     func inCone(_ f: FOVParams, env: Env, bearing: Double, d: Double) -> Bool {
         guard let b = band(f, env: env), d <= b.rangeM else { return false }
-        guard let w = env.windFromDeg, b.halfAngleDeg < 180 else { return true }   // calm / unknown direction: circle
+        // unknown wind direction: no cone, only the calm-band circle (fov-params "calm" ~40 m), never a full-range circle
+        guard let w = env.windFromDeg else { return d <= (f.windCone.first?.rangeM ?? b.rangeM) }
+        guard b.halfAngleDeg < 180 else { return true }   // calm band: circle
         var diff = abs(bearing - w).truncatingRemainder(dividingBy: 360)
         if diff > 180 { diff = 360 - diff }
         return diff <= b.halfAngleDeg

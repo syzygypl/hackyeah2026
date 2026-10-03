@@ -77,7 +77,10 @@ impl FieldOfView {
         if !(d <= b.range_m) {
             return false;
         }
-        let Some(w) = env.wind_from_deg else { return true }; // calm / unknown direction: circle
+        // unknown wind direction: no cone, only the calm-band circle (fov-params "calm" ~40 m), never a full-range circle
+        let Some(w) = env.wind_from_deg else {
+            return d <= f.wind_cone.first().map(|c| c.range_m).unwrap_or(b.range_m);
+        };
         if !(b.half_angle_deg < 180.0) {
             return true;
         }
