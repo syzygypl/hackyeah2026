@@ -109,9 +109,11 @@ export function installHeightFog() {
 // U: shared uniforms owned by the page (time, wind, heat textures...), so one value drives every material using it
 export const FX = {
   // gradient sky with sun disk and halo (full custom shader, rendered on the inside of a sphere)
+  // plus a cloud layer drifting with the wind (uCloudOff), its cover from the step's weather (uCloud 0..1)
   sky: (sunDir) => fxShader({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() }, sunDir: { value: sunDir }, sunCol: { value: new THREE.Color('#ffd9a0') }, sunAmt: { value: 1 } },
+    uniforms: { top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() }, sunDir: { value: sunDir }, sunCol: { value: new THREE.Color('#ffd9a0') }, sunAmt: { value: 1 },
+      uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() } },
     vertex: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragment: `varying vec3 vP;
     void main(){
@@ -119,6 +121,13 @@ export const FX = {
       vec3 c = mix(bottom, top, pow(h,0.75));
       float d = max(dot(normalize(vP), sunDir), 0.0);
       c += sunCol * (pow(d, 900.0) * 6.0 + pow(d, 60.0) * 0.45 + pow(d, 6.0) * 0.18) * sunAmt;
+      if (vP.y > 0.0 && uCloud > 0.01) {
+        vec2 uv = vP.xz / (vP.y + 0.12) * 1.3 + uCloudOff;
+        float n = fxFbm(uv * 1.4, 0.0) + 0.25 * fxNoise(uv * 7.0);
+        float cov = smoothstep(0.78 - uCloud * 0.42, 0.98 - uCloud * 0.3, n) * smoothstep(0.0, 0.16, vP.y);
+        vec3 lit = mix(vec3(0.93, 0.94, 0.96), sunCol, 0.28) * (0.62 + 0.45 * smoothstep(0.5, 1.1, n + d * 0.3));
+        c = mix(c, mix(lit * mix(0.35, 1.0, clamp(sunAmt, 0.0, 1.0)), bottom, 0.25 * (1.0 - vP.y)), cov * 0.92);
+      }
       gl_FragColor = vec4(c, 1.0);
     }`,
   }),
@@ -193,6 +202,99 @@ export const FX = {
       vec2 q = p + vec2(sin(p.y * 0.37 + t * 0.4), cos(p.x * 0.41 - t * 0.3)) * 2.2; // domain warp: no regular grid
       vec3 nW = normalize(vec3((sin(q.x + t * 1.3) * 0.5 + sin((q.x * 0.6 + q.y) * 1.3 - t * 1.1) * 0.35) * a, 8.0, (sin(q.y * 0.9 + t * 0.9) * 0.5 + sin((q.x - q.y * 0.7) * 1.1 + t * 1.6) * 0.3) * a));
       normal = normalize((viewMatrix * vec4(nW, 0.0)).xyz); }` } }),
+
+  // cloud shadows: the drifting cloud layer dims the direct sun on the terrain (needs the baked sun term)
+  cloudShadows: (U) => ({ name: 'clouds', requires: ['sun'], uniforms: { uCloud: U.uCloud, uCloudOff: U.uCloudOff },
+    hooks: { color: `
+    {
+      vec2 cp = fxWorld.xz * 0.32 + uCloudOff * 4.0;
+      float n = fxNoise(cp) * 0.62 + fxNoise(cp * 2.3 + 7.1) * 0.38;
+      bakedSun *= 1.0 - uCloud * 0.6 * smoothstep(0.5 - uCloud * 0.2, 0.72 - uCloud * 0.15, n);
+    }` } }),
+
+  // lakes: three directional waves displace the surface in the vertex shader; the pixel shader takes the normal from
+  // the same function (exact at every pixel) plus fine wind ripples, tints deep water dark and the shallow rim
+  // turquoise, puts foam on the shore and on crests, and sparkles where the sun reflects. Mesh: unit polar grid
+  // scaled (r, 1, r), so length(position.xz) is 0 at the centre and 1 at the shore.
+  lakeWaves: (U) => ({ name: 'waves', uniforms: { uTime: U.uTime, uWind: U.uWind, uSunDir: U.uSunDir, uDay: U.uDay },
+    glsl: `
+    varying float vRim;
+    float fxWaveAmp() { return 0.0016 + uWind * 0.03; }
+    // height and its x/z slope, world units (km)
+    vec3 fxWave(vec2 p, float t, float a) {
+      vec3 r = vec3(0.0);
+      vec2 D[3]; D[0] = vec2(0.8, 0.6); D[1] = vec2(-0.42, 0.91); D[2] = vec2(0.96, -0.28);
+      float K[3]; K[0] = 48.0; K[1] = 74.0; K[2] = 118.0;
+      float W[3]; W[0] = 1.15; W[1] = 1.7; W[2] = 2.4;
+      float A[3]; A[0] = 1.0; A[1] = 0.55; A[2] = 0.3;
+      for (int i = 0; i < 3; i++) {
+        float ph = K[i] * dot(D[i], p) + W[i] * t, ai = a * A[i];
+        r.x += ai * sin(ph); r.yz += ai * K[i] * cos(ph) * D[i];
+      }
+      return r;
+    }`,
+    hooks: {
+      vertex: `
+    {
+      vRim = length(position.xz);
+      vec3 wp = (modelMatrix * vec4(transformed, 1.0)).xyz;
+      transformed.y += fxWave(wp.xz, uTime, fxWaveAmp()).x * (1.0 - smoothstep(0.8, 1.0, vRim));
+    }`,
+      color: `
+    float waveEdge = 1.0 - smoothstep(0.8, 1.0, vRim);
+    vec3 wv = fxWave(fxWorld.xz, uTime, fxWaveAmp()) * waveEdge;
+    {
+      vec3 deep = vec3(0.01, 0.07, 0.12), shallow = vec3(0.06, 0.32, 0.34);
+      diffuseColor.rgb = mix(deep, shallow, smoothstep(0.72, 1.0, vRim));
+      float near = 1.0 - smoothstep(1.5, 6.0, length(fxWorld - cameraPosition)); // foam detail only where it reads as foam
+      float streak = smoothstep(0.62, 0.9, fxNoise(fxWorld.xz * vec2(900.0, 300.0) + uTime * 1.5) * fxNoise(fxWorld.xz * 140.0 - uTime * 0.4) * 1.6);
+      float crest = smoothstep(0.7, 1.0, wv.x / fxWaveAmp()) * streak * smoothstep(0.03, 0.09, uWind) * near;
+      float shore = smoothstep(0.93, 0.99, vRim) * (0.35 + 0.65 * fxNoise(fxWorld.xz * 380.0 - uTime * 0.8));
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 0.95), clamp(shore * 0.8 + crest * 0.55, 0.0, 1.0));
+    }`,
+      normal: `
+    vec3 waterN;
+    { vec2 p = fxWorld.xz * 260.0; float t = uTime, a = (0.25 + uWind * 6.0) * 0.07;
+      vec2 q = p + vec2(sin(p.y * 0.37 + t * 0.4), cos(p.x * 0.41 - t * 0.3)) * 2.2; // domain-warped ripples: no regular grid
+      vec2 rip = vec2(sin(q.x + t * 1.3) * 0.5 + sin((q.x * 0.6 + q.y) * 1.3 - t * 1.1) * 0.35, sin(q.y * 0.9 + t * 0.9) * 0.5 + sin((q.x - q.y * 0.7) * 1.1 + t * 1.6) * 0.3) * a;
+      waterN = normalize(vec3(-wv.y + rip.x, 1.0, -wv.z + rip.y));
+      normal = normalize((viewMatrix * vec4(waterN, 0.0)).xyz); }`,
+      emissive: `
+    { vec3 V = normalize(cameraPosition - fxWorld), Rf = reflect(-V, waterN);
+      float sd = max(dot(Rf, normalize(uSunDir)), 0.0);
+      float tw = step(0.8, fxHash(floor(fxWorld.xz * 1400.0) + floor(uTime * 7.0)));
+      totalEmissiveRadiance += vec3(1.0, 0.88, 0.7) * (pow(sd, 1200.0) * 1.6 + pow(sd, 90.0) * 0.12 + pow(sd, 400.0) * tw * 1.4) * uDay * waveEdge; }`,
+    } }),
+
+  // rain / snow: GPU particles in a box around the orbit target (uCenter, size uBox), falling and drifting with the
+  // wind entirely in the vertex shader; rain as slanted streaks, snow as soft flakes
+  precip: (U) => fxShader({
+    transparent: true, depthWrite: false,
+    uniforms: { uTime: U.uTime, uWind: U.uWind, uDay: U.uDay, uCenter: { value: new THREE.Vector3() }, uBox: { value: 3 }, uKind: { value: 0 }, uAmt: { value: 0 }, uPx: { value: 1000 } },
+    vertex: `attribute float aRnd; varying float vA;
+    void main() {
+      vec3 p = position;
+      float speed = mix(1.5, 0.22, uKind) * (0.8 + 0.4 * aRnd);
+      p.y = fract(p.y - uTime * speed / (uBox * 0.6) * 3.0);
+      p.x = fract(p.x + uTime * uWind * mix(1.2, 2.5, uKind) / uBox + uKind * 0.015 * sin(uTime * 1.3 + aRnd * 40.0));
+      p.z = fract(p.z + uKind * 0.012 * cos(uTime * 1.1 + aRnd * 31.0));
+      vec3 w = uCenter + (p - 0.5) * vec3(uBox, uBox * 0.6, uBox) + vec3(0.0, uBox * 0.22, 0.0);
+      vec4 mv = modelViewMatrix * vec4(w, 1.0);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = uBox * mix(0.011, 0.006, uKind) * (0.6 + 0.7 * aRnd) * uPx / max(-mv.z, 0.05);
+      vA = uAmt * step(aRnd, uAmt) * smoothstep(0.0, 0.08, p.y) * smoothstep(1.0, 0.9, p.y) * smoothstep(0.0, 0.1, p.x) * smoothstep(1.0, 0.9, p.x);
+    }`,
+    fragment: `varying float vA;
+    void main() {
+      vec2 c = gl_PointCoord - 0.5;
+      float a = uKind < 0.5
+        ? (1.0 - smoothstep(0.02, 0.07, abs(c.x - c.y * uWind * 5.0))) * (1.0 - smoothstep(0.25, 0.5, abs(c.y)))
+        : 1.0 - smoothstep(0.15, 0.5, length(c));
+      vec3 col = mix(vec3(0.72, 0.8, 0.9), vec3(1.0), uKind) * mix(0.45, 1.0, uDay);
+      gl_FragColor = vec4(col, a * vA * mix(0.5, 0.95, uKind));
+      if (gl_FragColor.a < 0.01) discard;
+    }`,
+  }),
 
   // wind: the crown sways with the step's reported wind, phase from the instance position
   treeWind: (U) => ({ name: 'wind', uniforms: { uTime: U.uTime, uWind: U.uWind },

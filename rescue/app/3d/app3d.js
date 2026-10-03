@@ -271,6 +271,15 @@ const starGeo = new THREE.BufferGeometry();
 }
 const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.3, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false });
 scene.add(new THREE.Points(starGeo, starMat));
+// rain / snow (fx3d.precip): 9000 particles in a box that follows the orbit target and scales with the zoom
+const precipMat = FX.precip({ uTime: { value: 0 }, uWind: { value: 0.03 }, uDay: { value: 1 } }); // linked to heatU below
+const precip = (() => {
+  const n = 9000, pos = new Float32Array(n * 3), rnd = new Float32Array(n);
+  for (let i = 0; i < n; i++) { pos[i * 3] = Math.random(); pos[i * 3 + 1] = Math.random(); pos[i * 3 + 2] = Math.random(); rnd[i] = Math.random(); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aRnd', new THREE.BufferAttribute(rnd, 1));
+  const p = new THREE.Points(g, precipMat); p.frustumCulled = false; p.visible = false; p.renderOrder = 2; scene.add(p);
+  return p;
+})();
 const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.castShadow = true;
@@ -327,7 +336,9 @@ const compTex = new THREE.CanvasTexture(compCanvas); compTex.colorSpace = THREE.
 const heatTex = () => { const t = new THREE.CanvasTexture(document.createElement('canvas')); t.colorSpace = THREE.SRGBColorSpace; return t; };
 const heatU = { uHeatFrom: { value: heatTex() }, uHeatTo: { value: heatTex() }, uHeatT: { value: 1 }, uHeatOn: { value: new THREE.Vector2() },
   uHeatRect: { value: new THREE.Vector4() }, uHeatEdges: { value: new THREE.Vector3() }, uTime: { value: 0 }, uEmis: { value: 0 },
-  uSnowY: { value: ((2350 - zMin) * EX) / 1000 }, uWind: { value: 0.03 } };
+  uSnowY: { value: ((2350 - zMin) * EX) / 1000 }, uWind: { value: 0.03 },
+  uDay: { value: 1 }, uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() }, uSunDir: { value: SUN_DIR } }; // shared by every fx3d effect
+Object.assign(precipMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 
 const terrainGeo = new THREE.PlaneGeometry(WKM, HKM, DEM.cols - 1, DEM.rows - 1);
 terrainGeo.rotateX(-Math.PI / 2);
@@ -395,8 +406,8 @@ const normalTex = (() => {
 const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x000000, roughness: 0.96, metalness: 0,
   normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 });
 heatU.uSunMask = { value: sunMask };
-// fx3d: close-up detail, POA heat layer, baked + near sun shadow, snow glints
-applyFx(terrainMat, [FX.terrainDetail(), FX.poaHeat(heatU), FX.bakedSun(heatU), FX.snowGlints(heatU)]);
+// fx3d: close-up detail, POA heat layer, baked + near sun shadow, drifting cloud shadows, snow glints
+applyFx(terrainMat, [FX.terrainDetail(), FX.poaHeat(heatU), FX.bakedSun(heatU), FX.cloudShadows(heatU), FX.snowGlints(heatU)]);
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
@@ -527,7 +538,7 @@ function makeLine(vecs, { color = '#222', width = 2, opacity = 1, dashed = false
 // draped polyline in [lat, lon]; parts outside the DEM are dropped
 // Batched: every group keeps one LineSegments2 per style (colour, width, dash...), so a layer of 100 outlines is one
 // draw call. Runs are collected here and uploaded once, right before the next frame renders (flushLines).
-const dirtyLines = new Set();
+const dirtyLines = new Set(), flowMats = new Set(); // flowMats: dashes animated along the line (streams)
 function drapeRuns(latlon, lift, opts, group) {
   const key = JSON.stringify(opts), batches = group.userData.lines || (group.userData.lines = new Map());
   let b = batches.get(key);
@@ -546,10 +557,10 @@ function drapeRuns(latlon, lift, opts, group) {
 }
 function flushLines() {
   for (const b of dirtyLines) {
-    const { color = '#222', width = 2, opacity = 1, dashed = false, dash = 0.05, gap = 0.04 } = b.opts;
+    const { color = '#222', width = 2, opacity = 1, dashed = false, dash = 0.05, gap = 0.04 } = b.opts; // flow: see flowMats
     if (!b.obj) {
       const mat = new LineMaterial({ color, linewidth: width, transparent: opacity < 1, opacity, dashed, dashSize: dash, gapSize: gap });
-      mat.resolution.set(innerWidth, innerHeight); lineMats.add(mat);
+      mat.resolution.set(innerWidth, innerHeight); lineMats.add(mat); if (b.opts.flow) flowMats.add(mat);
       b.obj = new LineSegments2(new LineSegmentsGeometry(), mat); b.group.add(b.obj);
     } else { b.obj.geometry.dispose(); b.obj.geometry = new LineSegmentsGeometry(); }
     b.obj.geometry.setPositions(b.pts);
@@ -590,12 +601,18 @@ for (const t of TER?.trails || []) {
   drapeRuns(t.points, 0.013, { color: '#fbf8f0', width: 4, opacity: 0.55 }, statics);
   drapeRuns(t.points, 0.014, { color: TRAIL_COL[key] || '#555', width: 2 }, statics);
 }
-for (const s of TER?.streams || []) drapeRuns(s.points, 0.008, { color: '#3a86c8', width: 1.3, opacity: 0.75 }, statics);
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x03181d, roughness: 0.14, metalness: 0.35 });
-applyFx(waterMat, [FX.waterRipples(heatU)]); // fx3d: lake ripples reflecting the sky
+// streams: a blue bed plus light dashes running downstream (OSM waterways are drawn in the flow direction)
+for (const s of TER?.streams || []) {
+  drapeRuns(s.points, 0.008, { color: '#3a86c8', width: 1.6, opacity: 0.8 }, statics);
+  drapeRuns(s.points, 0.0085, { color: '#d8f1ff', width: 1.2, opacity: 0.9, dashed: true, dash: 0.014, gap: 0.035, flow: true }, statics);
+}
+// lakes: a polar grid (unit radius, 24 rings) so the vertex shader has vertices to move; fx3d waves do the rest
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
+applyFx(waterMat, [FX.lakeWaves(heatU)]); // fx3d: waves, foam, depth tint, sun glitter
+const lakeGeo = new THREE.RingGeometry(0.0001, 1, 96, 24).rotateX(-Math.PI / 2);
 for (const l of TER?.lakes || []) {
-  const m = new THREE.Mesh(new THREE.CircleGeometry(l.radiusM / 1000, 48).rotateX(-Math.PI / 2), waterMat);
-  m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
+  const m = new THREE.Mesh(lakeGeo, waterMat), r = l.radiusM / 1000;
+  m.scale.set(r, 1, r); m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
 }
 for (const h of TER?.huts || []) statics.add(pin(h.at[0], h.at[1], '#7f5539', 0.07, esc(h.name), 'hut', 0.011));
 for (const g of segs.values()) drapeRuns(ringLL(g.polygon), 0.016, { color: '#2b2f33', width: 1, opacity: 0.28 }, statics);
@@ -665,7 +682,7 @@ const MOODS = {
   fog: { top: '#7f9bb8', bottom: '#ece5d8', fog: '#cdd6df', sun: '#fff5e8', sunI: 2.3, hs: '#dbe6f2', hg: '#6f6656', hI: 1.0, stars: 0, emis: 0, exp: 1.12 },
   night: { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#e3eaff', sunI: 2.9, hs: '#cad7f0', hg: '#5c5c68', hI: 1.65, stars: 0.6, emis: 0.25, exp: 1.2 },
 };
-const cur = { top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60, wind: 0.02 };
+const cur = { cloud: 0.35, rain: 0, snow: 0, top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60, wind: 0.02 };
 let tgt = { ...cur }, weatherOn = true;
 function setMood(w) {
   const vis = w?.visibilityM ?? 10000, dark = !!w?.dark && weatherOn;
@@ -675,13 +692,20 @@ function setMood(w) {
     sunI: m.sunI, hI: m.hI, stars: m.stars * (vis >= 500 ? 1 : 0.1), emis: m.emis, exp: m.exp,
     near: !weatherOn ? 9 : vis <= 100 ? 5 : vis < 500 ? 6 : 9, far: !weatherOn ? 40 : vis <= 100 ? 22 : vis < 500 ? 28 : 40,
     wind: clamp((weatherOn ? w?.windMs ?? 4 : 4) / 14, 0.15, 1.5) * 0.07,
+    // cloud cover and precipitation from the step's weather (off with "Pogoda")
+    cloud: !weatherOn ? 0.3 : w?.precip && w.precip !== 'none' ? 0.85 : vis < 500 ? 0.7 : 0.35,
+    rain: weatherOn && w?.precip === 'rain' ? 1 : 0, snow: weatherOn && w?.precip === 'snow' ? 1 : 0,
   };
 }
 function stepMood(dt) {
   const k = 1 - Math.exp(-dt * 1.8);
   for (const c of ['top', 'bottom', 'fog', 'sun', 'hs', 'hg']) cur[c].lerp(tgt[c], k);
-  for (const n of ['sunI', 'hI', 'stars', 'emis', 'exp', 'near', 'far', 'wind']) cur[n] += (tgt[n] - cur[n]) * k;
-  heatU.uWind.value = cur.wind;
+  for (const n of ['sunI', 'hI', 'stars', 'emis', 'exp', 'near', 'far', 'wind', 'cloud', 'rain', 'snow']) cur[n] += (tgt[n] - cur[n]) * k;
+  heatU.uWind.value = cur.wind; heatU.uCloud.value = cur.cloud; heatU.uDay.value = clamp(1 - cur.stars * 1.6, 0.15, 1);
+  heatU.uCloudOff.value.add(new THREE.Vector2(0.8, 0.6).multiplyScalar(dt * (0.004 + cur.wind * 0.12))); // clouds drift with the wind
+  skyMat.uniforms.uCloud.value = cur.cloud; skyMat.uniforms.uCloudOff.value.copy(heatU.uCloudOff.value);
+  const pk = cur.snow > cur.rain ? 1 : 0, pa = Math.max(cur.rain, cur.snow);
+  precip.visible = pa > 0.01; precipMat.uniforms.uKind.value = pk; precipMat.uniforms.uAmt.value = pa;
   skyMat.uniforms.top.value.copy(cur.top); skyMat.uniforms.bottom.value.copy(cur.bottom);
   scene.fog.color.copy(cur.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
   sun.color.copy(cur.sun); sun.intensity = cur.sunI; hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hI;
@@ -696,7 +720,7 @@ envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), envSkyMat));
 let envRT = null, envAt = -1;
 function updateEnv() {
   const u = envSkyMat.uniforms;
-  u.top.value.copy(cur.top); u.bottom.value.copy(cur.bottom).lerp(cur.hg, 0.55); u.sunDir.value.copy(SUN_DIR); u.sunCol.value.copy(cur.sun); u.sunAmt.value = skyMat.uniforms.sunAmt.value * 0.15;
+  u.top.value.copy(cur.top); u.bottom.value.copy(cur.bottom).lerp(cur.hg, 0.55); u.sunDir.value.copy(SUN_DIR); u.sunCol.value.copy(cur.sun); u.sunAmt.value = skyMat.uniforms.sunAmt.value * 0.15; u.uCloud.value = cur.cloud;
   const rt = pmrem.fromScene(envScene, 0, 0.1, 50);
   scene.environment = rt.texture; envRT?.dispose(); envRT = rt; envAt = performance.now();
 }
@@ -1227,6 +1251,12 @@ function frame() {
     if (m.once) { oneShot = true; m.t += dt / 1.1; m.dot.position.copy(m.curve.getPoint(Math.min(1, m.t))); if (m.t >= 1) { movers.splice(i, 1); m.done(); } }
     else { m.t = (m.t + dt * 0.15) % 1; m.dot.position.copy(m.curve.getPoint(m.t)); m.mat.dashOffset -= dt * 0.08; }
   }
+  for (const m of flowMats) m.dashOffset -= dt * 0.05; // streams run downstream
+  if (precip.visible) {
+    const u = precipMat.uniforms; u.uCenter.value.copy(controls.target);
+    u.uBox.value = clamp(camera.position.distanceTo(controls.target) * 0.9, 0.8, 8);
+    u.uPx.value = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  }
   flushLines();
   const moved = cameraMoved();
   const active = moved || fly || CINE.on || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
@@ -1249,6 +1279,7 @@ function frame() {
 }
 
 // ---------- start ----------
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 for (let k = 0; k < 60; k++) stepMood(0.1);
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
