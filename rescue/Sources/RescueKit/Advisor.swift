@@ -185,7 +185,8 @@ public enum Advisor {
             let vMs = b > 0 ? 1000 / (60 * b) : 0
             let inBand = vMs >= cat.waveSpeedMs.min && vMs <= cat.waveSpeedMs.max
             let rmsScore = max(0, min(1, 1 - (rms - 15) / 60))
-            let timing = b <= 0 ? 0 : (inBand ? rmsScore : 0.3 * rmsScore)
+            // two points always fit a line perfectly: full timing credit only from 3 incidents on
+            let timing = (b <= 0 ? 0 : (inBand ? rmsScore : 0.3 * rmsScore)) * min(1, (n - 1) / 2)
             let useV = inBand ? vMs : cat.waveSpeedMs.default
             let t0 = inBand ? a : (Double(linked.map(\.minute).min()!) - (pts.map(\.km).min()! * 1000 / useV) / 60)
             let align = min(1, (n - 1) / 3)
@@ -200,7 +201,7 @@ public enum Advisor {
             let ev = [
                 Ev(id: "E1", kind: "river", label: "Korytarz rzeki poniżej zapory", text: "\(linked.count) zgłosze\(linked.count < 5 ? "nia" : "ń") do \(pl(cat.corridorM / 1000)) km od koryta \(src.riverGen ?? "rzeki") poniżej: \(src.name), km \(pl(kms.min()!))-\(pl(kms.max()!)) biegu rzeki", weight: 0.35, value: align, incidents: ids),
                 Ev(id: "E2", kind: "timing", label: "Czasy zgodne z falą", text: b <= 0 ? "Czasy zdarzeń nie rosną z biegiem rzeki - to nie wygląda na jedną falę" :
-                    "Czas zdarzeń rośnie z biegiem rzeki: ok. \(pl(vMs * 3.6)) km/h (\(pl(vMs)) m/s)\(inBand ? "" : ", poza pasmem \(pl(cat.waveSpeedMs.min))-\(pl(cat.waveSpeedMs.max)) m/s"), odchyłka ±\(Int(rms.rounded())) min; fala ruszyła ok. \(clock(Int(t0.rounded())))", weight: 0.30, value: timing, incidents: ids),
+                    "Czas zdarzeń rośnie z biegiem rzeki: ok. \(pl(vMs * 3.6)) km/h (\(pl(vMs)) m/s)\(inBand ? "" : ", poza pasmem \(pl(cat.waveSpeedMs.min))-\(pl(cat.waveSpeedMs.max)) m/s"), odchyłka ±\(Int(rms.rounded())) min; fala ruszyła ok. \(clock(Int(t0.rounded())))\(n < 3 ? " (tylko 2 punkty: każda prosta pasuje, połowa zaufania)" : "")", weight: 0.30, value: timing, incidents: ids),
                 Ev(id: "E3", kind: "keywords", label: "Wspólne słowa w zgłoszeniach", text: withWater.isEmpty ? "Żadne zgłoszenie nie mówi o wodzie ani fali" :
                     "Sygnały wody w \(withWater.count)/\(linked.count) zgłoszeniach: " + counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(5).map { "\"\($0.key)\" ×\($0.value)" }.joined(separator: ", "), weight: 0.20, value: kw, incidents: withWater.map(\.sc)),
                 Ev(id: "E4", kind: "time", label: "Skupienie w czasie", text: "Wszystkie w ciągu \(dur(span)) (\(clock(linked.map(\.minute).min()!))-\(clock(linked.map(\.minute).max()!)))", weight: 0.15, value: conc, incidents: ids),
