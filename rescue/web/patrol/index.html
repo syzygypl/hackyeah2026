@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b3261e">
+<title>Patrol - Rescue Locator</title>
+<link rel="stylesheet" href="../vendor/maplibre-gl.css">
+<style>
+  :root { --bg: #f4f1ec; --card: #fff; --ink: #1b1b1b; --muted: #5f5a52; --line: #ddd5c8; --red: #b3261e; --green: #1e7a3a; --amber: #a15c00; --blue: #1f4e79; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--red); color: #fff; padding: 10px 14px calc(10px) 14px; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 16px; margin: 0; }
+  header select { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 8px; border: 0; flex: 1; min-width: 0; }
+  .net { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.2); white-space: nowrap; }
+  .net.off { background: #ffd54f; color: #3b2f00; font-weight: 700; }
+  main { padding: 12px 12px 120px; display: grid; gap: 12px; max-width: 640px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .task-seg { font-size: 22px; font-weight: 750; margin: 2px 0 6px; }
+  .task-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 14px; }
+  .task-meta b { color: var(--ink); }
+  .flag { display: inline-block; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: #fde7e5; color: var(--red); font-weight: 650; font-size: 14px; }
+  .warn { background: #fff4e0; color: var(--amber); }
+  #map { height: 46vh; min-height: 260px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  button { font: inherit; border: 0; border-radius: 14px; padding: 16px 10px; font-weight: 700; font-size: 17px; cursor: pointer; min-height: 64px; color: #fff; }
+  button:active { transform: scale(.98); }
+  .b-done { background: var(--green); } .b-part { background: #4f7f5c; } .b-clue { background: var(--red); grid-column: span 2; font-size: 19px; }
+  .b-wx { background: var(--blue); } .b-status { background: #6b5b45; }
+  .sub { font-size: 12px; font-weight: 500; display: block; opacity: .9; margin-top: 2px; }
+  textarea, input[type=text] { width: 100%; font: inherit; font-size: 17px; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+  .row { display: flex; gap: 8px; margin-top: 8px; }
+  .row button { flex: 1; min-height: 52px; font-size: 16px; }
+  .b-send { background: var(--ink); }
+  .b-ghost { background: #e9e3d9; color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .chip { background: #e9e3d9; color: var(--ink); min-height: 44px; padding: 8px 12px; font-size: 15px; font-weight: 600; border-radius: 999px; }
+  .chip.on { background: var(--blue); color: #fff; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 0 0 8px; }
+  .log { display: grid; gap: 8px; }
+  .item { border-left: 4px solid var(--line); padding: 4px 0 4px 10px; font-size: 14px; }
+  .item.mine { border-color: var(--green); } .item.queued { border-color: #ffb300; } .item.err { border-color: var(--red); }
+  .item small { color: var(--muted); display: block; }
+  .hint { display: inline-block; font-size: 12px; background: #eef3f8; color: var(--blue); border-radius: 6px; padding: 1px 6px; margin: 2px 4px 0 0; }
+  #toast { position: fixed; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 10; max-width: 616px; margin: 0 auto; background: var(--ink); color: #fff; border-radius: 12px; padding: 12px 14px; font-size: 15px; display: none; }
+  dialog { border: 0; border-radius: 16px; padding: 16px; width: min(92vw, 520px); }
+  dialog::backdrop { background: rgba(0,0,0,.45); }
+  .muted { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Patrol</h1>
+  <select id="team" aria-label="Zespół"></select>
+  <span class="net" id="net">online</span>
+</header>
+<main>
+  <section class="card" id="task" aria-live="polite"><span class="muted">Wczytuję przydział…</span></section>
+  <div id="map" role="img" aria-label="Mapa przydzielonego segmentu"></div>
+  <section class="grid">
+    <button class="b-done" data-act="done">Przeszukane<span class="sub">nic, pokrycie dobre</span></button>
+    <button class="b-part" data-act="part">Częściowo<span class="sub">nic, słabe pokrycie</span></button>
+    <button class="b-clue" data-act="clue">ŚLAD / ZNALEZIONO</button>
+    <button class="b-wx" data-act="wx">Pogoda</button>
+    <button class="b-status" data-act="status">Status zespołu</button>
+  </section>
+  <section class="card">
+    <h2>Meldunek własnymi słowami</h2>
+    <textarea id="free" rows="2" placeholder="np. przeszukaliśmy żleb do progu, nic, widoczność 20 m"></textarea>
+    <div class="row"><button class="b-send" id="sendFree">Wyślij meldunek</button></div>
+    <p class="muted" style="margin:8px 0 0">Meldunek czyta lokalny model na laptopie kierownika akcji (bez internetu). Bez zasięgu meldunki czekają w kolejce na telefonie.</p>
+  </section>
+  <section class="card"><h2>Meldunki <span id="qcount"></span></h2><div class="log" id="log"></div></section>
+</main>
+<div id="toast" role="status"></div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+
+<script type="module">
+  import * as maplibregl from "../vendor/maplibre-gl.mjs";
+  import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "../basemap/basemap.js";
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const qs = new URLSearchParams(location.search);
+  const API = qs.get("api") || "http://127.0.0.1:8770";       // rescue-field serve (laptop kierownika akcji)
+  const RUN = qs.get("run") || "../../out/run.json";
+  const QKEY = "rescue-patrol-queue", LKEY = "rescue-patrol-log", TKEY = "rescue-patrol-team";
+  const store = {
+    get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  let run, step, team, map, queue = store.get(QKEY, []), log = store.get(LKEY, []), online = true;
+
+  // ---------- data ----------
+  run = await (await fetch(RUN)).json();
+  step = run.steps[run.steps.length - 1];
+  const teams = (step.resources || []).filter(r => r.type !== "drone");
+  $("team").innerHTML = teams.map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join("");
+  team = qs.get("team") || store.get(TKEY, null) || teams[0]?.id;
+  $("team").value = team;
+  $("team").onchange = e => { team = e.target.value; store.set(TKEY, team); renderTask(); };
+
+  const segById = Object.fromEntries(step.segments.map(s => [s.id, s]));
+  const teamName = () => (teams.find(t => t.id === team) || {}).name || team;
+  const shortTeam = () => teamName().replace(/\s*\(.*\)\s*/, "");
+  const assignment = () => (step.assignments || []).find(a => a.resourceId === team);
+
+  function renderTask() {
+    const a = assignment(), r = teams.find(t => t.id === team);
+    if (!a) {
+      $("task").innerHTML = `<h2>Przydział</h2><div class="task-seg">Brak przydziału</div><div class="task-meta">${esc(r?.reason || "")}</div>`;
+    } else {
+      $("task").innerHTML = `<h2>Twój segment</h2>
+        <div class="task-seg">${esc(a.segmentId)} · ${esc(a.segmentName)}</div>
+        <div class="task-meta"><span>Prawdopodob.: <b>${Math.round(a.poa * 100)}%</b></span><span>Dojście: <b>${Math.round(a.travelMin)} min</b></span><span>Przeszukanie: <b>${Math.round(a.sweepMin)} min</b></span></div>
+        <div class="task-meta" style="margin-top:4px">${esc(a.reason)}</div>
+        ${(a.safety || []).map(f => `<span class="flag">⚠ ${esc(f)}</span>`).join(" ")}
+        ${step.weather?.survival ? `<span class="flag warn">${esc(step.weather.survival.text)}</span>` : ""}`;
+    }
+    if (map && map.isStyleLoaded()) highlight();
+  }
+
+  // ---------- map ----------
+  await loadBasemap(maplibregl);
+  map = new maplibregl.Map({ container: "map", style: offlineStyle(), bounds: ZAWRAT_BOUNDS, attributionControl: { compact: true } });
+  map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "top-right");
+  map.on("load", () => {
+    const fc = { type: "FeatureCollection", features: step.segments.map(s => ({ type: "Feature", properties: { id: s.id, name: s.name, poa: s.poa },
+      geometry: { type: "Polygon", coordinates: [s.polygon.concat([s.polygon[0]])] } })) };
+    map.addSource("segs", { type: "geojson", data: fc });
+    map.addLayer({ id: "segs-line", type: "line", source: "segs", paint: { "line-color": "#5f5a52", "line-width": 1, "line-opacity": 0.6 } });
+    map.addLayer({ id: "seg-mine", type: "fill", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "fill-color": "#b3261e", "fill-opacity": 0.25 } });
+    map.addLayer({ id: "seg-mine-line", type: "line", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "line-color": "#b3261e", "line-width": 3 } });
+    map.addLayer({ id: "segs-label", type: "symbol", source: "segs", layout: { "text-field": ["get", "id"], "text-font": ["Noto Sans Medium"], "text-size": 12 },
+      paint: { "text-color": "#5f5a52", "text-halo-color": "#fff", "text-halo-width": 1.5 } });
+    highlight();
+  });
+  function highlight() {
+    const a = assignment(), id = a ? a.segmentId : "";
+    map.setFilter("seg-mine", ["==", ["get", "id"], id]);
+    map.setFilter("seg-mine-line", ["==", ["get", "id"], id]);
+    const s = segById[id];
+    if (s) {
+      const xs = s.polygon.map(p => p[0]), ys = s.polygon.map(p => p[1]);
+      map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: 50, maxZoom: 15, duration: 600 });
+    }
+  }
+  renderTask();
+
+  // ---------- reports ----------
+  const hhmm = () => new Date().toTimeString().slice(0, 5);
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = "none", 3500); }
+
+  async function post(text, at) {
+    const r = await fetch(API + "/report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, at }), signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }
+  async function report(text) {
+    const entry = { id: Date.now() + Math.random(), text, at: hhmm(), status: "sending" };
+    log.unshift(entry); renderLog();
+    try {
+      const res = await post(text, entry.at);
+      Object.assign(entry, { status: "sent", hints: res.hints || [], parsedBy: res.parsedBy, latencyMs: res.latencyMs });
+      setOnline(true);
+      toast(`Wysłane. Odczytane: ${(res.hints || []).map(h => h.type).join(", ") || "bez wskazówek"}`);
+    } catch (e) {
+      entry.status = "queued"; queue.push(entry); store.set(QKEY, queue); setOnline(false);
+      toast("Brak łączności - meldunek w kolejce, wyślę automatycznie.");
+    }
+    store.set(LKEY, log.slice(0, 50)); renderLog();
+  }
+  async function flush() {
+    if (!queue.length) return;
+    const pending = queue.slice();
+    for (const e of pending) {
+      try {
+        const res = await post(e.text + ` (wysłane z opóźnieniem, zdarzenie o ${e.at})`, e.at);
+        const l = log.find(x => x.id === e.id) || e;
+        Object.assign(l, { status: "sent", hints: res.hints || [], parsedBy: res.parsedBy });
+        queue = queue.filter(x => x.id !== e.id);
+        setOnline(true);
+      } catch { setOnline(false); break; }
+    }
+    store.set(QKEY, queue); store.set(LKEY, log.slice(0, 50)); renderLog();
+  }
+  setInterval(flush, 8000);
+  async function ping() { try { await fetch(API + "/health", { signal: AbortSignal.timeout(3000) }); setOnline(true); flush(); } catch { setOnline(false); } }
+  setInterval(ping, 15000); ping();
+  function setOnline(v) { online = v; $("net").textContent = v ? "łączność OK" : "BEZ ŁĄCZNOŚCI"; $("net").classList.toggle("off", !v); }
+
+  function renderLog() {
+    $("qcount").textContent = queue.length ? `· ${queue.length} w kolejce` : "";
+    $("log").innerHTML = log.slice(0, 12).map(e => `<div class="item ${e.status === "sent" ? "mine" : e.status === "queued" ? "queued" : ""}">
+      ${esc(e.text)}<small>${esc(e.at)} · ${e.status === "sent" ? "wysłane" + (e.parsedBy ? " · " + esc(e.parsedBy.split(":")[0]) : "") : e.status === "queued" ? "w kolejce" : "wysyłam…"}</small>
+      ${(e.hints || []).map(h => `<span class="hint">${esc(h.type)}${h.segmentId ? " " + esc(h.segmentId) : ""}${h.pod != null ? " POD " + h.pod : ""}</span>`).join("")}</div>`).join("") || `<span class="muted">Brak meldunków.</span>`;
+  }
+  renderLog();
+
+  // ---------- buttons ----------
+  const seg = () => { const a = assignment(); return a ? `${a.segmentId} ${a.segmentName}` : "przydzielony segment"; };
+  function dialog(html, onOk) {
+    $("dlgForm").innerHTML = html + `<div class="row"><button value="cancel" class="b-ghost">Anuluj</button><button value="ok" class="b-send">Wyślij</button></div>`;
+    $("dlg").showModal();
+    $("dlg").onclose = () => { if ($("dlg").returnValue === "ok") onOk($("dlgForm")); };
+    $("dlgForm").querySelectorAll(".chips").forEach(g => g.onclick = ev => { const c = ev.target.closest(".chip"); if (!c) return; ev.preventDefault();
+      g.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === c)); g.dataset.v = c.dataset.v; });
+  }
+  const chips = (name, opts) => `<div class="chips" data-name="${name}">${opts.map(o => `<button type="button" class="chip" data-v="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+  const val = (f, name) => f.querySelector(`.chips[data-name="${name}"]`)?.dataset.v;
+
+  document.querySelector(".grid").onclick = ev => {
+    const b = ev.target.closest("button[data-act]"); if (!b) return;
+    const who = shortTeam();
+    if (b.dataset.act === "done") report(`${who}: przeszukaliśmy ${seg()}, nic, pokrycie dobre`);
+    if (b.dataset.act === "part") report(`${who}: przeszukaliśmy częściowo ${seg()}, nic, pokrycie słabe`);
+    if (b.dataset.act === "clue") dialog(`<h2>Ślad w ${esc(seg())}</h2>${chips("what", ["but / odzież", "plecak", "głos / wołanie", "światło", "pies zaznaczył", "poszkodowany ZNALEZIONY"])}
+        <input type="text" name="note" placeholder="opis, gdzie dokładnie" style="margin-top:10px">`, f => {
+        const what = val(f, "what") || "ślad", note = f.note.value.trim();
+        const pos = window.__lastPos ? ` (GPS ${window.__lastPos})` : "";
+        report(`${who}: ${what} w ${seg()}${note ? ", " + note : ""}${pos}`);
+      });
+    if (b.dataset.act === "wx") dialog(`<h2>Pogoda w terenie</h2><p class="muted">Widoczność</p>${chips("vis", ["20 m", "50 m", "100 m", "500 m", "dobra"])}
+        <p class="muted">Wiatr</p>${chips("wind", ["słaby", "5 m/s", "10 m/s", "15 m/s", "20 m/s"])}<p class="muted">Opad</p>${chips("pr", ["brak", "deszcz", "śnieg", "oblodzenie"])}`, f => {
+        const parts = [val(f, "vis") && `widoczność ${val(f, "vis")}`, val(f, "wind") && `wiatr ${val(f, "wind")}`, val(f, "pr") && val(f, "pr")].filter(Boolean);
+        if (parts.length) report(`${who}: pogoda w ${seg()}: ${parts.join(", ")}`);
+      });
+    if (b.dataset.act === "status") dialog(`<h2>Status: ${esc(who)}</h2>${chips("st", ["wolni, gotowi do kolejnego zadania", "wracamy, zmęczenie", "potrzebujemy wsparcia", "kontuzja w zespole", "schodzimy - zagrożenie lawinowe"])}`, f => {
+        const st = val(f, "st"); if (st) report(`${who}: ${st}`);
+      });
+  };
+  $("sendFree").onclick = () => { const t = $("free").value.trim(); if (!t) return; report(`${shortTeam()}: ${t}`); $("free").value = ""; };
+  navigator.geolocation?.watchPosition(p => { window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`; }, () => {}, { enableHighAccuracy: true });
+</script>
+</body>
+</html>
