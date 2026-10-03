@@ -114,3 +114,12 @@ If present next to the scenario, it replaces `terrain` from the scenario. Same s
 ```
 
 Note: if the real terrain moves features, the scenario events (cell fix, truth, segment seeds, trip route) in `zawrat.json` may need re-placing so the story still holds.
+
+## Validation
+
+`validate/validate_run.py` checks `out/run.json` (and optionally a `*-terrain.json` override) against the contracts above: schema id, bbox sanity, grid/segOf sizes, poaGrid sums to 1, segments sorted desc by poa with closed-ring polygons inside the bbox, monotonic step minutes, and the `value` block's ranges. Stdlib only, no deps.
+
+```sh
+python3 rescue/validate/validate_run.py rescue/out/run.json
+python3 rescue/validate/validate_run.py rescue/out/run.json rescue/scenarios/zawrat-terrain.json
+```
