@@ -285,3 +285,5 @@ body.embed-bare #app { grid-template-rows: minmax(0, 1fr); grid-template-areas: 
 .progress .pg-kpi span { font-size: 11px; color: var(--mute); line-height: 1.2; display: block; }
 .progress .pg-leg { font-size: 11px; color: var(--mute); display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .progress .pg-leg i { width: 10px; height: 3px; display: inline-block; border-radius: 2px; margin-left: 6px; }
+.modelink { color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 9px; font-size: 12px; text-decoration: none; margin-left: 6px; white-space: nowrap; }
+.modelink:hover { background: var(--accent); color: #062126; }

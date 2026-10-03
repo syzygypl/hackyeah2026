@@ -259,6 +259,22 @@
     return { k: h.k, seg, name: (g && g.name) || (M.R.value && M.R.value.findSegName) || seg, rank: before.findIndex((x) => x.id === seg) + 1 };
   }
 
+  // S6 (parity with 3D): header link to the 3D view with the same scenario and step. 3D knows these ids;
+  // any other run goes over as ?run=&scenario=&terrain=&dem= (paths re-based from web/ to web/3d/).
+  const SC3D = { zawrat: 'zawrat', 'morskie-oko': 'morskie-oko', kasprowy: 'kasprowy', 'blind-01-replay': 'blind-01' };
+  function link3d() {
+    const a = $('#to3d'); if (!a) return;
+    const up = (u) => (/^[a-z][a-z0-9+.-]*:/i.test(u) || u.startsWith('/') ? u : '../' + u);
+    const q = new URLSearchParams();
+    if (SC3D[CFG.sc]) q.set('sc', SC3D[CFG.sc]);
+    else if (CFG.run) {
+      q.set('run', up(CFG.run)); q.set('scenario', up(CFG.scenario)); q.set('dem', up(CFG.dem));
+      q.set('terrain', up(CFG.terrain || CFG.scenario.replace(/\.json$/, '-terrain.json')));
+    }
+    q.set('step', String(S.step));
+    a.href = '3d/?' + q;
+  }
+
   // parity with 3D: "wpływ" = the segment that gained most when the hint arrived (engine steps k-1 -> k)
   function influence(k) {
     const R = S.M.R; if (k <= 0) return null;
@@ -703,6 +719,7 @@
     renderValue(st);
     renderProgress();
     renderTimeline();
+    link3d();
     document.body.dataset.step = String(step);
   }
 
