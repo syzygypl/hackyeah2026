@@ -249,6 +249,16 @@
     return out;
   }
 
+  // parity with 3D: the find is the Found provider / a ZNALEZIONO hint; its step and the find segment's rank just before it
+  const isFoundHint = (h) => h.source === 'Found' || !!(h.ev && h.ev.found) || /ZNALEZIONO/i.test(h.label || '');
+  function foundInfo() {
+    const M = S.M, h = M.hints.find(isFoundHint), seg = findSegOf(M.R.value);
+    if (!h || !seg) return null;
+    const before = M.R.steps[Math.max(0, h.k - 1)].segments.slice().sort((a, b) => b.poa - a.poa);
+    const g = M.segs.get(seg);
+    return { k: h.k, seg, name: (g && g.name) || (M.R.value && M.R.value.findSegName) || seg, rank: before.findIndex((x) => x.id === seg) + 1 };
+  }
+
   // parity with 3D: "wpływ" = the segment that gained most when the hint arrived (engine steps k-1 -> k)
   function influence(k) {
     const R = S.M.R; if (k <= 0) return null;
@@ -666,9 +676,12 @@
       effect = mv.length ? `<div class="sc-effect">Zmiana: ${mv.map((x) => `<span class="${x.d >= 0 ? 'up' : 'down'}">${esc(x.id)} ${pp(x.d)}</span>`).join(' ')}</div>` : '';
     }
     const offNote = S.disabled.has(h.id) ? '<div class="sc-off">Ta wskazówka jest wyłączona w widoku.</div>' : '';
+    const leadChange = prevSt && prevSt[0].id !== st[0].id ? `<div class="sc-lead">Zmiana lidera (było: <b>${esc(prevSt[0].id)} ${esc(prevSt[0].name)}</b>)</div>` : '';
+    const fi = foundInfo();
+    const foundLine = fi && step >= fi.k ? `<div class="sc-lead">Znaleziony w: <b>${esc(fi.seg)} ${esc(fi.name)}</b>${fi.rank ? ` (#${fi.rank} w rankingu tuż przed)` : ''}</div>` : '';
     $('#stepcard').innerHTML = `<div class="sc-head"><span class="ic k-${esc(h.kind)}">${kindOf(h.kind).icon}</span><span>Krok ${step + 1}/${M.hints.length} · ${esc(h.t)} · ${esc(kindOf(h.kind).pl)}</span></div>
       <div class="sc-title">Nowa wskazówka: ${esc(h.label)}</div>${evd}${effect}${offNote}
-      <div class="sc-lead">Prowadzi: <b>${esc(top3[0].id)} ${esc(top3[0].name)}</b> ${pct(top3[0].poa, 0)}</div><div class="sc-wx" id="scwx"></div>`;
+      <div class="sc-lead">Prowadzi: <b>${esc(top3[0].id)} ${esc(top3[0].name)}</b> ${pct(top3[0].poa, 0)}</div>${leadChange}${foundLine}<div class="sc-wx" id="scwx"></div>`;
     // banner for modified view
     const off = M.hints.filter((x) => x.k <= step && S.disabled.has(x.id));
     const mb = $('#modbanner');
