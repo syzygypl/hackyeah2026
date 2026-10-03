@@ -2,7 +2,7 @@
 
 Collected 2026-10-03 10:58, just before the tasks were unlocked. At that time the site had task summaries and rules PDFs, but the **detailed task descriptions were still hidden** (they are published at 11:00 on hackyeah.pl and on HackTribe). Update this file once they are out.
 
-**Update 11:10:** after the unlock, hackyeah.pl/tasks-prizes redirects to HackTribe, so **HackTribe is now the source of truth**: https://hackyeah2026.hacktribe.co/challenges/ (login required). Each challenge page there holds only the short description, the prize pool and a language note, with no extra specs or attachments. Anything more detailed will come from mentors and partners on site and on Discord. The Info page on HackTribe opens only after you complete your profile.
+**Update 11:17:** at 11:00 the site switched task details to visible. The tasks page code has a `details` button type next to `rules`, so each task should get a **Details document** (most likely a PDF, like the rules). It isn't readable yet because the hackyeah.pl content API is overloaded and returns `Upstream 524` (timeout). Retry https://hackyeah.pl/tasks-prizes in a browser and look for a Details button on each task. HackTribe (https://hackyeah2026.hacktribe.co/challenges/, login required) only shows the short description, the prize pool and a language note, with no attachments. Its Info page opens only after you complete your profile.
 
 What HackTribe shows differently from the rules PDFs:
 
