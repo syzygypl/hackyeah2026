@@ -20,6 +20,11 @@
       "permanent": false
     },
     {
+      "source": "/landing",
+      "destination": "/app/landing/",
+      "permanent": false
+    },
+    {
       "source": "/studio",
       "destination": "/out/studio.html",
       "permanent": false
