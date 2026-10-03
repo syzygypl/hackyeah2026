@@ -5,7 +5,10 @@
 //! under the exact cache keys this instance computes for them, so a cold instance answers from memory. A key holds the
 //! live state and the file stamps, so any live change or re-saved scenario misses the baked entry and computes as before.
 //!
-//! File: "RSBAKE1\n", then per entry a line `<scenario>\t<content hash>\t<key, file stamps as \x01>\t<body length>\n` + body.
+//! Each body also goes in gzipped (level 9), into the gzip cache by its ETag, so the first gzip answer is not compressed live.
+//!
+//! File: "RSBAKE2\n", then per entry a line `<scenario>\t<content hash>\t<key, file stamps as \x01>\t<body length>\t<gzip
+//! length>\n` + body + gzip body (gzip length 0 = none).
 use super::common::*;
 use super::fixes::TIMELINE_CACHE;
 use super::incidents::{incident_base, incident_base_key, scenario_hash};
@@ -16,7 +19,7 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 
 static BAKED: Lazy<RwLock<HashMap<String, Bytes>>> = Lazy::new(|| RwLock::new(HashMap::new()));
-const MAGIC: &[u8] = b"RSBAKE1\n";
+const MAGIC: &[u8] = b"RSBAKE2\n";
 
 pub fn baked(key: &str) -> Option<Bytes> {
     let g = BAKED.read();
@@ -70,8 +73,10 @@ pub async fn bake(path: &str) -> Result<(), String> {
         }
         for (k, b) in entries {
             let kt = k.replace(&stamps, "\x01");
-            out.extend_from_slice(format!("{sc}\t{hash}\t{kt}\t{}\n", b.len()).as_bytes());
+            let gz = if b.len() >= 16 * 1024 { super::http::gzip(&b, 9).unwrap_or_default() } else { vec![] };
+            out.extend_from_slice(format!("{sc}\t{hash}\t{kt}\t{}\t{}\n", b.len(), gz.len()).as_bytes());
             out.extend_from_slice(&b);
+            out.extend_from_slice(&gz);
             n += 1;
         }
     }
@@ -100,17 +105,21 @@ pub fn load(path: &str) {
         let Some(nl) = d[i..].iter().position(|&b| b == b'\n') else { break };
         let head = String::from_utf8_lossy(&d[i..i + nl]).into_owned();
         let p: Vec<&str> = head.split('\t').collect();
-        let Some(len) = p.get(3).and_then(|l| l.parse::<usize>().ok()) else { break };
+        let (Some(len), Some(glen)) = (p.get(3).and_then(|l| l.parse::<usize>().ok()), p.get(4).and_then(|l| l.parse::<usize>().ok())) else { break };
         let start = i + nl + 1;
-        if p.len() != 4 || start + len > d.len() {
+        if p.len() != 5 || start + len + glen > d.len() {
             break;
         }
         let body = d.slice(start..start + len);
-        i = start + len;
+        let gz = d.slice(start + len..start + len + glen);
+        i = start + len + glen;
         let (sc, hash, kt) = (p[0], p[1], p[2]);
         let stamps = checked.entry(sc.to_string()).or_insert_with(|| (content_hash(sc) == hash).then(|| file_stamps(sc)));
         match stamps {
             Some(st) => {
+                if !gz.is_empty() {
+                    super::http::gz_put(super::http::etag(&body), gz);
+                }
                 m.insert(kt.replace('\x01', st), body);
                 ok += 1;
             }

@@ -450,10 +450,7 @@ async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -
     // ETag on GET 200 answers (bodies unchanged, byte-identical): a page change re-fetching the same run gets an empty 304
     // instead of up to 2.6 MB. Cache-Control no-cache (revalidate every time) instead of Swift's no-store.
     if (m == "GET" || m == "HEAD") && out.status == 200 && out.location.is_none() && !out.body.is_empty() {
-        use std::hash::{Hash, Hasher};
-        let mut hs = std::collections::hash_map::DefaultHasher::new();
-        out.body.hash(&mut hs);
-        let tag = format!("\"{:016x}{:x}\"", hs.finish(), out.body.len());
+        let tag = etag(&out.body);
         if inm.as_deref() == Some(tag.as_str()) {
             let mut r = Response::new(Body::empty());
             *r.status_mut() = StatusCode::NOT_MODIFIED;
@@ -482,6 +479,27 @@ async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -
     to_http(out, head)
 }
 
+/// ETag of a 200 body (also the key of the gzip cache, which bake.rs fills at startup)
+pub fn etag(body: &[u8]) -> String {
+    use std::hash::{Hash, Hasher};
+    let mut hs = std::collections::hash_map::DefaultHasher::new();
+    body.hash(&mut hs);
+    format!("\"{:016x}{:x}\"", hs.finish(), body.len())
+}
+pub fn gz_put(tag: String, g: Bytes) {
+    let mut c = GZ.lock();
+    if c.1 + g.len() > GZ_CAP {
+        *c = (HashMap::new(), 0);
+    }
+    c.1 += g.len();
+    c.0.insert(tag, g);
+}
+pub fn gzip(b: &[u8], level: u32) -> Option<Vec<u8>> {
+    use std::io::Write;
+    let mut e = flate2::write::GzEncoder::new(Vec::with_capacity(b.len() / 4), flate2::Compression::new(level));
+    e.write_all(b).ok()?;
+    e.finish().ok()
+}
 const GZ_MIN: usize = 16 * 1024;
 /// gzip bodies by ETag, up to GZ_CAP bytes of compressed data (then the cache starts over)
 static GZ: once_cell::sync::Lazy<parking_lot::Mutex<(HashMap<String, Bytes>, usize)>> =
@@ -503,21 +521,8 @@ async fn gz_cached(tag: &str, body: &Bytes) -> Option<Bytes> {
         return Some(g.clone());
     }
     let b = body.clone();
-    let g = tokio::task::spawn_blocking(move || {
-        use std::io::Write;
-        let mut e = flate2::write::GzEncoder::new(Vec::with_capacity(b.len() / 4), flate2::Compression::default());
-        e.write_all(&b).ok()?;
-        e.finish().ok()
-    })
-    .await
-    .ok()??;
-    let g = Bytes::from(g);
-    let mut c = GZ.lock();
-    if c.1 + g.len() > GZ_CAP {
-        *c = (HashMap::new(), 0);
-    }
-    c.1 += g.len();
-    c.0.insert(tag.to_string(), g.clone());
+    let g = Bytes::from(tokio::task::spawn_blocking(move || gzip(&b, 6)).await.ok()??);
+    gz_put(tag.to_string(), g.clone());
     Some(g)
 }
 
