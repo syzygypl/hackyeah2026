@@ -1124,6 +1124,63 @@ class PolicyApi(unittest.TestCase):
         self.assertEqual(self.server_mod.LAYER.verify_chain(), (True, None))
 
 
+class ApprovalApi(PolicyApi):
+    """F6: an agent can never approve its own held call; approvals are admin-only, payload-bound and single use."""
+
+    def setUp(self):
+        super().setUp()
+        self.T = {"session": self.id(), "tool": "transfer_funds", "args": {"to": ACME, "amount": 15000, "reference": "big"}}
+
+    def _held(self):
+        code, body, _ = self._req("POST", "/v1/tool", dict(self.T, approved_by="judge"))  # self-declared approver
+        self.assertEqual(code, 403, body)
+        self.assertIn("approval_id", body)
+        return body["approval_id"]
+
+    def test_caller_supplied_approved_by_is_ignored(self):
+        self._held()
+
+    def test_admin_approval_then_single_use(self):
+        self.env.edit(lambda p: p["controls"]["payments"].update(session_cap=100000))  # so the replay reaches the approver
+        aid = self._held()
+        code, _, _ = self._req("POST", f"/v1/approvals/{aid}", {"decision": "approve"})  # no token
+        self.assertEqual(code, 401)
+        code, body, _ = self._req("POST", f"/v1/approvals/{aid}", {"decision": "approve"}, token="test-token-123")
+        self.assertEqual((code, body["status"]), (200, "approved"))
+        code, body, _ = self._req("POST", "/v1/tool", dict(self.T, approval_id=aid))
+        self.assertEqual((code, body["final"]), (200, "ALLOW"), body)
+        code, body, _ = self._req("POST", "/v1/tool", dict(self.T, approval_id=aid))  # replay
+        self.assertEqual(code, 403)
+        self.assertIn("replay", body["approval_problem"])
+        self.assertEqual(self.server_mod.LAYER.verify_chain(), (True, None))
+
+    def test_mutated_payload_denied(self):
+        aid = self._held()
+        self._req("POST", f"/v1/approvals/{aid}", {"decision": "approve"}, token="test-token-123")
+        changed = {**self.T, "args": dict(self.T["args"], amount=19000), "approval_id": aid}
+        code, body, _ = self._req("POST", "/v1/tool", changed)
+        self.assertEqual(code, 403)
+        self.assertIn("mutation", body["approval_problem"])
+
+    def test_rejected_and_pending_ids_do_not_pass(self):
+        aid = self._held()
+        code, body, _ = self._req("POST", "/v1/tool", dict(self.T, approval_id=aid))
+        self.assertIn("pending", body["approval_problem"])
+        self._req("POST", f"/v1/approvals/{aid}", {"decision": "reject"}, token="test-token-123")
+        code, body, _ = self._req("POST", "/v1/tool", dict(self.T, approval_id=aid))
+        self.assertEqual(code, 403)
+        self.assertIn("rejected", body["approval_problem"])
+
+    def test_list_pending_and_cache_clear_need_token(self):
+        self._held()
+        self.assertEqual(self._req("GET", "/v1/approvals")[0], 401)
+        code, body, _ = self._req("GET", "/v1/approvals", token="test-token-123")
+        self.assertEqual(code, 200)
+        self.assertTrue(any(a["tool"] == "transfer_funds" for a in body))
+        self.assertEqual(self._req("POST", "/admin/cache/clear", {})[0], 401)
+        self.assertEqual(self._req("POST", "/admin/cache/clear", {}, token="test-token-123")[0], 200)
+
+
 class Performance(unittest.TestCase):
     def test_overhead_under_1ms_p99(self):
         p = measure_overhead(2000)
@@ -1148,7 +1205,7 @@ GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
           "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "GuardConsensus": "guard consensus (parallel votes)",
-          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "Performance": "performance"}
+          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "Performance": "performance"}
 
 
 def run_suite():

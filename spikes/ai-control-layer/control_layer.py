@@ -455,10 +455,11 @@ class ControlLayer:
                 ev["guardrails"].append("taint")
                 ev["reasons"].append(f"session tainted by unsafe content in output of {session.tainted_by}")
             if decision == APPROVAL:
-                ok, who = (self.approver(session, name, args, ev["reasons"]) if self.approver else (False, None))
+                res = self.approver(session, name, args, ev["reasons"]) if self.approver else (False, None)
+                ok, who, note = res[0], res[1], (res[2] if len(res) > 2 else None)  # approver may explain (pending id, replay...)
                 ev["approved_by"] = who
                 if not ok:
-                    raise Denied("human_approval", f"human approval {'rejected by ' + who if who else 'pending - no approver online'}")
+                    raise Denied("human_approval", note or f"human approval {'rejected by ' + who if who else 'pending - no approver online'}")
                 ev["reasons"].append(f"approved by {who}")
             if name == "transfer_funds":
                 session.transferred += float(args.get("amount", 0))

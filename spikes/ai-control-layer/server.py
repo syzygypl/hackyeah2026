@@ -5,8 +5,12 @@ Run:  python3 server.py [port]      (default 8787, binds 127.0.0.1)
   POST /v1/prompt  {"session": "s1", "text": "..."}                       app -> LLM prompt check
   POST /v1/tool    {"session": "s1", "tool": "send_email", "args": {...},
                     "purpose": "the user's actual task (the judge model uses it as context)",
-                    "approved_by": "optional human, simulates the approval click"}
-  POST /admin/cache/clear   drop cached model verdicts (also cleared automatically on every policy change)
+                    "approval_id": "optional: an id an admin approved; must match the held payload, single use"}
+                   A call held for approval returns 403 + "approval_id" (pending). The caller can NOT approve itself.
+  GET  /v1/approvals              (admin token) pending approvals
+  POST /v1/approvals/{id}         (admin token) {"decision": "approve" | "reject"}; then the agent re-sends the
+                                  identical call with "approval_id". Changed payload / replay / expired = DENY.
+  POST /admin/cache/clear         (admin token) drop cached model verdicts (also cleared on every policy change)
   GET  /metrics    real-time metrics + per-check latency telemetry (JSON)
   GET  /audit      exportable audit log (JSONL, hash-chained)
   GET  /report     security report (markdown)
@@ -16,15 +20,18 @@ Run:  python3 server.py [port]      (default 8787, binds 127.0.0.1)
                    audited as policy_changed / policy_change_rejected with actor, old -> new version and a key diff.
 CORS: only the dashboard origin (ACL_DASHBOARD_ORIGIN, default http://127.0.0.1:8790).
 """
+import hashlib
 import hmac
 import json
 import os
+import secrets
 import sys
 import tempfile
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from control_layer import HERE, ControlLayer, PolicyStore, Session, policy_diff, security_report
+from control_layer import HERE, ControlLayer, PolicyStore, Session, policy_diff, redact, security_report
 from mock_tools import TOOLS
 
 def load_dotenv(path=os.path.join(HERE, ".env")):
@@ -44,12 +51,40 @@ load_dotenv()
 POLICY_WRITE_LOCK = threading.Lock()
 SESSIONS_LOCK = threading.Lock()  # guards the sessions dict only
 SESSIONS = {}
-PENDING_APPROVER = threading.local()
+PENDING_APPROVER = threading.local()  # per request: the approval_id the caller presents (never a self-declared approver)
+APPROVALS = {}  # id -> {session, tool, payload_hash, args (redacted), reasons, status, created, decided_by}
+APPROVALS_LOCK = threading.Lock()
+APPROVAL_TTL_S = 600
+
+
+def _payload_hash(session_id, tool, args):
+    return hashlib.sha256(json.dumps([session_id, tool, args], sort_keys=True, default=str).encode()).hexdigest()
 
 
 def approver(session, tool, args, reasons):
-    who = getattr(PENDING_APPROVER, "who", None)
-    return (bool(who), who)
+    """Approval is bound to the server-stored payload and used once. The agent can only present an approval_id
+    that an admin approved via POST /v1/approvals/{id}; anything else creates a new pending approval."""
+    aid = getattr(PENDING_APPROVER, "approval_id", None)
+    h = _payload_hash(session.id, tool, args)
+    with APPROVALS_LOCK:
+        a = APPROVALS.get(aid) if aid else None
+        if a:
+            problem = ("expired" if time.time() - a["created"] > APPROVAL_TTL_S else
+                       "already used (replay)" if a["status"] == "consumed" else
+                       "rejected by " + str(a["decided_by"]) if a["status"] == "rejected" else
+                       "still pending" if a["status"] == "pending" else
+                       "does not match the approved payload (mutation)" if a["payload_hash"] != h else None)
+            if problem is None:
+                a["status"] = "consumed"
+                return True, f"{a['decided_by']} (approval {aid})"
+            PENDING_APPROVER.problem = f"approval {aid} {problem}"
+            return False, None, PENDING_APPROVER.problem
+        new = secrets.token_urlsafe(9)
+        APPROVALS[new] = {"id": new, "session": session.id, "tool": tool, "payload_hash": h,
+                          "args": {k: (redact(v)[0] if isinstance(v, str) else v) for k, v in args.items()},
+                          "reasons": list(reasons), "status": "pending", "created": time.time(), "decided_by": None}
+        PENDING_APPROVER.pending = new
+        return False, None, f"pending approval {new}: an admin must approve via POST /v1/approvals/{new}"
 
 
 LAYER = ControlLayer(TOOLS, approver=approver)
@@ -93,21 +128,29 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", "0")
         self.end_headers()
 
-    def do_PUT(self):
-        if self.path != "/v1/policy":
-            return self._send(404, {"error": "unknown endpoint"})
-        actor = os.environ.get("ACL_ADMIN_LABEL", "admin-token")
-        LAYER._load_policy()
-        old_version = LAYER.store.version
+    def _admin(self, kind, what):
+        """Admin bearer check shared by every privileged endpoint. Returns the actor label, or None after replying."""
         token = os.environ.get("ACL_ADMIN_TOKEN", "")
         if not token:
-            LAYER.audit_admin("policy_change_rejected", "anonymous", False, "policy editing disabled: ACL_ADMIN_TOKEN not set", old_version)
-            return self._send(403, {"error": "policy editing is disabled: set ACL_ADMIN_TOKEN in the server environment (.env)"})
+            LAYER.audit_admin(kind, "anonymous", False, f"{what} disabled: ACL_ADMIN_TOKEN not set", LAYER.store.version)
+            self._send(403, {"error": f"{what} is disabled: set ACL_ADMIN_TOKEN in the server environment (.env)"})
+            return None
         given = self.headers.get("Authorization", "")
         given = given[7:] if given.startswith("Bearer ") else ""
         if not hmac.compare_digest(given.encode(), token.encode()):
-            LAYER.audit_admin("policy_change_rejected", "unauthenticated", False, "missing or wrong admin token", old_version)
-            return self._send(401, {"error": "missing or wrong bearer token"})
+            LAYER.audit_admin(kind, "unauthenticated", False, f"{what}: missing or wrong admin token", LAYER.store.version)
+            self._send(401, {"error": "missing or wrong bearer token"})
+            return None
+        return os.environ.get("ACL_ADMIN_LABEL", "admin-token")
+
+    def do_PUT(self):
+        if self.path != "/v1/policy":
+            return self._send(404, {"error": "unknown endpoint"})
+        LAYER._load_policy()
+        old_version = LAYER.store.version
+        actor = self._admin("policy_change_rejected", "policy editing")
+        if actor is None:
+            return
         raw = self.rfile.read(int(self.headers.get("Content-Length", 0))).decode("utf-8", "replace")
         try:
             new = PolicyStore.validate(raw)
@@ -137,6 +180,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, "".join(json.dumps(e, ensure_ascii=False, default=str) + "\n" for e in LAYER.audit_snapshot()), "application/x-ndjson")
         if self.path == "/report":
             return self._send(200, security_report(LAYER, sessions), "text/markdown")
+        if self.path == "/v1/approvals":
+            if self._admin("approvals_list_rejected", "approvals") is None:
+                return
+            with APPROVALS_LOCK:
+                return self._send(200, [{k: v for k, v in a.items() if k != "payload_hash"} for a in APPROVALS.values()
+                                        if a["status"] == "pending"])
         if self.path == "/policy":
             return self._send(200, {"version": LAYER.store.version, "policy": LAYER.policy, "rejected_edits": LAYER.store.errors[-5:]})
         self._send(200, __doc__, "text/plain")
@@ -147,21 +196,43 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return self._send(400, {"error": "invalid JSON"})
         if self.path == "/admin/cache/clear":
+            if self._admin("cache_clear_rejected", "cache clearing") is None:
+                return
             n = len(LAYER.semantic.cache)
             LAYER.semantic.clear_cache()
             return self._send(200, {"cleared": n})
+        if self.path.startswith("/v1/approvals/"):
+            actor = self._admin("approval_rejected_unauthorized", "approvals")
+            if actor is None:
+                return
+            aid, decision = self.path.rsplit("/", 1)[-1], req.get("decision")
+            with APPROVALS_LOCK:
+                a = APPROVALS.get(aid)
+                if not a:
+                    return self._send(404, {"error": "unknown approval id"})
+                if a["status"] != "pending":
+                    return self._send(409, {"error": f"approval already {a['status']}"})
+                if decision not in ("approve", "reject"):
+                    return self._send(400, {"error": "decision must be approve | reject"})
+                a["status"], a["decided_by"] = ("approved" if decision == "approve" else "rejected"), actor
+            LAYER.audit_admin("approval_" + a["status"], actor, decision == "approve",
+                              f"{a['tool']} in session {a['session']}: {decision} (approval {aid})", LAYER.store.version)
+            return self._send(200, {k: v for k, v in a.items() if k != "payload_hash"})
         s = session(req.get("session"), req.get("purpose"))
+        extra = {}
         with s.lock:
             if self.path == "/v1/prompt":
                 r = LAYER.check_prompt(s, str(req.get("text", "")), req.get("direction", "input"))
-            elif self.path == "/v1/tool":
-                PENDING_APPROVER.who = req.get("approved_by")
+            elif self.path == "/v1/tool":  # a caller-supplied "approved_by" is ignored on purpose (F6)
+                PENDING_APPROVER.approval_id = req.get("approval_id")
+                PENDING_APPROVER.pending = PENDING_APPROVER.problem = None
                 r = LAYER.call(s, req.get("tool"), req.get("args") or {})
-                PENDING_APPROVER.who = None
+                extra = {"approval_id": PENDING_APPROVER.pending, "approval_problem": PENDING_APPROVER.problem}
+                PENDING_APPROVER.approval_id = PENDING_APPROVER.pending = PENDING_APPROVER.problem = None
             else:
                 return self._send(404, {"error": "unknown endpoint"})
         ev = r["event"]
-        self._send(200 if r["decision"] == "ALLOW" else 403, {
+        self._send(200 if r["decision"] == "ALLOW" else 403, {**{k: v for k, v in extra.items() if v},
             "decision": ev["decision"], "final": r["decision"], "output": r["output"], "guardrails": ev["guardrails"],
             "reasons": ev["reasons"], "semantic": ev["semantic"], "overhead_us": ev["overhead_us"],
             "checks_us": ev["checks_us"], "policy_version": ev["policy_version"], "audit_seq": ev["seq"]})
