@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ktoś zaginął - co robić | Rescue Locator</title>
+<meta name="description" content="Bliska osoba nie wróciła z gór, lasu albo znad wody? Najpierw 112. Potem przygotuj informacje dla ratowników.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="rodzina.css">
+</head>
+<body>
+<header class="rz-top">
+  <a class="rz-brand" href="start.html"><svg viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg><span>Rescue Locator</span></a>
+  <nav aria-label="Na tej stronie">
+    <a href="#zgloszenie">Zgłoszenie</a>
+    <a href="#widzialem">Widziałem kogoś</a>
+    <a href="#przed">Przed wyjściem</a>
+  </nav>
+</header>
+
+<main class="rz">
+  <section class="rz-alarm" aria-labelledby="h-alarm">
+    <h1 id="h-alarm">Ktoś zaginął? Najpierw zadzwoń 112.</h1>
+    <p>Nie czekaj do rana i nie szukaj sam po zmroku. Ratownicy wolą wyjechać niepotrzebnie niż za późno.</p>
+    <a class="rz-call" href="tel:112">Zadzwoń 112</a>
+    <div class="rz-more">
+      <a href="tel:985"><b>985</b> góry (TOPR, GOPR)</a>
+      <a href="tel:+48601100300"><b>601 100 300</b> góry (TOPR, GOPR)</a>
+      <a href="tel:+48601100100"><b>601 100 100</b> woda (WOPR)</a>
+    </div>
+    <p class="rz-src">Numery wg <a href="https://topr.pl">topr.pl</a> i <a href="https://www.gopr.pl">gopr.pl</a>. Bez zasięgu albo przy słabym zasięgu: 112.</p>
+  </section>
+
+  <section class="rz-card" id="zgloszenie" aria-labelledby="h-form">
+    <h2 id="h-form"><span class="n">1</span> Przygotuj zgłoszenie</h2>
+    <p>Dyżurny zapyta o te rzeczy. Wpisz, co wiesz, i naciśnij <b>Gotowy tekst</b>. Możesz go przeczytać przez telefon albo wysłać ratownikom, gdy o to poproszą. Puste pola pomijamy.</p>
+    <form id="f" autocomplete="off">
+      <fieldset>
+        <legend>Kto</legend>
+        <label>Imię i nazwisko <input name="kto" placeholder="np. Tomasz Wiśniewski"></label>
+        <div class="row">
+          <label>Wiek <input name="wiek" inputmode="numeric" placeholder="58"></label>
+          <label>Wzrost, sylwetka <input name="wyglad" placeholder="ok. 180 cm, szczupły"></label>
+        </div>
+        <label>Zdrowie, leki <input name="zdrowie" placeholder="np. cukrzyca, bierze insulinę; demencja"></label>
+        <label>Doświadczenie <select name="dosw"><option value="">-</option><option>dobrze zna teren</option><option>zna teren słabo</option><option>pierwszy raz w tym miejscu</option><option>dziecko</option><option>może być zdezorientowany</option></select></label>
+      </fieldset>
+      <fieldset>
+        <legend>Gdzie i kiedy</legend>
+        <label>Gdzie widziany ostatni raz <input name="gdzie" placeholder="np. schronisko w Dolinie Pięciu Stawów"></label>
+        <div class="row">
+          <label>Kiedy (godzina) <input name="kiedy" type="time"></label>
+          <label>Ostatni kontakt (SMS, telefon) <input name="kontakt" type="time"></label>
+        </div>
+        <label>Planowana trasa i cel <textarea name="trasa" rows="2" placeholder="np. Palenica - Pięć Stawów - Zawrat i z powrotem, miał wrócić do 17:00"></textarea></label>
+        <label>Gdzie stoi auto / rower <input name="auto" placeholder="np. parking Palenica Białczańska, srebrna skoda"></label>
+      </fieldset>
+      <fieldset>
+        <legend>Jak wygląda, co ma</legend>
+        <label>Ubiór i kolory <input name="ubior" placeholder="np. czerwona kurtka, czarne spodnie, szary plecak"></label>
+        <label>Sprzęt <span class="chips" role="group" aria-label="Sprzęt">
+          <label><input type="checkbox" name="sprzet" value="czołówka"> czołówka</label>
+          <label><input type="checkbox" name="sprzet" value="ciepłe ubranie"> ciepłe ubranie</label>
+          <label><input type="checkbox" name="sprzet" value="jedzenie i woda"> jedzenie i woda</label>
+          <label><input type="checkbox" name="sprzet" value="powerbank"> powerbank</label>
+          <label><input type="checkbox" name="sprzet" value="mapa"> mapa</label>
+        </span></label>
+      </fieldset>
+      <fieldset>
+        <legend>Telefon</legend>
+        <div class="row">
+          <label>Numer <input name="tel" type="tel" placeholder="600 100 200"></label>
+          <label>Bateria, gdy pisał <input name="bat" placeholder="np. ok. 20%"></label>
+        </div>
+        <label>Aplikacja Ratunek <select name="ratunek"><option value="">nie wiem</option><option>ma aplikację Ratunek</option><option>nie ma aplikacji Ratunek</option></select></label>
+      </fieldset>
+      <fieldset>
+        <legend>Kto zgłasza</legend>
+        <div class="row">
+          <label>Ty: imię <input name="zglasza" placeholder="np. Anna, żona"></label>
+          <label>Twój telefon <input name="ztel" type="tel" placeholder="numer do oddzwonienia"></label>
+        </div>
+      </fieldset>
+      <div class="rz-actions">
+        <button type="submit" class="primary">Gotowy tekst</button>
+        <button type="button" id="clear">Wyczyść</button>
+      </div>
+    </form>
+    <div id="out" class="rz-out" hidden>
+      <h3>Tekst zgłoszenia</h3>
+      <pre id="txt" tabindex="0"></pre>
+      <div class="rz-actions">
+        <a class="rz-call small" href="tel:112">Zadzwoń 112</a>
+        <button type="button" id="copy">Kopiuj</button>
+        <button type="button" id="share" hidden>Udostępnij</button>
+      </div>
+      <p class="rz-note" id="copied" role="status"></p>
+    </div>
+    <p class="rz-honest"><b>To pokaz, nie usługa.</b> Ta strona nic nie wysyła: tekst powstaje i zostaje w Twoim telefonie (do przycisku Wyczyść). Zgłoszenie robisz zawsze dzwoniąc na 112.</p>
+  </section>
+
+  <section class="rz-card" id="widzialem" aria-labelledby="h-seen">
+    <h2 id="h-seen"><span class="n">2</span> Widziałem kogoś</h2>
+    <p>Jeśli widzisz zaginioną osobę <b>teraz</b>: zostań w pobliżu, nie goń jej, zadzwoń 112.</p>
+    <p>Gdy ratownicy proszą o pomoc mieszkańców, mogą wysłać link do strony takiej jak te dwie (w pokazie, z fikcyjnymi osobami):</p>
+    <div class="rz-two">
+      <a class="rz-link" href="../web/seen/?sc=krakow-nowa-huta"><b>Strona „Widziałem”</b><span>Karta zaginionej osoby, mapa: dotknij miejsca, wybierz kiedy, wyślij.</span></a>
+      <a class="rz-link" href="czat.html"><b>Opisz własnymi słowami</b><span>Czat: napisz zwykłym zdaniem, co i gdzie widziałeś. Pokażemy, jak ratownicy zobaczą to na mapie.</span></a>
+    </div>
+  </section>
+
+  <section class="rz-card" id="przed" aria-labelledby="h-before">
+    <h2 id="h-before"><span class="n">3</span> Przed wyjściem w góry</h2>
+    <ul class="rz-check">
+      <li><b>Zostaw komuś plan:</b> trasę, godzinę powrotu i co robić, gdy nie wrócisz.</li>
+      <li><b>Telefon:</b> pełna bateria, powerbank, czołówka. Oszczędzaj baterię, gdy się zgubisz.</li>
+      <li><b>Aplikacja Ratunek:</b> zainstaluj przed wyjściem. Pomaga wezwać pomoc i podać miejsce.</li>
+      <li><b>Pogoda i warunki:</b> sprawdź prognozę i komunikaty ratowników. Zawróć, zanim zrobi się ciemno.</li>
+      <li><b>Ubiór:</b> coś w jaskrawym kolorze, ciepła warstwa, nawet latem.</li>
+    </ul>
+    <p class="rz-src">Więcej u źródła: <a href="https://topr.pl">TOPR</a> · <a href="https://www.gopr.pl">GOPR</a> · <a href="https://www.tpn.pl">Tatrzański Park Narodowy</a> · <a href="https://meteo.imgw.pl">prognoza IMGW</a></p>
+  </section>
+
+  <section class="rz-about">
+    <p><b>Czym jest Rescue Locator?</b> Narzędziem dla ratowników: z kilku wskazówek (także od rodziny) robi mapę, gdzie szukać najpierw. Szukają zawsze ratownicy.</p>
+    <p><a href="landing/?dla=turysci">Więcej dla turystów i rodzin</a> · <a href="start.html">Strona startowa</a></p>
+  </section>
+
+  <footer class="rz-foot">Prototyp z hackathonu HackYeah 2026. Wszystkie osoby i akcje w pokazie są fikcyjne. Ta strona nie zastępuje telefonu na 112 ani porady ratowników.</footer>
+</main>
+<script src="rodzina.js" defer></script>
+</body>
+</html>
