@@ -34,6 +34,7 @@ Outline for the PDF deck. One idea per slide. Numbers: blind-test ablation `resc
    - Key frame: empty searches and drone pass -> probability drains into Żleb pod Zawratem (S7, #1) -> wind grounds the drone, plan re-allocates and sends a patrol to S7 -> patrol reports "ŚLAD", then "ZNALEZIONO". Optional epilogue: Ratunek ping at 20:05 inside S7.
    - Field report typed in free text, parsed offline by local qwen3 4B in 1.3-1.7 s (rules fallback ~15 ms).
    - Link to demo video.
+   - If the 3D view in satellite mode is shown: credit on the slide, "Sentinel-2 cloudless 2016 by EOX IT Services GmbH (CC BY 4.0)".
 
 7. **Architecture: pluggable providers**
    - Swift package; each hint source is a provider streaming updates (Koester rings, trip plan, car at trailhead, 112 cell fix, Ratunek ping, drone / searched segments).
@@ -64,6 +65,7 @@ Outline for the PDF deck. One idea per slide. Numbers: blind-test ablation `resc
     - Team, contact.
     - Repo link, demo video link.
     - Credits: R. J. Koester, *Lost Person Behavior* / ISRID (dbS Productions), statistics used approximately with attribution.
+    - Dane i licencje: OpenStreetMap (ODbL), Copernicus DEM, podkład offline Protomaps / OSM (ODbL), Sentinel-2 cloudless 2016 by EOX IT Services GmbH (CC BY 4.0), three.js (MIT), MapLibre GL JS (BSD).
     - Disclosure (open-task AI rule): built during HackYeah 2026; AI tools used (Claude Code); all data mocked and fictitious; libraries and sources listed in the repo.
 
 Category: DEFENCE open task. Criteria mapping and what to say per slide: [`pitch.md`](pitch.md#judging-criteria---demo-moment-default-open-task-criteria). Slide 2 should quote the brief's "information is incomplete, resources are limited" to score Relation to Category (20%).

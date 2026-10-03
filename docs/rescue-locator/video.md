@@ -26,6 +26,8 @@ Backup video for the DEFENCE submission (MP4 not required for open tasks, but it
 
 ## Checklist before upload
 
+- If any shot shows the 3D view in satellite-photo mode: on-screen credit "Sentinel-2 cloudless 2016 by EOX IT Services GmbH (CC BY 4.0)" for the whole shot, and the same line on the end card.
+
 - Length under 3:00, MP4, 1080p, audio level even.
 - No real names, phone numbers or real 112 data anywhere on screen; the scenario person is fictitious.
 - Repo link and demo link readable on the end card for 3+ seconds.
