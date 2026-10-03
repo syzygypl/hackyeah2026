@@ -1,0 +1,48 @@
+{
+  "schema": "rescue-clue-weights/1-proposal",
+  "doc": "docs/rescue-locator/pole-widzenia.md, section 'Wagi śladów: wiarygodność i zanik w czasie'",
+  "formula": "weight = sources[source] * accuracy factor of type * 0.5^(ageH / halfLifeH) * corroboration, clamped to 0..1; halfLifeH null = no decay",
+  "note": "Illustrative defaults, not TOPR/GOPR procedures. 'est' = estimate without a direct source.",
+  "sources": {
+    "operator": 1.0,
+    "ratownik": 0.9,
+    "obywatel-niezweryfikowany": 0.3,
+    "swiadek": 0.6,
+    "gps": 0.95,
+    "bts": 0.8,
+    "aml": 0.9,
+    "dron": 0.5,
+    "pies": 0.5,
+    "pies-terenowy": 0.7
+  },
+  "types": {
+    "trop-psa":   { "accuracyM": 50,   "halfLifeH": 24,   "note": "trail age: 90% <3h, 70% 12h, 50% 24h, 25% 48h (3retrievers); double-blind 2026 start choice at chance level" },
+    "pies-alert": { "accuracyM": 75,   "halfLifeH": 2,    "note": "area dog false alerts ~3.4% (0-18%); halfLife est" },
+    "swiadek":    { "accuracyM": 200,  "halfLifeH": 6,    "note": "est; distance error grows with range and delay (Lindsay 2008, Nyman 2019)" },
+    "zgloszenie": { "accuracyM": 500,  "halfLifeH": 4,    "note": "est; unverified crowd report, dedupe reports from the same appeal" },
+    "gps":        { "accuracyM": 10,   "halfLifeH": 2,    "note": "smartphone 5-12 m under canopy (Forests 2022); halfLife est for a mobile subject, 12 h if immobile" },
+    "bts":        { "accuracyM": 5000, "halfLifeH": 3,    "note": "Cell ID rural 5-20 km (up to 30 km), TA step ~550 m (EENA); halfLife est" },
+    "aml":        { "accuracyM": 50,   "halfLifeH": 2,    "note": "EENA: <=50 m in 90%; PL full rollout planned 2027 (UKE); halfLife est" },
+    "slad-buta":  { "accuracyM": 5,    "halfLifeH": 12,   "note": "est; ages with sun and rain, mud slowest" },
+    "przedmiot":  { "accuracyM": 5,    "halfLifeH": 24,   "note": "est; shows where the person was, not where they are" },
+    "dron-termo": { "accuracyM": 15,   "halfLifeH": 1,    "note": "unconfirmed thermal hit; tracking detector precision 90.3%, recall 73.4% (Remote Sens 2025); halfLife est" },
+    "meldunek":   { "accuracyM": 30,   "halfLifeH": 6,    "note": "est; trained searcher with team GPS" },
+    "operator":   { "accuracyM": null, "halfLifeH": null, "note": "manual entry, no decay" }
+  },
+  "scentHalfLifeMultipliers": {
+    "hotOrStrongSun": 0.5,
+    "heavyRain": 0.5,
+    "windOver8ms": 0.7,
+    "coolHumidForest": 1.5,
+    "note": "est; studies disagree on weather effects (Greatbatch 2015, Sci Rep 2024)"
+  },
+  "corroboration": {
+    "agreeBoost": 1.25,
+    "agreeBoostMax": 1.5,
+    "conflictPenalty": 0.7,
+    "radiusM": 500,
+    "maxSubjectSpeedKmh": 3,
+    "requireDifferentSources": true,
+    "note": "est; agree = independent clues from different sources within radiusM and age gap <= shorter halfLife; conflict = contradicts a higher-weight clue beyond reachable distance; operator always wins"
+  }
+}

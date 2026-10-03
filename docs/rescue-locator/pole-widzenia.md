@@ -152,3 +152,69 @@ Po przeszukaniu prawdopodobieństwo w komórce aktualizujemy jak dotąd: POA_now
 - Liczby z badań dotyczą głównie Ameryki Północnej; Tatry i Bieszczady mogą być gorsze (stromizny, kosodrzewina).
 - Zakładamy osobę nieodpowiadającą i średnio widoczną; jaskrawa kurtka zwiększa W, ciemna zmniejsza.
 - Krzywa wykładnicza POD jest ostrożna; w dzień dane pasują lepiej do krzywej "inverse cube" (wyższe POD przy tym samym C).
+
+## Wagi śladów: wiarygodność i zanik w czasie
+
+Silnik waży każdy ślad liczbą 0..1:
+
+`waga = wiarygodność źródła x dokładność typu x zanik(t) x korroboracja`, gdzie `zanik(t) = 0,5^(t / T½)`, a `t` to wiek śladu w godzinach.
+
+Wartości poniżej są **ilustracyjne** (do demo i kalibracji), oparte na publikacjach i materiałach szkoleniowych. To nie są procedury TOPR ani GOPR. Wartości bez bezpośredniego źródła oznaczono **szac.** Propozycja w formacie maszynowym: `rescue/scenarios/weights/clue-weights.proposal.json`.
+
+### Tabela per typ śladu
+
+| Typ śladu | Wiarygodność 0..1 | Dokładność lokalizacji | Połowiczny zanik T½ | Źródło / uzasadnienie |
+|---|---|---|---|---|
+| Trop psa tropiącego (mantrailer) | 0,5 | 50 m (kierunek wzdłuż tropu, nie punkt) | 24 h | Tabela wieku tropu: 90% sukcesu do 3 h, 70% po 12 h, 50% po 24 h, 25% po 48 h, 12% po 3 dniach [1]; krzywa 0,5^(t/24) trafia w te punkty. Harvey i Harvey 2003: weterani 96% na tropach 48 h, nowicjusze 53% [2]. Podwójnie ślepe badanie 2026: wybór właściwego tropu na starcie nie lepszy od losowego (9% trafień, 19% błędnej osoby) [3], stąd wiarygodność tylko 0,5. |
+| Ślad psa terenowego (area / air-scent, alert) | 0,7 | 25-100 m (zasięg wiatru) | 2 h (**szac.**: zapach w powietrzu jest bieżący, osoba mogła się przemieścić) | Fałszywe alarmy psów średnio 3,4% (0-18%); wykrycie 82-99% na 25 m, 13-95% na 100 m zależnie od stabilności powietrza (Graham 1994 za [4]); ESW dla psów [5]. |
+| Świadek naoczny | 0,6 | 200 m (**szac.**; godzina obserwacji +-30 min **szac.**) | 6 h (**szac.**: wartość spada z ruchem osoby, nie z pamięcią) | Błąd oceny odległości rośnie z dystansem i opóźnieniem relacji; rozpoznanie osoby wiarygodne do ok. 100 m [6][7]. |
+| Zgłoszenie obywatela niezweryfikowane | 0,3 | 500 m (**szac.**) | 4 h (**szac.**) | Rozpoznanie nieznanej twarzy z apelu: tylko 6,7% poprawnych odpowiedzi [8]; wiele zgłoszeń po jednym apelu medialnym nie jest niezależnych. |
+| GPS z telefonu (udostępniona pozycja) | 0,95 | 5-10 m otwarty teren, 7-12 m pod okapem lasu | 2 h (**szac.**, osoba w ruchu) / 12 h (**szac.**, osoba stoi lub ranna) | Smartfony pod okapem 6,7-11,5 m (z liśćmi), 4,5-6,7 m (bez liści) [9]. ISRID: kwartyle odległości od IPP i "godziny mobilności" per kategoria [10][11]; zamiast samego zaniku można też powiększać promień o ok. 1-2 km/h ruchu (**szac.**). |
+| BTS / logowanie do stacji (Cell ID, TA) | 0,8 (że telefon był w zasięgu sektora) | 1-30 km na wsi, krok TA ok. 550 m | 3 h (**szac.**) | Cell ID: od metrów w mieście do 10-30 km na płaskim terenie i wodzie; komórki wiejskie 5-20 km; TA w krokach ok. 550 m [12]. W górach odbicia i zasięg przez dolinę mogą wskazać sektor po drugiej stronie grani (**szac.**). |
+| AML (Advanced Mobile Location, 112) | 0,9 | 50 m w 90% przypadków, typowo 5-20 m | 2 h (**szac.**, jak GPS) | EENA: ok. 50 m w 90% przypadków, w UK średnio ok. 20 m, 90% lokalizacji w 30 s [13][14]. W Polsce AML wdraża UKE z CPPC, pełne uruchomienie planowane na 2027 [15][16]; do tego czasu w danych 112 przeważa lokalizacja sieciowa. |
+| Ślady fizyczne: odcisk buta (śnieg, błoto) | 0,7 | 5 m (miejsce) plus kierunek ruchu | 12 h (**szac.**; błoto wolniej, mokry śnieg i deszcz szybciej) | Starzenie zależy od pogody, nie od samego czasu: słońce i deszcz zaokrąglają krawędzie, błoto starzeje się najwolniej [17][18]. |
+| Ślady fizyczne: porzucony przedmiot | 0,6 (przedmiot mógł należeć do kogoś innego) | 5 m | 24 h (**szac.**: wskazuje, gdzie osoba była, nie gdzie jest) | Koester, Lost Person Behavior: przedmioty jako ślady kierunku ruchu [10]; wartości **szac.** |
+| Detekcja z drona (termowizja, niezweryfikowana) | 0,5 | 10-20 m (GPS drona + rzut kamery, **szac.**) | 1 h (**szac.**) | Detektory termalne dają dużo fałszywych trafień (pnie, kamienie, zwierzęta) [19]; z tropieniem w kolejnych klatkach precyzja 90,3%, czułość 73,4% [20]. Po potwierdzeniu wzrokiem operatora traktować jak meldunek ratownika. |
+| Meldunek ratownika (przeszkolony) | 0,9 | 20-50 m (**szac.**) | 6 h (**szac.**) | Przeszkolony obserwator, pozycja z GPS zespołu; **szac.** |
+| Operator (wpis ręczny, decyzja KDR) | 1,0 | wg wpisu | bez zaniku (T½ = null) | Decyzja człowieka nadpisuje model; **szac.** |
+
+### Pogoda a zapach (trop psa)
+
+- Trop starzeje się szybciej w słońcu, upale, przy suchym powietrzu i silnym lub porywistym wietrze; wolniej w chłodzie, wilgoci i gęstej roślinności. W optymalnych warunkach psy szły po tropach do 2 tygodni, opisywane rekordy to ponad 200-300 h [21].
+- Najlepsze warunki: wiatr 2,2-4,5 m/s, 0-18 °C, wilgotność powyżej 20%; konwekcja w południe psuje smugę zapachu [22][4].
+- Badania są niespójne: część nie znajduje wpływu temperatury (0-25 °C) i wilgotności (18-90%) [23], Greatbatch 2015 nie potwierdza wpływu pogody na skuteczność [24].
+- Propozycja (**szac.**): mnożnik T½ tropu: x0,5 przy upale powyżej 25 °C lub silnym słońcu, x0,5 po intensywnym deszczu, x0,7 przy wietrze powyżej 8 m/s, x1,5 przy chłodzie i wilgoci w lesie.
+
+### Korroboracja: zgodne i sprzeczne ślady
+
+- W teorii poszukiwań bayesowskich niezależne ślady mnożą wiarygodności (likelihood) w każdej komórce, a mapę POA normalizuje się po każdym śladzie [10][25]. Kluczowa jest **niezależność**: pięć zgłoszeń po tym samym apelu w mediach to jeden ślad, nie pięć.
+- Praktyka SAR (Koester, NASAR): ślad ocenia się pod kątem spójności z profilem osoby i osią czasu; ślad sprzeczny z resztą obniża się, ale nie kasuje, dopóki go nie zweryfikowano [10].
+- Reguła w silniku (**szac.**): dwa ślady z **różnych źródeł** w promieniu 500 m i zgodne czasowo (różnica wieku nie większa niż T½ krótszego) dostają po x1,25 (łącznie maks. x1,5, waga przycięta do 1). Ślad sprzeczny ze śladem o wyższej wadze (ten sam czas, odległość większa niż osoba mogła przejść przy ok. 3 km/h, **szac.**) dostaje x0,7. Ślad operatora zawsze wygrywa.
+
+### Źródła
+
+1. 3retrievers, "When to use a search dog" (tabela wieku tropu): http://www.3retrievers.com/when-to-use-a-search-dog.html
+2. Harvey L.M., Harvey J.W. (2003), bloodhoundy na tropach 48 h, omówienie: https://bloodhoundsincorporated.com/research/
+3. Initial trail selection in mantrailing dogs under double-blind field conditions (2026): https://pmc.ncbi.nlm.nih.gov/articles/PMC13158615/
+4. Lost Pet Research, "How Accurate are Search Dogs? Part 1: Area Detection Dogs" (przegląd, w tym Graham 1994): https://lostpetresearch.com/2018/09/how-accurate-are-search-dogs-part-1/
+5. Chiacchia i in. (2015), Deriving Effective Sweep Width for Air-scent Dog Teams: https://doi.org/10.1016/j.wem.2014.10.004
+6. Lindsay i in. (2008), How variations in distance affect eyewitness reports and identification accuracy: https://pubmed.ncbi.nlm.nih.gov/18253819/
+7. Nyman i in. (2019), The distance threshold of reliable eyewitness identification: https://psycnet.apa.org/fulltext/2019-38765-001.pdf
+8. "If you could just come forward": televised public appeals and missing persons (2025): https://www.tandfonline.com/doi/full/10.1080/22041451.2025.2531635
+9. Evaluation of Positioning Accuracy of Smartphones under Different Canopy Openness, Forests 2022: https://doi.org/10.3390/f13101591
+10. Koester R.J. (2008), Lost Person Behavior (ISRID): https://www.amazon.com/Lost-Person-Behavior-search-rescue/dp/1879471396
+11. Sava i in. (2015), Evaluating Lost Person Behavior Models: http://geoinf.psu.edu/publications/2015_TransGIS_Search_Sava.pdf
+12. EENA, Caller location in support of emergency services: https://eena.org/knowledge-hub/documents/caller-location-in-support-of-emergency-services-updated/
+13. EENA, AML FAQ (2018): https://eena.org/wp-content/uploads/2018_12_11_AML_faq-1.pdf
+14. EENA, AML in the United Kingdom: https://eena.org/knowledge-hub/documents/aml-in-the-united-kingdom/
+15. UKE, Co zmieni AML?: https://www.uke.gov.pl/blog/co-zmieni-aml-szybkie-i-precyzyjne-lokalizowanie-osob-dzwoniacych-na-112-i-inne-numery-alarmowe,137.html
+16. UKE, projekt AML: https://uke.gov.pl/projekty/aml/
+17. Nature Mentor, How to tell if tracks are fresh: https://nature-mentor.com/how-to-tell-if-animal-tracks-are-fresh/
+18. Offgridweb, Footprint Analysis 101: https://www.offgridweb.com/preparation/footprint-analysis-101-getting-a-foot-message/
+19. Thermal human detection for Search and Rescue UAVs (2022): https://www.diva-portal.org/smash/get/diva2:1707781/FULLTEXT01.pdf
+20. Enhancing Search and Rescue Missions with UAV Thermal Video Tracking, Remote Sensing 2025: https://doi.org/10.3390/rs17173032
+21. Missing Animal Response Network, How long can scent survive?: https://www.missinganimalresponse.com/lost-pet-help/how-long-can-scent-survive/
+22. What Makes Canine Search and Rescue Successful? (Animals 2026): https://pmc.ncbi.nlm.nih.gov/articles/PMC12937267/
+23. Success in the Natural Detection Task (Sci Rep 2024): https://www.nature.com/articles/s41598-024-62957-5
+24. Greatbatch i in. (2015), Quantifying Search Dog Effectiveness: https://journals.sagepub.com/doi/10.1016/j.wem.2015.02.009
+25. SARBayes, Bayesian methods for WiSAR: https://sarbayes.org/
