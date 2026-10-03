@@ -34,7 +34,7 @@ public func runJSONObject(scenario s: Scenario, grid: ProbabilityGrid, hints: [L
         let segs = grid.segments(poa)
         let h = hints[k - 1]
         steps.append([
-            "t": h.clock, "minute": h.minute, "label": h.title, "source": h.source, "kind": h.kind,
+            "t": h.clock, "minute": h.minute, "dayOffset": s.dayOffset(h.minute), "label": h.title, "source": h.source, "kind": h.kind,
             "hintId": h.id,
             "hintsActive": hints.prefix(k).map(\.id),
             "weather": weatherJSON(plans[k - 1]),

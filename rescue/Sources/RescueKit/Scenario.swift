@@ -102,12 +102,50 @@ public struct Scenario: Codable, Sendable {
         if !(on ?? showEpilogue ?? false) { events.removeAll { $0.epilogue == true } }
     }
 
+    /// Minutes since startClock for a FORWARD-looking time (events, team readiness).
+    /// Accepts "HH:mm", "+N HH:mm" (N days after the start day) or ISO "YYYY-MM-DDTHH:mm" (relative to `date`).
+    /// Plain "HH:mm" more than 12 h before startClock is the next day (00:55 in a story that starts 18:15 = +400 min);
+    /// up to 12 h before is the past (a helicopter ready at 17:50, a sighting at 13:40).
     public func minute(_ clock: String) -> Int {
-        func m(_ s: String) -> Int {
-            let p = s.split(separator: ":").compactMap { Int($0) }
-            return p[0] * 60 + p[1]
+        if let (days, hm) = Scenario.explicitDay(clock, date: date) { return days * 1440 + hm - Scenario.hm(startClock) }
+        let d = Scenario.hm(clock) - Scenario.hm(startClock)
+        return d < -720 ? d + 1440 : d
+    }
+
+    /// Minutes since startClock for a time that is by nature in the PAST (last contact, last seen):
+    /// never pushed to the next day; a time well after the start is taken as the previous evening.
+    public func minutePast(_ clock: String) -> Int {
+        if let (days, hm) = Scenario.explicitDay(clock, date: date) { return days * 1440 + hm - Scenario.hm(startClock) }
+        let d = Scenario.hm(clock) - Scenario.hm(startClock)
+        return d > 120 ? d - 1440 : d
+    }
+
+    /// Day offset of a scenario minute (0 = start day, 1 = after midnight).
+    public func dayOffset(_ minute: Int) -> Int { Int(floor(Double(minute + Scenario.hm(startClock)) / 1440)) }
+
+    static func hm(_ s: String) -> Int {
+        let p = s.split(separator: ":").compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        return (p.first ?? 0) * 60 + (p.count > 1 ? p[1] : 0)
+    }
+    /// "+N HH:mm" or "YYYY-MM-DDTHH:mm[:ss]" -> (days after `date`, minutes of day)
+    static func explicitDay(_ s: String, date: String) -> (Int, Int)? {
+        let t = s.trimmingCharacters(in: .whitespaces)
+        if t.hasPrefix("+"), let sp = t.firstIndex(of: " "), let n = Int(t[t.index(after: t.startIndex)..<sp]) {
+            return (n, hm(String(t[t.index(after: sp)...])))
         }
-        return m(clock) - m(startClock)
+        if t.count >= 16, let tIdx = t.firstIndex(of: "T") {
+            let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.timeZone = TimeZone(identifier: "UTC")
+            guard let d0 = f.date(from: date), let d1 = f.date(from: String(t[..<tIdx])) else { return nil }
+            let days = Int((d1.timeIntervalSince(d0) / 86400).rounded())
+            return (days, hm(String(t[t.index(after: tIdx)...].prefix(5))))
+        }
+        return nil
+    }
+
+    /// "HH:mm" display clock for a scenario minute.
+    public func clock(_ minute: Int) -> String {
+        let t = ((Scenario.hm(startClock) + minute) % 1440 + 1440) % 1440
+        return String(format: "%02d:%02d", t / 60, t % 60)
     }
 
     public func events(for provider: String) -> [Event] {

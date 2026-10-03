@@ -90,7 +90,8 @@ actor Studio {
 
     func lastClock() -> String {
         let all = items.flatMap { ($0["events"] as? [[String: Any]]) ?? [] }.compactMap { $0["at"] as? String }
-        return all.max { clockMin($0) < clockMin($1) } ?? (base["startClock"] as? String ?? "17:40")
+        let start = base["startClock"] as? String ?? "17:40"
+        return all.max { relMin($0, start) < relMin($1, start) } ?? start
     }
 
     var segments: [[String: Any]] { base["segments"] as? [[String: Any]] ?? [] }
@@ -110,9 +111,8 @@ actor Studio {
 
     func convert(_ i: [String: Any]) async -> (events: [[String: Any]], parsedBy: String?, note: String?) {
         let prov = i["provider"] as? String ?? ""
-        var at = (i["at"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? clockAdd(lastClock(), 5)
-        let start = base["startClock"] as? String ?? "17:40"
-        if clockMin(at) < clockMin(start) { at = start }   // before the report: the stream starts at startClock
+        let at = (i["at"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? clockAdd(lastClock(), 5)
+        // times are relative to startClock with the engine's midnight rule (00:55 after an evening start = next day)
         var e: [String: Any] = ["provider": prov, "at": at, "title": i["title"] as? String ?? "", "detail": i["detail"] as? String ?? ""]
         func title(_ t: String) { if (e["title"] as? String ?? "").isEmpty { e["title"] = t } }
         let ll = latlon(i)
@@ -265,7 +265,8 @@ actor Studio {
             for j in rules.indices where !used.contains(j) && !narr.contains(where: { $0.type == rules[j].type && $0.at == rules[j].at }) {
                 narr.append(rules[j])
             }
-            narr.sort { clockMin($0.at ?? "23:59") < clockMin($1.at ?? "23:59") }
+            let st = base["startClock"] as? String ?? "17:40"
+            narr.sort { relMin($0.at ?? clockAdd(st, 1439), st) < relMin($1.at ?? clockAdd(st, 1439), st) }
         }
         // subject category from the narrative re-targets the Koester module
         if let cat = categoryFrom(text), let idx = items.firstIndex(where: { ($0["input"] as? [String: Any])?["provider"] as? String == "KoesterRings" }) {

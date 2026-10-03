@@ -52,7 +52,8 @@ public enum HintStream {
 
 /// Shared helper so each provider file stays tiny.
 func hint(_ s: Scenario, _ e: Scenario.Event, _ i: Int, _ evidence: LocationHint.Evidence, marker: Coord? = nil) -> LocationHint {
-    var h = LocationHint(id: "\(e.provider)-\(i)", source: e.provider, minute: s.minute(e.at), clock: e.at,
+    let m = s.minute(e.at)
+    var h = LocationHint(id: "\(e.provider)-\(i)", source: e.provider, minute: m, clock: s.clock(m),
                          title: e.title, detail: e.detail, evidence: evidence)
     h.marker = marker
     return h

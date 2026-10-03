@@ -22,6 +22,11 @@ func clockMin(_ hhmm: String) -> Int {
     let p = hhmm.split(separator: ":").compactMap { Int($0) }
     return (p.first ?? 0) * 60 + (p.dropFirst().first ?? 0)
 }
+/// Minutes after `start` with the engine's day rule (more than 12 h before start = next day).
+func relMin(_ c: String, _ start: String) -> Int {
+    let d = clockMin(c) - clockMin(start)
+    return d < -720 ? d + 1440 : d
+}
 func num(_ v: Any?) -> Double? {
     if let d = v as? Double { return d }
     if let i = v as? Int { return Double(i) }

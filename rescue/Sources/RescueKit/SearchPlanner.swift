@@ -77,7 +77,7 @@ public enum SearchPlanner {
     }
 
     public static func survival(_ s: Scenario, minute: Int, _ c: LocationHint.Conditions) -> Survival {
-        let last = s.minute(s.subject.lastContact ?? s.startClock)
+        let last = s.minutePast(s.subject.lastContact ?? s.startClock)
         let h = Double(minute - last) / 60
         let cold = c.tempC <= 2, wetOrWind = c.precip != "none" || c.windMs > 8
         let level: String

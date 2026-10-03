@@ -40,7 +40,11 @@ func renderHTML(scenario s: Scenario, grid: ProbabilityGrid, hints: [LocationHin
         "trails": s.terrain.trails.map { ["name": $0.name, "points": $0.points] },
         "streams": s.terrain.streams.map { ["name": $0.name, "points": $0.points] },
         "huts": s.terrain.huts.map { ["name": $0.name, "at": $0.at] },
-        "hints": zip(hints, grid.layers).map { hintJSON($0, $1.factor) },
+        "hints": zip(hints, grid.layers).map { h, l -> [String: Any] in
+            var d = hintJSON(h, l.factor)
+            if s.dayOffset(h.minute) > 0 { d["clock"] = "\(h.clock) (+\(s.dayOffset(h.minute)))" }
+            return d
+        },
         "summary": summary,
         "resBases": Dictionary(uniqueKeysWithValues: SearchPlanner.resources(s).map { ($0.id, $0.base) }),
         "difficulty": grid.difficulty.map(\.rawValue),

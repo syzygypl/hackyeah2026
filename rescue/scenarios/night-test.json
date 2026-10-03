@@ -1,0 +1,290 @@
+{
+ "bbox": {
+  "south": 49.195,
+  "west": 20.005,
+  "north": 49.249,
+  "east": 20.0875
+ },
+ "cellM": 100,
+ "segments": [
+  {
+   "id": "S1",
+   "name": "Dolina Roztoki (dolna)",
+   "seed": [
+    49.229,
+    20.079
+   ]
+  },
+  {
+   "id": "S2",
+   "name": "Siklawa / Roztoka górna",
+   "seed": [
+    49.217,
+    20.056
+   ]
+  },
+  {
+   "id": "S3",
+   "name": "Schronisko i Przedni Staw",
+   "seed": [
+    49.213,
+    20.049
+   ]
+  },
+  {
+   "id": "S4",
+   "name": "Wielki Staw",
+   "seed": [
+    49.2087,
+    20.0395
+   ]
+  },
+  {
+   "id": "S5",
+   "name": "Czarny Staw Polski",
+   "seed": [
+    49.205,
+    20.0265
+   ]
+  },
+  {
+   "id": "S6",
+   "name": "Szlak niebieski Wyżnie Solnisko - Zawrat",
+   "seed": [
+    49.212,
+    20.025
+   ]
+  },
+  {
+   "id": "S7",
+   "name": "Żleb pod Zawratem",
+   "seed": [
+    49.216,
+    20.018
+   ]
+  },
+  {
+   "id": "S8",
+   "name": "Zawrat - Świnica, grań",
+   "seed": [
+    49.22,
+    20.009
+   ]
+  },
+  {
+   "id": "S9",
+   "name": "Zmarzły Staw / Kozia Dolinka",
+   "seed": [
+    49.225,
+    20.022
+   ]
+  },
+  {
+   "id": "S10",
+   "name": "Kozi Wierch - Orla Perć",
+   "seed": [
+    49.2205,
+    20.032
+   ]
+  },
+  {
+   "id": "S11",
+   "name": "Granaty / Buczynowa Dolinka",
+   "seed": [
+    49.226,
+    20.042
+   ]
+  },
+  {
+   "id": "S12",
+   "name": "Szpiglasowa Przełęcz",
+   "seed": [
+    49.199,
+    20.042
+   ]
+  },
+  {
+   "id": "S13",
+   "name": "Morskie Oko",
+   "seed": [
+    49.199,
+    20.068
+   ]
+  },
+  {
+   "id": "S14",
+   "name": "Droga do Morskiego Oka",
+   "seed": [
+    49.215,
+    20.08
+   ]
+  },
+  {
+   "id": "S15",
+   "name": "Hala Gąsienicowa / Murowaniec",
+   "seed": [
+    49.241,
+    20.011
+   ]
+  },
+  {
+   "id": "S16",
+   "name": "Wołoszyn",
+   "seed": [
+    49.239,
+    20.05
+   ]
+  },
+  {
+   "id": "S17",
+   "name": "Czarny Staw Gąsienicowy",
+   "seed": [
+    49.231,
+    20.018
+   ]
+  },
+  {
+   "id": "S18",
+   "name": "Dolina za Mnichem",
+   "seed": [
+    49.202,
+    20.015
+   ]
+  },
+  {
+   "id": "S19",
+   "name": "Las nad Wodogrzmotami",
+   "seed": [
+    49.244,
+    20.075
+   ]
+  },
+  {
+   "id": "S20",
+   "name": "Zadni Staw Polski",
+   "seed": [
+    49.212,
+    20.012
+   ]
+  }
+ ],
+ "incident": "TEST: zdarzenia po północy (scenariusz testowy, fikcyjny)",
+ "date": "2026-10-03",
+ "startClock": "21:30",
+ "subject": {
+  "name": "Test (osoba fikcyjna)",
+  "age": 45,
+  "category": "hiker",
+  "note": "Scenariusz testowy przejścia przez północ.",
+  "lastContact": "16:10"
+ },
+ "ipp": {
+  "name": "IPP: schronisko w Dolinie Pięciu Stawów (16:10)",
+  "at": [
+   49.21363,
+   20.04873
+  ]
+ },
+ "resources": [
+  {
+   "id": "topr-a",
+   "name": "Patrol TOPR A",
+   "type": "ground",
+   "base": [
+    49.21363,
+    20.04873
+   ],
+   "readyAt": "00:20"
+  },
+  {
+   "id": "heli",
+   "name": "Śmigłowiec TOPR",
+   "type": "heli",
+   "base": [
+    49.293,
+    19.964
+   ],
+   "readyAt": "21:00"
+  }
+ ],
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "21:30",
+   "title": "Teren",
+   "detail": "",
+   "factor": 1
+  },
+  {
+   "provider": "Terrain",
+   "at": "21:30",
+   "title": "Teren: koszt",
+   "detail": "",
+   "factor": 0
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "21:30",
+   "title": "Koester: turysta",
+   "detail": "",
+   "point": [
+    49.21363,
+    20.04873
+   ],
+   "quantilesKm": [
+    1.1,
+    3.0,
+    5.8,
+    11.5
+   ]
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "21:30",
+   "title": "Noc, mgła",
+   "detail": "",
+   "visibilityM": 150,
+   "windMs": 5,
+   "tempC": 1,
+   "dark": true
+  },
+  {
+   "provider": "Cell112Fix",
+   "at": "23:40",
+   "title": "BTS 23:40",
+   "detail": "",
+   "point": [
+    49.217,
+    20.023
+   ],
+   "radiusM": 1200
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "00:55",
+   "title": "Patrol: S6 nic (po północy)",
+   "detail": "",
+   "segments": [
+    "S6"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "+1 02:10",
+   "title": "Patrol: S4 nic (zapis +1)",
+   "detail": "",
+   "segments": [
+    "S4"
+   ],
+   "pod": 0.6
+  }
+ ],
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ }
+}
