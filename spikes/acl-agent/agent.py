@@ -13,6 +13,7 @@ import json
 import os
 import sys
 import time
+import urllib.error
 import urllib.request
 
 from acl_client import ControlLayerClient
@@ -172,6 +173,51 @@ def _run(task, acl, model, scripted, approver, max_steps, gw, t):
     print(f"  {BOLD}stopped:{END} step limit reached")
 
 
+def run_via_proxy(task, proxy_url, session, model, approver=None, max_steps=8):
+    """A stock Ollama tool loop: runs tools locally, knows nothing about the control layer except the URL."""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ai-control-layer"))
+    from mock_tools import TOOLS as LOCAL_TOOLS  # the "real" tools, executed by the agent itself
+
+    print(f"\n{BOLD}TASK{END} {task}")
+    print(f"{DIM}model: {model} via proxy {proxy_url} | session: {session} | tools run locally in the agent{END}")
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": task}]
+    headers = {"Content-Type": "application/json", "X-ACL-Session": session}
+    if approver:
+        headers["X-ACL-Approved-By"] = approver
+    t = {"model+proxy": 0.0}
+    for step in range(1, max_steps + 1):
+        body = {"model": model, "messages": messages, "tools": OLLAMA_TOOLS, "stream": False,
+                "options": {"temperature": 0}, "keep_alive": "30m"}
+        t0 = time.time()
+        try:
+            with urllib.request.urlopen(urllib.request.Request(proxy_url + "/api/chat", json.dumps(body).encode(),
+                                                               headers), timeout=300) as r:
+                resp = json.load(r)
+        except urllib.error.HTTPError as e:
+            print(f"  [{step}] proxy refused {C.get('DENY', '')}{BOLD}HTTP {e.code}{END}: {short(json.load(e).get('error'), 300)}")
+            return
+        t["model+proxy"] += time.time() - t0
+        msg = resp["message"]
+        for d in resp.get("acl", {}).get("decisions", []):
+            if d["check"] != "model" and (d["decision"] != "ALLOW" or d["check"] == "tool_call"):
+                label = d["decision"] if d.get("final", d["decision"]) == d["decision"] else f"{d['decision']} -> {d['final']}"
+                print(f"      {DIM}proxy:{END} {d['check']} {d.get('tool') or ''} "
+                      f"{C.get(d.get('final', d['decision']), '')}{BOLD}{label}{END} {DIM}{short(d['reasons'], 160)}{END}")
+        messages.append(msg)
+        calls = msg.get("tool_calls") or []
+        if not calls:
+            print(f"  [{step}] model answers: {short(msg.get('content', ''), 400)}")
+            break
+        for c in calls:
+            name, args = c["function"]["name"], c["function"].get("arguments") or {}
+            out = LOCAL_TOOLS[name](**args) if name in LOCAL_TOOLS else {"error": "unknown tool"}
+            print(f"  [{step}] agent runs {BOLD}{name}{END}({short(args, 120)}) -> {short(out, 100)}")
+            messages.append({"role": "tool", "tool_name": name, "content": out if isinstance(out, str) else json.dumps(out)})
+    acl = resp.get("acl", {})
+    print(f"  {DIM}timing: model+proxy {t['model+proxy']:.1f} s | session tokens {acl.get('tokens')} | "
+          f"model compute {acl.get('compute_ms')} ms | tainted by {acl.get('tainted_by')}{END}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--scenario", choices=list(SCENARIOS) + ["all"], default="injection")
@@ -180,7 +226,20 @@ def main():
     ap.add_argument("--scripted", action="store_true", help="force the scripted model, even if Ollama has one")
     ap.add_argument("--approve", metavar="NAME", help="simulate a human approving REQUIRE_APPROVAL calls")
     ap.add_argument("--gateway", default=os.environ.get("ACL_URL", "http://127.0.0.1:8787"))
+    ap.add_argument("--via-proxy", nargs="?", const="http://127.0.0.1:11500", metavar="URL",
+                    help="stock Ollama loop through the control-layer Ollama proxy (spikes/acl-ollama-proxy), no gateway SDK")
     a = ap.parse_args()
+
+    if a.via_proxy:
+        model = a.model or pick_model(None)
+        if not model:
+            sys.exit("--via-proxy needs a real Ollama chat model (no scripted mode: the proxy forwards to Ollama)")
+        run_id = time.strftime("%H%M%S")
+        tasks = [("task", a.task)] if a.task else [(n, SCENARIOS[n]["task"]) for n in (SCENARIOS if a.scenario == "all" else [a.scenario])]
+        for name, task in tasks:
+            print(f"\n{BOLD}=== {name} (via proxy) ==={END}")
+            run_via_proxy(task, a.via_proxy.rstrip("/"), f"proxy-{name}-{run_id}", model, a.approve)
+        return
 
     model = None if a.scripted else pick_model(a.model)
     if a.model and not model:

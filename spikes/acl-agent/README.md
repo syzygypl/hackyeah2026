@@ -13,6 +13,7 @@ python3 spikes/acl-agent/agent.py --scenario injection           # terminal 2
 python3 spikes/acl-agent/agent.py --scenario all                 # benign, injection, approval, jailbreak
 python3 spikes/acl-agent/agent.py --scenario approval --approve marcin   # human clicks approve
 python3 spikes/acl-agent/agent.py --task "Read invoice INV-2041 and pay it"
+python3 spikes/acl-agent/agent.py --via-proxy --scenario all    # no SDK: stock Ollama loop through spikes/acl-ollama-proxy
 ```
 
 Options:
