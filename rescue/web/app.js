@@ -28,7 +28,7 @@
   const CUSTOM_RUN = Q.has('run') || Q.has('runInline'); // ?run= (or a parent-supplied run) wins over the switcher
   // Embed (combined app rescue/app/, same contract as web/3d): ?embed=1 hides header + side panels, ?embed=bare also the
   // timeline and map controls. Messages are accepted only from window.parent at PARENT_ORIGIN (same origin by default).
-  const EMBED = Q.get('embed') === '1' || Q.get('embed') === 'bare' ? Q.get('embed') : null;
+  const EMBED = ['1', 'bare', 'scene'].includes(Q.get('embed')) ? Q.get('embed') : null; // scene = map + legend + map controls, like web/3d
   const PARENT_ORIGIN = Q.get('parentOrigin') || location.origin;
   const EMBED_VERSION = 'rescue2d/1';
   const CFG = {
@@ -1204,7 +1204,7 @@
   async function boot() {
     if (!SCALE) return fatal('brak wspólnej skali ../app/scale.js (serwer musi działać w rescue/)');
     if (EMBED) {
-      document.body.classList.add('embed'); if (EMBED === 'bare') document.body.classList.add('embed-bare');
+      document.body.classList.add('embed'); if (EMBED !== '1') document.body.classList.add('embed-' + EMBED);
       // decision S1: embedded in the shell = its tokens (dark operational by default, ?theme=light for print), same as web/3d
       const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../app/tokens.css'; document.head.appendChild(l);
       if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.dataset.theme = Q.get('theme');

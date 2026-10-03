@@ -275,6 +275,10 @@ body.embed #top, body.embed #left, body.embed #right { display: none; }
 body.embed #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "map" "tl"; }
 body.embed-bare #timeline, body.embed-bare #mapctl, body.embed-bare #stepcard { display: none; }
 body.embed-bare #app { grid-template-rows: minmax(0, 1fr); grid-template-areas: "map"; }
+/* ?embed=scene (same layout as web/3d in the shell): map, legend top-left, map controls top-right; the shell owns step card and timeline */
+body.embed-scene #timeline, body.embed-scene #stepcard { display: none; }
+body.embed-scene #app { grid-template-rows: minmax(0, 1fr); grid-template-areas: "map"; }
+body.embed-scene #legend { top: 10px; bottom: auto; }
 
 /* operation progress (parity with 3D) */
 .progress { padding: 4px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
