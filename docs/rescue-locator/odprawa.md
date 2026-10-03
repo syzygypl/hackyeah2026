@@ -34,6 +34,22 @@ No API changes.
   page. Bieszczady was checked too.
 - On a phone (under 820 px) the sheet becomes a normal scrolling page: the blocks stack, and the team table turns into cards.
 
+## Karty zadań (`&karty=1`, the "Karty zadań" button)
+
+There is one card per assigned team, two cards per A4 page with a dashed cut line, so each team leader gets their own slip. Each card has:
+
+- the team and its callsign
+- the sector, its rank in the search order and its centre coordinates (for the GPS)
+- a sketch zoomed to the sector: the sector in navy, neighbours, heat, top 3 and IPP
+- times: out, on site, search done (from the engine's approach and search times), and POD
+- the report rhythm and a blank radio channel
+- the crew, from the inventory
+- the safety notes from the engine and the inventory warnings
+- a return-report box: przeszukane, nic / częściowo / ślad, plus time and notes
+
+The cards use the same data as the briefing, with no extra requests. Shots: `shots/odprawa-karty-zawrat.pdf` (3 teams, 2 pages) and
+`shots/odprawa-karty-zawrat-a4.jpg`.
+
 ## Links
 
 - Start page: "Odprawa (druk)" line under the role cards (zawrat).
