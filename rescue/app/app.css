@@ -440,7 +440,8 @@ body.signals,body.mode-edycja{--dock-h:166px}
 .tlk.k-nic{width:3px;height:12px;margin:-6px 0 0 -1.5px;border-radius:2px}
 .tlk.k-pogoda{background:var(--rl-card);box-shadow:inset 0 0 0 2px var(--c)}
 .tlk.k-found{width:11px;height:11px;margin:-5.5px 0 0 -5.5px}
-.k-slad{--c:var(--rl-warn-ink)}.k-nic{--c:var(--rl-mute)}.k-pogoda{--c:var(--rl-ink-2)}.k-zespol{--c:var(--rl-ok)}.k-found{--c:var(--rl-danger)}.k-baza{--c:var(--rl-mute)}
+/* kind colours from the --rl-ev-* tokens (ported from b069c21, AI Andrzeja); a marker may refine --c by its step kind (EV_COL in app.js) */
+.k-slad{--c:var(--rl-accent)}.k-nic{--c:var(--rl-ok)}.k-pogoda{--c:var(--rl-ev-weather)}.k-zespol{--c:var(--rl-accent)}.k-found{--c:var(--rl-danger)}.k-baza{--c:var(--rl-ev-terrain)}
 .ticker{display:flex;gap:6px;flex:0 1 auto;min-width:0;max-width:34%;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
 .ticker:empty{display:none}
 .ticker .tk{display:inline-flex;align-items:center;gap:5px;flex:none;max-width:210px;height:26px;padding:0 10px 0 8px;border-radius:13px;background:var(--rl-panel-2);font-size:var(--rl-fs-xs);color:var(--rl-ink-2);white-space:nowrap}

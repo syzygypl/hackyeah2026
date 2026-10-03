@@ -905,10 +905,14 @@ function shortEv(label, k) {
   if (rest && w(p).length <= 3) return w(p).length >= 2 ? cut(w(p)) : p + ": " + cut(w(rest).slice(0, 3));
   return cut(w(t.split(",")[0]).slice(0, 4));
 }
+// marker colour per step kind from the --rl-ev-* tokens (ported from b069c21, AI Andrzeja); our kind class keeps the shape
+const EV_COL = { terrain: "--rl-ev-terrain", cost: "--rl-ev-terrain", difficulty: "--rl-ev-terrain", conditions: "--rl-ev-weather", weather: "--rl-ev-weather",
+  rings: "--rl-ev-rings", route: "--rl-ev-route", containment: "--rl-ev-car", sector: "--rl-ev-phone", corridor: "--rl-ev-phone", fix: "--rl-ev-phone",
+  searched: "--rl-ok", found: "--rl-danger", clue: "--rl-accent", report: "--rl-accent" };
 function renderDock() {
   const R = D(); if (!R || !R.steps || !$("tlMarks")) return;
   const n = R.steps.length, S = curStep();
-  $("tlMarks").innerHTML = R.steps.map((s, k) => `<i class="tlk k-${evKind(s)}${k + 1 === store.step ? " cur" : k + 1 > store.step ? " fut" : ""}" style="left:${n > 1 ? (k / (n - 1) * 100).toFixed(2) : 50}%"></i>`).join("");
+  $("tlMarks").innerHTML = R.steps.map((s, k) => `<i class="tlk k-${evKind(s)}${k + 1 === store.step ? " cur" : k + 1 > store.step ? " fut" : ""}" style="left:${n > 1 ? (k / (n - 1) * 100).toFixed(2) : 50}%${evKind(s) !== "found" && EV_COL[s.kind] ? `;--c:var(${EV_COL[s.kind]})` : ""}"></i>`).join("");
   if (S) $("clock").title = S.t + " · " + S.label;
   const byTitle = (t) => { const st = R.steps.find((s) => s.label === t); return st ? evKind(st) : /^ZNALEZIONO/i.test(t || "") ? "found" : "slad"; };
   const items = liveOn() && live.events.length

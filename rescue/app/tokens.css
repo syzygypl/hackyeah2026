@@ -26,6 +26,8 @@
   --rl-warn:#e9c46a;--rl-warn-ink:#8a5a00;      /* sand fill / its readable text */
   --rl-select:#ffd84d;                          /* selected segment / evidence in both views */
   --rl-chrome:#23272a;--rl-on-chrome:#faf8f3;   /* active tab, Kino letterbox */
+  /* time dock: one dot colour per kind of signal (canvas board TimeDock); searched = ok, found = danger, live report = accent */
+  --rl-ev-terrain:#8d7b68;--rl-ev-weather:#9aa9b8;--rl-ev-rings:#457b9d;--rl-ev-route:#7b6fa8;--rl-ev-car:#b07d2b;--rl-ev-phone:#9b5fb3;
   /* spacing + shape */
   --rl-sp-1:4px;--rl-sp-2:8px;--rl-sp-3:12px;--rl-sp-4:16px;--rl-sp-5:24px;
   --rl-radius-s:8px;--rl-radius:10px;--rl-radius-l:14px;
