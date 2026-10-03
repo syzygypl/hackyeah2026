@@ -47,6 +47,7 @@ const SIG = {
   DronePassEmpty: ['D', '#555b61', 'Dron termowizyjny: nic'],
   Clue: ['!', '#2d6a4f', 'Ślad / znalezienie'],
   RatunekPing: ['G', '#2d6a4f', 'Ratunek: ping GPS'],
+  Found: ['!', '#2d6a4f', 'Znalezienie'],
 };
 const sigOf = (e) => (/świadek/i.test(e.title || '') ? ['Ś', '#e76f51', 'Świadek'] : /ZNALEZIONO/i.test(e.title || '') ? ['!', '#2d6a4f', 'Znalezienie'] : null) || SIG[e.provider] || [e.provider?.[0] || '•', /świadek|witness/i.test(e.title + e.provider) ? '#e76f51' : '#6b6f72', e.provider || 'Sygnał'];
 const TEAM_COL = { heli: '#1f4e79', ground: '#b8860b', dog: '#8d5524', drone: '#6c4ab6' };
@@ -135,7 +136,7 @@ const cellOf = (lat, lon) => {
 const EVENTS = (SCN?.events || []).map((e) => ({ ...e, step: R.steps.findIndex((s) => s.label === e.title) }));
 const evByLabel = new Map(EVENTS.map((e) => [e.title, e]));
 const resources = new Map((SCN?.resources || []).map((r) => [r.id, r]));
-const isFound = (e) => e.found || /ZNALEZIONO/i.test(e.title || '');
+const isFound = (e) => e.found || e.provider === 'Found' || /ZNALEZIONO/i.test(e.title || '');
 const foundEv = EVENTS.find((e) => isFound(e) && e.step >= 0);
 const foundStep = foundEv ? foundEv.step : -1;
 const foundAt = foundEv?.point || SCN?.truth?.at;
