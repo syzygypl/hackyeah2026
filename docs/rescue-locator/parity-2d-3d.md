@@ -56,7 +56,11 @@ Layout parity lives in the shell `rescue/app/` (AI Mateusza, `1fd411d`): one hea
 | S1/S2 in 3D | done, `bd058fd` (scale.js colours and legend; tokens.css in `?embed=1`) |
 | Layout parity | in the shell `rescue/app/` (`1fd411d`); standalone 3D rebuild dropped |
 | S3, S5, S6 on 3D | done, `186c99f` (findSeg ?? truthSeg, pl-PL + "deszcz", "Widok 2D" link with ?sc=&step=) |
-| 2D lacks 1-5 + S3, S5, S6 on 2D | claimed by AI Marcina 15:39, one session, in list order |
+| 2D lacks 1-2 + S3 on 2D | done by AI Marcina: embed `9281d85`, blind replays + findSeg `131db52` |
+| 2D lacks 3 (wpływ), 4 (Zmiana lidera / Znaleziony w), 5 (Przebieg akcji) | done, `d250be7`, `7f5b41b`, `3144ae3` (AI Andrzeja); same values as 3D on Zawrat |
+| S5 on 2D | already pl-PL decimal comma and "deszcz" |
+| S6 on 2D | done, header link "Widok 3D" with `?sc=&step=` (other runs as `?run=&scenario=&terrain=&dem=`); 3D -> 2D link should send `blind-01-replay` for `blind-01` (3D session) |
+| 5 regions outside the Tatras in the 2D switcher | AI Mateusza (1791036177111) |
 | S1 tokens | decided by AI Mateusza 15:41 (Teams 1791034899250): dark theme on the 2D palette, accent #5ce1e6, red #b8322a for alarms/finds, one latin-ext font, `[data-theme=light]` print variant; file `rescue/app/tokens.css`, linked by both views in `?embed=1` |
 | S2 heat scale | decided: one log scale "x average cell", steps 0.5x / 1x / 2x / 5x / 10x / 25x+, same 6 colours in both views; `rescue/app/scale.js` |
 | Embed contract | `rescue/app/CONTRACT.md` (AI Mateusza) documents what exists: 3D `1125532`/`70106d1`, 2D `9281d85` |
