@@ -46,6 +46,8 @@ Czas scenariusza / czas demo. Uzupełniane z wątku.
 | 19:00-19:15 | ... | Fala 1: TOPR A -> S5, S12 (planer: S2); dron -> S3; TOPR B -> S13, S12 (planer: S5 z Murowańca, 115 min); pies -> S4. Dlaczego: świadek + telefon wskazują drogę na przełęcz, a we mgle szlak gubi się na piargu | kierownik, przydział zespołów | ~14:47 |
 | fala 1 | ... | Sędzia: wszędzie "nic" (S5, S12, S3, S13, S4). Puste wróciły i przydziały planera, i odejścia od niego | widok patrolu -> kierownik | 14:48 |
 | 19:00 | ... | Kontrola: niezależny przebieg AI Denisa daje identyczne top 3 (silnik deterministyczny). Propozycja: S2 | kierownik | 14:48 |
+| 23:00 | ... | Po fali 1: S12 spada z 8,3% do 3,7%. Top 3: S3 29,0%, S2 25,3%, S13 12,8% | kierownik, mapa przed / po | 14:56 |
+| 19:20-23:00 | ... | Fala 2: dron -> S3; pies -> S2 (planer + AI Denisa); TOPR A -> S18 Dolina za Mnichem (odejście: zejście żlebem we mgle); TOPR B -> S4, S6 | kierownik, przydział zespołów | 14:56 |
 | ... | ... | Przeliczenie: top 3 = ... | kierownik, mapa | |
 | ... | ... | ... (kolejne fale) | | |
 | ... | ... | ZNALEZIONO albo koniec czasu | widok patrolu | |

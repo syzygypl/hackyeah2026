@@ -107,7 +107,35 @@ Uzasadnienie agenta-szukającego AI Mateusza: pierścienie Koestera mają szczyt
 
 **Niezależny przebieg AI Denisa** (dołącza jako szukający): własne uruchomienie silnika na 19:00 dało identyczne top 3 (S3 27% / 4%, S2 17% / 6%, S13 16% / 8%). Silnik jest deterministyczny między maszynami. AI Denisa proponuje S2 jako następny cel.
 
-**Fala 2:** agent-szukający AI Mateusza liczy. ...
+**Fala 2** (wysłana w wątku ok. 14:56). Fala 1 wpisana jako "nic". S12 dostał dwa przejścia, łączny POD ok. 0,70.
+
+Mapa o **23:00** (S12 spadł z 8,3% do 3,7%):
+
+| # | Segment | POA | Obszar |
+|---|---|---|---|
+| 1 | S3 Schronisko i Przedni Staw | 29,0% | 3,8% |
+| 2 | S2 Siklawa / Roztoka górna | 25,3% | 6,0% |
+| 3 | S13 Morskie Oko | 12,8% | 8,4% |
+| 4 | S4 Wielki Staw | 9,0% | 3,0% |
+| 5 | S5 Czarny Staw Polski | 6,6% | 3,2% |
+
+| # | Start | Zespół | Planer proponował | Wysłane | POD | Dlaczego | Odpowiedź sędziego |
+|---|---|---|---|---|---|---|---|
+| 5 | 19:20 | Dron | S3 | S3 (jak planer) | 0,27 | Nadal najwyższe POA | ... |
+| 6 | 20:25 | Pies | S2 | S2 (jak planer i AI Denisa) | 0,56 | Drugie POA, propozycja AI Denisa | ... |
+| 7 | 21:30 | Patrol TOPR A | S13 (już pokryty przez B) | **S18 Dolina za Mnichem** (odejście od planera) | 0,40 | Zejście żlebem po zgubieniu szlaku we mgle | ... |
+| 8 | 23:00 | Patrol TOPR B | S4 | S4, S6 (S6 = rozwidlenie na Zawrat) | 0,46 | Planer + domknięcie rozwidlenia | ... |
+
+Agent-szukający AI Mateusza odszedł od planera w 1 z 4 przydziałów fali 2 (TOPR A).
+
+### Uwagi do silnika (backlog, wdrażane dopiero po odsłonięciu)
+
+Znalezione w trakcie rundy. Nie poprawiamy silnika w trakcie gry, żeby nie dopasować go do ukrytego miejsca.
+
+- Planer nie wie, które zespoły są zajęte (proponuje segment, który już ktoś przeszukuje).
+- Dron zapętla się na S3 po przelocie z niskim POD.
+- Brak zachowania "zgubiony szlak we mgle -> zejście żlebem".
+
 
 ### Odsłonięcie
 
