@@ -36,8 +36,8 @@ public enum StoryPipeline {
     }
 
     /// JSON bytes of the run document (Sendable, for servers / actors).
-    public static func runData(_ scenario: Scenario) async -> Data {
-        let doc = await run(scenario)
+    public static func runData(_ scenario: Scenario, timeline: TimelineEngine.Input? = nil, frameMin: Int = 5, frames: Bool = true) async -> Data {
+        let doc = await run(scenario, timeline: timeline, frameMin: frameMin, frames: frames)
         return (try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])) ?? Data("{}".utf8)
     }
     public static func modulesData() -> Data {
@@ -45,7 +45,8 @@ public enum StoryPipeline {
                                                       "categories": koesterCategories.keys.sorted()])) ?? Data("{}".utf8)
     }
 
-    public static func run(_ scenarioIn: Scenario) async -> [String: Any] {
+    /// `timeline`: tracks (+ DEM, FOV params) for timeline mode; adds the optional `timeline` key, steps unchanged.
+    public static func run(_ scenarioIn: Scenario, timeline: TimelineEngine.Input? = nil, frameMin: Int = 5, frames: Bool = true) async -> [String: Any] {
         var scenario = scenarioIn
         scenario.applyEpilogue()
         let coverage = applyCoverage(&scenario)
@@ -128,6 +129,9 @@ public enum StoryPipeline {
             }
             if let mk = h.marker { d["marker"] = [mk.lat, mk.lon] }
             return d
+        }
+        if let timeline, let tl = TimelineEngine(scenario: scenario, grid: grid, hints: arrived, input: timeline) {
+            doc["timeline"] = tl.json(frameMin: frameMin, frames: frames)
         }
         return doc
     }
