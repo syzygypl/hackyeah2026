@@ -37,7 +37,7 @@ owners' areas are listed at the end, with selectors.
 | centrum.html | all | 75 muted labels at 4.15:1 | fixed `8122c1e` |
 | zasoby.html | 390, 360 | Unit event buttons ("Wymiana baterii", "Usterka"...) 24 px tall. Bar controls (select, godzina, Na żywo, klucz) 26 px | fixed `c8e716e`: 40 px with an 8 px gap on touch and under 600 px (unitcard.css, so Ćwiczenia cards get it too). Markup unchanged |
 | zasoby.html | all | "39.4 h" do przeglądu: decimal point in Polish UI | fixed `c8e716e` (card) and `ed7c961` (drawer): "39,4 h" |
-| zasoby.html | all | Card header showed the raw id and callsign ("drone · DRONE-265"). English ids read as jargon | fixed `d8ed98b`: only the callsign, as a small muted mono tag. The raw id is only in the tooltip. Ćwiczenia cards have no callsign, so they show no tag. Prompt and toast use the unit name. Shot: `qa-zasoby-390-after.jpg` |
+| zasoby.html | all | Card header showed the raw id and callsign ("drone · DRONE-265"). English ids read as jargon | fixed `70c9f1d`: only the callsign, as a small muted mono tag. The raw id is only in the tooltip. Ćwiczenia cards have no callsign, so they show no tag. Prompt and toast use the unit name. Shot: `qa-zasoby-390-after.jpg` |
 | unit drawer (actorlog) | 390 | Close button 31x26. Feed and filter buttons 22 px | fixed `ed7c961`: close 44 px, buttons 36 px on touch |
 | web/seen (Widziałem) | 390, 360 | Flow works: card, big "Widziałem tę osobę", map, when (chips), notes, send. No scroll, targets 44+ px | ok |
 | web/seen (Widziałem) | 360 | Map attribution, expanded, covers ~20% of the small map | open, AI Marcina |
@@ -72,7 +72,7 @@ owners' areas are listed at the end, with selectors.
 
 ### tokens.css (shared)
 
-`--rl-mute` was `#6b6f72`, which is 4.15:1 on `--rl-bg`. Now it is `#5d6165`: 5.1:1 on `--rl-bg`, 5.9:1 on the panel, 6.2:1 on white (fixed `56f88d4`, decided by Mateusz). The dark theme `#8797a4` was already 5.2-6.2:1. The per-page overrides were removed in `9c038e7`.
+`--rl-mute` was `#6b6f72`, which is 4.15:1 on `--rl-bg`. Now it is `#5d6165`: 5.1:1 on `--rl-bg`, 5.9:1 on the panel, 6.2:1 on white (fixed `4d3cb08`, decided by Mateusz). The dark theme `#8797a4` was already 5.2-6.2:1. The per-page overrides were removed in `f7126db`.
 
 ## Screenshots (docs/rescue-locator/shots/)
 
