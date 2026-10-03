@@ -367,7 +367,9 @@ const SKY_SUN = dirOf(sunOfStep(STEP0).el, sunOfStep(STEP0).az); // the sun itse
 // ---------- sky, lights ----------
 const skyMat = FX.sky(SKY_SUN);
 skyMat.uniforms.uMoonDir.value.copy(dirOf(MOON.el, MOON.az));
-scene.add(new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16), skyMat));
+// drawn last of the opaque objects (depth-tested, no depth write): the sky's per-pixel scattering and cloud noise runs
+// only where no terrain, tree or building is in front (it sorted first before: same centre as the terrain, lower id)
+{ const m = new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16), skyMat); m.renderOrder = 100; scene.add(m); }
 const starGeo = new THREE.BufferGeometry();
 {
   const n = 900, pos = new Float32Array(n * 3);
