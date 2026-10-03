@@ -360,3 +360,133 @@ Implemented in rescue-server `// MARK: timeline` (engine instance cached per sce
 - With `timeline`, the dock slider runs over minutes `startMinute..endMinute` (1 min steps; play = one frame per 0.5 s); event steps are ticks on the slider (click = jump to that minute). Without `timeline` the dock stays event-based.
 - Shell -> view: new `{ type: "time", minute, t }` (2D / 3D draw actor markers with an accuracy circle, the track so far (solid = gps, dashed = est), the FOV outline, heat = frame `poaGrid`). View -> shell: `{ source, type: "time", minute, t }` when the user scrubs inside a view. `{ type: "step", i }` stays and means "jump to the minute of step i".
 - Polish labels: "ślad GPS", "ślad szacowany", "pole widzenia", "pokrycie (POD)", "dokładność ±N m".
+
+## Zasoby i dziennik (actor log, data feeds, inventory / health) - v1
+
+Additive features on rescue-server (`// MARK: inventory` block + one route hook) and the app: (1) the **actor log** = everything one actor (team, dog team, drone, helicopter, boat, divers) did, in order, assembled from data that already exists; (2) **data feeds per actor** = which streams the actor provides (GPS, reports, radio, video, ...) with status and last update; (3) **Zasoby** = every unit with crew, condition and limits (fatigue, battery, fuel, maintenance, dog work time). Inventory data is FICTIONAL; fatigue, battery and fuel are ESTIMATES from the timeline, and the UI says so.
+
+Owners: contract + server + UI = AI Mateusza; `rescue/scenarios/inventory/inventory.json` + `params.json` + `docs/rescue-locator/zasoby.md` (parameters with sources) = AI Marcina; `rescue/integration/test_inventory.py` + review = AI Denisa. Files live in the subfolder `scenarios/inventory/` so no scenario lister takes them for scenarios (like `tracks/`, `fov/`). Until AI Marcina's file lands the server ships a minimal fallback seed there.
+
+Times: every entry / state is on the SCENARIO clock (`HH:MM`, `minute` = minutes since `startClock`, like `steps[].minute`). Things known only by wall clock (live feed events posted now) are placed at the incident's live moment (`liveAt` = operator cursor, else the default live moment) and keep their ISO time in `wall`.
+
+### 1. `GET /api/actors/<id>/log?sc=<sc>&since=<HH:MM|minute>&type=<t1,t2>`
+
+Read-only, no key. `<id>` = roster / resource id (`GET /api/teams` id, tracks actor id). `sc` = incident (default: the actor's roster `sc`, else its first `home`). `since` = only entries at or after that scenario minute. `type` = comma list filter (the UI may also filter client side). 404 for an unknown actor.
+
+```jsonc
+{ "schema": "rescue-actor-log/1",
+  "id": "drone", "name": "Dron termowizyjny", "kind": "dron", "sc": "zawrat", "liveAt": "19:45",
+  "entries": [                              // oldest first: by minute, then source order / feed seq
+    { "minute": 85, "t": "19:05",
+      "type": "fix",                         // dispatch | status | fix | search | report | clue | inventory | scripted
+      "feed": "gps",                         // optional: the feed (section 2) the entry came through
+      "title": "Pozycja GPS ±8 m", "detail": "...",   // Polish, ready to show
+      "src": "tracks",                       // tracks | livefix | feed | assignment | report | inventory | scenario
+      "sc": "zawrat", "segmentId": "S4", "lat": 49.21, "lon": 20.04,   // optional
+      "seq": 17, "acked": true, "wall": "2026-10-04T09:11:40Z" } ],    // optional (feed entries)
+  "counts": { "fix": 12, "search": 2, "dispatch": 1 },
+  "note": "..." }
+```
+
+Sources (no new storage, except the inventory events of section 4):
+- `fix`: fixes of the actor in `scenarios/tracks/<sc>.json` (`src: tracks`; never `truth`) + `POST /api/fix` live fixes (`src: livefix`). Every fix is listed; the UI may collapse runs of GPS fixes.
+- `search`: tracks file `legs` of kind `search` (segment, from-to), `detail` with the segment's cumulative POD from the timeline frame at the leg end (all units together, said so).
+- `dispatch` / `status`: tracks `legs` of kind `approach` / `flight` (first leg per segment = "wyjście do S4"), operator assignments (`src: assignment`), feed `dispatch` events with `team == id` (roster moves, "odwołany"), and a final `status` entry with the roster status now (wolny / w drodze / w akcji).
+- `report` / `clue`: feed events with `team == id` (kinds report, clue, fix from a report) and stored field reports whose hint `resource` is the id or the name (`src: report`).
+- ACK: not a separate entry; feed entries carry `acked` (operator confirmed). `type=ack` returns the acked entries.
+- `scripted`: scenario events whose title names the actor (its resource name, or the kind word when the incident has a single actor of that kind); `detail` says "przypisane po nazwie".
+- `inventory`: section 4 events.
+- Limit: the shared deploy's feed query returns the latest 50 events of the incident, so older FEED entries drop out (assignments, fixes, reports and inventory events do not).
+
+### 2. Data feeds per actor: `GET /api/actors/<id>/feeds?sc=&at=` and `feeds` in every `GET /api/inventory` unit
+
+```jsonc
+{ "schema": "rescue-actor-feeds/1", "id": "drone", "sc": "zawrat", "at": "19:45",
+  "feeds": [
+    { "id": "drone:gps", "kind": "gps",       // gps | reports | radio | video | thermal | collar | telemetry | clues
+      "label": "Pozycja GPS",                  // Polish
+      "status": "live",                        // live | stale | off
+      "lastAt": "19:40", "count": 12,          // scenario clock of the last item up to `at` (null = never), items up to `at`
+      "href": "/app/?mode=akcja&sc=zawrat&actor=drone",   // optional: where the UI links (map track, filtered log, telemetry)
+      "note": "podgląd niedostępny w demo" } ] }          // optional
+```
+
+- Which feeds an actor has, by kind: every actor `gps` (fixes from tracks + `POST /api/fix`), `reports` (field reports / feed reports and report fixes), `radio` (text radio / voice notes = reports whose text came by radio, i.e. `src: report` fixes and feed `report` events), `clues` (clues it submitted); `dron` + `smiglowiec` also `video` and `thermal` (MOCK: no footage in the demo, status `off`, note "podgląd niedostępny w demo"); `pies` also `collar` (dog collar GPS = the dog actor's GPS fixes); units with equipment in the inventory (`dron`, `smiglowiec`, `lodz`) also `telemetry` (battery / fuel from section 3, status live while the unit is working).
+- Status: `live` = last item at most `staleMin` (10) minutes before `at`; `stale` = older; `off` = never (or mocked).
+- UI: section "Źródła danych" in the actor drawer: status dot (green live, amber stale, grey off), label, last update, count, links: GPS / collar -> track on the 2D map (`highlight`), reports / radio / clues -> the log filtered by that feed, telemetry -> battery / fuel chart over time.
+
+### 3. `GET /api/inventory?sc=<sc>&at=<HH:MM|minute>`
+
+Read-only, no key. Every unit of `inventory.json` merged with the roster (a roster team without an inventory entry is listed with `"inventory": false`, static fields only). `sc` = incident whose timeline drives the dynamic state (default: each unit's roster `sc`, else its first home with a tracks file); `at` = scenario clock (default: the live moment, as `GET /api/tracks`). With `sc`, units not on that incident (roster `sc` set to another one, or not in its resources / tracks) keep static values.
+
+```jsonc
+{ "schema": "rescue-inventory-state/1", "sc": "zawrat", "at": "19:45", "minute": 125,
+  "fictional": true, "note": "Dane sprzętu i załóg są fikcyjne. Zmęczenie, bateria i paliwo to szacunki z osi czasu.",
+  "params": { /* params.json in force, defaults filled in */ },
+  "units": [
+    { "id": "drone", "name": "Dron termowizyjny", "kind": "dron", "inventory": true,
+      "base": "Baza TOPR Zakopane", "model": "...", "callsign": "...",
+      "sc": "zawrat", "segmentId": "S7", "status": "w akcji",        // roster (GET /api/teams)
+      "crew": [ { "name": "Kamil Nowak", "role": "operator drona" } ], "dog": null,
+      "spares": [ { "item": "akumulator TB30", "qty": 3 } ],
+      "maintenanceLog": [ ... ],
+      "health": {                             // keys present per kind; null = unknown
+        "source": "timeline",                 // timeline (tracks / fixes of sc up to at) | static
+        "dutyMin": 155, "dutyLimitMin": 720,  // since dutyStart (inventory) or the first fix
+        "distanceKm": 4.2, "climbM": 380,     // ESTIMATED track (GET /api/tracks path, never truth) + DEM
+        "effortMin": 140,                     // Tobler-weighted walking minutes (below)
+        "fatiguePct": 46, "lastRest": "18:30",
+        "workMin": 22, "workLimitMin": 30, "restMin": 15,              // dog: continuous work since the last rest
+        "flightMin": 31, "batteryPct": 18, "flightMinLeft": 6, "spareBatteries": 3,   // drone, since the last battery_swap
+        "fuelPct": 64, "enduranceMinLeft": 96,                          // heli / boat, since the last refuel
+        "hoursTotal": 212.4, "maintenanceEveryH": 50, "maintenanceDueInH": 3.1, "lastMaintenance": "2026-09-20",
+        "fault": null,                         // text of an open fault event
+        "series": [ [100, 100], [105, 97] ] }, // [minute, batteryPct | fuelPct | fatiguePct] every 5 min up to at (telemetry chart)
+      "warnings": [ { "level": "red", "code": "battery", "text": "Bateria 18% - wymień lub wracaj" } ],
+      "level": "red",                         // red | amber | ok (worst warning)
+      "feeds": [ /* section 2 */ ],
+      "events": [ /* this unit's inventory events, newest first, max 10 */ ] } ] }
+```
+
+Warnings (TOPR red only for HARD limits): red = battery < `batteryHardPct` (20), crew / team over its duty limit, maintenance overdue, fuel < `fuelHardPct` (20), open fault, dog over `workLimitMin`; amber = battery < `batteryWarnPct` (35), duty within `dutyWarnMin` (60) of the limit, maintenance due within `maintenanceWarnH` (5 h), fuel < `fuelWarnPct` (35), fatigue >= 70%, dog within `workWarnMin` (5) of its limit.
+
+Dynamic state per unit, from the timeline of `sc` (fixes + estimated path, minute by minute, up to `at`):
+- **working / airborne** = the sample is more than `homeRadiusM` (50 m) from the unit's first position, or it moved more than 10 m since the previous minute. Drone: battery drops `100 / flightMinPerBattery` % per airborne minute since the last `battery_swap` (100% before the first flight). Heli / boat: fuel drops `100 / enduranceMin` % per working minute since the last `refuel`. `hoursTotal` = file value + airborne minutes in this timeline; maintenance due = `hoursAtLastMaintenance + maintenanceEveryH - hoursTotal` (a `maintenance` event sets hours-at-maintenance to now).
+- **effort (Tobler)**: per minute step, `speed = 6 exp(-3.5 |slope + 0.05|)` km/h with slope from the DEM (`tools/terrain/data/<sc>-dem.json`; none = flat); effortMin = sum of `km / speed x 60 x (speedFlat / 5.04)` with speedFlat = 5.04 (so it equals walking minutes on flat ground).
+- **fatigue** (ground teams, dog handlers, divers) = `min(100, 100 x (effortMin / effortBudgetMin x wEffort + dutyMin / dutyLimitMin x wDuty))`; `effortMin` counts since the last `rest`, duty from dutyStart. Defaults effortBudgetMin 480, wEffort 0.7, wDuty 0.3.
+- **dog work**: minutes moving since the last `rest` event or the last stationary stretch of at least `restMin` (15); limit `workLimitMin` (default 30, configurable). ASSUMPTION: search dogs typically need a rest after about 20-40 min of intensive search; documented in `docs/rescue-locator/zasoby.md`.
+- Helicopter crew duty = `dutyLimitMin` of kind smiglowiec (default 600).
+
+### 4. `POST /api/inventory/<id>/event {type, note?, at?, sc?, by?}`
+
+Operator key (not the field key). `type`: `maintenance` (clears `fault`, hours since maintenance back to 0, `lastMaintenance` = today) | `battery_swap` (drone: 100% from `at`, `spareBatteries` - 1, floor 0) | `refuel` (heli / boat: 100% from `at`) | `rest` (team / dog: effort part of fatigue and dog work reset at `at`) | `fault` (open fault, red until `maintenance`). `note` max 200 chars. `at` = scenario clock HH:MM (default: the incident's live moment); `sc` default: the unit's roster `sc`, else its first home. -> `{ ok: true, event: { id, unit, type, note, at, sc, by, wall } }`; 400 unknown unit / type.
+Stored: local `out/inventory-events.json`, shared deploy store document `inventory-events`; cleared by `POST /api/reset`. Each event also goes to the live feed as `kind: "inventory"` (`team` = unit id, `sc`, `type` = event type, title e.g. "drone: wymiana baterii"), so it shows in Na żywo and in the actor log.
+
+### 5. Files (AI Marcina)
+
+`rescue/scenarios/inventory/inventory.json` (schema `rescue-inventory/1`, fictional):
+
+```jsonc
+{ "schema": "rescue-inventory/1", "note": "Dane fikcyjne (hackathon).",
+  "units": [
+    { "id": "drone",                         // = roster id (resources[].id); one entry per id across all scenarios
+      "kind": "dron",                        // same words as GET /api/teams kind
+      "name": "Dron termowizyjny",           // optional, the roster name wins
+      "base": "Baza TOPR Zakopane", "model": "quadrokopter z kamerą termowizyjną (fikcyjny)", "callsign": "TOPR-D1",
+      "dutyStart": "17:50",                 // optional scenario clock: crew on duty since (default: first fix)
+      "crew": [ { "name": "Kamil Nowak", "role": "operator drona" }, { "name": "Ewa Zając", "role": "obserwator" } ],
+      "dog": { "name": "Ares", "breed": "owczarek belgijski", "certified": "2025-05" },   // dog teams only
+      "equipment": {                         // per kind, all optional (params.json defaults)
+        "spareBatteries": 4, "flightMinPerBattery": 38,                     // drone
+        "enduranceMin": 150,                                                // heli / boat
+        "hoursTotal": 212.4, "maintenanceEveryH": 50, "hoursAtLastMaintenance": 165.0, "lastMaintenance": "2026-09-20" },
+      "spares": [ { "item": "akumulator TB30", "qty": 4 } ],
+      "maintenanceLog": [ { "date": "2026-09-20", "type": "przegląd", "note": "wymiana śmigieł" } ] } ] }
+```
+
+`rescue/scenarios/inventory/params.json` (schema `rescue-inventory-params/1`): `{ "staleMin": 10, "kinds": { "<pieszy|pies|dron|smiglowiec|lodz|nurkowie>": {...} }, "sources": [{ "key", "text", "url"? }] }`, per-kind keys any of `dutyLimitMin`, `dutyWarnMin`, `effortBudgetMin`, `wEffort`, `wDuty`, `workLimitMin`, `workWarnMin`, `restMin`, `flightMinPerBattery`, `batteryHardPct`, `batteryWarnPct`, `enduranceMin`, `fuelHardPct`, `fuelWarnPct`, `maintenanceEveryH`, `maintenanceWarnH`, `homeRadiusM`. Missing file / keys = Swift defaults: pieszy duty 720 min; pies duty 480, work 30, rest 15; dron 35 min per battery, maintenance 50 h; smiglowiec endurance 150 min, crew duty 600 min, maintenance 100 h; lodz endurance 300 min; nurkowie duty 240 min.
+
+### 6. UI (rescue/app)
+
+- Page `app/zasoby.html` ("Zasoby"), linked from the header next to Centrum: one card / row per unit (kind, base, incident / segment / status, crew, condition bars, warnings, feed dots), incident + time picker (`?sc=&at=`), operator buttons per unit for the events of section 4. Banner: inventory data fictional, condition = estimates.
+- Actor drawer (shared script `app/actorlog.js`): clicking an actor anywhere (Na żywo feed entry with `team`, Zasoby card, Centrum roster row, 2D marker) opens a side drawer: header (name, kind, status, level), "Źródła danych" (section 2), "Dziennik" (section 1) with filter chips by type. In Akcja it posts `{ type: "highlight", actor: <id> }` to the 2D view (shell -> view, optional: a view that ignores it keeps working); the 2D view may post `{ source, type: "actor", id }` when an actor marker is clicked.
