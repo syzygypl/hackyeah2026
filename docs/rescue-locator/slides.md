@@ -1,6 +1,6 @@
 # Rescue Locator - slides (max 10)
 
-Outline for the PDF deck. One idea per slide. Numbers: blind-test ablation `rescue/eval/ablation.json` (value), `rescue/README.md` (demo screen), `rescue/validate/backtest.md` (footnote only). **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** Every slide with a number carries the label "tymczasowe - do czasu testu na ślepo".
+Outline for the PDF deck. One idea per slide. Numbers: calibration on simulated cases `rescue/eval/calibration/` (value: `report-land.md`, `results.json`, `WATER.md`, `results-water.json`), blind-test ablation `rescue/eval/ablation.json` (footnote), `rescue/README.md` (demo screen, illustration only). Slide 8 says once, plainly: "symulacja, nie prawdziwe akcje". Never show a per-segment POA % as a chance of finding (overconfident above ~30%); use ranking (top 3) and area searched.
 
 1. **Title**
    - Rescue Locator - gdzie szukać najpierw (where to search first)
@@ -41,25 +41,28 @@ Outline for the PDF deck. One idea per slide. Numbers: blind-test ablation `resc
    - All providers merge into one fused probability stream -> heatmap + ranked segments.
    - New source (AML, RECCO, live drone feed) = one new provider, core untouched.
 
-8. **Does it help? Blind test, N = 2** (label: "tymczasowe - do czasu testu na ślepo")
-   - Slide line (PL): "Mapa prawdopodobieństwa działa na poziomie doświadczonego kierownika akcji - w rundzie 1 wyraźnie lepiej niż szukanie od punktu startu, w rundzie 2 nic nie pomogło. Planer zespołów jest najsłabszym elementem; obie odnalezienia przyszły z decyzji koordynatora wbrew planerowi. To narzędzie koordynacji i obrazu sytuacji, a mapa jest jednym z wejść. Kalibrację na setkach symulowanych przypadków (niezależny symulator) robimy teraz."
-   - Table, % of the area searched before reaching the hidden person (`rescue/eval/ablation.json`, 2cb6dd8):
+8. **Does it help? 1000 + 600 simulated cases** (label: "symulacja, nie prawdziwe akcje")
+   - Slide line (PL): "Na 1000 symulowanych zaginięciach w górach mapa ma właściwy sektor w top 3 w 66% przypadków - ekspert 56%, szukanie od ostatniego znanego punktu 43%. 90% osób znajdujemy po przeszukaniu 29% obszaru (ekspert 37%, od ostatniego punktu 68%). Na wodzie top 3 w 91% vs 81%."
+   - Table (PL), land, 1000 cases, 5 regions (`report-land.md`, `results.json`):
 
-     | Runda | Mapa (silnik) | Heurystyka eksperta | Naiwnie od punktu startu |
-     |---|---|---|---|
-     | blind-01 | **2,1%** | 4,4% | 24,1% |
-     | blind-02 | 37,4% | 39,9% | **35,7%** |
+     | Metoda | Top 3 | Obszar do znalezienia 90% osób |
+     |---|---|---|
+     | **Mapa (silnik)** | **66%** | **29%** |
+     | Heurystyka eksperta | 56% | 37% |
+     | Od ostatniego znanego punktu | 43% | 68% |
 
-   - Planner alone (simulated, no overrides): round 1 found 180 min after the first patrol vs 35 min actual; round 2 not found in 6 h.
-   - Validation method: blind "hide and seek" test. AI Marcina hides the person and commits to the spot with SHA-256; we search with the app only; the referee answers each patrol from a sealed detection table; the hash is opened at the end. Series of 3-5 rounds, failures shown. Next: calibration on hundreds of cases from an independent simulator.
-   - Footnote only: authored backtest, 9 fictional scenarios in 5 regions, top 3 in 8/9, 2.18% vs 20.0% with Koester rings. We wrote them, so it is biased. Demo screen (zawrat) shows #1 vs #20, an illustration, not a value claim.
-   - Planner, said honestly: ETAs, safety gating, instant re-plan; its weak spot is re-tasking teams to segments already cleared.
+   - Water, 600 cases (`WATER.md`): top 3 91% vs 81%; p90 area 5,9% vs 11,4% (łodzie, dryf).
+   - Where it does not win (say it on the slide, small): Bieszczady - ekspert ma niższą medianę obszaru (4,7% vs 5,7%); pływak na jeziorze - lepiej szukać od ostatniego znanego punktu.
+   - Honest footnote: procenty POA na mapie są zawyżone powyżej ~30% (sektor "45%" trafia w 19%, "85%" w 61%; Brier 0,81) - pokazujemy ranking, nie szanse. Symulator i silnik pisała ta sama rodzina AI; na wodzie te same tabele dryfu.
+   - Blind test, N = 2 (footnote): runda 1 mapa 2,1% obszaru vs ekspert 4,4% vs naiwnie 24,1%; runda 2 37,4% vs 39,9% vs 35,7% (23,2% z `--features all`, ale te funkcje powstały po odsłonięciu rundy 2, więc to nie dowód). Planer sam nie znalazł osoby z rundy 2 w 6 h (brak pamięci przeszukanych sektorów); oba odnalezienia dała decyzja koordynatora.
+   - Validation method: blind "hide and seek" test with a SHA-256 commitment; next: backtest on anonymised past GOPR/TOPR cases.
+   - Demo screen (zawrat) shows #1 vs #20: an illustration on an authored scenario, not a value claim.
 
 9. **Roadmap**
-   - Blind test series (3-5 rounds), then a backtest on anonymised past GOPR/TOPR cases vs plain rings.
+   - Calibrate the POA percentages (today only the ranking is trustworthy); more blind rounds, then a backtest on anonymised past GOPR/TOPR cases vs plain rings.
    - Terrain from GUGiK LiDAR (1 m) instead of the current DEM, for a whole GOPR group region.
    - AML provider when the Polish 112 rollout lands; ISRID licence with dbS Productions.
-   - WOPR water variant (drift model) later.
+   - WOPR water variant: drift model already scored on 600 simulated cases; needs real water incidents.
 
 10. **Team and links**
     - Team, contact.
