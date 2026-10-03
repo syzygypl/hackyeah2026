@@ -14,6 +14,7 @@ Zasada dla autorów silnika: nikt z szukających (ludzie ani AI) nie zagląda do
 - **14:36** - AI Mateusza przyjmuje krytykę w całości. Doprecyzowanie: liczby z backtestu mierzyły stan przed pingiem (Zawrat 19:35), ale stronniczość autorów jest prawdziwa. Od tej chwili wszystkie liczby w pitchu i slajdach są oznaczone "tymczasowe - do czasu testu na ślepo", a do pitchu idzie wynik serii, także porażki.
 - **14:37** - w repo: liczby oznaczone jako tymczasowe, demo kończy się meldunkiem patrolu "ZNALEZIONO", ping Ratunek zostaje tylko jako opcjonalny epilog (commit fc34299).
 - **Później** - AI Denisa powtarza backtest na prawdziwym terenie OSM + DEM dla wszystkich trzech scenariuszy (24a7370, 988ecf4): top 3 w 3/3, średnio 1,73% obszaru wobec 15,2% z samymi pierścieniami. Morskie Oko kończy się teraz śladem od psa i patrolu, nie pingiem (6d71893). Liczby nadal tymczasowe do wyniku testu na ślepo.
+- **Jeszcze później** - backtest rozszerzony do 9 fikcyjnych scenariuszy w 5 rejonach (Tatry, Bieszczady, Karkonosze, Śniardwy, Morzycko, Międzyzdroje): top 3 w 8/9, średnio 2,18% obszaru wobec 20,0%. Uczciwe porażki: Karkonosze (poza top 3, 2,86% wobec 1,8%) i Kasprowy (4,94% wobec 4,2%).
 
 ## Zasady
 
@@ -211,7 +212,7 @@ Po odsłonięciu (lista sędziego):
 
 ## Runda blind-02
 
-Pierwsza runda na poprawionym silniku (aa18405, poprawki z blind-01). Odsłonięcie jeszcze nie nastąpiło: nikt z szukających nie czyta `rescue/blindtest/blind-02*`.
+Pierwsza runda na poprawionym silniku (aa18405, poprawki z blind-01). Odsłonięta (a0476e0).
 
 - **Zobowiązanie (SHA-256):** `4af5d1ccfbe25f9c76429dda75a3c452a93606fd6f3657cbd17250c24d8e92f7`
 - **Sprawa:** Stanisław M. (osoba fikcyjna), 79 lat, wczesna demencja, bez telefonu. Wyszedł z pensjonatu przy Drodze pod Reglami ok. 14:30. Córka zgłasza o 16:40.
@@ -236,7 +237,7 @@ Pierwsza runda na poprawionym silniku (aa18405, poprawki z blind-01). Odsłonię
 | 2 | TOPR B | D7 | planer | nic |
 | 2 | Śmigłowiec | uziemiony po zmroku | - | - |
 | 3 | Pies | D3 | planer | nic |
-| 3 | TOPR A | **D18**, stromy las za Jaskinią Dziura | **odejście od planera** | **ZNALEZIONO o 21:20** |
+| 3 | TOPR A | **D18**, stromy las za Jaskinią Dziura | **odejście od planera** (planer powtarzał D14) | **ZNALEZIONO o 21:20** |
 | 3 | TOPR B | D12, D11 (na zachód od świadka) | **odejście od planera** | nic |
 | 3 | Dron (AI Denisa) | zbocza D13, termowizja nocą | ... | nic |
 
@@ -258,11 +259,42 @@ Uzasadnienie TOPR A w fali 3 (agent-szukający AI Mateusza): czapka leżała na 
 
 ### Odsłonięcie
 
-(po odsłonięciu)
+**AI Marcina, a0476e0.** Źródło: `rescue/blindtest/blind-02-result.md`.
+
+- **Miejsce:** 49.27003, 19.93961 (komórka r33 c25, segment D18).
+- **Sól:** `015f869f614028292cef1826ca988a5a`
+- **Zapieczętowana tabela wykrywalności:** naziemny 0,45, pies 0,6, dron 0,25, śmigłowiec 0,15.
+- **Weryfikacja:** oba hashe zgodne (zobowiązanie i tabela). `python3 rescue/blindtest/reveal.py --round blind-02 --at 49.27003,19.93961 --salt 015f869f614028292cef1826ca988a5a --run rescue/out/blind-02-replay.run.json` -> `commitment OK 4af5d1cc...e92f7`.
+- **Historia chowającego:** poszedł Drogą pod Reglami na zachód, dalej niż zwykle. Skręcił w niebieski szlak do Doliny ku Dziurze, zgubił czapkę przy wejściu. Zszedł ze szlaku w las w górę Potoku ku Dziurze, zaplątał się w młodnik nad potokiem i usiadł zmarznięty ok. 200 m od szlaku. Żywy, wychłodzony, bez telefonu.
+- **Dlaczego taka tabela:** gęsty młodnik, zmierzch i deszcz, osoba skulona pod gałęziami. Termowizja z góry słabo widzi przez korony, pies na świeżym tropie dobrze, tyraliera wolno, ale skutecznie.
+- **Wynik:** ZNALEZIONO o 21:20 w D18 przez patrol A, ok. 6,8 h po wyjściu z pensjonatu. W kolejności czasu było to 13. przeszukanie segmentu. D13 (obok) przeszukany 3 razy i poprawnie pusty.
 
 ### Metryki
 
-(po odsłonięciu): ranga prawdziwego segmentu przed 1. patrolem, procent obszaru do trafienia, porównanie z naiwnym przeszukiwaniem, odległość od szczytu mapy.
+Stan silnika o 17:45, wszystkie wskazówki, przed patrolami:
+
+| Metryka | Wartość |
+|---|---|
+| Znaleziony | tak, 21:20, D18, patrol A |
+| Przeszukanie segmentu, które znalazło | 13. w kolejności czasu |
+| Ranga prawdziwego segmentu D18 | #8 z 20 (same pierścienie: #10) |
+| Procent obszaru do trafienia | 37,4% |
+| Naiwnie od pensjonatu (IPP) | 35,7% |
+| Odległość od szczytu mapy | ok. 1,0 km |
+| Po zdarzeniu "Found" | komórka #3, szczyt 75 m od miejsca |
+
+**"Tym razem sama mapa nie pomogła"** (sędzia): silnik wypadł nie lepiej niż naiwne szukanie od pensjonatu. Top 3 planera AI Denisa o 17:45: D13, D8, D12. D18 nie było w top 3. Nocny przelot drona AI Denisa nad D13 nie został oceniony.
+
+**Rozbieżności nazw i numeracji:** w pliku sędziego zespoły to `gopr-a` i `gopr-b` (w wątku TOPR A i B), a fale są numerowane od przelotu drona o 17:45 jako fali 1, więc nasza "3. fala" to tam fala 4.
+
+### Co z tego wynika
+
+**N = 2, nie liczba do pitchu** (sędzia).
+
+1. Seria po 2 rundach: 2/2 znalezione, oba razy przez decyzję agenta-szukającego AI wbrew planerowi. Silnik sam: runda 1 = 4,1% obszaru (8x lepiej niż naiwnie), runda 2 = 37% (jak naiwnie).
+2. Słabość przy demencji: czapka i świadek ciągną szczyt na szlak i drogę, a nie w "prosto do utknięcia" (las i potok za ostatnim śladem). Kandydat do backlogu: rozkład kierunkowy od ostatniego śladu plus przyciąganie potoku i młodnika dla kategorii demencja.
+3. Planer: POD drona w lesie o zmierzchu 0,72 (za wysoko), proponował śmigłowiec po zmroku (błąd).
+4. Projekt rundy (sędzia): nazwy segmentów od najbliższego obiektu bywały mylące (D13). Od rundy 3 nazwy od środka ciężkości i lista obiektów.
 
 ## Runda blind-03
 
@@ -274,10 +306,10 @@ Uzasadnienie TOPR A w fali 3 (agent-szukający AI Mateusza): czapka leżała na 
 
 ## Podsumowanie serii
 
-*(po odsłonięciu wszystkich rund)*
+Po 2 rundach. Wpis koordynatora do pitchu (tymczasowy do blind-03): "Test na ślepo: 2/2 rundy znalezione w 3. fali, obie dzięki decyzji agenta-szukającego AI wbrew planerowi - w rundzie 2 sama mapa nie pomogła. Każdą lekcję wpisujemy do silnika (14 poprawek)."
 
 | Runda | Znaleziony | Patrole | Ranga przed 1. patrolem | Obszar do znalezienia | Czas vs naiwne | Odległość od szczytu |
 |---|---|---|---|---|---|---|
 | blind-01 | tak (19:35, dron, S12) | 8. przeszukanie segmentu | #5 z 20 | 4,1% (naiwnie 32,3%) | ok. 8x mniej obszaru niż naiwnie | 1,95 km |
-| blind-02 | tak (21:20, TOPR A, D18, fala 3) | (po odsłonięciu) | (po odsłonięciu) | (po odsłonięciu) | (po odsłonięciu) | (po odsłonięciu) |
+| blind-02 | tak (21:20, patrol A, D18, fala 3) | 13. przeszukanie segmentu | #8 z 20 | 37,4% (naiwnie 35,7%) | bez poprawy wobec naiwnego | ok. 1,0 km |
 | blind-03 | | | | | | |

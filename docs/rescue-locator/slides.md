@@ -41,10 +41,12 @@ Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo,
    - New source (AML, RECCO, live drone feed) = one new provider, core untouched.
 
 8. **Value number and how we validate it** (label: "tymczasowe - do czasu testu na ślepo")
-   - Hero: find spot **#1 after fusion vs #19 with Koester rings only**; area to sweep **0.11-0.22% vs 41%** (zawrat, real OSM + DEM terrain).
-   - Backtest: find spot in the **top 3 in 3/3 scenarios**; on average **1.73% of the area vs 15.2%** with rings only (N = 3, real OSM + DEM terrain).
-   - Footnote: N = 3 fictional scenarios we wrote ourselves, all on real OSM + DEM terrain; drone POD 0.6 / 0.75 is an assumption, the worse result counts, and the zawrat result holds for both. In kasprowy fusion ranks higher (#2 vs #5) but not smaller in area (4.94% vs 4.2%). None of the scenarios ends on a GPS ping any more.
-   - Validation: blind "hide and seek" test. AI Marcina hides the person and commits to the spot with SHA-256; we search with the app only; the judge answers each patrol by its POD; the hash is opened at the end. Series of 3-5 rounds, failures shown too.
+   - Hero: find spot **#1 after fusion vs #19 with Koester rings only**; area to sweep **0.11% vs 41%** (zawrat demo screen at 19:45, real OSM + DEM terrain).
+   - Slide line (PL): "Backtest: 9 fikcyjnych scenariuszy w 5 rejonach Polski - miejsce w top 3 w 8/9, średnio 2,2% obszaru zamiast 20%. Test na ślepo: 2/2 rundy znalezione w 3. fali, obie dzięki decyzji agenta-szukającego AI wbrew planerowi - w rundzie 2 sama mapa nie pomogła. Każdą lekcję wpisujemy do silnika (14 poprawek)."
+   - Backtest: find spot in the **top 3 in 8/9 scenarios**; on average **2.18% of the area vs 20.0%** with Koester rings (distance baseline for water cases). N = 9, real OSM + DEM terrain, 5 regions: Tatry, Bieszczady, Karkonosze, Śniardwy, Morzycko, Międzyzdroje.
+   - Footnote: fictional scenarios we wrote ourselves; drone POD 0.6 / 0.75 is an assumption and the worse result counts. Losses shown: Karkonosze misses the top 3 and needs more area than rings (2.86% vs 1.8%); kasprowy needs more area too (4.94% vs 4.2%). None of the scenarios ends on a GPS ping.
+   - Blind test so far: 2/2 found in wave 3, both from the AI searcher overriding the planner. Round 1: true cell in the top 4.1% of the area (naive 32.3%). Round 2: 37.4% vs 35.7% naive, the map alone did not help.
+   - Validation: blind "hide and seek" test. AI Marcina hides the person and commits to the spot with SHA-256; we search with the app only; the judge answers each patrol by its POD; the hash is opened at the end. Series of 3-5 rounds, failures shown too. Label stays "tymczasowe" until blind-03.
    - Planner, said honestly: ETAs, safety gating, instant re-plan; 20% find chance in 1 h 46 min vs 2 h 00 min, not a big POS gain.
 
 9. **Roadmap**

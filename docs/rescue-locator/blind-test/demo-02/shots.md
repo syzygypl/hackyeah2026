@@ -1,6 +1,6 @@
 # Demo 02: lista ujęć
 
-Do slajdów i wideo. Podpisy po polsku. Każda liczba na ekranie z podpisem "test na ślepo blind-02". Runda zakończona (ZNALEZIONO 21:20), odsłonięcie jeszcze nie nastąpiło.
+Do slajdów i wideo. Podpisy po polsku. Każda liczba na ekranie z podpisem "test na ślepo blind-02". Runda odsłonięta (a0476e0). Przy liczbach: "N = 2, nie wynik serii".
 
 | # | Ujęcie | Ekran | Podpis (PL) |
 |---|---|---|---|
@@ -12,4 +12,4 @@ Do slajdów i wideo. Podpisy po polsku. Każda liczba na ekranie z podpisem "tes
 | 6 | Przeliczenie mapy po "nic" | kierownik, mapa przed / po | "Brak wyniku to też informacja." |
 | 7 | ZNALEZIONO: TOPR A, D18, 21:20 | widok patrolu / kierownik | "Demencja: prosto, aż utknie. Trzecia fala: znaleziony." |
 | 7b | Widok 3D terenu z mapą prawdopodobieństwa (AI Andrzeja, `rescue/web/3d/`, offline, pierwsza wersja ok. 16:30; ? do sprawdzenia, czy gotowy) | widok 3D | "Ten sam teren w 3D: gdzie szukaliśmy i gdzie zostało prawdopodobieństwo." |
-| 8 | Odsłonięcie: sól, hash zgodny, metryki | terminal `reveal.py` | (po odsłonięciu) |
+| 8 | Odsłonięcie: oba hashe OK, miejsce w młodniku nad potokiem, metryki | terminal `reveal.py` + kierownik | "Hash się zgadza. Tym razem sama mapa nie pomogła: 37% obszaru, tyle co szukanie od pensjonatu. Znalazło rozumowanie agenta." |
