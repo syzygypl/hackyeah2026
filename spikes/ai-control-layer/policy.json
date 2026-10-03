@@ -77,7 +77,8 @@
         "prompt_action": "redact",
         "resolve_tools": ["transfer_funds"]
       },
-      "output_scope": "flagged_tools"
+      "output_scope": "flagged_tools",
+      "document_action": "redact"
     },
     "attack_signatures": {
       "_doc": "Deterministic, externally managed feed of historical AI-infrastructure exploits (file path or http(s) URL, reloaded on change). Calls matching a signature at or above min_severity are blocked.",
@@ -86,7 +87,7 @@
       "min_severity": "medium"
     },
     "semantic": {
-      "_doc": "Semantic (AI-based) controls, hybrid and two-tier. A heuristic injection scorer always runs (microseconds). Tier 1 prefilter: small local guard model on every prompt, tool call and tool output. Tier 2 judge: bigger guard model on high_risk_tools or when the prefilter says Controversial. score = max(heuristic, model scores); verdict scores: Unsafe / judge 'yes' = 1.0 (llama-guard: P(unsafe) from logprobs), Controversial = 0.5, Safe = 0. threshold = adherence level: 0.6 balanced (Controversial passes), 0.5 strict. backend: auto (tiers whose model is not pulled are skipped and flagged) | ollama (missing model = failure, fail_mode applies) | heuristic (no models). fail_mode open = continue on heuristic + audit flag semantic=unavailable; closed = prefilter denies, judge requires human approval. on_flag for tool calls: require_approval | deny; a flagged tool output taints the session (on_detect: taint | block). Only models in models.allowed are used; pinned_digests refuses a model whose Ollama digest changed (supply chain). A model that times out or errors goes on cooldown_s circuit-breaker cooldown and the next fallback model is tried in the same call. Cold models are warmed at startup and in the background (up to warmup_timeout_ms); the request path never waits longer than the tier timeout; keep_alive keeps models loaded. Model tag + digest of every verdict go into the audit record. Verdicts are cached only for a tier's primary model, for cache_ttl_s (0 = off); fallback-model verdicts are never cached; the cache is cleared on every policy change and by POST /admin/cache/clear. Model time counts against budgets.max_compute_ms.",
+      "_doc": "Semantic (AI-based) controls, hybrid and two-tier. A heuristic injection scorer always runs (microseconds). Tier 1 prefilter: small local guard model on every prompt, tool call and tool output. Tier 2 judge: bigger guard model on high_risk_tools or when the prefilter says Controversial. score = max(heuristic, model scores); verdict scores: Unsafe / judge 'yes' = 1.0 (llama-guard: P(unsafe) from logprobs), Controversial = 0.5, Safe = 0. threshold = adherence level: 0.6 balanced (Controversial passes), 0.5 strict. backend: auto (tiers whose model is not pulled are skipped and flagged) | ollama (missing model = failure, fail_mode applies) | heuristic (no models). fail_mode open = continue on heuristic + audit flag semantic=unavailable; closed = prefilter denies, judge requires human approval. on_flag for tool calls: require_approval | deny; a flagged tool output taints the session (on_detect: taint | block). User prompts: prompt_on_detect block | taint; documents (check_prompt direction=document) are always redacted + tainted, never silently passed. An injection hit always taints the session, even when PII in the same text would block it. Only models in models.allowed are used; pinned_digests refuses a model whose Ollama digest changed (supply chain). A model that times out or errors goes on cooldown_s circuit-breaker cooldown and the next fallback model is tried in the same call. Cold models are warmed at startup and in the background (up to warmup_timeout_ms); the request path never waits longer than the tier timeout; keep_alive keeps models loaded. Model tag + digest of every verdict go into the audit record. Verdicts are cached only for a tier's primary model, for cache_ttl_s (0 = off); fallback-model verdicts are never cached; the cache is cleared on every policy change and by POST /admin/cache/clear. Model time counts against budgets.max_compute_ms.",
       "enabled": true,
       "backend": "auto",
       "ollama_url": "http://localhost:11434",
@@ -97,6 +98,7 @@
       "threshold": 0.6,
       "on_flag": "require_approval",
       "on_detect": "taint",
+      "prompt_on_detect": "block",
       "taint_escalates": ["high", "critical"],
       "scan_tool_args": true,
       "mode": "tiered",
