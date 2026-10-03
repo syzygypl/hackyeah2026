@@ -11,7 +11,7 @@
 <link rel="preload" href="../../app/fonts/barlow-400-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../../app/fonts/barlow-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="../../app/fonts/barlow-700-latin-ext.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="../vendor/maplibre-gl.css">
+<link rel="stylesheet" href="../vendor/maplibre-gl.css" media="print" onload="this.media='all'"><!-- the map opens only after "Widziałem": not render-blocking -->
 <link rel="stylesheet" href="../../app/tokens.css">
 <style>
   /* Public "Widziałem" page (docs/rescue-locator/city-extension.md, step 4): reached by QR / link from a city alert.
@@ -125,7 +125,9 @@
 
 <script type="module">
   // maplibre (300 KB) loads in the background: the missing-person card renders without waiting for it, the map needs it only after "Widziałem"
-  const libP = Promise.all([import("../vendor/maplibre-gl.mjs"), import("../basemap/basemap.js")]);
+  // started after the page's load event (fonts and the card first on a weak link) or by the tap, whichever comes first
+  const libs = () => libs.p ||= Promise.all([import("../vendor/maplibre-gl.mjs"), import("../basemap/basemap.js")]);
+  if (document.readyState === "complete") libs(); else addEventListener("load", () => libs(), { once: true });
   let maplibregl = null;
 
   const qs = new URLSearchParams(location.search);
@@ -169,7 +171,7 @@
 
   async function initMap() {
     if (map) return;
-    const [ml, { offlineStyle, loadBasemap, regionFor }] = await libP; maplibregl = ml;
+    const [ml, { offlineStyle, loadBasemap, regionFor }] = await libs(); maplibregl = ml;
     if (map) return;
     const bb = sc?.bbox || { south: 50.045, west: 19.995, north: 50.092, east: 20.075 };
     const region = regionFor(bb);
