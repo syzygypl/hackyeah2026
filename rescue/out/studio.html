@@ -42,6 +42,43 @@ label.f{display:block;margin:6px 0 2px;color:var(--ink2);font-size:12px}
 #pick{position:absolute;right:10px;top:10px;z-index:5;background:var(--accent);color:#062126;font-weight:700;padding:5px 10px;border-radius:8px;display:none}
 .mute{color:var(--mute)}
 #slider{width:100%}
+
+/* drag and drop */
+.dnd-h{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:10px 0 6px}
+#palette,#tokens{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.card{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel2);cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;font-size:13px;line-height:1.2}
+.card:hover{border-color:var(--accent)}
+.card.armed{outline:2px solid var(--accent);background:#173238}
+.card .dot{width:12px;height:12px;border-radius:50%;flex:none;border:1.5px solid #000}
+.card.off{opacity:.42;cursor:not-allowed;border-style:dashed}
+.card.busy{opacity:.55;cursor:default}
+.card .sub{display:block;color:var(--mute);font-size:11px}
+body.dragging,body.dragging *{cursor:grabbing!important}
+#ghost{position:fixed;z-index:50;pointer-events:none;transform:translate(-50%,-120%);background:var(--accent);color:#062126;font-weight:700;padding:4px 10px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.5);display:none;white-space:nowrap}
+#map.drop-ok::after{content:"";position:absolute;inset:0;border:3px dashed var(--accent);pointer-events:none;z-index:4;border-radius:4px}
+#map.armed-map{cursor:crosshair}
+#hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);z-index:5;background:rgba(14,19,23,.9);border:1px solid var(--line);border-radius:18px;padding:5px 14px;font-size:13px;color:var(--ink2);white-space:nowrap;max-width:95%;overflow:hidden;text-overflow:ellipsis}
+#hint b{color:var(--accent)}
+.pop{position:absolute;z-index:8;background:var(--panel);border:1px solid var(--accent);border-radius:10px;padding:8px 10px;width:230px;box-shadow:0 6px 20px rgba(0,0,0,.6);font-size:12px}
+.pop h3{margin:0 0 4px;font-size:13px}
+.pop label{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:3px 0;color:var(--ink2)}
+.pop input,.pop select{width:110px}
+.pop input[type=checkbox]{width:auto}
+.pop .row{margin-top:6px;justify-content:flex-end}
+.pin{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #000;cursor:grab;box-shadow:0 2px 6px rgba(0,0,0,.5);touch-action:none}
+.pin span{display:block;transform:rotate(45deg);text-align:center;font:700 11px/18px sans-serif;color:#000}
+.pin.future{opacity:.35}
+.tok{background:rgba(14,19,23,.95);border:2px solid var(--warn);border-radius:10px;padding:5px 7px;font-size:12px;color:var(--ink);min-width:150px;text-align:center}
+.tok b{display:block}
+.tok .row{justify-content:center;margin-top:4px}
+.tok button{padding:6px 12px;font-weight:700;font-size:13px}
+.tok button.nic{background:#2b3741}
+.tok button.found{background:var(--ok);color:#000;border-color:var(--ok)}
+.tok button.x{padding:2px 7px;font-size:11px}
+.ev{touch-action:pan-x}
+.ev.drop-before{box-shadow:inset 4px 0 0 var(--accent)}
+.ev.drop-after{box-shadow:inset -4px 0 0 var(--accent)}
+.ev.dragsrc{opacity:.4}
 @media (max-width:900px){#app{grid-template-columns:1fr;grid-template-rows:auto 50vh auto auto auto;height:auto}header,#bottom{grid-column:1}}
 </style>
 </head>
@@ -52,12 +89,17 @@ label.f{display:block;margin:6px 0 2px;color:var(--ink2);font-size:12px}
   <span class="mute">Kategoria</span><select id="ncat"></select>
   <button id="newZ">Nowa historia: Zawrat</button>
   <button id="newPick">Nowa historia: wskaż IPP na mapie</button>
+  <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button>
   <span style="flex:1"></span>
   <input id="sname" placeholder="nazwa-historii" size="16"><button id="save">Zapisz scenariusz</button>
   <label id="pinbox" style="display:none">PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
   <span id="status" class="mute"></span>
 </header>
 <div id="left">
+  <div class="dnd-h">Dowody - przeciągnij na mapę</div>
+  <div id="palette"></div>
+  <div class="dnd-h">Zespoły - przeciągnij na sektor</div>
+  <div id="tokens"></div>
   <h2>Opowiedz historię</h2>
   <textarea id="narr" placeholder="np. Ostatnio widziany o 12:10 w schronisku w Dolinie Pięciu Stawów. Planował wejść na Zawrat. O 18:05 operator: logowanie w rejonie Koziego Wierchu, promień 1,2 km. O 19:20 patrol przeszukał S6, nic."></textarea>
   <div class="row"><button class="primary" id="narrBtn">Zamień na zdarzenia</button><span id="narrInfo" class="help"></span></div>
@@ -67,7 +109,7 @@ label.f{display:block;margin:6px 0 2px;color:var(--ink2);font-size:12px}
   <form id="form"></form>
   <div class="row" style="margin-top:8px"><button class="primary" id="add">Dodaj</button><span id="addInfo" class="note"></span></div>
 </div>
-<div id="map"><div id="toast"></div><div id="pick">Kliknij mapę: IPP nowej historii</div><div id="terrain"></div></div>
+<div id="map"><div id="toast"></div><div id="pick">Kliknij mapę: IPP nowej historii</div><div id="terrain"></div><div id="hint">Przeciągnij <b>dowód</b> na mapę, przeciągnij <b>zespół</b> na sektor. Pinezki można przesuwać.</div></div><div id="ghost"></div>
 <div id="right">
   <h2>Gdzie szukać najpierw</h2>
   <div class="box"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
@@ -133,8 +175,9 @@ const COL = { rings: "#ffffff", sector: "#b07cff", point: "#3ee08f", route: "#f2
 
 map.on("click", async (e) => {
   const ll = [+e.lngLat.lat.toFixed(5), +e.lngLat.lng.toFixed(5)];
+  if (armed || suppressClick) return;   // handled by the DOM click below (works even when the map canvas is not painting)
   if (picking) {
-    picking = false; $("pick").style.display = "none";
+    picking = false; $("pick").style.display = "none"; teamOps = [];
     await run(() => api("/story/new", { ipp: ll, category: $("ncat").value, startClock: "17:40" }), "Nowa historia od IPP " + ll.join(", "));
     return;
   }
@@ -172,7 +215,7 @@ function formValues() {
 }
 
 // ---------- render
-function render() {
+let render = function () {
   if (!D || !D.steps) { $("status").textContent = D && D.error ? "błąd: " + D.error : ""; return; }
   const S = D.steps[step - 1], b = D.bbox;
   if (mapReady) renderMap(S, b);
@@ -237,6 +280,7 @@ function renderPanels(S) {
 }
 $("slider").oninput = () => { step = +$("slider").value; render(); };
 $("events").onclick = async (e) => {
+  if (suppressClick) return;
   const b = e.target.closest("button"), card = e.target.closest(".ev"); if (!card) return;
   if (b) { await run(() => api("/story/edit", { id: card.dataset.id, op: b.dataset.op }), b.dataset.op === "delete" ? "Usunięto zdarzenie" : "Zamieniono kolejność (czas)"); return; }
 };
@@ -267,7 +311,7 @@ $("narrBtn").onclick = async () => {
   $("narrBtn").disabled = false;
   if (d && d.narrative) { const n = d.narrative; $("narrInfo").textContent = `${n.items.length} zdarzeń · ${n.parsedBy}${n.note ? " · " + n.note : ""}`; }
 };
-$("newZ").onclick = () => run(() => api("/story/new", { template: "zawrat", category: $("ncat").value, startClock: "17:40" }), "Nowa historia: Zawrat");
+$("newZ").onclick = () => { teamOps = []; return run(() => api("/story/new", { template: "zawrat", category: $("ncat").value, startClock: "17:40" }), "Nowa historia: Zawrat"); };
 $("newPick").onclick = () => { picking = true; $("pick").style.display = "block"; toast("Kliknij mapę, żeby wskazać IPP (poza rejonem Zawratu: teren płaski)"); };
 $("save").onclick = async () => {
   try { const r = await api("/story/save", { name: $("sname").value || "studio-story" });
@@ -276,6 +320,225 @@ $("save").onclick = async () => {
   } catch (e) { toast(String(e.message || e), 4000); }
 };
 
+// ---------- drag and drop (pointer events: mouse + touch; every drag also works as click card -> click map)
+const CARDS = [
+  { key: "cell", provider: "Cell112Fix", label: "Lokalizacja 112 / BTS", color: "#b07cff", r: 1500, pin: "112" },
+  { key: "witness", provider: "Clue", label: "Świadek", color: "#5ce1e6", r: 400, title: "Świadek: widział osobę idącą w górę", pin: "Ś" },
+  { key: "car", provider: "TrailheadCar", label: "Auto na parkingu", color: "#cccccc", r: 450, pin: "A" },
+  { key: "ping", provider: "RatunekPing", label: "Ping Ratunek", color: "#3ee08f", r: 25, pin: "R" },
+  { key: "clue", provider: "Clue", label: "Ślad (przedmiot)", color: "#f2b134", r: 500, title: "Rękawiczka przy szlaku", pin: "!" },
+  { key: "found", provider: "Found", label: "Znaleziono", color: "#ff6b5a", r: 30, title: "ZNALEZIONO: patrol, osoba przytomna", pin: "Z" },
+  { key: "weather", provider: "WeatherConditions", label: "Pogoda", color: "#8fb3ff", weather: true },
+  { key: "searched", provider: "SegmentSearched", label: "Patrol przeszukał, nic", color: "#8797a4", seg: true, pod: 0.7 },
+  { key: "drone", provider: "DronePassEmpty", label: "Dron przeszukał, nic", color: "#8797a4", seg: true, pod: 0.6 },
+];
+const PIN_OF = { Cell112Fix: ["112", "#b07cff"], TrailheadCar: ["A", "#cccccc"], RatunekPing: ["R", "#3ee08f"], Clue: ["!", "#f2b134"], Found: ["Z", "#ff6b5a"], KoesterRings: ["IPP", "#ffffff"] };
+const POD_DEF = { ground: 0.6, dog: 0.7, drone: 0.6, heli: 0.5 };
+let armed = null;            // {kind:"module", card} | {kind:"team", res} while a card is selected for click-to-place
+let teamOps = [];            // client-side patrol assignments: {res, segId, segName, at, ll:[lat,lon], pod, sweep}
+let pinMarkers = [], tokMarkers = [], pop = null, suppressClick = false;
+
+const addMin = (t, m) => { const [h, mm] = String(t || "17:40").split(":").map(Number); const x = ((h * 60 + mm + m) % 1440 + 1440) % 1440; return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0"); };
+const startClock = () => (D && D.story && D.story.base && D.story.base.startClock) || "17:40";
+const rel = (t) => { const [a, b] = String(t).split(":").map(Number), [c, d] = startClock().split(":").map(Number); let x = a * 60 + b - c * 60 - d; return x < -720 ? x + 1440 : x; };
+const curStep = () => D && D.steps ? D.steps[step - 1] : null;
+const curClock = () => (curStep() || {}).t || startClock();
+function inPoly(pt, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
+function segAt(lng, lat) { const S = curStep(); return S ? S.segments.find((s) => inPoly([lng, lat], s.polygon)) : null; }
+function mapLL(x, y) { const r = $("map").getBoundingClientRect(); if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null; const ll = map.unproject([x - r.left, y - r.top]); return { lng: ll.lng, lat: ll.lat, px: [x - r.left, y - r.top] }; }
+function hint(html) { $("hint").innerHTML = html || "Przeciągnij <b>dowód</b> na mapę, przeciągnij <b>zespół</b> na sektor. Pinezki można przesuwać."; }
+
+// generic pointer drag: start after 6 px, ghost follows the pointer, onMove/onDrop get client x/y
+function draggable(el, label, onDrop, onMove) {
+  el.addEventListener("pointerdown", (e) => {
+    if (e.button > 0 || e.target.closest("button,input,select")) return;
+    const sx = e.clientX, sy = e.clientY; let on = false;
+    const mv = (ev) => {
+      if (!on && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 6) return;
+      if (!on) { on = true; document.body.classList.add("dragging"); $("ghost").textContent = label(); $("ghost").style.display = "block"; el.classList.add("dragsrc"); }
+      $("ghost").style.left = ev.clientX + "px"; $("ghost").style.top = ev.clientY + "px";
+      $("map").classList.toggle("drop-ok", !!mapLL(ev.clientX, ev.clientY) && !onMove);
+      if (onMove) onMove(ev.clientX, ev.clientY);
+      ev.preventDefault();
+    };
+    const up = (ev) => {
+      removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+      if (!on) return;
+      suppressClick = true; setTimeout(() => suppressClick = false, 50);
+      document.body.classList.remove("dragging"); $("ghost").style.display = "none"; $("map").classList.remove("drop-ok"); el.classList.remove("dragsrc");
+      if (ev.type === "pointerup") onDrop(ev.clientX, ev.clientY);
+    };
+    addEventListener("pointermove", mv, { passive: false }); addEventListener("pointerup", up); addEventListener("pointercancel", up);
+  });
+}
+function arm(a) {
+  armed = a; document.querySelectorAll(".card.armed").forEach((c) => c.classList.remove("armed"));
+  $("map").classList.toggle("armed-map", !!a);
+  if (!a) return hint();
+  document.querySelector(`.card[data-k="${a.kind === "team" ? "t:" + a.res.id : a.card.key}"]`)?.classList.add("armed");
+  hint(a.kind === "team" ? `Kliknij <b>sektor</b> na mapie dla: ${esc(a.res.name)} (Esc - anuluj)` : `Kliknij mapę, żeby dodać: <b>${esc(a.card.label)}</b> (Esc - anuluj)`);
+}
+
+// palette
+function renderPalette() {
+  const have = new Set(MODS.map((m) => m.name));
+  $("palette").innerHTML = CARDS.filter((c) => have.has(c.provider)).map((c) => `<div class="card" data-k="${c.key}" tabindex="0" role="button" title="Przeciągnij na mapę albo kliknij, potem kliknij mapę"><span class="dot" style="background:${c.color}"></span>${esc(c.label)}</div>`).join("");
+  for (const el of $("palette").children) {
+    const c = CARDS.find((x) => x.key === el.dataset.k);
+    draggable(el, () => c.label, (x, y) => { const ll = mapLL(x, y); if (ll) openForm(c, ll); });
+    el.onclick = () => { if (!suppressClick) arm(armed && armed.card === c ? null : { kind: "module", card: c }); };
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.onclick(); } };
+  }
+}
+// team tokens from the current step's resources
+function renderTokens() {
+  const S = curStep(); if (!S) return;
+  const busy = new Set(teamOps.map((o) => o.res.id));
+  $("tokens").innerHTML = (S.resources || []).map((r) => { const off = !r.available, b = busy.has(r.id);
+    return `<div class="card ${off ? "off" : ""} ${b ? "busy" : ""}" data-k="t:${esc(r.id)}" tabindex="0" role="button" title="${esc(off ? "Niedostępny: " + r.reason : b ? "Zespół już w akcji na mapie" : "Przeciągnij na sektor albo kliknij, potem kliknij sektor")}"><span class="dot" style="background:${off ? "#555" : "#f2b134"}"></span><span>${esc(r.name)}<span class="sub">${esc(off ? r.reason : b ? "w akcji" : "gotowy, " + S.t)}</span></span></div>`; }).join("") || `<div class="help">Brak zespołów.</div>`;
+  for (const el of $("tokens").children) {
+    const r = (S.resources || []).find((x) => "t:" + x.id === el.dataset.k); if (!r || !r.available || busy.has(r.id)) continue;
+    draggable(el, () => r.name, (x, y) => { const ll = mapLL(x, y); if (ll) dropTeam(r, ll); });
+    el.onclick = () => { if (!suppressClick) arm(armed && armed.res && armed.res.id === r.id ? null : { kind: "team", res: r }); };
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); el.onclick(); } };
+  }
+}
+
+// inline form next to the drop point
+function closePop() { if (pop) { pop.el.remove(); pop.m && pop.m.remove(); pop = null; } }
+function openForm(c, ll) {
+  closePop(); arm(null);
+  const seg = segAt(ll.lng, ll.lat), S = curStep();
+  if (c.seg && !seg) return toast("Upuść na sektor (segment) mapy");
+  const segOpts = (S ? S.segments : []).map((s) => `<option value="${esc(s.id)}" ${seg && s.id === seg.id ? "selected" : ""}>${esc(s.id)} ${esc(s.name)}</option>`).join("");
+  const at = addMin(curClock(), 5);
+  let f = `<h3>${esc(c.label)}</h3><label>Godzina <input type="time" name="at" value="${at}"></label>`;
+  if (c.r) f += `<label>Promień m <input name="radiusM" inputmode="numeric" value="${c.r}"></label>`;
+  if (c.title) f += `<label>Opis <input name="title" value="${esc(c.title)}"></label>`;
+  if (c.seg) f += `<label>Sektor <select name="seg">${segOpts}</select></label><label>POD <input name="pod" inputmode="decimal" value="${c.pod}"></label>`;
+  if (c.weather) f += `<label>Widoczność m <input name="visibilityM" value="80"></label><label>Wiatr m/s <input name="windMs" value="12"></label><label>Temp. °C <input name="tempC" value="1"></label><label>Ciemno <input type="checkbox" name="dark" checked></label>`;
+  f += `<div class="row"><button type="button" class="cancel">Anuluj</button><button class="primary" type="submit">Dodaj</button></div>`;
+  const el = document.createElement("form"); el.className = "pop"; el.innerHTML = f;
+  const W = $("map").clientWidth, H = $("map").clientHeight;
+  el.style.left = Math.max(4, Math.min(W - 240, ll.px[0] + 14)) + "px"; el.style.top = Math.max(4, Math.min(H - 240, ll.px[1] - 20)) + "px";
+  $("map").appendChild(el);
+  const m = c.weather ? null : new maplibregl.Marker({ element: pinEl(c.pin || "?", c.color) }).setLngLat([ll.lng, ll.lat]).addTo(map);
+  pop = { el, m };
+  el.querySelector(".cancel").onclick = closePop;
+  el.onkeydown = (e) => { if (e.key === "Escape") closePop(); };
+  el.onsubmit = async (e) => {
+    e.preventDefault();
+    const v = Object.fromEntries([...el.querySelectorAll("input,select")].map((i) => [i.name, i.type === "checkbox" ? i.checked : i.value]));
+    const inp = { provider: c.provider, at: v.at };
+    if (!c.weather && !c.seg) { inp.lat = +ll.lat.toFixed(5); inp.lon = +ll.lng.toFixed(5); }
+    if (v.radiusM) inp.radiusM = v.radiusM;
+    if (v.title) inp.title = v.title;
+    if (c.seg) { inp.segments = [v.seg]; inp.pod = v.pod; }
+    if (c.weather) Object.assign(inp, { visibilityM: v.visibilityM, windMs: v.windMs, tempC: v.tempC, dark: v.dark });
+    closePop();
+    await addInput(inp);
+  };
+  setTimeout(() => el.querySelector("input")?.focus(), 0);
+}
+async function addInput(inp) {
+  const d = await run(() => api("/story/event", { event: inp }));
+  if (d && d.added) { if (!d.added.events.length) toast("Nie dodano: " + (d.added.note || "brak danych")); else toast("Dodano: " + d.added.events.map((e) => e.title).join("; ")); }
+  return d;
+}
+
+// pins for positional story items, draggable -> /story/edit op update
+function pinEl(txt, color, future) { const el = document.createElement("div"); el.className = "pin" + (future ? " future" : ""); el.style.background = color; el.innerHTML = `<span>${esc(txt)}</span>`; return el; }
+function renderPins() {
+  pinMarkers.forEach((m) => m.remove()); pinMarkers = [];
+  const S = curStep(); if (!S || !D.story) return;
+  for (const it of D.story.items) {
+    const ev = it.events[0] || {}, p = ev.point; if (!p || !PIN_OF[it.input.provider]) continue;
+    let [txt, color] = PIN_OF[it.input.provider];
+    if (it.input.provider === "Clue" && /świadek/i.test(ev.title || "")) { txt = "Ś"; color = "#5ce1e6"; }
+    const el = pinEl(txt, color, rel(ev.at) > rel(S.t)); el.title = `${ev.at} ${ev.title || it.input.provider} - przeciągnij, żeby przesunąć`;
+    const m = new maplibregl.Marker({ element: el, anchor: "bottom-left", offset: [-2, 2] }).setLngLat([p[1], p[0]]).addTo(map);
+    // own pointer drag (mouse + touch), MapLibre's marker drag needs map mouse events
+    el.addEventListener("pointerdown", (e) => {
+      if (e.button > 0) return; e.preventDefault(); e.stopPropagation();
+      const r0 = $("map").getBoundingClientRect(), pt0 = map.project(m.getLngLat()), dx = e.clientX - r0.left - pt0.x, dy = e.clientY - r0.top - pt0.y;
+      let moved = false; map.dragPan.disable(); document.body.classList.add("dragging"); $("map").classList.add("drop-ok");
+      const mv = (ev) => { const r = $("map").getBoundingClientRect(); moved = moved || Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) > 4; m.setLngLat(map.unproject([ev.clientX - r.left - dx, ev.clientY - r.top - dy])); ev.preventDefault(); };
+      const up = async () => {
+        removeEventListener("pointermove", mv); removeEventListener("pointerup", up); removeEventListener("pointercancel", up);
+        map.dragPan.enable(); document.body.classList.remove("dragging"); $("map").classList.remove("drop-ok");
+        if (!moved) { m.setLngLat([p[1], p[0]]); return; }
+        const ll = m.getLngLat(), dist = Math.round(new maplibregl.LngLat(p[1], p[0]).distanceTo(ll));
+        await run(() => api("/story/edit", { id: it.id, op: "update", input: { lat: +ll.lat.toFixed(5), lon: +ll.lng.toFixed(5) } }), `Przesunięto: ${ev.title || it.input.provider} o ${dist} m - mapa przeliczona`);
+      };
+      addEventListener("pointermove", mv, { passive: false }); addEventListener("pointerup", up); addEventListener("pointercancel", up);
+    });
+    pinMarkers.push(m);
+  }
+}
+
+// team on a segment: token with "nic" / "ZNALEZIONO"
+function dropTeam(r, ll) {
+  arm(null);
+  const seg = segAt(ll.lng, ll.lat); if (!seg) return toast("Upuść zespół na sektor (segment) mapy");
+  const S = curStep(), plan = (S.assignments || []).find((a) => a.resourceId === r.id && a.segmentId === seg.id);
+  teamOps.push({ res: r, segId: seg.id, segName: seg.name, at: curClock(), ll: [ll.lat, ll.lng], pod: plan ? +plan.pod.toFixed(2) : POD_DEF[r.type] || 0.6,
+                 sweep: plan ? Math.min(120, Math.max(15, Math.round(plan.travelMin + plan.sweepMin))) : 30, planned: !!plan });
+  toast(`${r.name} -> ${seg.id} ${seg.name} (${curClock()})${plan ? ", zgodnie z planem" : ""}`);
+  renderTeams(); renderTokens();
+}
+function renderTeams() {
+  tokMarkers.forEach((m) => m.remove()); tokMarkers = [];
+  teamOps.forEach((o, k) => {
+    const el = document.createElement("div"); el.className = "tok";
+    el.innerHTML = `<b>${esc(o.res.name)}</b>${esc(o.segId)} ${esc(o.segName)} · od ${esc(o.at)} · POD ${Math.round(o.pod * 100)}%<div class="row"><button class="nic">nic</button><button class="found">ZNALEZIONO</button><button class="x" title="Odwołaj zespół">x</button></div>`;
+    el.querySelector(".nic").onclick = async () => {
+      const d = await addInput({ provider: o.res.type === "drone" ? "DronePassEmpty" : "SegmentSearched", at: addMin(o.at, o.sweep), segments: [o.segId], pod: o.pod, title: `${o.res.name}: ${o.segId} przeszukany, nic` });
+      if (d && d.added && d.added.events.length) { teamOps.splice(teamOps.indexOf(o), 1); renderTeams(); renderTokens(); }
+    };
+    el.querySelector(".found").onclick = async () => {
+      const d = await addInput({ provider: "Found", at: addMin(o.at, Math.min(o.sweep, 20)), lat: +o.ll[0].toFixed(5), lon: +o.ll[1].toFixed(5), radiusM: 30, title: `ZNALEZIONO: ${o.res.name} w ${o.segId}` });
+      if (d && d.added && d.added.events.length) { teamOps = []; renderTeams(); renderTokens(); }
+    };
+    el.querySelector(".x").onclick = () => { teamOps.splice(teamOps.indexOf(o), 1); renderTeams(); renderTokens(); };
+    tokMarkers.push(new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat([o.ll[1], o.ll[0]]).addTo(map));
+  });
+}
+
+// event list: drag a card onto another one -> retime before/after it
+let evDrop = null;
+function evTarget(x, y) {
+  document.querySelectorAll(".ev.drop-before,.ev.drop-after").forEach((c) => c.classList.remove("drop-before", "drop-after"));
+  const t = document.elementFromPoint(x, y)?.closest(".ev"); if (!t) return (evDrop = null);
+  const r = t.getBoundingClientRect(), before = x < r.left + r.width / 2;
+  t.classList.add(before ? "drop-before" : "drop-after"); evDrop = { id: t.dataset.id, before };
+}
+function wireEvents() {
+  for (const card of $("events").querySelectorAll(".ev")) {
+    draggable(card, () => card.querySelector(".t").textContent, async () => {
+      document.querySelectorAll(".ev.drop-before,.ev.drop-after").forEach((c) => c.classList.remove("drop-before", "drop-after"));
+      if (!evDrop || evDrop.id === card.dataset.id) return;
+      const tgt = D.story.items.find((i) => i.id === evDrop.id), tAt = tgt && tgt.events[0] && tgt.events[0].at; if (!tAt) return;
+      const at = addMin(tAt, evDrop.before ? -1 : 1);
+      await run(() => api("/story/edit", { id: card.dataset.id, op: "update", input: { at } }), `Nowy czas zdarzenia: ${at} - mapa przeliczona`);
+    }, evTarget);
+  }
+}
+
+map.getCanvasContainer().addEventListener("click", (e) => {
+  if (!armed || suppressClick || e.target.closest(".pin,.tok")) return;
+  const p = mapLL(e.clientX, e.clientY); if (!p) return;
+  const a = armed; suppressClick = true; setTimeout(() => suppressClick = false, 80); if (a.kind === "team") dropTeam(a.res, p); else openForm(a.card, p);
+});
+async function undo() { closePop(); await run(() => api("/story/edit", { op: "undo" }), "Cofnięto ostatnią zmianę"); }
+$("undo").onclick = undo;
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { arm(null); closePop(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.target.closest("input,textarea,select")) { e.preventDefault(); undo(); }
+});
+const _render = render;
+render = function () { _render(); if (D && D.steps) { renderPins(); renderTokens(); renderTeams(); wireEvents(); } };
+window.dnd = { CARDS, openForm, dropTeam, teamOps: () => teamOps, mapLL, segAt };   // debugging / tests
+
 // boot
 try {
   const m = await api("/modules"); MODS = m.modules;
@@ -283,6 +546,7 @@ try {
   $("ncat").innerHTML = m.categories.map((c) => `<option ${c === "hiker" ? "selected" : ""}>${c}</option>`).join("");
   $("mod").onchange = renderForm;
   $("mod").value = "Cell112Fix";
+  renderPalette();
   renderForm();
   await load();
 } catch (e) { toast("Serwer studio niedostępny: swift run rescue-studio (" + (e.message || e) + ")", 8000); }
