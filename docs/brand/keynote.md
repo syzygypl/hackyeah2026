@@ -2,7 +2,7 @@
 
 Refreshed 2026-10-03 ~12:45 with the demo Mac verification (docs/research/demo-mac-test.md, docs/summary-1230.md). Builds on `docs/submission/pitch-script.md` (timing, fallbacks, Q&A) and `deck-outline.md` (10-slide frame). This file holds only the words, the slide lines and the notes. Language: English (GS judges). Numbers: fact sheet in `brand.md` §5. Product names come from `brand.md` §0: on a rename, swap "Airlock" and "Rój" everywhere in this file and nothing else.
 
-Status deck (12 slides, seed of the final 10): https://claude.ai/artifact/SRwnPmKfx3BjUWh1b5TymS
+Status deck (10 slides by default, 12 with the live-pitch slides): https://claude.ai/artifact/SRwnPmKfx3BjUWh1b5TymS
 
 ## Script (about 430 spoken words)
 
@@ -44,7 +44,7 @@ Status deck (12 slides, seed of the final 10): https://claude.ai/artifact/SRwnPm
 | 9 | Scale | Stateless checks today; shared store and model pool are planned. | Implementability |
 | 10 | Close | Your agents act. Airlock decides. Repo, 3 commands. | - |
 
-Deck variants: the artifact shows the 10-slide version by default (consensus folded into the robustness slide, Condorcet as a footnote). The live pitch unhides 2 slides (consensus, Condorcet), 12 in total. For the final GS PDF, the team, decision and next slides get swapped for this table's slides 8-10; Rój, math and team seed the open AI deck.
+Deck variants: the artifact shows the 10-slide version by default (consensus folded into the robustness slide, Condorcet as a footnote). The live pitch unhides 2 slides (consensus, Condorcet), 12 in total. For the final GS PDF, the team, decision and next slides get swapped for this table's slides 8-10; Rój and math slides would seed a separate open-AI deck only under options B or C (see the options slide); under option A, Rój appears only as guard consensus inside the GS pitch.
 
 ## Speaker notes
 
@@ -63,6 +63,6 @@ Deck variants: the artifact shows the 10-slide version by default (consensus fol
 - If the live agent stalls: switch to `--scripted`. Same gateway, say so.
 - Pause after every hero number.
 
-## Rój variant (open AI entry, pending the 13:00 decision)
+## Rój variant (only if the humans pick option B or C at 13:00)
 
 Frame: Rój extracts and quotes, it doesn't advise. On screen and in the UI: "To nie jest porada prawna ani podatkowa." Hook: an official letter, one deadline. Two model families (qwen3:4b, gemma3:4b) read it. If they agree and the quote is verbatim in the letter: green. If they disagree: "Rozstrzygnięte - sprawdź" or "nie wiem, sprawdź". The API arbiter stays off for real letters (names and health details aren't redacted). Hidden text is stripped in code before any model reads it. Math slide: three independent 90% voters make 2.8% errors, five make 0.86% (theory, Condorcet; correlation sets a floor, which is why two families). Bridge: Airlock already uses the same rule for its own guards: agreement passes, disagreement is settled by risk. Per-letter time of 4-8 s is an estimate until measured.
