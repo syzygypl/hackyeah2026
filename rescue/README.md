@@ -226,6 +226,28 @@ Append-only JSON array written by `rescue-field serve` (POST /report), read by `
 ```
 <!-- END field-reports -->
 
+## Engine changes after blind-01 (before/after)
+
+Measured with `python3 rescue/tools/eval_engine.py`. It uses the referee's metrics on every scenario with a find spot, at the moment all clues are in, before the first search report. Running blind rounds (blind-02) are never evaluated. No parameter was tuned to a revealed find spot; values are round and physically motivated.
+
+| Item | What | Effect (blind-01 replay at 19:00, others where changed) |
+|---|---|---|
+| 9 | Times after midnight: plain HH:mm more than 12 h before `startClock` = next day; `"+1 02:10"` or ISO accepted; last contact never rolls forward; `dayOffset` per step; `scenarios/night-test.json` | bug fix, order and team readiness correct across midnight |
+| 10 | `Found` event (or a Clue with `"found": true` / "ZNALEZIONO" in the title): POA collapses on the spot, planner stops ("akcja zamknięta") | find cell rank 83 -> 1 |
+| 8 | Coverage check + auto-expand the grid to cover case evidence + 500 m (`value.coverage`, banner when > 5% outside, `"fixedBbox": true` to opt out; slope grid remapped). Idea: AI Michała | BTS 17.5% outside -> 0%; S12 8.3% -> 8.9%, cell 147 -> 146 (not the main problem) |
+| 1 | Last known point: each newer precise sighting (Clue, radius <= 500 m, `seenAt` or "HH:mm" in the title) moves the Koester rings 70/30 sighting/IPP | S12 #5 -> #2, peak 1951 -> 1225 m from the truth; cell 146 -> 182 (weight concentrates at the witness) |
+| 2 | Travel corridor along trails (Dijkstra on the trail graph) from the last known point / IPP to the BTS sector, 250 m buffer, half the weight of a told plan | cell 182 -> 99 (0.99 km² to sweep, baseline 1.47); zawrat: peak 1447 -> 147 m from the truth at the find moment |
+| 7 | Lost trail in fog: off-trail cells going away from the ridge near passes and forks | made all 3 scenarios slightly worse (blind-01 99 -> 117 cells) -> **opt-in only** (`"lostTrail": true`) |
+| 5, 6 | Planner memory: team state from assignments and team-named reports (re-task while walking in, lock while sweeping, never double-assign); diminishing returns (rate x (1 - 0.15 cumPOD), x 0.85 same resource type again) | map unchanged by design; plan backtest blind-01 first sweep of the true cell 127 -> 145 min, p(4 h) 0.47 unchanged |
+| 3 | Vehicle legs: teams with `vehicleFrom` drive the access road (terrain `roads`, built-in Palenica - Morskie Oko) and walk in | no scenario sets `vehicleFrom` yet; test: Zakopane patrol to S5 269 -> 117 min |
+| 4 | "Dlaczego ten segment": evidence that raised/lowered the segment (pp, layer on/off) and the runner-up team | explanation only |
+
+Net on blind-01 at 19:00: S12 **#5 -> #2** (8.3% -> 25.6%), true cell 147 -> **99** (1.47 -> 0.99 km² to sweep), map peak 1.95 -> 1.23 km from the find. zawrat, kasprowy and morskie-oko keep their ranks (zawrat #1, morskie-oko #1, kasprowy #2). One revealed round is not a benchmark.
+
+Planner caveat (plan backtest, from the clues moment): in zawrat the "smart" plan first sweeps the true cell after 286 min vs 207 min for naive "biggest POA first". The true segment is only #5 at 18:30 and its sweep is a slow rope job. This is open work, not hidden.
+
+New run.json fields (all additive, `validate_run.py` passes): `steps[].dayOffset`, `steps[].resources[].busyUntil/arriveAt/position/currentSegment`, `steps[].segmentHistory`, `steps[].assignments[].why/whyLayers`, `value.coverage`, `value.find*`, `value.truthPlanned[Clues]/truthNaive[Clues]` (`firstSweepMin`, `p2h`, `p4h`, `sweeps`). New scenario fields: `events[].seenAt`, `events[].epilogue`, `resources[].vehicleFrom`, `terrain.roads`, `fixedBbox`, `lostTrail`, `ipp.seenAt`. New providers: `Found`, `LostTrail` (opt-in); corridor and last-known-point layers come from `Cell112Fix` / `Clue`.
+
 ## Story Studio (compose a new incident live)
 
 ```sh
