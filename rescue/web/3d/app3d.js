@@ -9,6 +9,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { colorFor, gradientCSS, STOPS } from '../../app/scale.js'; // shared heat scale (decision S2), same as 2D
 
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
@@ -110,6 +111,11 @@ function decimate(D, k) {
 const inlineRun = (() => { if (!Q.has('runInline')) return null; try { return JSON.parse(sessionStorage.getItem('rescue3d-run')); } catch { return null; } })();
 if (Q.get('embed') === '1' || Q.get('embed') === 'bare') document.body.classList.add('embed');
 if (Q.get('embed') === 'bare') document.body.classList.add('embed-bare');
+if (document.body.classList.contains('embed')) {
+  // decision S1: embedded views use the shell's tokens (dark operational theme, light via ?theme=light)
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../../app/tokens.css'; document.head.appendChild(l);
+  if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.dataset.theme = Q.get('theme');
+}
 let R, SCN, TER, DEM, REV;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
@@ -346,13 +352,9 @@ function heatCanvasGrid(p) {
   if (mx - mn < 1e-12) return null; // uniform (replay without engine output): no heat
   const small = document.createElement('canvas'); small.width = R.cols; small.height = R.rows;
   const g = small.getContext('2d'), img = g.createImageData(R.cols, R.rows);
-  // colour by "times the average cell": average or less = no tint, 10x average = full colour.
-  // Same scale at every step, so a flat prior stays clear and a sharp peak stands out.
+  // shared scale (rescue/app/scale.js): colour by "times the average cell", stops 0.5x/1x/2x/5x/10x/25x+, same as 2D
   const N = p.length;
-  for (let i = 0; i < N; i++) {
-    const v = clamp(Math.log(Math.max(p[i] * N, 1e-9)) / Math.log(10), 0, 1), [r, gg, b] = lerpStops(RAMP, v);
-    img.data.set([r, gg, b, 255 * clamp(v * 0.95, 0, 0.75)], i * 4);
-  }
+  for (let i = 0; i < N; i++) { const [r, gg, b, a] = colorFor(p[i], N); img.data.set([r, gg, b, Math.round(a * 255)], i * 4); }
   g.putImageData(img, 0, 0);
   const mid = document.createElement('canvas'); mid.width = R.cols * 4; mid.height = R.rows * 4;
   const gm = mid.getContext('2d'); gm.imageSmoothingQuality = 'high'; gm.drawImage(small, 0, 0, mid.width, mid.height);
@@ -794,6 +796,10 @@ addEventListener('keydown', (e) => {
   sel.addEventListener('change', () => { const u = new URL(location.href); u.searchParams.set('sc', sel.value); u.searchParams.delete('run'); location.href = u.toString(); });
 })();
 
+// ---------- legend (shared scale) ----------
+const LEGEND_HEAT = `<span>Prawdopodobieństwo × średnia komórka</span><i class="ramp" style="background:${gradientCSS()}"></i><span class="stops">${STOPS.map((x) => `<b>${x.label}</b>`).join('')}</span>`;
+document.querySelector('.legend').innerHTML = LEGEND_HEAT;
+
 // ---------- camera ----------
 let fly = null;
 function flyTo(target, dist = 3, dur = 1.6) {
@@ -825,7 +831,7 @@ $('btn-diff').addEventListener('click', () => {
   SHOW_DIFF = !SHOW_DIFF; $('btn-diff').classList.toggle('on', SHOW_DIFF); compose();
   document.querySelector('.legend').innerHTML = SHOW_DIFF
     ? `<span>Trudność terenu (silnik)</span><div class="lg-diff">${(R.difficultyClasses || []).map((c) => `<span><i style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`
-    : '<span>Prawdopodobieństwo</span><i class="ramp"></i><span class="lo">niskie</span><span class="hi">wysokie</span>';
+    : LEGEND_HEAT;
 });
 $('btn-trees').addEventListener('click', () => { forest.visible = !forest.visible; $('btn-trees').classList.toggle('on', forest.visible); });
 
@@ -1082,7 +1088,8 @@ const toParent = (msg) => { if (window.parent !== window) window.parent.postMess
 function selectSeg(id, { fly: doFly = true, notify = true } = {}) {
   const g = segs.get(id); if (!g) return;
   SEL = id; disposeGroup(dyn.sel);
-  drapeRuns(ringLL(g.polygon), 0.026, { color: '#1f4e79', width: 4, opacity: 0.95 }, dyn.sel);
+  const selCol = getComputedStyle(document.documentElement).getPropertyValue('--rl-select').trim() || '#1f4e79';
+  drapeRuns(ringLL(g.polygon), 0.026, { color: selCol, width: 4, opacity: 0.95 }, dyn.sel);
   document.querySelectorAll('#ranklist li').forEach((li) => li.classList.toggle('sel', li.dataset.seg === id));
   if (doFly) flyTo(v3(g.center[0], g.center[1]), 2.4);
   if (notify && !fromParent) toParent({ type: 'select', segmentId: id });

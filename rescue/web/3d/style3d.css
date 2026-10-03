@@ -237,3 +237,24 @@ body.embed-bare #timeline, body.embed-bare #progress, body.embed-bare #hud { dis
 .stepno { font: 12px ui-monospace, Menlo, monospace; color: var(--mute); min-width: 42px; }
 .stepno b { color: var(--ink); }
 #timeline .btn.sm { margin-top: 0; font-size: 15px; padding: 2px 10px; }
+
+/* shared legend stops */
+.legend .stops { display: flex; justify-content: space-between; font-size: 9.5px; }
+.legend .stops b { font-weight: 500; }
+/* decision S1: embedded in the shell = its tokens (dark operational by default) */
+body.embed {
+  --paper: color-mix(in srgb, var(--rl-panel, #151c22) 94%, transparent); --paper-solid: var(--rl-panel, #151c22);
+  --ink: var(--rl-ink, #eef2f5); --mute: var(--rl-mute, #8797a4); --line: var(--rl-line, #2b3741);
+  --blue: var(--rl-accent, #5ce1e6); --red: var(--rl-danger, #b8322a); --green: var(--rl-ok, #3ee08f);
+  font-family: var(--rl-font); color: var(--ink);
+}
+body.embed .panel { box-shadow: var(--rl-shadow); }
+body.embed .btn { background: var(--rl-panel-2, #1b242c); color: var(--ink); border-color: var(--line); }
+body.embed .btn.on { color: var(--rl-accent); border-color: var(--rl-accent); }
+body.embed .wchip, body.embed #teams li, body.embed #game p, body.embed .sc-lead, body.embed #progress .pg-kpi span { color: var(--rl-ink-2, #b7c3cd); }
+body.embed .wchip { background: var(--rl-panel-2, #1b242c); }
+body.embed .tick b { background: var(--line); }
+body.embed .tick.past b { background: var(--rl-accent); }
+body.embed #game .stat, body.embed #game code { background: var(--rl-panel-2, #1b242c); }
+body.embed .lbl3d { background: color-mix(in srgb, var(--rl-panel, #151c22) 90%, transparent); color: var(--ink); border-color: var(--line); }
+body.embed .tip, body.embed .toast { background: var(--rl-panel, #151c22); color: var(--ink); }
