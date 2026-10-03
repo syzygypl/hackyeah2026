@@ -18,9 +18,11 @@ import hashlib
 import json
 import math
 import re
+import socket
 import threading
 import time
 import unicodedata
+import urllib.error
 import urllib.request
 
 ZERO_WIDTH = re.compile("[​-‏⁠﻿­]")
@@ -130,7 +132,8 @@ class SemanticGuard:
         self.ollama_ok = None
         self.cache = {}
         self.warm, self.cooldown, self._warming = set(), {}, set()
-        self._ps_checked_at = 0  # models loaded once; circuit breaker: model -> retry-after timestamp
+        self._ps_checked_at = 0
+        self._timeouts = {}  # model -> consecutive short-input timeouts  # models loaded once; circuit breaker: model -> retry-after timestamp
         self.stats = {"model_calls": 0, "cache_hits": 0, "errors": 0, "last_backend": None, "last_error": None}
 
     # -- model inventory (name -> digest), refreshed every 30 s
@@ -157,6 +160,25 @@ class SemanticGuard:
                         self.warm.discard(m)
             except Exception:
                 pass
+
+    def _on_model_error(self, cfg, model, err, text_len):
+        """F4 circuit breaker: trip at once on connection errors; on timeouts only after k consecutive timeouts on SHORT
+        inputs (a long input timing out says nothing about the model - fail_mode applies to that request only)."""
+        reason = getattr(err, "reason", None)
+        timeout = isinstance(err, (TimeoutError, socket.timeout)) or isinstance(reason, (TimeoutError, socket.timeout))
+        if not timeout and isinstance(err, (urllib.error.URLError, ConnectionError, OSError)):
+            self.cooldown[model] = time.time() + cfg.get("cooldown_s", 15)
+            self._timeouts[model] = 0
+            return "breaker:connection"
+        if timeout and text_len <= cfg.get("breaker_short_input_chars", 1500):
+            self._timeouts[model] = self._timeouts.get(model, 0) + 1
+            self._mark_cold(cfg, model)  # a short input timing out usually means evicted/cold (F5)
+            if self._timeouts[model] >= cfg.get("breaker_consecutive_timeouts", 3):
+                self.cooldown[model] = time.time() + cfg.get("cooldown_s", 15)
+                self._timeouts[model] = 0
+                return "breaker:timeouts"
+            return "timeout"
+        return "timeout:long_input" if timeout else "error"
 
     def _mark_cold(self, cfg, model):
         self.warm.discard(model)
@@ -264,12 +286,12 @@ class SemanticGuard:
                     out.append(dict(r, stage=name, model=model, digest=digest[:12], criterion=crit, counted=counted,
                                     category_names=[LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]))
             except Exception as e:
-                self.cooldown[model] = time.time() + cfg.get("cooldown_s", 15)
-                self._mark_cold(cfg, model)  # F5: a timeout usually means evicted/cold -> re-warm in the background
-                errors.append(f"{model} {type(e).__name__}: {str(e)[:60]}")
-                res["flags"].append(f"failed:{model}")
+                kind = self._on_model_error(cfg, model, e, len(text))
+                errors.append(f"{model} {type(e).__name__}: {str(e)[:60]} ({kind})")
+                res["flags"].append(f"failed:{model}:{kind}")
                 continue
             self.warm.add(model)
+            self._timeouts[model] = 0
             res["timings_us"][f"semantic_{name}"] = round((time.perf_counter_ns() - t) / 1000, 1)
             res["stages"] += out
             return out
@@ -298,12 +320,21 @@ class SemanticGuard:
                 self._fail(res, "prefilter", pf, e, mode)
         jd = cfg.get("judge") or {}
         controversial = any(r["verdict"] == "controversial" for r in pre)
-        if jd.get("enabled", True) and jd.get("model") and (high_risk or controversial):
+        degraded = pf.get("enabled", True) and (not pre or pre[0]["model"] != pf.get("model"))
+        if degraded:  # F2: a fallback answered or the tier failed -> say so, and do not let it silence the judge
+            res["flags"].append("degraded:prefilter")
+        esc = set(jd.get("escalate_on", ["controversial", "prefilter_failed"]))
+        escalate = (("controversial" in esc and controversial) or ("prefilter_failed" in esc and degraded)
+                    or ("heuristic_signal" in esc and bool(signals)))
+        if jd.get("enabled", True) and jd.get("model") and (high_risk or escalate):
             try:
                 j = self._stage("judge", jd, cfg, allowed, text, res, context=context)
                 used.append(j[0]["model"])
             except StageUnavailable as e:
-                self._fail(res, "judge", jd, e, mode)
+                suspicious = high_risk or controversial or bool(signals)
+                # judge called only because the prefilter degraded: its failure inherits the prefilter's fail_mode;
+                # with a real reason to suspect (high risk, Controversial, heuristic signal) the judge fails closed
+                self._fail(res, "judge", jd if suspicious else dict(jd, fail_mode=pf.get("fail_mode", "open")), e, mode)
         counted = [r["p_unsafe"] for r in res["stages"] if r["counted"]]
         res["score"] = max([h] + counted)
         res["backend"] = "+".join(used + ["heuristic"]) if used else res["backend"]
@@ -343,9 +374,8 @@ class SemanticGuard:
                     break  # one unsafe criterion is enough for this guard's vote
             self.warm.add(model)
         except Exception as e:  # timed out / errored guard: does not vote
-            self.cooldown[model] = time.time() + cfg.get("cooldown_s", 15)
-            self._mark_cold(cfg, model)
-            v["vote"], v["error"] = "unknown", f"{type(e).__name__}: {str(e)[:60]}"
+            kind = self._on_model_error(cfg, model, e, len(text))
+            v["vote"], v["error"] = "unknown", f"{type(e).__name__}: {str(e)[:60]} ({kind})"
         v["latency_ms"] = round((time.perf_counter_ns() - t) / 1e6, 1)
         out[i] = v
 
