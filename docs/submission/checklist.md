@@ -63,4 +63,4 @@ Chosen task: TBD | Language of the submission: TBD (see table below)
 - The **live-pitch version has 12 slides**: the same deck plus 2 hidden slides, "Airlock uses Rój's math on itself" (guard consensus) and the Condorcet slide. To present them, unhide both in the editor. Re-hide them before any PDF export.
 - In the submission version, the consensus escalation is folded into the robustness slide (slide 3), and Condorcet is a footnote on the Rój slide.
 - Pitch script and the GS 10-slide cut: `docs/brand/keynote.md`. Legal wording: `docs/research/legal-check-pl.md`.
-- Before export: keep the "SYZYGY Warsaw" cover line only after employer IP sign-off (rules §6.1).
+- Before export: the cover shows the neutral label "Zespół HackYeah 2026"; add an employer name only after IP sign-off (rules §6.1).
