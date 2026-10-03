@@ -1,0 +1,503 @@
+{
+ "incident": "Zaginione dziecko - Karpacz, las nad Wilczym Potokiem, rodzinna wycieczka (scenariusz fikcyjny)",
+ "date": "2026-08-15",
+ "startClock": "15:40",
+ "subject": {
+  "name": "Zosia W., 7 lat (osoba fikcyjna)",
+  "age": 7,
+  "category": "child-7-9",
+  "note": "Rodzinny piknik 14 osób (dziadkowie, rodzice, ciocie, kuzyni) na polanie przy niebieskim szlaku nad Wilczym Potokiem. Ok. 15:05 Zosia poszła z kubkiem zbierać jagody 'tylko za tamte drzewa'. Różowa bluza, granatowe spodnie, białe trampki, bez telefonu. Boi się psów, nie odpowiada obcym - może się chować. Rodzina szukała sama pół godziny, o 15:40 mama dzwoni na 112.",
+  "lastContact": "15:05"
+ },
+ "bbox": {
+  "south": 50.745,
+  "west": 15.705,
+  "north": 50.787,
+  "east": 15.785
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: polana piknikowa przy niebieskim szlaku nad Wilczym Potokiem (ostatnio widziana 15:05)",
+  "at": [
+   50.7617,
+   15.752
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "R1",
+   "name": "R1 Jeleni Potok",
+   "seed": [
+    50.78175,
+    15.713
+   ]
+  },
+  {
+   "id": "R2",
+   "name": "R2 Szklarska Poręba - Dworzec kolejowy Wałbrzych Główny",
+   "seed": [
+    50.78175,
+    15.729
+   ]
+  },
+  {
+   "id": "R3",
+   "name": "R3 Dziki Potok",
+   "seed": [
+    50.78175,
+    15.745
+   ]
+  },
+  {
+   "id": "R4",
+   "name": "R4 Karpacz Muzeum Zabawek - Sowia Przełęcz",
+   "seed": [
+    50.78175,
+    15.761
+   ]
+  },
+  {
+   "id": "R5",
+   "name": "R5 Skałka",
+   "seed": [
+    50.78175,
+    15.777
+   ]
+  },
+  {
+   "id": "R6",
+   "name": "R6 Karpacz - Słonecznik",
+   "seed": [
+    50.77125,
+    15.713
+   ]
+  },
+  {
+   "id": "R7",
+   "name": "R7 Karpacz Biały Jar - Kocioł Białego Jaru",
+   "seed": [
+    50.77125,
+    15.729
+   ]
+  },
+  {
+   "id": "R8",
+   "name": "R8 Słonecznik - Przełęcz Okraj",
+   "seed": [
+    50.77125,
+    15.745
+   ]
+  },
+  {
+   "id": "R9",
+   "name": "R9 Karpacz PKP - Schronisko PTTK nad Łomniczką",
+   "seed": [
+    50.77125,
+    15.761
+   ]
+  },
+  {
+   "id": "R10",
+   "name": "R10 Szklarska Poręba - Dworzec kolejowy Wałbrzych Główny",
+   "seed": [
+    50.77125,
+    15.777
+   ]
+  },
+  {
+   "id": "R11",
+   "name": "R11 Karpacz Biały Jar - Kocioł Białego Jaru",
+   "seed": [
+    50.76075,
+    15.713
+   ]
+  },
+  {
+   "id": "R12",
+   "name": "R12 Karpacz Biały Jar - Śnieżka",
+   "seed": [
+    50.76075,
+    15.729
+   ]
+  },
+  {
+   "id": "R13",
+   "name": "R13 Wilczy Potok",
+   "seed": [
+    50.76075,
+    15.745
+   ]
+  },
+  {
+   "id": "R14",
+   "name": "R14 Łomniczka",
+   "seed": [
+    50.76075,
+    15.761
+   ]
+  },
+  {
+   "id": "R15",
+   "name": "R15 Słonecznik - Przełęcz Okraj",
+   "seed": [
+    50.76075,
+    15.777
+   ]
+  },
+  {
+   "id": "R16",
+   "name": "R16 Karpacz Biały Jar - Kocioł Białego Jaru",
+   "seed": [
+    50.75025,
+    15.713
+   ]
+  },
+  {
+   "id": "R17",
+   "name": "R17 Bystrzyk",
+   "seed": [
+    50.75025,
+    15.729
+   ]
+  },
+  {
+   "id": "R18",
+   "name": "R18 Łomniczka",
+   "seed": [
+    50.75025,
+    15.745
+   ]
+  },
+  {
+   "id": "R19",
+   "name": "R19 Czerniawka",
+   "seed": [
+    50.75025,
+    15.761
+   ]
+  },
+  {
+   "id": "R20",
+   "name": "R20 Płomnica",
+   "seed": [
+    50.75025,
+    15.777
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "pol-karpacz",
+   "name": "Patrol Policji (KP Karpacz)",
+   "type": "ground",
+   "base": [
+    50.7781,
+    15.7552
+   ],
+   "readyAt": "15:55"
+  },
+  {
+   "id": "gopr-kpz-a",
+   "name": "GOPR Karkonosze - patrol A (Karpacz)",
+   "type": "ground",
+   "base": [
+    50.7768,
+    15.753
+   ],
+   "readyAt": "16:05"
+  },
+  {
+   "id": "dron-gopr-kpz",
+   "name": "Dron termowizyjny GOPR Karkonosze",
+   "type": "drone",
+   "base": [
+    50.7768,
+    15.753
+   ],
+   "readyAt": "16:20"
+  },
+  {
+   "id": "gopr-kpz-b",
+   "name": "GOPR Karkonosze - patrol B (ratownicy z dyżuru domowego)",
+   "type": "ground",
+   "base": [
+    50.7768,
+    15.753
+   ],
+   "readyAt": "16:35"
+  },
+  {
+   "id": "heli-lpr-jg",
+   "name": "Śmigłowiec LPR (Jelenia Góra)",
+   "type": "heli",
+   "base": [
+    50.899,
+    15.7856
+   ],
+   "readyAt": "16:40"
+  },
+  {
+   "id": "pies-gopr-kpz",
+   "name": "Przewodnik z psem tropiącym GOPR",
+   "type": "dog",
+   "base": [
+    50.7768,
+    15.753
+   ],
+   "readyAt": "16:50"
+  }
+ ],
+ "volunteers": [
+  {
+   "id": "rodzina-1",
+   "name": "Rodzina: tata i wujek (GPS telefonu)",
+   "from": "15:40",
+   "to": "16:30",
+   "route": [
+    [
+     50.7617,
+     15.752
+    ],
+    [
+     50.76488,
+     15.75004
+    ],
+    [
+     50.76659,
+     15.74981
+    ],
+    [
+     50.76863,
+     15.75047
+    ],
+    [
+     50.7665,
+     15.7515
+    ],
+    [
+     50.7617,
+     15.752
+    ]
+   ]
+  },
+  {
+   "id": "rodzina-2",
+   "name": "Rodzina: ciocie i kuzyni (GPS telefonu)",
+   "from": "15:40",
+   "to": "16:30",
+   "route": [
+    [
+     50.7617,
+     15.752
+    ],
+    [
+     50.76133,
+     15.74862
+    ],
+    [
+     50.75918,
+     15.75881
+    ],
+    [
+     50.75843,
+     15.76108
+    ],
+    [
+     50.75936,
+     15.76481
+    ],
+    [
+     50.76,
+     15.758
+    ],
+    [
+     50.7617,
+     15.752
+    ]
+   ]
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): wykrot przy Wilczym Potoku, ok. 150 m nad Łomniczką",
+  "at": [
+   50.76825,
+   15.75837
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "15:40",
+   "title": "Teren: szlaki, potoki, las świerkowy regla dolnego",
+   "detail": "OSM. Dzieci 7-9 lat często idą ścieżką albo w dół, do potoku, i chowają się, gdy się boją (Koester).",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "15:40",
+   "title": "Koester: dziecko 7-9 lat, teren leśny",
+   "detail": "Pierścienie ISRID od IPP (wartości przybliżone).",
+   "point": [
+    50.7617,
+    15.752
+   ],
+   "quantilesKm": [
+    0.5,
+    1.0,
+    2.0,
+    4.1
+   ]
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "15:40",
+   "title": "Trudność terenu",
+   "detail": "Klasy terenu z nachylenia DEM: stromo w dolinach potoków."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "15:40",
+   "title": "Warunki: słonecznie, +24°C, wiatr 3 m/s",
+   "detail": "IMGW: od 19:00 burze z gradem. Zachód słońca ok. 20:15. Śmigłowiec może latać do nadejścia burzy.",
+   "visibilityM": 10000,
+   "windMs": 3,
+   "tempC": 24,
+   "precip": "none",
+   "dark": false,
+   "ice": false
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "15:40",
+   "title": "Rodzina: polana i ścieżka 300 m w obie strony, nic",
+   "detail": "14 osób wołało i szukało przez pół godziny, bez planu. Niski POD.",
+   "segments": [
+    "R13"
+   ],
+   "pod": 0.2
+  },
+  {
+   "provider": "TripPlan",
+   "at": "15:45",
+   "title": "Mama: 'mieliśmy wrócić niebieskim szlakiem do ul. Leśnej'",
+   "detail": "\"Zosia zna tylko drogę, którą przyszliśmy: niebieskim od ul. Leśnej, wzdłuż potoku.\"",
+   "points": [
+    [
+     50.76863,
+     15.75047
+    ],
+    [
+     50.76659,
+     15.74981
+    ],
+    [
+     50.76488,
+     15.75004
+    ],
+    [
+     50.76133,
+     15.74862
+    ],
+    [
+     50.76162,
+     15.75282
+    ]
+   ],
+   "radiusM": 150
+  },
+  {
+   "provider": "Clue",
+   "at": "15:55",
+   "title": "Rodzina (meldunek): wujek - ktoś wołał w dole, w stronę Wilczego Potoku",
+   "detail": "Meldunek: Mieszkaniec (rodzina, wujek Marek, telefon z GPS): słyszałem cienkie wołanie 'mamo' w dole lasu, ok. 15:50. GPS mojego telefonu w miejscu nasłuchu.",
+   "point": [
+    50.765,
+    15.753
+   ],
+   "radiusM": 300,
+   "seenAt": "15:50",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "Clue",
+   "at": "16:15",
+   "title": "Rodzina (meldunek): kuzynka - różowa bluza nad Łomniczką",
+   "detail": "Meldunek: Mieszkaniec (rodzina, kuzynka Ola, telefon z GPS): widziałam między drzewami różową bluzę nad Łomniczką, ok. 16:10, dziecko szło z kimś dorosłym.",
+   "point": [
+    50.75718,
+    15.75936
+   ],
+   "radiusM": 250,
+   "seenAt": "16:10",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "16:45",
+   "title": "Policja: Łomniczka przy Szerokim Moście - to inne dziecko z rodzicami, nic",
+   "detail": "Patrol Policji sprawdził zgłoszenie kuzynki: dziewczynka w różowej bluzie z rodzicami, to nie Zosia.",
+   "segments": [
+    "R14"
+   ],
+   "pod": 0.5
+  },
+  {
+   "provider": "Clue",
+   "at": "17:05",
+   "title": "GOPR A: znalezisko - różowa gumka do włosów przy Wilczym Potoku",
+   "detail": "Mama potwierdza: Zosi. Leżała przy ścieżce zwierząt nad potokiem, ok. 600 m od polany, w dół.",
+   "point": [
+    50.76643,
+    15.75476
+   ],
+   "radiusM": 120
+  },
+  {
+   "provider": "DronePassEmpty",
+   "at": "17:20",
+   "title": "Dron: zręby i polany nad Łomnicą, nic",
+   "detail": "Termowizja pod gęstymi świerkami słabo widzi. POD 40%.",
+   "segments": [
+    "R7"
+   ],
+   "pod": 0.4
+  },
+  {
+   "provider": "Clue",
+   "at": "17:50",
+   "title": "Pies GOPR podjął trop w dół wzdłuż Wilczego Potoku",
+   "detail": "Przewodnik: pies prowadzi korytem, wyraźnie, ostatnie 200 m.",
+   "point": [
+    50.7672,
+    15.756
+   ],
+   "radiusM": 150
+  },
+  {
+   "provider": "Weather",
+   "at": "18:05",
+   "title": "IMGW: burza nadciąga, od ok. 19:00 grad i ulewa",
+   "detail": "Śmigłowiec LPR ma okno do ok. 18:45. Dziecko w krótkim rękawie: wychłodzenie po zmroku.",
+   "factor": 1.0
+  },
+  {
+   "provider": "Clue",
+   "at": "18:20",
+   "title": "ZNALEZIONO: pies GOPR - Zosia w wykrocie przy Wilczym Potoku",
+   "detail": "Schowana pod korzeniami przewróconego świerka, ok. 150 m nad Łomniczką. Wystraszona, otarcia, lekko wychłodzona. Przekazana mamie i ZRM.",
+   "point": [
+    50.76825,
+    15.75837
+   ],
+   "radiusM": 30,
+   "found": true
+  }
+ ]
+}
