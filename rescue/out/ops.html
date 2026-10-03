@@ -4,11 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monitoring terenu</title>
+<link rel="stylesheet" href="../app/tokens.css">
 <style>
-  :root { --bg:#f6f5f2; --card:#fff; --ink:#1c1c1c; --muted:#666; --line:#ddd; --ok:#1f6f43; --okbg:#e3f3e9; --warn:#8a5a00; --warnbg:#fff1d6; --bad:#b3261e; --badbg:#fde4e1; --acc:#2a5db0; }
-  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#141414; --card:#1f1f1f; --ink:#eee; --muted:#aaa; --line:#333; --ok:#7fd6a2; --okbg:#173325; --warn:#ffc966; --warnbg:#3a2c0e; --bad:#ff7b70; --badbg:#3d1714; --acc:#8fb4ff; } }
+  /* colours from the app's tokens (paper theme, docs/rescue-locator/ui-design.md), so Monitoring matches the shell */
+  :root { --bg:var(--rl-bg,#ece8df); --card:var(--rl-panel-solid,#faf8f3); --ink:var(--rl-ink,#23272a); --muted:var(--rl-mute,#6b6f72); --line:var(--rl-line,rgba(35,39,42,.12));
+    --ok:var(--rl-ok,#2d6a4f); --okbg:color-mix(in srgb, var(--rl-ok,#2d6a4f) 14%, transparent); --warn:var(--rl-warn-ink,#8a5a00); --warnbg:color-mix(in srgb, var(--rl-warn,#e9c46a) 28%, transparent);
+    --bad:var(--rl-danger,#b8322a); --badbg:color-mix(in srgb, var(--rl-danger,#b8322a) 11%, transparent); --acc:var(--rl-accent,#1f4e79); }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 -apple-system, system-ui, "Segoe UI", sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 var(--rl-font, -apple-system, system-ui, "Segoe UI", sans-serif); }
   main { max-width: 960px; margin: 0 auto; padding: 16px; }
   h1 { font-size: 20px; margin: 4px 0 2px; }
   h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
@@ -18,8 +21,8 @@
   .warn { color: var(--warn); background: var(--warnbg); border-color: transparent; }
   .bad { color: var(--bad); background: var(--badbg); border-color: transparent; }
   .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 12px; }
-  .card { background: var(--card); border:1px solid var(--line); border-radius: 10px; padding: 12px; min-width: 0; }
-  .big { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .card { background: var(--card); border:1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }
+  .big { font-family: var(--rl-font-num, inherit); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .meta { color: var(--muted); font-size: 12px; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
