@@ -1401,7 +1401,7 @@ func clueWeightRoute(_ q: Req) async -> Data {
 
 // MARK: inventory (CONTRACT.md "Zasoby i dziennik"): GET /api/actors/<id>/log, GET /api/actors/<id>/feeds,
 // GET /api/inventory?sc=&at=, POST /api/inventory/<id>/event. Data: scenarios/inventory/inventory.json + params.json (fictional,
-// AI Marcina; a built-in fallback seed when missing). Dynamic state = estimates from the timeline path (GET /api/tracks, never truth).
+// AI Marcina). Dynamic state = estimates from the timeline path (GET /api/tracks, never truth).
 // Own storage: inventory events only (local out/inventory-events.json, shared store doc "inventory-events").
 
 let invDir = scenariosDir.appendingPathComponent("inventory")
@@ -1433,37 +1433,13 @@ func invP(_ params: [String: Any], _ kind: String, _ key: String) -> Double {
     ((params["kinds"] as? [String: Any])?[kind] as? [String: Double])?[key] ?? invKindDefaults[kind]?[key] ?? invBaseDefaults[key] ?? 0
 }
 
-/// inventory.json units by id; nil = no file (the fallback seed is used)
+/// inventory.json units by id (AI Marcina, fictional); nil = no file (units then carry roster data only, "inventory": false)
 func invFileUnits() -> [String: [String: Any]]? {
     guard let d = try? Data(contentsOf: invDir.appendingPathComponent("inventory.json")) else { return nil }
     var out: [String: [String: Any]] = [:]
     for u in (jsonObject(d)["units"] as? [[String: Any]]) ?? [] { if let id = u["id"] as? String { out[id] = u } }
     return out
 }
-/// Fallback seed (no inventory.json yet): fictional crew and equipment derived from the roster id, deterministic.
-func invFallbackUnit(_ id: String, kind: String) -> [String: Any] {
-    let first = ["Kamil", "Ewa", "Tomasz", "Anna", "Paweł", "Marta", "Jakub", "Zofia", "Michał", "Agnieszka", "Piotr", "Karolina"]
-    let last = ["Nowak", "Zając", "Gąsienica", "Wójcik", "Krawczyk", "Mazur", "Kowalczyk", "Bukowski", "Sikora", "Bielecka", "Chowaniec", "Duda"]
-    let h = id.unicodeScalars.reduce(7) { ($0 &* 31 &+ Int($1.value)) & 0xffff }
-    let name = { (i: Int) -> String in "\(first[(h + i * 5) % first.count]) \(last[(h / 3 + i * 7) % last.count])" }
-    let roles: [String] = ["pies": ["przewodnik psa", "ratownik"], "dron": ["operator drona", "obserwator"],
-                           "smiglowiec": ["pilot", "drugi pilot", "ratownik pokładowy", "lekarz"], "lodz": ["sternik", "ratownik"],
-                           "nurkowie": ["kierownik nurkowania", "nurek", "nurek asekurujący"]][kind] ?? ["kierownik zespołu", "ratownik", "ratownik", "ratownik"]
-    var u: [String: Any] = ["id": id, "kind": kind, "fallback": true, "base": "baza (fikcyjna)",
-                            "crew": roles.enumerated().map { ["name": name($0.offset), "role": $0.element] }]
-    var eq: [String: Any] = [:]
-    switch kind {
-    case "dron": eq = ["spareBatteries": 3, "flightMinPerBattery": 35, "hoursTotal": 180 + Double(h % 40), "maintenanceEveryH": 50, "hoursAtLastMaintenance": 150 + Double(h % 40), "lastMaintenance": "2026-09-12"]
-        u["spares"] = [["item": "akumulator lotniczy", "qty": 3], ["item": "komplet śmigieł", "qty": 2]]
-    case "smiglowiec": eq = ["enduranceMin": 150, "hoursTotal": 4100 + Double(h % 300), "maintenanceEveryH": 100, "hoursAtLastMaintenance": 4030 + Double(h % 300), "lastMaintenance": "2026-09-01"]
-    case "lodz": eq = ["enduranceMin": 300, "hoursTotal": 620 + Double(h % 50), "maintenanceEveryH": 100, "hoursAtLastMaintenance": 560 + Double(h % 50), "lastMaintenance": "2026-08-20"]
-    case "pies": u["dog"] = ["name": ["Ares", "Luna", "Kira", "Bruno"][h % 4], "breed": "owczarek belgijski", "certified": "2025-05"]
-    default: break
-    }
-    if !eq.isEmpty { u["equipment"] = eq }
-    return u
-}
-
 struct InvEvent: Codable, Sendable { var id = "", unit = "", type = "", note: String?, at = "", sc: String?, by = "operator", wall = "" }
 actor InvEvents {
     var local: [InvEvent]?
@@ -1737,10 +1713,9 @@ func invUnitSc(_ t: InvTeam, _ q: String?) -> String? {
 func invUnitDoc(_ t: InvTeam, sc: String?, tl: (String, Int, [String: [[Double]]])?, atMin: Int?, liveMin: Int?, params: [String: Any], events: [InvEvent], file: [String: [String: Any]]?) async -> [String: Any] {
     let fu = file?[t.id]
     let kind = t.kind.isEmpty ? (fu?["kind"] as? String ?? "") : t.kind
-    let unit = fu ?? (file == nil ? invFallbackUnit(t.id, kind: kind) : [:])
-    var o: [String: Any] = ["id": t.id, "name": t.name, "kind": kind, "inventory": fu != nil || file == nil, "sc": t.sc ?? NSNull(),
+    let unit = fu ?? [:]
+    var o: [String: Any] = ["id": t.id, "name": t.name, "kind": kind, "inventory": fu != nil, "sc": t.sc ?? NSNull(),
                             "segmentId": t.segmentId ?? NSNull(), "status": t.status, "home": t.home]
-    if file == nil { o["fallback"] = true }
     for k in ["base", "model", "callsign", "crew", "dog", "spares", "maintenanceLog", "equipment", "dutyStart"] { o[k] = unit[k] ?? NSNull() }
     let start = sc.map(invStart) ?? 0
     let mine = events.filter { $0.unit == t.id && ($0.sc == nil || $0.sc == sc) }

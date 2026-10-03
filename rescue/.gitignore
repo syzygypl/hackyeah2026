@@ -6,3 +6,5 @@ out/live-*.json
 .vercel
 .env*
 tools/vercel/public/
+out/inventory-events.json
+out/fixes-*.json
