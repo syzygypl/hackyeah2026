@@ -2076,6 +2076,8 @@ const seenLive = new Set();
 let liveSeq = 0, liveMiss = 0;
 const hhmm = (t) => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }); };
 async function pollLive() {
+  // History and blind replays keep their recorded evidence; do not mix in current field reports.
+  if (P.reveal || new URL(P.run, location.href).searchParams.get('live') === '0') return;
   const f = await getJSON(`/api/live?sc=${encodeURIComponent(SC)}&since=${liveSeq}`, true);
   if (!f || !Array.isArray(f.events)) { if (++liveMiss >= 2) return; setTimeout(pollLive, 8000); return; }
   liveMiss = 0; liveSeq = Math.max(liveSeq, f.seq || 0);
