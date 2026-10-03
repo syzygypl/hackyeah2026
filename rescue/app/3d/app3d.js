@@ -1645,7 +1645,8 @@ function cineFpp(next) {
   const ids = (TL3D.frame?.actors || []).map((a) => a.id).filter(Boolean);
   for (let k = 0; k < ids.length; k++) {
     const id = ids[(next + k) % ids.length];
-    if (TL3D.startFpp(id)) {
+    CINE.inserting = true; const ok = TL3D.startFpp(id); CINE.inserting = false;   // our own insert: startFpp's onStopCamera must not end Kino
+    if (ok) {
       const name = document.querySelector(`.tl3d-title ~ select option[value="${CSS.escape(id)}"], select[aria-label="Jednostka dla kamery FPP"] option[value="${CSS.escape(id)}"]`)?.textContent || id;
       CINE.fpp = { t: 5, next }; CINE.shot = null;
       $('caption').innerHTML = `<b>${esc(R.steps[STEP]?.t || '')}</b> Oczami jednostki: ${esc(name)}`;
@@ -1658,7 +1659,7 @@ function cinema(on) {
   if (on) TL3D?.stopFpp();
   CINE.on = on; document.body.classList.toggle('cinema', on); $('btn-cine').classList.toggle('on', on);
   toParent({ type: 'cinema', on }); // /app hides its floating panels while Kino runs
-  if (on) { CINE.prevRot = autoRot; CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null; cineShot(Q.has('step') ? STEP : 0); }
+  if (on) { CINE.prevRot = autoRot; CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null; cineShot(0); }   // Kino is the film of the whole story, from the first step (the shell's step sits at the end, the timeline sync moves STEP)
   else { if (CINE.fpp) { CINE.fpp = null; TL3D?.stopFpp(); } CINE.shot = null; overview(1.6); }
 }
 $('btn-cine').addEventListener('click', () => cinema(!CINE.on));
@@ -1750,7 +1751,7 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
     if (f.segments?.length) drawTop(rankedOf(f.segments));
     compose();
   },
-  onStopCamera: () => { if (CINE.on) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
+  onStopCamera: () => { if (CINE.on && !CINE.inserting) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
   onCamera: (on, actorId) => { fppHeat = on ? 0.3 : 1; compose(); toParent({ type: 'fpp', on, actorId }); },
   onActor: (id) => toParent({ type: 'actor', id }),
   getFrame: async (t) => {
