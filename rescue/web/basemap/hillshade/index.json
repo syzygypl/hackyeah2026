@@ -103,6 +103,19 @@
    ]
   ]
  },
+ "rodzina-dziecko-las": {
+  "file": "hillshade/rodzina-dziecko-las.png",
+  "bounds": [
+   [
+    15.683333333333309,
+    50.73138888888889
+   ],
+   [
+    15.806666666666642,
+    50.800555555555555
+   ]
+  ]
+ },
  "sniardwy": {
   "file": "hillshade/sniardwy.png",
   "bounds": [
@@ -113,6 +126,110 @@
    [
     21.860833333333332,
     53.79222222222222
+   ]
+  ]
+ },
+ "tragedia-w-moryniu": {
+  "file": "hillshade/tragedia-w-moryniu.png",
+  "bounds": [
+   [
+    14.36,
+    52.83277777777778
+   ],
+   [
+    14.45,
+    52.88722222222222
+   ]
+  ]
+ },
+ "zapora-huzele": {
+  "file": "hillshade/zapora-huzele.png",
+  "bounds": [
+   [
+    22.260277777777787,
+    49.45194444444444
+   ],
+   [
+    22.349166666666676,
+    49.507777777777775
+   ]
+  ]
+ },
+ "zapora-lesko": {
+  "file": "hillshade/zapora-lesko.png",
+  "bounds": [
+   [
+    22.26249999999999,
+    49.44138888888889
+   ],
+   [
+    22.363888888888876,
+    49.50111111111111
+   ]
+  ]
+ },
+ "zapora-myczkowce": {
+  "file": "hillshade/zapora-myczkowce.png",
+  "bounds": [
+   [
+    22.34833333333333,
+    49.41027777777778
+   ],
+   [
+    22.440277777777773,
+    49.463055555555556
+   ]
+  ]
+ },
+ "zapora-tlo-olszanica": {
+  "file": "hillshade/zapora-tlo-olszanica.png",
+  "bounds": [
+   [
+    22.396944444444443,
+    49.44777777777777
+   ],
+   [
+    22.496944444444445,
+    49.51222222222222
+   ]
+  ]
+ },
+ "zapora-tlo-tarnica": {
+  "file": "hillshade/zapora-tlo-tarnica.png",
+  "bounds": [
+   [
+    22.654722222222233,
+    49.03944444444444
+   ],
+   [
+    22.78416666666668,
+    49.10472222222222
+   ]
+  ]
+ },
+ "zapora-uherce": {
+  "file": "hillshade/zapora-uherce.png",
+  "bounds": [
+   [
+    22.34833333333333,
+    49.407500000000006
+   ],
+   [
+    22.43166666666666,
+    49.465833333333336
+   ]
+  ]
+ },
+ "zapora-zaluz": {
+  "file": "hillshade/zapora-zaluz.png",
+  "bounds": [
+   [
+    22.239722222222213,
+    49.49944444444445
+   ],
+   [
+    22.343055555555544,
+    49.556111111111115
    ]
   ]
  },

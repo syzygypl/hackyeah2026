@@ -24,6 +24,9 @@
       ['krakow-nowa-huta', 'Kraków - Nowa Huta (miasto)', 'krakow.pmtiles']]
       .map(([id, label, f]) => ({ id, label, run: `/api/run/${id}`, scenario: `../scenarios/${id}.json`, dem: `../tools/terrain/data/${id}-dem.json`, basemap: true, basemapFile: f })),
   ];
+  // any other scenario id (zapora-*, Studio, new ones): its own DEM, basemap region picked from the run's bbox (regionFor)
+  { const id = Q.get('sc'); if (id && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id) && !SCENARIOS.some((x) => x.id === id))
+    SCENARIOS.push({ id, label: id, run: `/api/run/${id}`, scenario: `../scenarios/${id}.json`, dem: `../tools/terrain/data/${id}-dem.json`, basemap: true }); }
   const SC = SCENARIOS.find((x) => x.id === Q.get('sc')) || SCENARIOS[0];
   const CUSTOM_RUN = Q.has('run') || Q.has('runInline'); // ?run= (or a parent-supplied run) wins over the switcher
   // Embed (combined app rescue/app/, same contract as web/3d): ?embed=1 hides header + side panels, ?embed=bare also the
