@@ -99,7 +99,7 @@ def parse_output(fmt, content, logprobs=None):
     """-> verdict (safe | controversial | unsafe), p_unsafe 0..1, categories."""
     c = content.strip()
     if fmt == "qwen3guard":
-        m = re.search(r"(?i)safety:\s*(safe|unsafe|controversial)", c)
+        m = re.match(r"(?i)\s*safety:\s*(safe|unsafe|controversial)\b", c)  # F10: anchored, echoed text cannot steer it
         if not m:
             raise ValueError(f"unexpected qwen3guard output {c[:50]!r}")
         v = m.group(1).lower()
@@ -107,10 +107,14 @@ def parse_output(fmt, content, logprobs=None):
         cats = [x.strip() for x in cats.group(1).split(",")] if cats and cats.group(1).strip().lower() != "none" else []
         return v, {"safe": 0.0, "controversial": 0.5, "unsafe": 1.0}[v], cats
     if fmt == "granite_guardian":
-        m = re.search(r"(?i)<score>\s*(yes|no)\s*</score>", c) or re.search(r"(?i)^\s*(yes|no)\b", c)
-        if not m:
-            raise ValueError(f"unexpected granite-guardian output {c[:50]!r}")
-        return ("unsafe", 1.0, []) if m.group(1).lower() == "yes" else ("safe", 0.0, [])
+        body = re.sub(r"(?is)<think>.*?</think>", "", c)  # F10: ignore reasoning, use the LAST score
+        scores = re.findall(r"(?i)<score>\s*(yes|no)\s*</score>", body)
+        if not scores:
+            m = re.match(r"(?i)\s*(yes|no)\b", body)
+            if not m:
+                raise ValueError(f"unexpected granite-guardian output {c[:50]!r}")
+            scores = [m.group(1)]
+        return ("unsafe", 1.0, []) if scores[-1].lower() == "yes" else ("safe", 0.0, [])
     first = c.split("\n")[0].strip().lower()
     if first not in ("safe", "unsafe"):
         raise ValueError(f"unexpected llama-guard output {c[:50]!r}")
