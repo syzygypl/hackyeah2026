@@ -36,7 +36,7 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
 - Fictional find spot (S7 Żleb pod Zawratem) is segment **#1** after fusion (from 19:35) vs #19 with plain Koester rings.
 - Area to sweep in POA order before reaching the find spot: **0.11% fused vs 41% rings only**.
 - 19:45 wind 14 m/s: drone grounded, helicopter cleared (fog blown away, NVG night flight), plan re-allocates.
-- **The find comes from the search, not from GPS:** at 19:45 the planner sends the helicopter to S7 (ETA 15 min). At 20:03 a field report (`Clue` with `"found": true`) says "ZNALEZIONO" in S7, which had been #1 on the map since 19:35.
+- **The find comes from the search, not from GPS:** at 19:45 the planner sends the helicopter to S7 (ETA 15 min). At 20:03 a `Found` event (helicopter crew: "ZNALEZIONO" in the gully) closes the case: the map collapses onto the find spot and the planner stops assigning teams. S7 had been #1 on the map since 19:35. (A `Clue` with `"found": true` or "ZNALEZIONO" in its title is treated the same way.)
 - The 20:05 Ratunek ping is an **optional epilogue** (`"epilogue": true` on the event, off by default; `swift run rescue-demo --epilogue` or `"showEpilogue": true` in the scenario). With it on, the page says "ping przyszedł o 20:05; mapa miała ten segment na #1 od 19:35".
 - Blind mode: a scenario without `truth` runs end to end. `value` then has no backtest fields (`rankFused`, `rankRings`, `areaFused`, `areaRings`, `truthSeg`), and `blind: true` is set. The page shows "Tryb ślepy" instead of the backtest.
 - Team allocation vs naive "biggest POA first" (same teams, same physics, simulated from 19:45): 20% chance of find after **1 h 46 min vs 2 h 00 min**, then roughly equal. Honest reading: in this scenario the planner's value is ETAs, safety gating and instant re-allocation when weather changes, not a big POS gain.
@@ -121,7 +121,7 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
     "areaFused": 0.0017, "areaRings": 0.364, "truthSeg": "S7",   // backtest: only when the scenario has truth
     "beforePing": 10,                   // step before the decisive hint (search find or Ratunek ping); name kept for compatibility
     "blind": false, "epilogue": false,
-    "findSource": "Clue", "findClock": "20:03", "findSeg": "S7", "findSegName": "...", "findTitle": "...",
+    "findSource": "Found", "findClock": "20:03", "findSeg": "S7", "findSegName": "...", "findTitle": "...",
     "findRank1Since": "19:35", "findAssigned": { "clock": "19:45", "resourceId": "heli", "resourceName": "...", "etaMin": 15 },
     "pingClock": "20:05",               // only with the epilogue on
     // added: team allocation simulation from beforePing, planned vs naive "biggest POA first" (-1 = not within 6 h)
