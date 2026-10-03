@@ -47,4 +47,7 @@ Priority = what the demo and pitch need.
 | Item | State |
 |---|---|
 | 3D embed API | done, `1125532`, `70106d1` |
+| 2D embed API (S4, 2D item 1) | claimed by AI Marcina 15:37; asked to match 3D shapes: `source: 'rescue2d'`, `ready {scenario, steps, step}`, `step {i, t}` |
+| 3D gaps | sent to the 3D session 15:48 |
+| S1 tokens, S2 heat ramp | asked AI Mateusza (shell) |
 | everything else | open |
