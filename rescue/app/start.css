@@ -1,4 +1,4 @@
-/* Start page (rescue/app/start.html): what Rescue Locator is, three entries, the 90 s tour. Paper look, colours only from tokens.css.
+/* Start page (rescue/app/start.html): what Rescue Locator is, three entries, the 90 s tour, then what you will see and how it works. Paper look, colours only from tokens.css.
    One red on the page: the tour button. */
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--rl-bg);color:var(--rl-ink);font:var(--rl-fs)/1.5 var(--rl-font);-webkit-font-smoothing:antialiased}
@@ -24,7 +24,7 @@ a{color:var(--rl-accent)}
 .st-btn{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:0 22px;border-radius:24px;font-weight:700;font-size:var(--rl-fs-l);text-decoration:none}
 .st-primary{background:var(--rl-danger);color:var(--rl-on-danger)}
 .st-primary:hover{filter:brightness(1.08)}
-.st-primary:focus-visible,.st-role:focus-visible,.st-links a:focus-visible{outline:3px solid var(--rl-accent);outline-offset:3px}
+.st-primary:focus-visible,.st-role:focus-visible{outline:3px solid var(--rl-accent);outline-offset:3px}
 .st-cta-sub{color:var(--rl-ink-2);font-size:var(--rl-fs-s)}
 
 .st-roles{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
@@ -34,27 +34,36 @@ a{color:var(--rl-accent)}
 .st-role span:last-child{color:var(--rl-ink-2);font-size:var(--rl-fs-s)}
 .st-ico svg{width:30px;height:30px;fill:none;stroke:var(--rl-accent);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
-.st-why{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;align-items:start}
-.st-why h2,.st-proof-h{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rl-mute);margin:0 0 6px}
-.st-why p{margin:0;color:var(--rl-ink-2)}
-.st-how{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:how}
-.st-how li{counter-increment:how;display:grid;grid-template-columns:30px 1fr;column-gap:10px;align-items:baseline;background:var(--rl-card);border:1px solid var(--rl-line);border-radius:var(--rl-radius);padding:9px 12px}
-.st-how li::before{content:counter(how);grid-row:1/3;font:700 20px/1 var(--rl-font-num);color:var(--rl-accent)}
-.st-how b{font-size:var(--rl-fs)}
-.st-how span{color:var(--rl-ink-2);font-size:var(--rl-fs-s)}
+/* below the buttons: what you will see (real screenshots, deep links), how it works, one proof line, footer */
+.st-h{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rl-mute);margin:0 0 10px}
+.st-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.st-card{display:flex;flex-direction:column;gap:4px;background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);overflow:hidden;color:var(--rl-ink);text-decoration:none;padding-bottom:14px;transition:border-color .15s,transform .15s}
+.st-card:hover{border-color:var(--rl-accent);transform:translateY(-2px)}
+.st-card:focus-visible{outline:3px solid var(--rl-accent);outline-offset:3px}
+.st-shot{display:block;aspect-ratio:16/10;background:var(--rl-panel-2);border-bottom:1px solid var(--rl-line);margin-bottom:8px;overflow:hidden}
+.st-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:left top}
+.st-shot-phone img{width:auto;margin:0 auto;object-fit:contain;padding:8px 0 0;filter:drop-shadow(var(--rl-shadow))}
+.st-card b{padding:0 14px;text-wrap:balance;font-size:var(--rl-fs-l);line-height:1.2}
+.st-card b::after{content:" \2192";color:var(--rl-accent)}
+.st-card span:last-child{padding:0 14px;color:var(--rl-ink-2);font-size:var(--rl-fs-s);line-height:1.35}
 
-.st-proof{border-top:1px solid var(--rl-line-strong);padding-top:16px}
-.st-nums{display:flex;gap:28px;flex-wrap:wrap;margin:6px 0}
-.st-num{display:flex;align-items:baseline;gap:8px}
-.st-num b{font:700 34px/1 var(--rl-font-num);font-variant-numeric:tabular-nums;color:var(--rl-ink-2)}
-.st-num-1 b{color:var(--rl-ink)}
-.st-num span{color:var(--rl-ink-2);font-size:var(--rl-fs-s);max-width:170px;line-height:1.25}
-.st-note{margin:4px 0 0;font-size:var(--rl-fs-xs);color:var(--rl-mute)}
+.st-steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;counter-reset:st}
+.st-steps li{counter-increment:st;display:grid;align-content:start;grid-template-columns:34px 1fr;column-gap:12px;row-gap:2px;align-items:start;padding:12px 14px;background:var(--rl-card);border:1px solid var(--rl-line);border-radius:var(--rl-radius)}
+.st-steps .st-ico{grid-row:1/3;padding-top:2px}
+.st-steps b::before{content:counter(st) ". ";color:var(--rl-accent)}
+.st-steps span:last-child{color:var(--rl-ink-2);font-size:var(--rl-fs-s);line-height:1.35}
 
-.st-links{display:flex;gap:8px 20px;flex-wrap:wrap;font-weight:600}
-.st-links a{text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--rl-accent) 35%,transparent)}
-.st-foot{font-size:var(--rl-fs-xs);color:var(--rl-mute);border-top:1px solid var(--rl-line);padding-top:12px;max-width:760px}
+.st-proof{margin:0;padding:14px 0 0;border-top:1px solid var(--rl-line-strong);color:var(--rl-ink-2)}
+.st-proof b{font:700 26px/1 var(--rl-font-num);color:var(--rl-ink);margin-right:4px}
+.st-proof .st-note{color:var(--rl-mute);font-size:var(--rl-fs-s)}
+.st-proof a{font-weight:600;white-space:nowrap}
+.st-proof a::after{content:" \2192"}
 
+.st-foot{font-size:var(--rl-fs-xs);color:var(--rl-mute);border-top:1px solid var(--rl-line);padding-top:12px}
+.st-foot p{margin:0 0 4px}
+.st-foot a{color:inherit}
+
+@media (max-width:900px){.st-cards{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:760px){
   .st{gap:16px;padding-top:14px}
   .st-hero{padding:20px 16px}
@@ -63,6 +72,6 @@ a{color:var(--rl-accent)}
   .st-roles{grid-template-columns:1fr;gap:10px}
   .st-role{padding:14px 16px}
   .st-role b{font-size:var(--rl-fs-l)}
-  .st-why{grid-template-columns:1fr;gap:12px}
-  .st-nums{gap:14px;flex-direction:column}
+  .st-steps{grid-template-columns:1fr;gap:8px}
 }
+@media (max-width:480px){.st-cards{grid-template-columns:1fr;gap:10px}}

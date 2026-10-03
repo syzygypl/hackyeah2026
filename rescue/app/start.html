@@ -44,38 +44,59 @@
     </a>
   </section>
 
-  <section class="st-why">
-    <div>
-      <h2>Dlaczego</h2>
-      <p>Sobota 17:40. Mąż nie wrócił z Zawratu, mgła, zaraz zmrok. Kierownik akcji ma tylko okruchy: auto na parkingu, „szedł przez Pięć Stawów”, lokalizację z 112 z dokładnością półtora kilometra. Dziś łączy to w głowie, na papierowej mapie.</p>
+  <section class="st-see" aria-labelledby="see-h">
+    <h2 id="see-h" class="st-h">Co tu zobaczysz</h2>
+    <div class="st-cards">
+      <a class="st-card" href="./?role=operator&amp;mode=akcja&amp;view=2d&amp;sc=zawrat&amp;time=live">
+        <span class="st-shot"><img src="start-assets/akcja-2d.jpg" alt="Mapa akcji Zawrat: mapa ciepła i trzy sektory do przeszukania najpierw" width="720" height="450" loading="lazy" decoding="async"></span>
+        <b>Mapa i kolejność sektorów</b>
+        <span>Kierownik akcji widzi, które trzy sektory przeszukać najpierw i ile to obszaru.</span>
+      </a>
+      <a class="st-card" href="./?role=operator&amp;mode=akcja&amp;view=3d&amp;sc=zawrat&amp;time=live">
+        <span class="st-shot"><img src="start-assets/akcja-3d.jpg" alt="Ta sama akcja w 3D: teren, las i sektory na zboczach" width="720" height="450" loading="lazy" decoding="async"></span>
+        <b>Teren w 3D</b>
+        <span>Ta sama akcja na prawdziwym terenie: żleby, las, stoki i trasy zespołów.</span>
+      </a>
+      <a class="st-card" href="./?role=ratownik&amp;sc=zawrat">
+        <span class="st-shot st-shot-phone"><img src="start-assets/ratownik.jpg" alt="Telefon ratownika: mój sektor S3 i duże przyciski meldunku" width="390" height="844" loading="lazy" decoding="async"></span>
+        <b>Telefon ratownika</b>
+        <span>Jeden ekran: mój sektor, kierunek i meldunek jednym przyciskiem albo zdaniem.</span>
+      </a>
+      <a class="st-card" href="cwiczenia.html">
+        <span class="st-shot"><img src="start-assets/cwiczenia.jpg" alt="Lista ćwiczeń: przejmij akcję w trakcie w górach lub na wodzie" width="720" height="450" loading="lazy" decoding="async"></span>
+        <b>Ćwiczenia</b>
+        <span>Przejmij trwającą akcję, wyślij zespoły i porównaj swój plan z planem silnika.</span>
+      </a>
     </div>
-    <ol class="st-how">
-      <li><b>Wskazówki</b><span>świadek, telefon, auto, pogoda, przeszukane sektory</span></li>
-      <li><b>Mapa</b><span>statystyka zaginięć i prawdziwy teren, przelicza się z każdą wskazówką</span></li>
-      <li><b>Zespoły</b><span>kto, dokąd, za ile minut; na lód tylko zespół z liną</span></li>
+  </section>
+
+  <section class="st-how" aria-labelledby="how-h">
+    <h2 id="how-h" class="st-h">Jak to działa</h2>
+    <ol class="st-steps">
+      <li>
+        <span class="st-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg></span>
+        <b>Zgłoszenie</b>
+        <span>Kto zaginął, gdzie i kiedy był ostatnio widziany.</span>
+      </li>
+      <li>
+        <span class="st-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 19 9 9l4 6 3-4 5 8z"/><path d="M12 3v2M7.5 4.5l1 1.5M16.5 4.5l-1 1.5"/></svg></span>
+        <b>Sygnały i teren</b>
+        <span>Telefon, auto na parkingu, świadek, pogoda, przeszukane sektory - na prawdziwym terenie i statystyce zaginięć.</span>
+      </li>
+      <li>
+        <span class="st-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8"/></svg></span>
+        <b>Gdzie szukać najpierw</b>
+        <span>Trzy sektory z największą wagą mapy. To kolejność przeszukiwania, nie szansa znalezienia. Każdy meldunek, także „pusto”, ją przelicza.</span>
+      </li>
     </ol>
   </section>
 
-  <section class="st-proof" aria-label="Wyniki symulacji">
-    <p class="st-proof-h">Właściwy sektor w pierwszej trójce, 1000 symulowanych zaginięć:</p>
-    <div class="st-nums">
-      <div class="st-num st-num-1"><b>66%</b><span>Rescue Locator</span></div>
-      <div class="st-num"><b>56%</b><span>doświadczony kierownik (heurystyka)</span></div>
-      <div class="st-num"><b>43%</b><span>od ostatniego punktu</span></div>
-    </div>
-    <p class="st-note">Symulacja, nie prawdziwe akcje. Szczegóły w aplikacji: Więcej, Walidacja.</p>
-  </section>
-
-  <nav class="st-links" aria-label="Więcej">
-    <a href="./?role=operator&amp;help=1">Instrukcja</a>
-    <a href="./?role=operator&amp;mode=walidacja">Walidacja</a>
-    <a href="./?role=operator&amp;sc=sniardwy">Woda i dryf (Śniardwy)</a>
-    <a href="centrum.html">Wiele akcji naraz</a>
-    <a href="cwiczenia.html">Ćwiczenia</a>
-  </nav>
+  <p class="st-proof"><b>66%</b> właściwy sektor w pierwszej trójce, wobec 56% doświadczonego kierownika i 43% szukania od ostatniego punktu. <span class="st-note">Symulacja, nie prawdziwe akcje (1000 zaginięć w górach).</span> <a href="./?role=operator&amp;mode=walidacja">Walidacja</a></p>
 
   <footer class="st-foot">
-    Wszystkie scenariusze są fikcyjne, a liczby z walidacji pochodzą z symulacji, nie z prawdziwych akcji. Bez śledzenia ludzi; decyzję zawsze podejmuje kierownik akcji. HackYeah 2026.
+    <p>Wszystkie scenariusze i osoby są fikcyjne. Decyzję zawsze podejmuje kierownik akcji.</p>
+    <p>Dane: mapa i obiekty <a href="https://www.openstreetmap.org/copyright" rel="noopener">© OpenStreetMap</a> (ODbL), wysokości Copernicus DEM (© DLR, Airbus, ESA), zdjęcia <a href="https://cloudless.eox.at" rel="noopener">Sentinel-2 cloudless</a> EOX (CC BY 4.0).</p>
+    <p><a href="https://github.com/syzygypl/hackyeah2026" rel="noopener">Kod na GitHubie</a> · HackYeah 2026</p>
   </footer>
 </main>
 <script src="start.js" defer></script>
