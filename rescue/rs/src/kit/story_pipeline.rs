@@ -71,10 +71,45 @@ impl StoryPipeline {
         Self::run_data(scenario, None, 5, true)
     }
 
+    /// Swift writes GET /modules with JSONSerialization and no `.sortedKeys`, i.e. in Dictionary hash order, which Swift
+    /// seeds per dictionary instance. The order below is the one the Swift server served (rs/golden/modules.json):
+    /// {categories, modules}, each module {help, label, name, fields}, each field in its own order (MODULE_FIELD_ORDER;
+    /// a field not listed there is written with sorted keys).
     pub fn modules_data() -> Vec<u8> {
-        let doc = json!({"modules": all_module_schemas().iter().map(|m| m.json()).collect::<Vec<_>>(),
-                         "categories": KOESTER_CATEGORIES.keys().collect::<Vec<_>>()});
-        swift_json_bytes(&doc)
+        let mut doc = serde_json::Map::new();
+        doc.insert("categories".into(), json!(KOESTER_CATEGORIES.keys().collect::<Vec<_>>()));
+        let mods: Vec<Value> = all_module_schemas()
+            .iter()
+            .map(|m| {
+                let fields: Vec<Value> = m
+                    .fields
+                    .iter()
+                    .map(|f| {
+                        let order = MODULE_FIELD_ORDER.iter().find(|r| r.0 == m.name && r.1 == f.key).map(|r| r.2).unwrap_or("dklot");
+                        let mut o = serde_json::Map::new();
+                        for c in order.chars() {
+                            let (k, v) = match c {
+                                'd' => ("default", json!(f.def)),
+                                'k' => ("key", json!(f.key)),
+                                'l' => ("label", json!(f.label)),
+                                'o' => ("options", json!(f.options)),
+                                _ => ("type", json!(f.type_)),
+                            };
+                            o.insert(k.into(), v);
+                        }
+                        Value::Object(o)
+                    })
+                    .collect();
+                let mut o = serde_json::Map::new();
+                o.insert("help".into(), json!(m.help));
+                o.insert("label".into(), json!(m.label));
+                o.insert("name".into(), json!(m.name));
+                o.insert("fields".into(), Value::Array(fields));
+                Value::Object(o)
+            })
+            .collect();
+        doc.insert("modules".into(), Value::Array(mods));
+        swift_json_ordered(&Value::Object(doc)).into_bytes()
     }
 
     /// Sorted hints of all providers + the grid with every layer added and the per-step POA/plans (the shared front half of
@@ -237,3 +272,49 @@ impl StoryPipeline {
         Value::Object(d)
     }
 }
+
+/// (module, field key, Swift key order of that field: d=default k=key l=label o=options t=type), see modules_data
+const MODULE_FIELD_ORDER: &[(&str, &str, &str)] = &[
+    ("KoesterRings", "at", "odtkl"),
+    ("KoesterRings", "category", "dtokl"),
+    ("KoesterRings", "latlon", "otdkl"),
+    ("TripPlan", "at", "otdkl"),
+    ("TripPlan", "text", "otdkl"),
+    ("TripPlan", "radiusM", "otdkl"),
+    ("TrailheadCar", "at", "otdkl"),
+    ("TrailheadCar", "latlon", "dotkl"),
+    ("TrailheadCar", "radiusM", "dtokl"),
+    ("Cell112Fix", "at", "otdkl"),
+    ("Cell112Fix", "latlon", "dtokl"),
+    ("Cell112Fix", "radiusM", "dtokl"),
+    ("Weather", "at", "dtokl"),
+    ("Weather", "factor", "dtokl"),
+    ("WeatherConditions", "at", "otdkl"),
+    ("WeatherConditions", "visibilityM", "odtkl"),
+    ("WeatherConditions", "windMs", "odtkl"),
+    ("WeatherConditions", "tempC", "dtokl"),
+    ("WeatherConditions", "precip", "dtokl"),
+    ("WeatherConditions", "dark", "dotkl"),
+    ("WeatherConditions", "ice", "otdkl"),
+    ("SegmentSearched", "at", "dtokl"),
+    ("SegmentSearched", "segments", "otdkl"),
+    ("SegmentSearched", "pod", "otdkl"),
+    ("DronePassEmpty", "at", "otdkl"),
+    ("DronePassEmpty", "segments", "odtkl"),
+    ("DronePassEmpty", "pod", "otdkl"),
+    ("Clue", "at", "dtokl"),
+    ("Clue", "latlon", "dtokl"),
+    ("Clue", "radiusM", "otdkl"),
+    ("Clue", "title", "otdkl"),
+    ("RatunekPing", "at", "dotkl"),
+    ("RatunekPing", "latlon", "otdkl"),
+    ("RatunekPing", "radiusM", "dtokl"),
+    ("Found", "at", "otdkl"),
+    ("Found", "latlon", "dtokl"),
+    ("Found", "radiusM", "odtkl"),
+    ("Found", "title", "dtokl"),
+    ("FieldReport", "at", "dotkl"),
+    ("FieldReport", "text", "dotkl"),
+    ("Terrain", "at", "otdkl"),
+    ("TerrainDifficulty", "at", "dotkl"),
+];
