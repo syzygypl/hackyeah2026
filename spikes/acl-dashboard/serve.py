@@ -11,12 +11,14 @@ import json
 import os
 import subprocess
 import sys
+import urllib.error
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SPIKE = os.path.join(HERE, "..", "ai-control-layer")
 OUT = os.path.join(SPIKE, "out")
+POLICY = os.path.join(SPIKE, "policy.json")
 GATEWAY = os.environ.get("ACL_GATEWAY", "http://127.0.0.1:8787")
 
 
@@ -64,7 +66,7 @@ class Handler(SimpleHTTPRequestHandler):
             body = live("/policy")
             if body is not None:
                 return self._send(body, "application/json", "live")
-            pol = read(os.path.join(SPIKE, "policy.json"))
+            pol = read(POLICY)
             return self._send(pol and json.dumps({"policy": json.loads(pol)}).encode(), "application/json", "file")
         if p == "/api/report":
             body = live("/report")
@@ -75,6 +77,50 @@ class Handler(SimpleHTTPRequestHandler):
             subprocess.run([sys.executable, "demo.py"], cwd=SPIKE, capture_output=True)
             return self._send(b'{"ok": true}', "application/json", "demo")
         return super().do_GET()
+
+    def do_POST(self):
+        p = self.path.split("?")[0]
+        body = self.rfile.read(int(self.headers.get("Content-Length", 0)) or 0)
+        if p in ("/api/prompt", "/api/tool"):
+            req = urllib.request.Request(GATEWAY + ("/v1/prompt" if p == "/api/prompt" else "/v1/tool"), data=body,
+                                         headers={"Content-Type": "application/json"}, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    return self._send(r.read(), "application/json", "live")
+            except urllib.error.HTTPError as e:  # 403 = blocked, still a valid verdict
+                return self._send(e.read(), "application/json", "live")
+            except Exception:
+                return self._json(503, {"error": f"gateway not running on {GATEWAY} - start: python3 spikes/ai-control-layer/server.py"})
+        if p == "/api/policy":
+            try:
+                pol = json.loads(body)
+                assert isinstance(pol, dict) and isinstance(pol.get("controls"), dict)
+            except Exception:
+                return self._json(400, {"error": "policy must be a JSON object with a 'controls' section"})
+            os.makedirs(OUT, exist_ok=True)
+            cur = read(POLICY)
+            if cur:
+                open(os.path.join(OUT, "policy.previous.json"), "wb").write(cur)
+            tmp = POLICY + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(pol, f, indent=2, ensure_ascii=False)
+                f.write("\n")
+            os.replace(tmp, POLICY)  # atomic: the gateway never reads a half-written file
+            return self._json(200, {"ok": True, "live": live("/policy") is not None})
+        if p == "/api/policy/reset":
+            r = subprocess.run(["git", "show", "HEAD:./policy.json"], cwd=SPIKE, capture_output=True)
+            if r.returncode != 0:
+                return self._json(500, {"error": "git show failed"})
+            open(POLICY, "wb").write(r.stdout)
+            return self._json(200, {"ok": True})
+        return self._json(404, {"error": "unknown endpoint"})
+
+    def _json(self, code, obj):
+        data = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(data)
 
     def log_message(self, fmt, *args):
         pass
