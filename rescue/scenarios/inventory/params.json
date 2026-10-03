@@ -1,0 +1,64 @@
+{
+ "schema": "rescue-inventory-params/1",
+ "note": "Parametry zdrowia jednostek dla zakładki Zasoby. Wartości ze źródeł (D) albo szacunki (S) - szczegóły i linki w docs/rescue-locator/zasoby.md. Wyniki (zmęczenie, bateria, paliwo) to szacunki z osi czasu.",
+ "staleMin": 10,
+ "kinds": {
+  "pieszy": {
+   "dutyLimitMin": 960, "dutyWarnMin": 60,
+   "effortBudgetMin": 480, "wEffort": 0.7, "wDuty": 0.3,
+   "homeRadiusM": 50,
+   "_src": "duty: NWCG 16 h (D, twardy limit 24 h); effort budget: 4000-5000 kcal na zmianę przy 600-800 kcal/h (S); wagi: S"
+  },
+  "pies": {
+   "dutyLimitMin": 360, "dutyWarnMin": 60,
+   "workLimitMin": 30, "workWarnMin": 5, "restMin": 30,
+   "effortBudgetMin": 360, "wEffort": 0.7, "wDuty": 0.3,
+   "homeRadiusM": 50,
+   "_src": "praca 20-45 min i tyle samo odpoczynku (FEMA US&R, D) - 30/30; doba 4-6 h efektywnej pracy (S) - 6 h; upał > 29 st. C skraca cykl (D, jakościowo)"
+  },
+  "dron": {
+   "flightMinPerBattery": 35, "batteryHardPct": 20, "batteryWarnPct": 35,
+   "maintenanceEveryH": 50, "maintenanceWarnH": 5,
+   "dutyLimitMin": 720, "dutyWarnMin": 60,
+   "homeRadiusM": 50,
+   "_src": "M30T: 41 min lotu / 36 min zawisu (D) - 35 min z rezerwą; zimno -20..-30 % (S, silnik nie liczy temperatury); przegląd co 50 h (S); operator jak ratownik 12 h (S)"
+  },
+  "smiglowiec": {
+   "enduranceMin": 150, "fuelHardPct": 15, "fuelWarnPct": 35,
+   "maintenanceEveryH": 100, "maintenanceWarnH": 5,
+   "dutyLimitMin": 600, "dutyWarnMin": 60,
+   "homeRadiusM": 50,
+   "_src": "W-3A Sokół: zasięg 550-600 km przy ok. 235 km/h = 2-2,5 h (S z D) - 150 min; Bell 407GXi 3,5 h (D); rezerwa VFR 20 min = ok. 13 % z 150 min -> fuelHardPct 15 (D); dyżur załogi 10 h (S)"
+  },
+  "lodz": {
+   "enduranceMin": 240, "fuelHardPct": 20, "fuelWarnPct": 35,
+   "maintenanceEveryH": 100, "maintenanceWarnH": 5,
+   "dutyLimitMin": 720, "dutyWarnMin": 60,
+   "homeRadiusM": 50,
+   "_src": "RIB / łódź PSP 3-5 h na zbiorniku (S) - 240 min; skuter ok. 2 h (S) - nadpisane w inventory.json (120 min); łódź WOPR 12 m 25 l/h (D)"
+  },
+  "nurkowie": {
+   "dutyLimitMin": 240, "dutyWarnMin": 30,
+   "effortBudgetMin": 120, "wEffort": 0.7, "wDuty": 0.3,
+   "homeRadiusM": 50,
+   "_src": "2-3 nurkowania na dobę z przerwą 1-2 h (S); czas dna z tabel MZ (D); zimą większa ekipa i punkt grzewczy (D, KG PSP)"
+  }
+ },
+ "sources": [
+  {"key": "nwcg-work-rest", "text": "NWCG Work/Rest and Length of Assignment Standards (2:1, 16 h, maks. 24 h)", "url": "https://www.fs.usda.gov/sites/default/files/2019-05/nwcg_workrest-lengthofassignmentstandards.pdf"},
+  {"key": "tobler", "text": "Tobler's hiking function: v = 6 exp(-3.5 |S + 0.05|) km/h, poza szlakiem x 3/5", "url": "https://en.wikipedia.org/wiki/Tobler%27s_hiking_function"},
+  {"key": "compendium-2024", "text": "2024 Adult Compendium of Physical Activities (marsz z obciążeniem 6.5-10 MET)", "url": "https://pacompendium.com/wp-content/uploads/2024/01/2024-adult-compendium_1_2024.pdf"},
+  {"key": "acgih-cold", "text": "ACGIH TLV Work/Warm-up Schedule (praca w zimnie), CCOHS", "url": "https://ccohs.gc.ca/oshanswers/phys_agents/cold_working.html"},
+  {"key": "fema-k9", "text": "FEMA US&R canine teams, WTC 2001: 20-45 min pracy, tyle samo odpoczynku", "url": "https://webharvest.gov/peth04/20041015000252/http:/www.fema.gov/about/mediacanine.shtm"},
+  {"key": "tamu-heat", "text": "Texas A&M VetMed, Feeling the Heat: ok. 41 st. C po 20-25 min szukania w upale", "url": "https://vetmed.tamu.edu/news/press-releases/feeling-the-heat/"},
+  {"key": "icar-dogs", "text": "ICAR (IKAR-CISA) Best Practice Guidelines for dog handlers (2018)", "url": "https://www.alpine-rescue.org/ikar-cisa/documents/2018/ikar20181210006103.pdf"},
+  {"key": "dji-m30t", "text": "DJI Matrice 30T: 41 min lotu, wiatr 15 m/s, -20..+50 st. C; TB30 131.6 Wh, do 400 cykli; BS30 20-90 % w ok. 30 min", "url": "https://www.advexure.com/products/dji-matrice-30t"},
+  {"key": "w3a", "text": "PZL W-3 Sokół: zasięg 550-600 km (zbiorniki główne), -40..+43 st. C", "url": "https://en.wikipedia.org/wiki/PZL_W-3_Sok%C3%B3%C5%82"},
+  {"key": "topr-heli", "text": "TOPR: jeden W-3A Sokół, zakup nowego planowany (PAP / Bankier)", "url": "https://www.bankier.pl/wiadomosc/TOPR-planuje-zakup-nowego-smiglowca-Czeka-na-ruch-parlamentarzystow-8968948.html"},
+  {"key": "easa-fuel", "text": "EASA Air Ops CAT.OP.MPA.191 / NCO.OP.125: rezerwa końcowa VFR śmigłowca 20 min", "url": "https://regulatorylibrary.caa.co.uk/965-2012/Content/Regs/07120_CATOPMPA191_Fuel_Scheme_-_Fuel%20Planning.htm"},
+  {"key": "easa-hems", "text": "EASA SPA.HEMS.120 minima pogodowe HEMS (dzień / noc)", "url": "https://regulatorylibrary.caa.co.uk/965-2012/Content/Regs/13170_SPAHEMS120_HEMS_operating_minima.htm"},
+  {"key": "wopr-12m", "text": "Łódź ratownicza WOPR 12 m: 25 l/h, ponad 30 km/h (koszalin.pl)", "url": "https://www.koszalin.pl/en/printpdf/1185"},
+  {"key": "cold-water-1-10-1", "text": "Zasada 1-10-1 dla człowieka w zimnej wodzie (Giesbrecht, CSBC)", "url": "https://csbc.ca/1-10-1-principle/"},
+  {"key": "psp-divers", "text": "KG PSP, skrypt szkolenia młodszego nurka, rozdz. 12 (planowanie nurkowania, 5 funkcji ekipy)", "url": "https://www.gov.pl/attachment/a51881dd-7383-4b3f-8767-b88f1a88c747"}
+ ]
+}
