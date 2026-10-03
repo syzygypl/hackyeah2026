@@ -1921,7 +1921,7 @@ func invActorLog(_ q: Req, _ id: String) async -> Data {
     for i in entries.indices { entries[i]["_o"] = nil }
     let counts = Dictionary(grouping: entries, by: { $0["type"] as? String ?? "" }).mapValues(\.count)
     let o: [String: Any] = ["schema": "rescue-actor-log/1", "id": id, "name": team.name, "kind": team.kind, "sc": sc, "liveAt": invClock(start, liveMin),
-                            "at": invClock(start, upTo), "status": team.status, "entries": entries, "counts": counts,
+                            "at": invClock(start, upTo), "status": stat, "entries": entries, "counts": counts,
                             "note": "Zbudowane z istniejących danych: nagranie śladów (bez trasy prawdziwej), GPS na żywo, przydziały, kanał na żywo, meldunki, zdarzenia scenariusza, wpisy zasobów."]
     return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data("{}".utf8))
 }
