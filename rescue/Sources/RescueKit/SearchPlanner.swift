@@ -79,6 +79,10 @@ public enum SearchPlanner {
     /// Resource gates. Thresholds are illustrative.
     static func gate(_ r: Scenario.Resource, _ c: LocationHint.Conditions, minute: Int, scenario: Scenario) -> (Bool, String) {
         if scenario.minute(r.readyAt) > minute { return (false, "w drodze, gotowy \(r.readyAt)") }
+        if scenario.has("availabilityWindows") {
+            if r.daylightOnly == true && c.dark { return (false, "niedostępny po zmroku (tylko za dnia)") }
+            if let u = r.availableUntil, minute >= scenario.minute(u) { return (false, "niedostępny od \(u)") }
+        }
         switch r.type {
         case "drone":
             if c.windMs > 12 { return (false, "uziemiony: wiatr \(Int(c.windMs)) m/s > 12 m/s") }
@@ -98,6 +102,7 @@ public enum SearchPlanner {
     }
 
     public static func survival(_ s: Scenario, minute: Int, _ c: LocationHint.Conditions) -> Survival {
+        if s.has("hypothermiaModel") { return survivalModel(s, minute: minute, c) }
         let last = s.minutePast(s.subject.lastContact ?? s.startClock)
         let h = Double(minute - last) / 60
         let cold = c.tempC <= 2, wetOrWind = c.precip != "none" || c.windMs > 8
@@ -108,6 +113,28 @@ public enum SearchPlanner {
         else { level = "niski" }
         let txt = String(format: "%.1f h od ostatniego kontaktu, %.0f°C, wiatr %.0f m/s%@: ryzyko hipotermii %@",
                          h, c.tempC, c.windMs, c.precip == "none" ? "" : c.precip == "rain" ? ", deszcz" : ", śnieg", level)
+        return Survival(hoursOut: h, level: level, text: txt)
+    }
+
+    /// Feature hypothermiaModel: hours exposed, the coldest temperature ahead (forecast night minimum), wet/wind,
+    /// and the person (age, category). Illustrative scoring after the usual SAR risk factors (elderly, children,
+    /// dementia, immobile, wet clothing, wind chill); not a medical model.
+    static func survivalModel(_ s: Scenario, minute: Int, _ c: LocationHint.Conditions) -> Survival {
+        let last = s.minutePast(s.subject.lastContact ?? s.startClock)
+        let h = Double(minute - last) / 60
+        let forecastMin = s.subject.forecastMinC ?? s.events(for: "WeatherConditions").compactMap(\.tempC).min() ?? c.tempC
+        let tMin = min(c.tempC, forecastMin)
+        var score = h / 6 + max(0, 5 - tMin) / 5
+        var why: [String] = []
+        if c.precip != "none" || c.windMs > 8 { score += 0.7; why.append(c.precip != "none" ? "mokro" : "wiatr \(Int(c.windMs)) m/s") }
+        let age = s.subject.age
+        if age >= 70 || age <= 12 { score += 0.7; why.append("wiek \(age)") }
+        let cat = s.subject.category.lowercased()
+        if cat.contains("dementia") || cat.contains("child") || cat.contains("demenc") { score += 0.7; why.append("kategoria \(s.subject.category)") }
+        if s.subject.posture == "unresponsive" { score += 0.5; why.append("nieruchoma") }
+        let level = score < 1 ? "niski" : score < 2 ? "podwyższony" : score < 3 ? "wysoki" : "krytyczny"
+        let txt = String(format: "%.1f h od ostatniego kontaktu, teraz %.0f°C, minimum nocy %.0f°C%@: ryzyko hipotermii %@",
+                         h, c.tempC, tMin, why.isEmpty ? "" : ", " + why.joined(separator: ", "), level)
         return Survival(hoursOut: h, level: level, text: txt)
     }
 

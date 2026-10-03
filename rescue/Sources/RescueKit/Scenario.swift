@@ -8,6 +8,8 @@ public struct Scenario: Codable, Sendable {
         public let category: String
         public let note: String
         public var lastContact: String? = nil
+        /// Feature hypothermiaModel: forecast overnight minimum (°C); else the minimum over the WeatherConditions events.
+        public var forecastMinC: Double? = nil
         /// "responsive" (answers calls, moves) or "unresponsive" (lying, unconscious); feature podModel
         public var posture: String? = nil   // "HH:mm", for the hypothermia clock
     }
@@ -63,6 +65,9 @@ public struct Scenario: Codable, Sendable {
         /// Where the team can board a vehicle (e.g. TOPR station in Zakopane). With roads in the terrain, ground teams
         /// may drive to the road point nearest the target and walk from there. nil = on foot from `base` only.
         public var vehicleFrom: [Double]? = nil
+        /// Feature availabilityWindows: usable only in daylight (e.g. a helicopter without night crew) and/or until "HH:mm".
+        public var daylightOnly: Bool? = nil
+        public var availableUntil: String? = nil
     }
     public struct Segment: Codable, Sendable {
         public let id: String
