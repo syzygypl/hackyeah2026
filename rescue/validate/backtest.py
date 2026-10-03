@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Backtest the rescue-locator engine across every committed scenario.
+
+For each rescue/scenarios/<name>.json (excluding *-terrain.json), runs
+`swift run rescue-demo --fast` and reads the resulting out/<tmp>.run.json
+`value` block: rank/area of the fictional find spot after fusion vs plain
+Koester rings. Where a scenario has a DronePassEmpty hint, it is run twice
+with the drone's POD patched to 0.6 and 0.75 (both are used in the demo
+set; see rescue/README.md) so the pitch number isn't tied to one guess.
+
+All work happens on throwaway copies named <name>-bt-<variant>.json (and
+matching -terrain.json if a real-terrain override exists for the
+scenario) so this never touches the committed rescue/out/index.html or
+rescue/out/run.json. Writes rescue/validate/backtest.md.
+
+Usage: cd rescue && swift build  (once, if not already built)
+       python3 validate/backtest.py
+"""
+import copy
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[2]
+RESCUE = REPO / "rescue"
+SCENARIOS = RESCUE / "scenarios"
+OUT = RESCUE / "out"
+
+
+def load(path):
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def drone_pod_variants(scenario):
+    has_drone = any(e.get("provider") == "DronePassEmpty" for e in scenario["events"])
+    if not has_drone:
+        return [("na", None, "n/a")]
+    return [("pod06", 0.6, "0.6"), ("pod075", 0.75, "0.75")]
+
+
+def make_variant(scenario, pod):
+    s = copy.deepcopy(scenario)
+    if pod is not None:
+        for e in s["events"]:
+            if e.get("provider") == "DronePassEmpty":
+                e["pod"] = pod
+    return s
+
+
+def run_variant(name, variant_slug, scenario_doc, terrain_src):
+    tmp_name = f"{name}-bt-{variant_slug}"
+    scen_path = SCENARIOS / f"{tmp_name}.json"
+    terrain_path = SCENARIOS / f"{tmp_name}-terrain.json"
+    run_json_path = OUT / f"{tmp_name}.run.json"
+    html_path = OUT / f"{tmp_name}.html"
+    try:
+        with open(scen_path, "w", encoding="utf-8") as f:
+            json.dump(scenario_doc, f, ensure_ascii=False)
+        if terrain_src is not None:
+            with open(terrain_src, encoding="utf-8") as f:
+                terrain_doc = json.load(f)
+            with open(terrain_path, "w", encoding="utf-8") as f:
+                json.dump(terrain_doc, f, ensure_ascii=False)
+
+        # Invoke the built binary directly rather than `swift run`: the latter wraps the
+        # child process in a way that hangs when stdout/stderr are pipes without a tty
+        # (as under this harness's subprocess sandbox).
+        binary = RESCUE / ".build" / "debug" / "rescue-demo"
+        proc = subprocess.run(
+            [str(binary), "--fast", f"scenarios/{tmp_name}.json"],
+            cwd=RESCUE, capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL,
+        )
+        if proc.returncode != 0:
+            return {"error": proc.stderr.strip()[-500:] or "rescue-demo exited non-zero"}
+
+        with open(run_json_path, encoding="utf-8") as f:
+            run_doc = json.load(f)
+        return {"value": run_doc["value"], "usedRealTerrain": terrain_src is not None}
+    finally:
+        for p in (scen_path, terrain_path, run_json_path, html_path):
+            p.unlink(missing_ok=True)
+
+
+def main():
+    binary = RESCUE / ".build" / "debug" / "rescue-demo"
+    if not binary.exists():
+        print(f"error: {binary} not found - run `cd rescue && swift build` first", file=sys.stderr)
+        sys.exit(2)
+    # Defensive cleanup: a prior crashed run could have left a "<name>-bt-<variant>.json"
+    # temp file behind, which would otherwise be picked up below as if it were a real
+    # scenario (and it is never one - "-bt-" is reserved for this script's own temp files).
+    for stray in SCENARIOS.glob("*-bt-*"):
+        stray.unlink()
+    for stray in OUT.glob("*-bt-*"):
+        stray.unlink()
+
+    scenario_paths = sorted(
+        p for p in SCENARIOS.glob("*.json")
+        if not p.name.endswith("-terrain.json") and "-bt-" not in p.name
+    )
+    rows = []
+    for path in scenario_paths:
+        name = path.stem
+        scenario = load(path)
+        terrain_src = path.with_name(f"{name}-terrain.json")
+        terrain_src = terrain_src if terrain_src.exists() else None
+        for variant_slug, pod, variant_display in drone_pod_variants(scenario):
+            variant_doc = make_variant(scenario, pod)
+            print(f"running {name} (drone POD {variant_display})...", file=sys.stderr)
+            result = run_variant(name, variant_slug, variant_doc, terrain_src)
+            rows.append({
+                "name": name,
+                "incident": scenario["incident"],
+                "category": scenario["subject"]["category"],
+                "podVariant": variant_display,
+                **result,
+            })
+
+    lines = [
+        "# Backtest: fused POA vs plain Koester rings",
+        "",
+        "Generated by `rescue/validate/backtest.py`. For each scenario: rank of the fictional",
+        "find-spot segment after fusing all evidence vs using only Koester/ISRID distance rings,",
+        "and the % of the 36 km2 box that would need sweeping (in POA order) to reach it. Where a",
+        "scenario includes a thermal-drone pass, both POD assumptions used in the demo set (0.6 and",
+        "0.75 - see rescue/README.md) are reported; neither claims a specific drone spec.",
+        "",
+        "| Scenariusz | Kategoria | POD drona | Ranga: fuzja | Ranga: same ringi | Obszar: fuzja | Obszar: ringi | Teren |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    ok_rows = [r for r in rows if "value" in r]
+    for r in rows:
+        if "error" in r:
+            lines.append(f"| {r['name']} | {r['category']} | {r['podVariant']} | BLAD: {r['error']} | | | | |")
+            continue
+        v = r["value"]
+        terrain = "prawdziwy (OSM+DEM)" if r["usedRealTerrain"] else "rysowany recznie (fallback)"
+        lines.append(
+            f"| {r['name']} | {r['category']} | {r['podVariant']} | "
+            f"#{v['rankFused']} | #{v['rankRings']} | "
+            f"{v['areaFused'] * 100:.2f}% | {v['areaRings'] * 100:.1f}% | {terrain} |"
+        )
+
+    top3 = sum(1 for r in ok_rows if r["value"]["rankFused"] <= 3)
+    n = len(ok_rows)
+    avg_area = sum(r["value"]["areaFused"] for r in ok_rows) / n * 100 if n else 0
+    avg_area_rings = sum(r["value"]["areaRings"] for r in ok_rows) / n * 100 if n else 0
+    lines += [
+        "",
+        "## Liczba do pitchu",
+        "",
+        f"Miejsce odnalezienia w top 3 segmentow po fuzji w **{top3}/{n}** przypadkach "
+        f"(obie wersje POD drona, wszystkie scenariusze). "
+        f"Srednio trzeba przeszukac **{avg_area:.2f}%** obszaru w kolejnosci POA zanim dojdzie sie "
+        f"do miejsca odnalezienia, wobec **{avg_area_rings:.1f}%** gdybysmy uzyli tylko pierscieni "
+        "Koestera (bez fuzji pozostalych dowodow).",
+        "",
+        "Uwaga: liczby zalezne od terenu - scenariusze bez jeszcze wygenerowanego prawdziwego terenu "
+        "(OSM+DEM, AI Marcina) uzywaja reczne narysowanego fallbacku ze scenariusza i moga sie zmienic "
+        "po dolozeniu <nazwa>-terrain.json (tak jak dla zawrat: ranga #1 -> #2).",
+    ]
+
+    md_path = RESCUE / "validate" / "backtest.md"
+    md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"wrote {md_path}", file=sys.stderr)
+    print(f"{top3}/{n} top-3, avg area fused {avg_area:.2f}% vs rings {avg_area_rings:.1f}%", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
