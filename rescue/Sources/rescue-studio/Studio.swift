@@ -456,6 +456,14 @@ actor Studio {
         return await rerun()
     }
 
+    /// The current story as a scenario file (events with titles), for the 3D view's ?scenario= parameter.
+    func scenarioData() async -> Data {
+        if base.isEmpty { _ = await newStory(jsonData(["template": "zawrat"])) }
+        var d = scenarioDict()
+        d["terrain"] = nil
+        return jsonData(d)
+    }
+
     func get() async -> Data {
         if base.isEmpty { return await newStory(jsonData(["template": "zawrat"])) }
         return lastRun
