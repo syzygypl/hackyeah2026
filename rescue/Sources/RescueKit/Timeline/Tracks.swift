@@ -19,8 +19,14 @@ public struct TrackFix: Sendable {
 
 public struct TrackConstraint: Sendable {
     public var from: Int, to: Int
-    public var along: String        // trail | stream | ridge | direct | stay
+    public var along: String        // trail | stream | ridge | direct | stay | reverse
     public var text: String? = nil
+    public var place: String? = nil // target place (gazetteer name) and its point: "szlakiem do Murowańca"
+    public var lat: Double? = nil, lon: Double? = nil
+    public var color: String? = nil // trail colour: "Niebieski" (trail names start with it)
+    public var src: String? = nil   // rules | llm | file
+    public var target: Coord? { lat != nil && lon != nil ? Coord(lat!, lon!) : nil }
+    public init(from: Int, to: Int, along: String, text: String? = nil) { self.from = from; self.to = to; self.along = along; self.text = text }
 }
 
 /// Detection parameters per actor kind = one `units.<unit>` entry of fov-params.json (AI Michała, sourced in
@@ -159,8 +165,9 @@ public struct TrackActor: Sendable {
     public var fixes: [TrackFix]
     public var constraints: [TrackConstraint] = []
     public var plan: [Coord] = []
-    public init(id: String, kind: String, name: String, fov: FOVParams, fixes: [TrackFix], constraints: [TrackConstraint] = [], plan: [Coord] = []) {
-        self.id = id; self.kind = kind; self.name = name; self.fov = fov; self.fixes = fixes; self.constraints = constraints; self.plan = plan
+    public var note: String? = nil   // osoba estimate: what it is built from
+    public init(id: String, kind: String, name: String, fov: FOVParams, fixes: [TrackFix], constraints: [TrackConstraint] = [], plan: [Coord] = [], note: String? = nil) {
+        self.id = id; self.kind = kind; self.name = name; self.fov = fov; self.fixes = fixes; self.constraints = constraints; self.plan = plan; self.note = note
     }
 }
 
@@ -218,9 +225,18 @@ public struct TrackSet: Sendable {
             for f in fixes {
                 if let l = dedup.last, l.minute == f.minute { if f.accM < l.accM { dedup[dedup.count - 1] = f } } else { dedup.append(f) }
             }
-            let cons: [TrackConstraint] = ((a["constraints"] as? [[String: Any]]) ?? []).compactMap { c in
+            var cons: [TrackConstraint] = ((a["constraints"] as? [[String: Any]]) ?? []).compactMap { c in
                 guard let f = minute(c["from"]), let t = minute(c["to"]) else { return nil }
-                return TrackConstraint(from: f, to: t, along: (c["along"] as? String) ?? "direct", text: c["text"] as? String)
+                var k = TrackConstraint(from: f, to: t, along: (c["along"] as? String) ?? "direct", text: c["text"] as? String)
+                k.place = c["place"] as? String; k.color = c["color"] as? String; k.src = (c["src"] as? String) ?? "file"
+                k.lat = (c["lat"] as? NSNumber)?.doubleValue; k.lon = (c["lon"] as? NSNumber)?.doubleValue
+                return k
+            }
+            // report fixes with text and no explicit constraint at that minute: rules reading (TrackConstraints)
+            let places = dedup.contains { $0.src == "report" && $0.text != nil } ? TrackConstraints.gazetteer(s) : []
+            for f in dedup where f.src == "report" {
+                guard let text = f.text, !cons.contains(where: { $0.from <= f.minute && $0.to > f.minute && $0.src != "rules" }) else { continue }
+                cons += TrackConstraints.read(text, at: f.minute, actor: id, scenario: s, places: places).constraints
             }
             let plan: [Coord] = ((a["plan"] as? [Any]) ?? []).compactMap { p in
                 if let po = p as? [String: Any], let lat = (po["lat"] as? NSNumber)?.doubleValue, let lon = (po["lon"] as? NSNumber)?.doubleValue { return Coord(lat, lon) }
