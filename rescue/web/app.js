@@ -18,7 +18,12 @@
     { id: 'kasprowy', label: 'Kasprowy', run: '../out/kasprowy.run.json', scenario: '../scenarios/kasprowy.json', dem: '../tools/terrain/data/kasprowy-dem.json', basemap: false },
   ];
   const SC = SCENARIOS.find((x) => x.id === Q.get('sc')) || SCENARIOS[0];
-  const CUSTOM_RUN = Q.has('run'); // ?run= override wins over the switcher
+  const CUSTOM_RUN = Q.has('run') || Q.has('runInline'); // ?run= (or a parent-supplied run) wins over the switcher
+  // Embed (combined app rescue/app/, same contract as web/3d): ?embed=1 hides header + side panels, ?embed=bare also the
+  // timeline and map controls. Messages are accepted only from window.parent at PARENT_ORIGIN (same origin by default).
+  const EMBED = Q.get('embed') === '1' || Q.get('embed') === 'bare' ? Q.get('embed') : null;
+  const PARENT_ORIGIN = Q.get('parentOrigin') || location.origin;
+  const EMBED_VERSION = 'rescue2d/1';
   const CFG = {
     sc: CUSTOM_RUN ? 'custom' : SC.id,
     run: Q.get('run') || SC.run,
@@ -843,10 +848,11 @@
   }
 
   /* ---------- interaction ---------- */
-  function setStep(k) {
-    const n = S.M.hints.length;
+  function setStep(k, fromParent) {
+    const n = S.M.hints.length, prev = S.step;
     S.step = Math.max(0, Math.min(n - 1, k));
     render();
+    if (!fromParent && S.step !== prev) toParent({ type: 'step', i: S.step, t: S.M.hints[S.step].t });
   }
   function play() {
     if (S.playing) return stop();
@@ -855,12 +861,49 @@
     S.timer = setInterval(() => { if (S.step >= S.M.hints.length - 1) return stop(); setStep(S.step + 1); }, CFG.playMs);
   }
   function stop() { S.playing = false; clearInterval(S.timer); S.timer = null; if (S.M) renderTimeline(); }
-  function selectSeg(id) {
-    S.selected = S.selected === id ? null : id;
+  function selectSeg(id, fromParent) {
+    S.selected = fromParent ? id : (S.selected === id ? null : id); // parent sets, user clicks toggle
     render();
     const g = S.M.segs.get(id);
     if (S.selected && g) S.view.fitSeg(g);
+    if (!fromParent) toParent({ type: 'select', segmentId: S.selected });
   }
+
+  /* ---------- embed API (postMessage; same shapes as web/3d, tagged source: 'rescue2d') ---------- */
+  // in:  {type:'run', run} | {type:'run', url} | {type:'run', run: {url}} | {type:'step', i} | {type:'select', segmentId|null}
+  // out: {source:'rescue2d', type:'ready', version, scenario, steps, step} | {..., type:'step', i, t} | {..., type:'select', segmentId}
+  function toParent(msg) {
+    if (window.parent === window) return;
+    try { window.parent.postMessage({ source: 'rescue2d', ...msg }, PARENT_ORIGIN); } catch (e) { warn('postMessage: ' + e.message); }
+  }
+  function onParentMessage(e) {
+    if (e.source !== window.parent || window.parent === window || e.origin !== PARENT_ORIGIN) return;
+    const m = e.data;
+    if (!m || typeof m !== 'object' || Array.isArray(m) || typeof m.type !== 'string') return;
+    if (!S.M || document.body.dataset.state !== 'ready') { (S.pendingMsgs = S.pendingMsgs || []).push(m); return; }
+    applyParentMessage(m);
+  }
+  function reloadWith(set, del) {
+    const u = new URL(location.href);
+    Object.entries(set).forEach(([k, v]) => u.searchParams.set(k, v));
+    del.forEach((k) => u.searchParams.delete(k));
+    location.replace(u.href);
+  }
+  function applyParentMessage(m) {
+    try {
+      if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
+      else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
+      else if (m.type === 'run' && typeof m.url === 'string') reloadWith({ run: m.url }, ['runInline', 'sc', 'step']);
+      else if (m.type === 'run' && m.run && typeof m.run === 'object' && typeof m.run.url === 'string' && !m.run.schema) reloadWith({ run: m.run.url }, ['runInline', 'sc', 'step']);
+      else if (m.type === 'run' && m.run && typeof m.run === 'object') {
+        const errs = checkRun(m.run);
+        if (errs.length) { warn('embed: run rejected (' + errs.join('; ') + ')'); return; }
+        sessionStorage.setItem('rescue2d-run', JSON.stringify(m.run)); // parked for the reload; the map is built per run at boot
+        reloadWith({ runInline: '1' }, ['run', 'sc', 'step']);
+      }
+    } catch (err) { warn('embed message ignored: ' + err.message); }
+  }
+  window.addEventListener('message', onParentMessage);
   function onHover(i, pt) {
     const tip = $('#tip');
     if (i == null || !S.lastP) { tip.hidden = true; return; }
@@ -979,6 +1022,7 @@
     renderLive();
   }
   async function pollRun() {
+    if (CFG.run === 'inline') return; // parent-supplied run: nothing to poll
     try {
       const r = await fetch(CFG.run, { method: 'HEAD', cache: 'no-store' });
       const sig = (r.headers.get('last-modified') || '') + '|' + (r.headers.get('content-length') || '');
@@ -1072,11 +1116,18 @@
   }
 
   async function boot() {
+    if (EMBED) { document.body.classList.add('embed'); if (EMBED === 'bare') document.body.classList.add('embed-bare'); }
     wire();
     initScenarioSwitcher();
     initLive();
     let R;
-    try { R = await fetchJSON(CFG.run); } catch (e) { return fatal(`${CFG.run}: ${e.message}`); }
+    if (Q.has('runInline')) {
+      try { R = JSON.parse(sessionStorage.getItem('rescue2d-run')); } catch (e) { R = null; }
+      if (!R) return fatal('brak run.json przekazanego przez aplikację nadrzędną (sessionStorage)');
+      CFG.run = 'inline';
+    } else {
+      try { R = await fetchJSON(CFG.run); } catch (e) { return fatal(`${CFG.run}: ${e.message}`); }
+    }
     const errs = checkRun(R);
     if (errs.length) return fatal('run.json nie spełnia kontraktu rescue-run/1: ' + errs.join('; '));
     const scen = await fetchJSON(CFG.scenario, true);
@@ -1133,6 +1184,8 @@
     setInterval(pollRun, CFG.runPollMs);
     pollRun();
     window.__rescue = { S, CFG, DIAG, setStep, compute, stats };
+    toParent({ type: 'ready', version: EMBED_VERSION, scenario: CFG.sc, steps: M.hints.length, step: S.step });
+    (S.pendingMsgs || []).splice(0).forEach(applyParentMessage);
   }
   boot().catch((e) => fatal(e.message || String(e)));
 })();

@@ -263,3 +263,9 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 .badge { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 8px; background: #fff3cd; color: #7a5b00; border: 1px solid #e6d18a; margin-left: 6px; }
 .ff-pin { display: block; font-size: 12px; margin-top: 6px; }
 .ff-pin input { font: inherit; width: 7em; margin-left: 4px; }
+
+/* embed mode (?embed=1 / ?embed=bare): the combined app (rescue/app/) provides header, panels and timeline */
+body.embed #top, body.embed #left, body.embed #right { display: none; }
+body.embed #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "map" "tl"; }
+body.embed-bare #timeline, body.embed-bare #mapctl, body.embed-bare #stepcard { display: none; }
+body.embed-bare #app { grid-template-rows: minmax(0, 1fr); grid-template-areas: "map"; }

@@ -110,7 +110,7 @@ try:
     call("Emulation.setDeviceMetricsOverride", {"width": W, "height": H, "deviceScaleFactor": 1, "mobile": False})
     call("Page.navigate", {"url": url})
     t0 = time.time(); state = None
-    while time.time() - t0 < 40:
+    while time.time() - t0 < 90:
         state = ev("document.body && document.body.dataset.state")
         if state in ("ready", "error"): break
         time.sleep(0.5)

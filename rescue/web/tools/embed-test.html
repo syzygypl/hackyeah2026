@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rescue/web embed test</title>
+<style>body { font: 13px system-ui, sans-serif; margin: 8px; } iframe { width: 900px; height: 520px; border: 1px solid #999; } pre { white-space: pre-wrap; }</style>
+</head>
+<body data-state="loading">
+<!-- Parent page for the 2D embed contract (README "Embedding"). Drives every message and asserts the replies.
+     Run: cd rescue && python3 -m http.server 8000 &  python3 web/tools/smoke.py http://localhost:8000/web/tools/embed-test.html /tmp/out
+     body[data-state] becomes "ready" only if every check passes, else "error"; results in #diag. -->
+<iframe id="f"></iframe>
+<pre id="diag"></pre>
+<script>
+'use strict';
+const F = document.getElementById('f');
+const LOG = [];
+const RESULTS = [];
+addEventListener('message', (e) => {
+  if (e.source === F.contentWindow && e.data && e.data.source === 'rescue2d') LOG.push(e.data);
+});
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(pred, ms = 20000) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms) { try { if (pred()) return true; } catch (e) { /* frame reloading */ } await sleep(100); }
+  return false;
+}
+const W = () => F.contentWindow;
+const R = () => W().__rescue;
+const post = (m, origin = location.origin) => W().postMessage(m, origin);
+const count = (type) => LOG.filter((m) => m.type === type).length;
+function check(name, ok, info) { RESULTS.push({ name, ok: !!ok, info }); }
+
+async function load(src) {
+  const n = count('ready');
+  F.src = src;
+  return until(() => count('ready') > n);
+}
+
+(async () => {
+  try {
+    // 1. ready
+    check('ready after load', await load('../index.html?embed=1&step=0'));
+    const ready = LOG.filter((m) => m.type === 'ready').pop() || {};
+    check('ready shape', ready.version === 'rescue2d/1' && Number.isInteger(ready.steps) && ready.steps > 1 && ready.step === 0 && typeof ready.scenario === 'string', ready);
+    const doc = W().document, vis = (id) => getComputedStyle(doc.getElementById(id)).display !== 'none';
+    check('embed=1 hides header and side panels, keeps map/legend/timeline', !vis('top') && !vis('left') && !vis('right') && vis('map') && vis('legend') && vis('timeline'));
+
+    // 2. parent step -> applied, not echoed
+    let steps0 = count('step');
+    post({ type: 'step', i: 2 });
+    check('parent step applied', await until(() => R().S.step === 2));
+    await sleep(400);
+    check('parent step not echoed', count('step') === steps0);
+
+    // 3. user step -> emitted with i and t
+    W().document.getElementById('next').click();
+    check('user step emitted', await until(() => LOG.some((m) => m.type === 'step' && m.i === 3 && typeof m.t === 'string')));
+
+    // 4. parent select -> applied, not echoed; user select -> emitted
+    const seg = R().S.M.segList[1].id;
+    const sel0 = count('select');
+    post({ type: 'select', segmentId: seg });
+    check('parent select applied', await until(() => R().S.selected === seg));
+    await sleep(300);
+    check('parent select not echoed', count('select') === sel0);
+    const other = R().S.M.segList[0].id;
+    W().document.querySelector(`#ranking tbody tr[data-seg="${other}"]`).click();
+    check('user select emitted', await until(() => LOG.some((m) => m.type === 'select' && m.segmentId === other)));
+    post({ type: 'select', segmentId: null });
+    check('select null clears', await until(() => R().S.selected === null));
+
+    // 5. malformed / hostile messages are ignored
+    const stepBefore = R().S.step, errs0 = R().DIAG.errors.length;
+    ['junk', null, 42, [], { type: 'step', i: '1' }, { type: 'step' }, { type: 'step', i: 1.5 }, { type: 'select', segmentId: 'NOPE' },
+     { type: 'eval', code: 'window.__pwned = 1' }, { type: 'run', url: 7 }, { type: 'run', run: { schema: 'x' } }].forEach((m) => post(m));
+    await sleep(600);
+    check('malformed ignored, no change, no errors, nothing evaluated',
+      R().S.step === stepBefore && !W().__pwned && R().DIAG.errors.length === errs0 && R().S.selected === null);
+
+    // 6. message not from window.parent (frame posts to itself) is ignored
+    const sc = W().document.createElement('script'); // posted from INSIDE the frame: event.source is the frame itself
+    sc.textContent = "window.postMessage({ type: 'step', i: 0 }, location.origin)";
+    W().document.body.appendChild(sc);
+    await sleep(400);
+    check('non-parent source ignored', R().S.step === stepBefore);
+
+    // 7. run object -> reload with runInline, ready again
+    const runObj = await (await fetch('../../out/run.json')).json();
+    let n = count('ready');
+    post({ type: 'run', run: runObj });
+    check('run object reloads (runInline)', await until(() => count('ready') > n) && W().location.search.includes('runInline=1') && R().S.M.hints.length === runObj.steps.length);
+
+    // 8. run url -> reload with ?run=
+    n = count('ready');
+    post({ type: 'run', url: '../out/run.json' });
+    check('run url reloads (?run=)', await until(() => count('ready') > n) && new URLSearchParams(W().location.search).get('run') === '../out/run.json');
+
+    // 9. messages before ready are queued
+    F.src = '../index.html?embed=bare';
+    await until(() => W().document && W().document.readyState !== 'loading' && W().location.search.includes('bare'));
+    post({ type: 'step', i: 1 });
+    n = count('ready');
+    check('early message queued and applied after ready', await until(() => count('ready') > n) && await until(() => R().S.step === 1));
+    const d2 = W().document, vis2 = (id) => getComputedStyle(d2.getElementById(id)).display !== 'none';
+    check('embed=bare keeps only map + legend', !vis2('timeline') && !vis2('mapctl') && vis2('map') && vis2('legend'));
+
+    // 10. wrong parentOrigin -> parent messages ignored (and its ready goes to that origin, not to us)
+    F.src = '../index.html?embed=1&parentOrigin=http://example.invalid';
+    check('load with foreign parentOrigin', await until(() => W().location.search.includes('parentOrigin') && W().document.body.dataset.state === 'ready' && R()));
+    post({ type: 'step', i: 3 });
+    await sleep(600);
+    check('foreign parentOrigin: our messages ignored', R().S.step !== 3);
+  } catch (e) {
+    check('exception', false, String(e && e.stack || e) + ' | frame=' + (() => { try { return W().location.href + ' state=' + W().document.body.dataset.state + ' diag=' + W().document.getElementById('diag').textContent.slice(0, 300); } catch (x) { return 'n/a'; } })());
+  }
+  const ok = RESULTS.every((r) => r.ok);
+  document.getElementById('diag').textContent = JSON.stringify({ ok, results: RESULTS, log: LOG.map((m) => m.type) }, null, 1);
+  document.body.dataset.state = ok ? 'ready' : 'error';
+})();
+</script>
+</body>
+</html>

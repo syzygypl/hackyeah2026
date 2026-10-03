@@ -51,6 +51,32 @@ When `rescue-field` runs on the LAN (`serve --host 0.0.0.0 --pin NNNN`), its end
 | `playMs` | `1800` | Play speed, ms per step |
 | `renderer` | `auto` | `canvas` forces the Canvas 2D fallback view |
 
+
+## Embedding (iframe + postMessage)
+
+For the combined app (`rescue/app/`). It uses the same contract as the 3D view (`web/3d/README.md`), and our messages are tagged `source: 'rescue2d'`.
+- **Incoming messages:** accepted only from `window.parent` and only from `PARENT_ORIGIN`: the page's own origin by default, or `?parentOrigin=<origin>`. Anything else, malformed messages and unknown types are ignored. Nothing is ever evaluated.
+- **Replies:** sent to `PARENT_ORIGIN`.
+- **Early messages:** messages that arrive before the map is ready are queued and applied after `ready`.
+
+| Direction | Message | Effect |
+|---|---|---|
+| parent -> 2D | `{type: 'step', i}` | jump to step `i` (integer) |
+| parent -> 2D | `{type: 'select', segmentId}` | select the segment (must exist in the run) and fit to it; `segmentId: null` clears |
+| parent -> 2D | `{type: 'run', url}` (also `{type: 'run', run: {url}}`) | reload with `?run=<url>` |
+| parent -> 2D | `{type: 'run', run}` | full run.json object: validated against rescue-run/1, parked in `sessionStorage` (`rescue2d-run`), reload with `?runInline=1` |
+| 2D -> parent | `{source: 'rescue2d', type: 'ready', version: 'rescue2d/1', scenario, steps, step}` | page loaded (also after every run reload) |
+| 2D -> parent | `{source: 'rescue2d', type: 'step', i, t}` | user changed the step (not echoed for parent-driven changes) |
+| 2D -> parent | `{source: 'rescue2d', type: 'select', segmentId}` | user clicked a segment (map, ranking, plan); `null` when deselected |
+
+**Modes:**
+- `?embed=1` hides our header and both side panels, and keeps the map, legend and timeline.
+- `?embed=bare` also removes the timeline, map controls and step card, leaving the map and legend.
+
+**URL parameters:** `?run=<url>`, `?step=i` and `?sc=` keep working in embed mode.
+
+**Test:** `web/tools/embed-test.html` is a parent page that drives every message and asserts the replies, see Checks.
+
 ## What is on the screen
 
 - **Map:** POA per cell for the selected step (6 classes, one warm hue, legend in % per 100 x 100 m cell). Segment polygons from run.json; top 3 thick white with "name - POA%" labels, others "S12 · 2%" (tick "pełne nazwy" for all names). Searched segments dashed with POD. IPP marker. Per-hint overlays when the scenario is available: Koester rings, trip route, car + exit corridor, BTS sector, Ratunek ping, steep ground. Optional "trudność terenu" layer from `run.json.difficulty`. Field reports as yellow markers.
@@ -101,6 +127,18 @@ python3 web/tools/smoke.py http://localhost:8000/web/ /tmp/rescue-shots 1280x720
 `check_data.py` compares the layer recovered from run.json (`poaGrid[k] / poaGrid[k-1]`) with the per-hint layers the engine embeds in `out/index.html`: on the current run the worst spread is 0.93% (run.json rounding). `smoke.py` (stdlib only, Chrome over the DevTools protocol) fails when the page does not reach `data-state="ready"` or throws; on the current data it reports MapLibre with 89 style layers, 3600 heat cells, basemap features under the heat, 20 ranked segments and zero requests to other hosts. `fixtures/live-events.sample.json` is a two-report sample in the live-events shape: `?live=fixtures/live-events.sample.json`.
 
 Screenshots (1280 x 720, offline basemap): `screenshots/1280x720-step-1945.png` (19:45, before the Ratunek ping), `screenshots/1280x720-ratunek-2005.png` (20:05, ping inside S7).
+
+Embed contract: `python3 web/tools/smoke.py http://localhost:8000/web/tools/embed-test.html /tmp/out 1280x900`. The parent page `tools/embed-test.html` loads the screen in an iframe and makes 18 checks:
+- `ready` shape, and what `embed=1` and `embed=bare` hide and keep
+- parent step and select are applied and not echoed; user step and select are emitted
+- `select null` clears
+- malformed and hostile messages are ignored, with nothing evaluated
+- messages from a non-parent source are ignored
+- run object (`runInline`) and run url reloads
+- messages that arrive before `ready` are queued
+- with a foreign `parentOrigin`, our messages are ignored
+
+The page sets `data-state=ready` only if every check passes.
 
 ## Attributions
 
