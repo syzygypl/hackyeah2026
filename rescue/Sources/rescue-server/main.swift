@@ -227,6 +227,20 @@ actor SharedState {
             last[k] = await export(k)
         }
     }
+    /// POST /api/advance writes its cursor through at once, on top of the stored document: with the end-of-request push alone a
+    /// concurrent request's pull on this instance could reload the old document in between, the push then saw nothing new and the
+    /// move was silently lost (the operator saw "ok", the map stayed). false = the store refused the write.
+    func putCursor(_ sc: String, _ v: String?) async -> Bool {
+        guard let neon = store as? NeonStore else { await cursors.set(sc, v); return true }
+        var m = ((await neon.doc("cursor")?.data).flatMap { (try? JSONSerialization.jsonObject(with: $0)) as? [String: String] }) ?? [:]
+        m[sc] = v
+        let d = (try? JSONSerialization.data(withJSONObject: m, options: [.sortedKeys])) ?? Data("{}".utf8)
+        let ver = await neon.putDoc("cursor", d)
+        guard ver > 0 else { return false }
+        await cursors.importState(d)
+        versions["cursor"] = ver; last["cursor"] = await cursors.exportState()
+        return true
+    }
     /// after POST /story/save: the saved file goes to the store too
     func pushScenario(_ name: String) async {
         guard store.shared, validName(name), let d = try? Data(contentsOf: scenariosDir.appendingPathComponent("\(name).json")) else { return }
@@ -324,7 +338,7 @@ func advance(_ q: Req) async -> Data {
     }
     if op == "next" && target == nil { return jsonErr("409 Conflict", "koniec nagrania - nie ma kolejnych zdarzeń") }
     let at = target?["at"] as? String ?? dflt
-    await cursors.set(sc, op == "default" ? nil : at)
+    guard await shared.putCursor(sc, op == "default" ? nil : at) else { return jsonErr("503 Service Unavailable", "nie udało się zapisać pozycji akcji - spróbuj ponownie") }
     let title = op == "start" ? "Akcja od początku (\(at))" : op == "default" ? "Akcja wraca do bieżącego momentu (\(at))"
         : "\(at) \(target?["title"] as? String ?? target?["provider"] as? String ?? "zdarzenie")"
     _ = await liveFeed.add(LiveFeedEvent(kind: "scenario", by: "operator", title: title, sc: sc))
