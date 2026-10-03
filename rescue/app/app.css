@@ -332,3 +332,5 @@ body.role-operator header #status{display:none}
 .livebox{border-top:1px solid var(--rl-line);margin-top:8px;padding:0 4px}
 .livebox button{min-height:34px;font-weight:600}
 #liveFeed{max-height:180px;overflow:auto}
+#centrumLink{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-accent);font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap}
+#centrumLink:hover{border-color:var(--rl-accent)}
