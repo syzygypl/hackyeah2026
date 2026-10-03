@@ -1,21 +1,22 @@
-**Recommendation: choose AI Control Layer at 13:00 if the mentor confirms the gateway scope; use open Artificial Intelligence as the first fallback.**
+**Recommendation for 13:00: AI Control Layer vs Huawei are the two main options after team lead Andrzej overruled Huawei's exclusion. Choose Huawei if a teammate can quickly build/run a HarmonyOS skeleton with DevEco Studio or compatible tooling; otherwise AI Control Layer, subject to mentor scope confirmation. Open Artificial Intelligence is the fallback. DevEco Studio runs on Windows x64 and macOS (Apple Silicon emulator OK), not on ARM Linux. Go/no-go: an M-series Mac or Windows owner gets an emulator running by ~13:30.**
 
 # Task options for the five-person SYZYGY team
 
-Decision brief for Sat 3 Oct, 13:00. Evidence: [repo guidance](../CLAUDE.md), [event/task summary](hackyeah-2026.md), and the linked rules extracts. Project ideas, effort estimates and scores below are **team judgments/guesses**, not task requirements or predicted jury scores. Details remain unverified.
+Decision brief for Sat 3 Oct, 13:00. Evidence: [repo guidance](../CLAUDE.md), [event/task summary](hackyeah-2026.md), the linked rules extracts and [Huawei Details](tasks/imagine-whats-next.txt). Project ideas, effort estimates and scores below are **team judgments/guesses**, not task requirements or predicted jury scores. Huawei Details are incorporated; other plans retain their rules-based summaries.
 
-## Four strongest candidates
+## Five candidates: two main options, open AI fallback
 
 Prize amounts are PLN, including tax per rules. Open-task prizes conflict: rules say 8,000; the repo's HackTribe observation says 5,000. Confirm with mentors.
 
 | Rank / candidate | Prize | Judging criteria, condensed | IP | Language | Effort risk in 24h (estimate) | Fit with this team | Fit /10 |
 |---|---|---|---|---|---|---|---|
 | 1. [AI Control Layer](rules/ai-control-layer.txt) | 15,000 pool: 6,000 / 5,000 / 4,000 | Guardrails 30%; architecture/performance 20%; security reporting 20%; self-tests 20%; implementability/scalability 10% | No copyright transfer | EN or PL | Medium: enforce real boundaries; avoid a universal security platform | Excellent: backend gateway, frontend evidence UI, familiar agent risks | 9 |
-| 2. [Artificial Intelligence](rules/artificial-intelligence.txt) | 8,000 rules / 5,000 HackTribe | Innovation 30%; category 20%; usability 20%; design 20%; completeness 10% | No copyright transfer | EN or PL | Low-medium: narrow document workflow; grounding must work | Excellent: AI-assisted development plus agency domain and polished UX | 8 |
-| 3. [Smart City](rules/smart-city.txt) | 8,000 rules / 5,000 HackTribe | Innovation 30%; category 20%; usability 20%; design 20%; completeness 10% | No copyright transfer | EN or PL | Low-medium: seeded map and workflow; avoid live municipal integrations | Strong: familiar web product; domain validation is the gap | 7.5 |
-| 4. [Finance Without Intermediaries](rules/finance-without-intermediaries.txt) | 11,300; no split specified | Relevance 30%; functionality 25%; problem choice 20%; implementation potential 15%; originality 10% | No copyright transfer | EN or PL | High unless someone knows the required chain/tooling: real contract execution is the differentiator | Good agency use case: milestone escrow; blockchain experience is unconfirmed | 6.5 |
+| 2. [Imagine What's Next (Huawei)](rules/imagine-what-s-next.txt) | **25,000 pool: 12,000 / 8,000 / 5,000 (biggest pool)** | Originality 20%; usefulness 20%; execution 20%; platform capabilities 20%; demo 10%; workflow reproducibility/transparency 10% | No copyright transfer; winners grant a 3-year non-exclusive demo/promotion licence | **EN only** | **High until build/run proven:** unfamiliar tooling, signing/emulator and local model integration; web-only demo insufficient | Serious contender: privacy UX and agent workflow fit; HarmonyOS experience/host compatibility unconfirmed | Conditional; rerank after tooling gate |
+| 3. [Artificial Intelligence](rules/artificial-intelligence.txt) | 8,000 rules / 5,000 HackTribe | Innovation 30%; category 20%; usability 20%; design 20%; completeness 10% | No copyright transfer | EN or PL | Low-medium: narrow document workflow; grounding must work | Excellent: AI-assisted development plus agency domain and polished UX | 8 |
+| 4. [Smart City](rules/smart-city.txt) | 8,000 rules / 5,000 HackTribe | Innovation 30%; category 20%; usability 20%; design 20%; completeness 10% | No copyright transfer | EN or PL | Low-medium: seeded map and workflow; avoid live municipal integrations | Strong: familiar web product; domain validation is the gap | 7.5 |
+| 5. [Finance Without Intermediaries](rules/finance-without-intermediaries.txt) | 11,300; no split specified | Relevance 30%; functionality 25%; problem choice 20%; implementation potential 15%; originality 10% | No copyright transfer | EN or PL | High unless someone knows the required chain/tooling: real contract execution is the differentiator | Good agency use case: milestone escrow; blockchain experience is unconfirmed | 6.5 |
 
-HubMI and Cracow are excluded: winning entails economic copyright transfer to PROIDEA and the City of Kraków respectively. Huawei is excluded: no HarmonyOS experience, and platform capabilities plus technical execution carry 40%; its larger pool does not justify the setup gamble. [Defence](rules/defence.txt) is next outside the four: resilience/cybersecurity fits, but proving crisis usefulness is harder for this team (judgment). Sport & Healthcare and ImpactHer would benefit from domain/user evidence we have not established.
+HubMI and Cracow are excluded: winning entails economic copyright transfer to PROIDEA and the City of Kraków respectively. [Defence](rules/defence.txt) is next outside the five: resilience/cybersecurity fits, but proving crisis usefulness is harder for this team (judgment). Sport & Healthcare and ImpactHer would benefit from domain/user evidence we have not established.
 
 ## 1. AI Control Layer: AgentGate
 
@@ -42,6 +43,35 @@ HubMI and Cracow are excluded: winning entails economic copyright transfer to PR
 | Security Reporting | 20% | Downloadable trace with rule IDs, redacted evidence, outcomes and remediation hints |
 | Completeness of the Self-Testing Suite | 20% | Rerunnable attack/benign cases, assertions on side effects, coverage and visible failures |
 | Practical Implementability and Scalability | 10% | Working adapter and config; explain deployment path and untested concurrency limits |
+
+## Imagine What's Next (Huawei): ShareShield
+
+**Idea (preferred candidate, judgment):** privacy-safe photo sharing for someone sending a street or workplace photo. On-device AI detects faces and blurs them before sharing; ID documents/licence plates are stretch targets, with manual masking for misses. Original photos and inference data stay on the phone; only the reviewed, sanitized copy is shared after confirmation. This combines Intelligent Experiences and Human-Centric Technology. A narrow face-only build is more plausible than the alternatives (guess); model/runtime compatibility and novelty remain unverified.
+
+**90-second demo - what the jury sees:**
+
+1. **0-15s:** on a running emulator/device, pick a consented or synthetic photo containing a bystander and sensitive text; show the accidental-sharing risk.
+2. **15-35s:** disable network access and run actual local face detection; show highlighted regions, then the blurred preview and measured processing time.
+3. **35-55s:** point out a missed sensitive region, add a manual mask and review the result; no claim of perfect detection.
+4. **55-75s:** confirm and export/share the sanitized copy through the platform's native flow; compare it with the unchanged original. Re-enable networking only if the recipient requires it.
+5. **75-90s:** show another input, including detection failure handling, then the build instructions, repo history and AI workflow evidence.
+
+**Minimum real build by 20:00:** installable, signed **.hap** targeting HarmonyOS/OpenHarmony/Oniro **API 20+** (minimum API 20 where applicable), running on a compatible emulator/device. Native photo selection, one working local face detector, local blur, manual mask correction, mandatory preview/confirmation and sanitized export/share. No server inference or photo upload; detection failure requires manual review. Verify a changed image and inspect the exported pixels. Native picker/share integration is the proposed platform capability; exact APIs, SDK/model support and whether this earns meaningful platform credit are **to verify**. Use ArkTS/ArkUI or another supported route; Android/iOS/web-only output does not qualify.
+
+**Can be faked, with disclosure:** recipient app/account and scenario photos; extra ID/plate detection can be a labeled future mock. Local inference, blur, review, sanitized output and HarmonyOS execution must be real. No claim to intercept every app's sharing or guarantee anonymity; offline execution demonstrates this path, not a complete privacy audit.
+
+| Judging criterion | Weight | Demo/build evidence |
+|---|---|---|
+| Originality | 20% | Review-before-share privacy workflow; differentiation from existing tools is a hypothesis |
+| Demonstrated usefulness of the proposed solution | 20% | Remove a bystander's face from an otherwise useful photo; explicit handling of missed regions |
+| Technical execution | 20% | Real local detection/blur on changed input, measured latency, failure handling and verified export |
+| Use or enhancement of platform capabilities | 20% | Working native photo/share flow and on-device inference; mentor confirms capability depth |
+| Quality of the demonstration | 10% | Running emulator/device, before/after output and clear limits within 90 seconds |
+| Reproducibility and transparency of the development workflow | 10% | Public repo, pinned SDK/model/tool versions, build/install/launch steps, repo history and `AI_WORKFLOW.md` |
+
+**Submission/workflow:** everything submitted for evaluation, including pitch, demo and documentation, must be **English only**. Disclose material pre-existing/third-party components and AI tools; substantial development must happen during the challenge. Details require a public repo, working `.hap`, reproducible instructions, recorded demo, concise architecture description and `AI_WORKFLOW.md` for our AI-assisted development, plus AI-feature documentation. Reproducibility/transparency of the AI-assisted workflow is **10%**: our agent workflow and repo history are evidence, backed by models/tools/MCP/skills, main prompts/configuration, review/validation, failed approaches and limitations, with secrets removed. These are planned deliverables, not files created by this brief.
+
+**Alternatives (judgments):** zero-install NFC/QR service opening an atomic service card with live status and a service widget offers a visible physical-to-digital demo, but atomic-service/widget availability and delivery effort need verification. An on-phone AI-agent control layer asking before actions shares AgentGate's core idea, but OS-wide interception/privileges are unverified; an app-owned approval gateway is the narrower fallback, not proof of OS-wide control.
 
 ## 2. Artificial Intelligence: BriefProof
 
@@ -100,6 +130,14 @@ HubMI and Cracow are excluded: winning entails economic copyright transfer to PR
 - What counts as a complete self-testing suite: fixed cases, generated attacks, coverage, or another measure?
 - What report fields and performance evidence are expected; are disclosed sandbox tools acceptable?
 
+**Imagine What's Next (Huawei)**
+
+- Is there a ready DevEco Studio/SDK setup or starter project and emulator we can use immediately? Which host OS/CPU combinations work, including ARM Linux, Mac and Windows?
+- Details say mentors have devices on site: which compatible models are available, with what access, signing and installation process?
+- Details require API 20+: which exact SDK/API version should we target for the supplied emulator/devices?
+- Do native photo selection/share plus local AI count as sufficient platform capability use? Are atomic services/service widgets available on this target, and what would earn stronger credit?
+- Can the same project be submitted to Huawei and AI Control Layer or open Artificial Intelligence, and under what conditions?
+
 **Artificial Intelligence**
 
 - Do the Details impose a theme, dataset, model or extra challenge that excludes agency brief analysis?
@@ -116,10 +154,11 @@ HubMI and Cracow are excluded: winning entails economic copyright transfer to PR
 
 ## Open unknowns and commitment gates
 
-- **Details documents were not readable at 11:17:** `hackyeah.pl` returned **524**. This brief uses repo snapshots only; it does not assert that the outage continues. Get Details from the mentor/site before the 13:00 choice where possible.
+- **Details documents were not readable at 11:17:** `hackyeah.pl` returned **524**. [Local Details](tasks/README.md) were subsequently downloaded around 11:45; Huawei's requirements above use that extract. Other sections retain earlier rules-based summaries; confirm them against Details/mentors before committing.
+- **Huawei tooling gate (proposal):** identify one tooling owner and prove a signed API 20+ skeleton builds, installs and launches within a 60-90 minute first slice, ideally using a mentor starter/emulator. DevEco Studio is recommended, not mandatory. **Tooling facts (checked on the web 11:45):** DevEco Studio (IDE + SDK + emulator, HUAWEI ID login) officially supports Windows 10/11 x64 and macOS 11-15, ~16 GB RAM recommended; the emulator runs on Apple Silicon Macs and on Windows with virtualization, generally not on Intel Macs; Linux is unofficial (community x86_64 repack only, so no ARM Linux). HarmonyOS NEXT phones are sold in China only: plan on the emulator unless the Huawei booth lends devices (device runs need AppGallery Connect signing; the emulator does not). Unverified risk: emulator images have been region-gated for some non-China accounts, which is exactly what the go/no-go test checks (30-60 min of downloads). ArkTS is strict TypeScript + declarative ArkUI: screens in hours for TS devs, platform kits (on-device vision, NFC, atomic services) are new APIs with Chinese-first docs. Also prove a small local inference path before expanding scope. If tooling stalls, take AI Control Layer; open AI remains the fallback. Andrzej's override makes Huawei a serious candidate, not an already selected task.
 - Details may change eligible use cases, mandatory models/protocols, datasets, integration depth, test/report expectations and deliverables. AgentGate's adapter/threat coverage, BriefProof's domain and StreetSignal's data/workflow may need replacement; rerank if the core cannot fit a 90-minute first slice.
 - Finance could move up if the mentor supplies a usable chain starter and a teammate demonstrates contract execution quickly. Guess: agency milestone escrow is relevant; required chain, wallet and dispute/oracle model are unknown. Never fake settlement if entering that task.
 - Confirm open-task prize discrepancies and checkpoint content. English extracts contain inconsistent **11:00 PM** wording; the repo schedule and Polish general rules specify **11:00**. Plan Sat 20:00 checkpoint, Sun 09:00 submission buffer, Sun 11:00 hard close.
 - General rules do not expressly forbid AI coding/pre-existing components; explicit permission with disclosure appears in Huawei's rules. Confirm selected-task restrictions; use only licensed, non-client inputs and document mocks/AI usage.
 - Proposed five owners: integration/deploy, core backend, frontend, evidence/evaluation, pitch/demo. For AI Control Layer, evidence owner owns tests/report. By ~14:30 deploy one real core step; by 17:00 run the happy path; by 20:00 deliver the minimum above and checkpoint materials. Cut anything outside the demo.
-- All four require title, team name/member list, description and PDF of at most 10 slides on HackTribe; mentors assess submissions before finalist pitches. Include repo/demo links and evidence in that package: a live demo alone is insufficient. Winning requires at least 50% in phase 1; fit scores above do not estimate that result.
+- All five require title, team name/member list, description and PDF of at most 10 slides on HackTribe; mentors assess submissions before finalist pitches. Include repo/demo links and evidence in that package, plus Huawei's deliverables listed above: a live demo alone is insufficient. Winning requires at least 50% in phase 1; fit scores above do not estimate that result.
