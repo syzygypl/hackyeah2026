@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import RescueKit
+import RescueStudioKit
 
 // Usage: swift run rescue-studio [port] [--host 0.0.0.0 [--pin NNNN]]   default 127.0.0.1:8771 (LAN needs a PIN), open http://127.0.0.1:8771/
 // Env: RESCUE_LLM_MODEL, RESCUE_LLM_URL (local only), RESCUE_LLM_TIMEOUT, RESCUE_LLM_OFF=1
