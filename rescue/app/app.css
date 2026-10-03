@@ -394,9 +394,8 @@ body.time-live #slider,body.time-live #play{opacity:.4;cursor:not-allowed}
 .livebox button:disabled{cursor:not-allowed}
 .livenote{margin:6px 0 8px;padding:8px 10px;border-radius:10px;background:var(--rl-card);box-shadow:inset 0 0 0 1px var(--rl-line-strong);font-size:var(--rl-fs-s);color:var(--rl-ink-2);line-height:1.4}
 .livenote .golive{display:block;margin-top:6px;width:100%}
-/* the mode must be obvious at a glance: a frame around the whole screen with its name (red = live, navy = recording) */
-body.time-live::after,body.time-hist::after{content:"";position:fixed;inset:0;border:4px solid var(--rl-danger);pointer-events:none;z-index:60}
-body.time-hist::after{border-color:var(--rl-accent)}
+/* the mode must be obvious at a glance: a label tab at the top edge with its name (red = live, navy = recording);
+   no frame around the whole screen any more (it boxed the 2D/3D views in red), the colour lives only in the tab */
 body.time-live::before,body.time-hist::before{content:"NA ŻYWO";position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:61;pointer-events:none;padding:2px 14px 4px;border-radius:0 0 10px 10px;background:var(--rl-danger);color:var(--rl-on-danger);font:700 12px/1.2 var(--rl-font);letter-spacing:.14em}
 body.time-hist::before{content:"HISTORIA · NAGRANIE";background:var(--rl-accent);color:var(--rl-on-accent)}
 body.role-ratownik::before,body.role-ratownik::after{display:none}
