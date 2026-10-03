@@ -315,7 +315,8 @@ export const FX = {
       vec3 w = uCenter + (p - 0.5) * vec3(uBox, uBox * 0.6, uBox) + vec3(0.0, uBox * 0.22, 0.0);
       vec4 mv = modelViewMatrix * vec4(w, 1.0);
       gl_Position = projectionMatrix * mv;
-      gl_PointSize = uBox * mix(0.011, 0.006, uKind) * (0.6 + 0.7 * aRnd) * uPx / max(-mv.z, 0.05);
+      // snow: small flakes (about a third of the old size), capped at 4 px on screen so a zoomed-out view never shows blobs
+      gl_PointSize = min(uBox * mix(0.011, 0.0018, uKind) * (0.6 + 0.7 * aRnd) * uPx / max(-mv.z, 0.05), mix(64.0, 4.0, uKind));
       vA = uAmt * step(aRnd, uAmt) * smoothstep(0.0, 0.08, p.y) * smoothstep(1.0, 0.9, p.y) * smoothstep(0.0, 0.1, p.x) * smoothstep(1.0, 0.9, p.x);
     }`,
     fragment: `varying float vA;
