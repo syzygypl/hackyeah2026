@@ -227,6 +227,20 @@ def suite(B):
         assert t["sc"] == B1 and t["segmentId"] == seg0[B1] and t["status"] == "w akcji", f"after dispatch: {t}"
         return f"{A} -> {B1}: w drodze; dispatched to {seg0[B1]}: w akcji"
 
+    @check("roster", "attach_moves_only_that_team")
+    def _():
+        if needs("/api/teams"):
+            return needs("/api/teams")
+        extra = sorted(t["id"] for t in teams_now().values() if t["sc"] == B1 and t["id"] != A)
+        if extra:
+            FINDINGS.append(f"POST /api/teams/assign {{team: {A}, sc: {B1}}} on a fresh roster also attached {extra} to {B1} "
+                            f"(status 'w drodze'). Contract: the call moves the team; 'untouched' incidents plan with their file teams, "
+                            "touched ones only with teams attached to them. Not in the contract: auto-attaching the incident's other "
+                            "file teams on first touch. Side effect: shared ids (drone, heli) become busy for other incidents, and an "
+                            "incident touched later can lose its file teams (morskie-oko planned with 1 team after gopr-a moved in).")
+            return ("WARN", f"{A} -> {B1} also attached {extra} (server auto-attaches the incident's file teams on first touch)")
+        return f"only {A} attached to {B1}"
+
     @check("roster", "move_detaches_and_clears_segment")
     def _():
         if needs("/api/teams", "/api/live"):
