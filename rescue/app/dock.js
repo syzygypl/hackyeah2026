@@ -57,3 +57,58 @@ export function tickerHTML(items) {
 export function tipHTML(R, g) {
   return g.ks.map((k) => { const s = R.steps[k - 1]; return `<div>${esc(s.t)} · ${esc(shortEv(s.label, evKind(s)))}</div>`; }).join("");
 }
+// ---------- event focus (ASK Mateusza): a click on a timeline event zooms the 2D map onto the area that event changed.
+// focusTarget(ev, R, k) -> { bbox: [[w, s], [e, n]], kind, segIds } | null. ev = an optional feed / live event ({kind, segmentId,
+// team, lat, lon}: Ćwiczenia feed, Na żywo), R = the run document, k = 1-based step. Weather and the start setup do not zoom.
+// focusUnion(targets) joins a group's areas (events within EV_GROUP_MIN minutes).
+const M_LAT = 111320, MIN_R = 150;
+function circleBox(lat, lon, r) { const d = Math.max(MIN_R, +r || 0), dy = d / M_LAT, dx = d / (M_LAT * Math.cos(lat * Math.PI / 180)); return [[lon - dx, lat - dy], [lon + dx, lat + dy]]; }
+function ptsBox(lonlat) { if (!lonlat.length) return null; let w = Infinity, s = Infinity, e = -Infinity, n = -Infinity; for (const [x, y] of lonlat) { w = Math.min(w, x); e = Math.max(e, x); s = Math.min(s, y); n = Math.max(n, y); } return [[w, s], [e, n]]; }
+function joinBox(a, b) { return !a ? b : !b ? a : [[Math.min(a[0][0], b[0][0]), Math.min(a[0][1], b[0][1])], [Math.max(a[1][0], b[1][0]), Math.max(a[1][1], b[1][1])]]; }
+function segPolys(R, k, ids) {   // [lon, lat] rings of the given segments (the step's own list, else any step that has them)
+  const out = [];
+  for (const id of ids) {
+    const s = (R.steps[k - 1] && R.steps[k - 1].segments || []).find((x) => x.id === id) || (R.steps.flatMap((st) => st.segments || []).find((x) => x.id === id));
+    if (s && Array.isArray(s.polygon)) out.push(...s.polygon);
+  }
+  return out;
+}
+function teamPos(R, k, team) { const r = team && (R.steps[k - 1] && R.steps[k - 1].resources || []).find((x) => x.id === team); return r && Array.isArray(r.position) ? r.position : null; }
+export function focusTarget(ev, R, k) {
+  if (!R || !Array.isArray(R.steps)) return null;
+  const s = R.steps[k - 1], prev = R.steps[k - 2];
+  if (ev && Number.isFinite(+ev.lat) && Number.isFinite(+ev.lon) && ev.lat !== null) return { bbox: circleBox(+ev.lat, +ev.lon, ev.radiusM), kind: ev.kind === "found" ? "found" : "clue", segIds: [] };
+  if (ev && ev.segmentId) {
+    let b = ptsBox(segPolys(R, k || R.steps.length, [ev.segmentId])); const p = teamPos(R, k || R.steps.length, ev.team);
+    if (p) b = joinBox(b, circleBox(p[0], p[1], MIN_R));
+    return b ? { bbox: b, kind: ev.kind === "dispatch" ? "dispatch" : "search", segIds: [ev.segmentId] } : null;
+  }
+  if (!s) return null;
+  const kind = evKind(s);
+  if (kind === "pogoda" || kind === "baza") return null;
+  const h = (R.hints || []).find((x) => x.id === s.hintId) || {};
+  if (kind === "nic") {   // searched / coverage: the hint's segments, else the segments whose cumulative POD rose at this step
+    let ids = Array.isArray(h.segments) ? h.segments : [];
+    if (!ids.length && s.segmentHistory) ids = Object.keys(s.segmentHistory).filter((id) => (s.segmentHistory[id].cumPod || 0) > ((prev && prev.segmentHistory && prev.segmentHistory[id] || {}).cumPod || 0));
+    const b = ptsBox(segPolys(R, k, ids));
+    return b ? { bbox: b, kind: "search", segIds: ids } : null;
+  }
+  // a dispatch step: a team whose assigned segment changed -> that segment + the team's position
+  const asg = (a) => new Map((a || []).map((x) => [x.resourceId || x.team || x.id, x.segmentId]));
+  const now = asg(s.assignments), was = asg(prev && prev.assignments);
+  const moved = [...now].filter(([t, seg]) => seg && was.get(t) !== seg);
+  if (moved.length && !h.center && !h.marker && !h.points) {
+    let b = null; for (const [t, seg] of moved) { b = joinBox(b, ptsBox(segPolys(R, k, [seg]))); const p = teamPos(R, k, t); if (p) b = joinBox(b, circleBox(p[0], p[1], MIN_R)); }
+    return b ? { bbox: b, kind: "dispatch", segIds: moved.map(([, seg]) => seg) } : null;
+  }
+  // a point (clue, sighting, report, phone sector, find) with its accuracy radius; a line (route, corridor, containment)
+  let b = null;
+  if (Array.isArray(h.center)) b = circleBox(h.center[0], h.center[1], h.radiusM);
+  if (Array.isArray(h.marker)) b = joinBox(b, circleBox(h.marker[0], h.marker[1], MIN_R));
+  if (Array.isArray(h.points) && h.points.length) b = joinBox(b, ptsBox(h.points.map((p) => [p[1], p[0]])));
+  return b ? { bbox: b, kind: kind === "found" ? "found" : "clue", segIds: [] } : null;
+}
+export function focusUnion(ts) {
+  const t = ts.filter(Boolean); if (!t.length) return null;
+  return { bbox: t.reduce((b, x) => joinBox(b, x.bbox), null), kind: t.some((x) => x.kind === "found") ? "found" : t[t.length - 1].kind, segIds: [...new Set(t.flatMap((x) => x.segIds || []))] };
+}

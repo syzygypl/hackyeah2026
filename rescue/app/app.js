@@ -3,7 +3,7 @@
 // `swift run rescue-server` on a laptop). Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/basemap/basemap.js";
-import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML } from "./dock.js";   // compact dock, shared with Ćwiczenia
+import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML, focusTarget, focusUnion } from "./dock.js";   // compact dock, shared with Ćwiczenia
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
 import { initRescuer, render as renderRescuer, pollTask, myTeam } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
@@ -985,7 +985,7 @@ $("tl").addEventListener("click", (e) => {
   const last = g.ks[g.ks.length - 1];
   if (liveOn()) { goEvent(last, g.minute); return; }   // Na żywo cannot rewind: Historia at that group's minute
   else if (tlScrub()) { const r = $("tlMarks").getBoundingClientRect(), T = tlScrub(); if (e.target !== $("slider") && g.minute != null && Math.abs((tlFrac(T, g.minute) * r.width + r.left) - e.clientX) <= 8) { goEvent(last, g.minute); return; } }   // marker click = land on the group's minute; the range handles the rest
-  else if (!g.ks.includes(store.step)) setStep(last);
+  else { if (!g.ks.includes(store.step)) setStep(last); focusEvent(last); }
   tlTip(j); clearTimeout(tlTip.h); tlTip.h = setTimeout(() => tlTip(0), 2200);
 });
 $("ticker").onclick = (e) => { const t = e.target.closest("[data-step],[data-min]"); if (t) goEvent(t.dataset.step ? +t.dataset.step : 0, t.dataset.min ? +t.dataset.min : null); };
@@ -1328,13 +1328,25 @@ async function goEvent(k, minute) {
     const R = D(), kk = s0 ? R.steps.findIndex((x) => x.label === s0.label) + 1 : 0;
     if (tlScrub() && minute != null) setMinute(minute);
     if (kk && kk !== store.step && (!tlScrub() || R.steps[kk - 1].minute === store.minute)) setStep(kk);
-    tlCard(store.step);
+    tlCard(store.step); focusEvent(store.step);
     toast(`Historia o ${tlDoc() ? tlClock(tlDoc(), store.minute) : (curStep() || {}).t || ""} - na żywo nie da się cofnąć. „Wróć na żywo” w pasku na dole.`, 4000);
     return;
   }
   if (tlScrub() && minute != null) { setMinute(minute); if (k && k !== store.step && D().steps[k - 1] && D().steps[k - 1].minute === store.minute) setStep(k); }
   else if (k) setStep(k);
-  tlCard(store.step);
+  tlCard(store.step); focusEvent(k || store.step);
+}
+// an event click zooms 2D onto the area its group changed (dock.js focusTarget: searched sectors, clue point + radius, dispatch
+// sector + team, the find; weather and the start setup do not move the map). Straight to the 2D frame like "highlight" (its ready
+// flag drops while a run reloads, the view queues); 3D gets the same message (its handler: AI Andrzeja). Kino does not use this.
+function focusEvent(k) {
+  const R = D(); if (!R || !R.steps || !k) return;
+  const G = evGroups(R), g = G[groupOf(G, k)], t = focusUnion((g ? g.ks : [k]).map((kk) => focusTarget(null, R, kk)));
+  if (!t) return;
+  const d = $("alDrawer"), padRight = d && d.getAttribute("aria-hidden") !== "true" ? Math.max(0, Math.round(innerWidth - d.getBoundingClientRect().left) - insets()[1]) : 0;
+  const msg = { type: "focusArea", bbox: t.bbox, kind: t.kind, segIds: t.segIds, padRight };
+  try { const f = $("frame2d"); if (f && f.contentWindow) f.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); } catch (e) {}
+  postTo("3d", msg);
 }
 // event groups for Kino and tests (same rule as the dock): [{minute, first, steps: [step index], events: [{i, t, minute, label, kind, hintId}]}]
 window.rescueApp.eventGroups = () => evGroups(D()).map((g) => ({ minute: g.minute, first: g.first, steps: g.ks.map((k) => k - 1),

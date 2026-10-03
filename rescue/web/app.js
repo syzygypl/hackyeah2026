@@ -1125,6 +1125,7 @@
       else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
       else if (m.type === 'time' && Number.isFinite(m.minute)) tlTime(m.minute, m.frame, m.frameMinute);
       else if (m.type === 'highlight') highlightActor(m);   // actor drawer (CONTRACT "Zasoby i dziennik" 6)
+      else if (m.type === 'focusArea') focusArea(m);        // an event click: zoom onto the area the event changed (dock.js focusTarget)
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
       // team overlay only (Ćwiczenia: a dispatch without new events): swap each step's assignments and redraw, no reload
       else if (m.type === 'assignments' && Array.isArray(m.steps) && m.steps.length === S.M.R.steps.length && m.steps.every((a) => a === null || Array.isArray(a))) {
@@ -1143,6 +1144,28 @@
   window.addEventListener('message', onParentMessage);
   // actor highlight: {type:'highlight', actor|null, sc, at} -> that actor's estimated track (GET /api/tracks/<sc>?at=, never truth),
   // bold over the map; clicking its marker posts {type:'actor', id} back (the shell opens the actor drawer)
+  // focusArea (shell -> view): fit the event's area beside the dock and panels (map.setPadding already holds the insets, this adds
+  // only a margin and the open drawer), then flash the event's segments for 1.5 s on their own layer (seg-line has no ids)
+  function focusArea(m) {
+    const map = S.view && S.view.map; if (!map) return;
+    const segs = (Array.isArray(m.segIds) ? m.segIds : []).map((id) => S.M && S.M.segs.get(id)).filter((g) => g && Array.isArray(g.polygon) && g.polygon.length > 2);
+    let b = Array.isArray(m.bbox) && m.bbox.length === 2 ? [[+m.bbox[0][0], +m.bbox[0][1]], [+m.bbox[1][0], +m.bbox[1][1]]] : null;
+    if (!b && segs.length) {   // segIds only (Ćwiczenia feed: no run geometry at hand): the box of the view's own segment polygons
+      const pts = segs.flatMap((g) => g.polygon);
+      b = [[Math.min(...pts.map((p) => p[0])), Math.min(...pts.map((p) => p[1]))], [Math.max(...pts.map((p) => p[0])), Math.max(...pts.map((p) => p[1]))]];
+    }
+    if (!b || !b.flat().every(Number.isFinite)) return;
+    map.fitBounds(b, { padding: { top: 48, bottom: 48, left: 48, right: 48 + Math.max(0, +m.padRight || 0) }, maxZoom: 15, duration: 500 });
+    const empty = { type: 'FeatureCollection', features: [] };
+    if (!map.getSource('focus-flash')) {
+      map.addSource('focus-flash', { type: 'geojson', data: empty });
+      const col = getComputedStyle(document.documentElement).getPropertyValue('--rl-warn').trim() || '#f2b134';
+      map.addLayer({ id: 'focus-flash', type: 'line', source: 'focus-flash', layout: { 'line-join': 'round' }, paint: { 'line-color': col, 'line-width': 6, 'line-opacity': 0.95 } });
+    }
+    const feats = segs.map((g) => ({ type: 'Feature', properties: { id: g.id }, geometry: { type: 'LineString', coordinates: [...g.polygon, g.polygon[0]] } }));
+    map.getSource('focus-flash').setData({ type: 'FeatureCollection', features: feats });
+    clearTimeout(focusArea.h); focusArea.h = setTimeout(() => { const src = map.getSource('focus-flash'); if (src) src.setData(empty); }, 1500);
+  }
   async function highlightActor(m) {
     const map = S.view && S.view.map; if (!map) return;
     const css = (v, d) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || d;
