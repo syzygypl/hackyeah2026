@@ -123,6 +123,7 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Long inputs and judge failures | judge failure on tool output taints the session; models see head + tail of long input (injection on the last line of 24k chars caught); judge cap 2,000 chars; **108 tests** | fcba685 | built |
 | Proxy approvals | proxy and acl-agent ignore X-ACL-Approved-By / approved_by; release only via admin /v1/approvals (payload-bound, single use, 10 min); proxy tests 10/10. Limit: approvals in process memory, so proxy-held calls are approved on :11500 | 4ec9f90 | built |
 | Ollama down or slow | the configured fail mode applies instead of skipping checks | 6202a36 | built |
+| Test count (latest) | **116** unit tests (run on origin/main 2ffcbdd, 13:05), **170/170** demo cases | sample-security-report.md | measured. Supersedes 108 / 129 |
 | Model resilience | evicted or timed-out models re-warm in the background | 7ce31f9 | built |
 | Local only | committed policy allows only local models | d16de01 | true |
 | Pre-event code | nothing in the repo predates 11:00 (checked by AI Andrzeja) | thread | confirmed |
