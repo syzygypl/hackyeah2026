@@ -71,6 +71,14 @@ class HeuristicClassifier:
         return round(1 - p, 3), [label for _, label in hits]
 
 
+def clip(text, n):
+    """Head + tail instead of a hard cut (F3/F8): an instruction at the end of a long document is still seen."""
+    if not n or len(text) <= n:
+        return text
+    h = n // 2
+    return text[:h] + "\n[... middle omitted by the control layer ...]\n" + text[-(n - h):]
+
+
 def model_format(model):
     m = model.lower()
     if "llama-guard" in m:
@@ -155,7 +163,7 @@ class SemanticGuard:
     def clear_cache(self):
         self.cache.clear()
 
-    def _call(self, cfg, model, text, timeout_s, system=None, context=None, cacheable=False):
+    def _call(self, cfg, model, text, timeout_s, system=None, context=None, cacheable=False, max_chars=6000):
         """cacheable only for a tier's PRIMARY model: fallback verdicts (e.g. llama-guard filling in while qwen3guard
         is on cooldown) are less reliable and must not stick. Entries expire after semantic.cache_ttl_s."""
         fmt = model_format(model)
@@ -168,8 +176,8 @@ class SemanticGuard:
                 "options": {"temperature": 0, "num_predict": 48},
                 "messages": ([{"role": "system", "content": system}] if system else []) + (
                     # judge a proposed tool call in context: user = the agent's task, assistant = the call
-                    [{"role": "user", "content": context[:2000]}, {"role": "assistant", "content": text[:6000]}] if context
-                    else [{"role": "user", "content": text[:6000]}])}
+                    [{"role": "user", "content": clip(context, 2000)}, {"role": "assistant", "content": clip(text, max_chars)}] if context
+                    else [{"role": "user", "content": clip(text, max_chars)}])}
         if fmt == "llama_guard":
             body.update(logprobs=True, top_logprobs=3)
         if fmt == "granite_guardian":
@@ -227,7 +235,7 @@ class SemanticGuard:
                 for crit in stage.get("criteria") or [None]:
                     r = self._call(cfg, model, text, timeout / 1000, system=crit,
                                    context=context if fmt == "granite_guardian" else None,
-                                   cacheable=model == stage.get("model"))
+                                   cacheable=model == stage.get("model"), max_chars=stage.get("max_input_chars", 6000))
                     counted = r["verdict"] != "safe" and not (fmt == "llama_guard" and r["categories"] and not blocked & set(r["categories"]))
                     out.append(dict(r, stage=name, model=model, digest=digest[:12], criterion=crit, counted=counted,
                                     category_names=[LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]))
@@ -294,7 +302,8 @@ class SemanticGuard:
         try:
             for crit in guard.get("criteria") or [None]:
                 r = self._call(cfg, model, text, guard.get("timeout_ms", 1500) / 1000, system=crit,
-                               context=context if fmt == "granite_guardian" else None, cacheable=True)
+                               context=context if fmt == "granite_guardian" else None, cacheable=True,
+                               max_chars=guard.get("max_input_chars", 2000 if fmt == "granite_guardian" else 6000))
                 counted = r["verdict"] != "safe" and not (fmt == "llama_guard" and r["categories"] and not blocked & set(r["categories"]))
                 v["verdict"], v["categories"] = r["verdict"], r["categories"]
                 v["category_names"] = [LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]

@@ -759,6 +759,8 @@ class ControlLayer:
             act = self._disagreement(ev, fail)
             if act in ("deny", "approve") and not hit:  # output already produced: treat as untrusted, taint the session
                 hit, guard, why = True, "guard_disagreement", "guards disagreed on tool output"
+            if fail == "approve" and not hit:  # F3: judge failed closed on an output -> untrusted + taint, never a silent pass
+                hit, guard, why = True, "semantic_unavailable", "judge unavailable on tool output (fail_mode closed)"
             if hit:
                 if pi.get("on_detect") == "block":
                     self._block(ev, guard, f"unsafe tool output from {name}: {why}")
