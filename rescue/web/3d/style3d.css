@@ -199,5 +199,7 @@ body.cinema .lbl3d.hut, body.cinema .lbl3d.team, body.cinema .lbl3d.ring { opaci
 
 /* selection + embed */
 #ranklist li.sel { background: rgba(31, 78, 121, 0.1); box-shadow: inset 3px 0 0 var(--blue); }
-body.embed #top { display: none; }
-body.embed #left, body.embed #right { top: 12px; }
+/* ?embed=1: the shell provides header, signals and ranking; ?embed=bare also drops timeline, progress and HUD */
+body.embed #top, body.embed #left, body.embed #detail, body.embed #right { display: none; }
+body.embed #feed { left: 12px; }
+body.embed-bare #timeline, body.embed-bare #progress, body.embed-bare #hud { display: none; }

@@ -44,4 +44,4 @@ For the combined app (`rescue/app/`). Same origin only: messages from other orig
 | 3D -> parent | `{source: 'rescue3d', type: 'step', i, t}` | user changed the step (not echoed for parent-driven changes) |
 | 3D -> parent | `{source: 'rescue3d', type: 'select', segmentId}` | user clicked a segment (ranking or terrain) |
 
-`?embed=1` hides the 3D header (the shell has its own). Before the contract settles, `?sc=`, `?run=<url>` and `?step=i` work as URL parameters too.
+`?embed=1` hides the 3D header, signal list/detail and ranking (the shell has its own); `?embed=bare` also hides the timeline, progress panel and buttons, leaving only the scene. Before the contract settles, `?sc=`, `?run=<url>` and `?step=i` work as URL parameters too.

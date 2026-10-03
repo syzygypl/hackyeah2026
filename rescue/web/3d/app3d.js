@@ -93,7 +93,8 @@ function decimate(D, k) {
 // ---------- load ----------
 // Embed: a parent page can hand a run object over postMessage; it is parked in sessionStorage and the page reloads.
 const inlineRun = (() => { if (!Q.has('runInline')) return null; try { return JSON.parse(sessionStorage.getItem('rescue3d-run')); } catch { return null; } })();
-if (Q.get('embed') === '1') document.body.classList.add('embed');
+if (Q.get('embed') === '1' || Q.get('embed') === 'bare') document.body.classList.add('embed');
+if (Q.get('embed') === 'bare') document.body.classList.add('embed-bare');
 let R, SCN, TER, DEM, REV;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
