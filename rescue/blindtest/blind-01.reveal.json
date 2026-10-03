@@ -1,0 +1,192 @@
+{
+ "round": "blind-01",
+ "at": [
+  49.19597,
+  20.04655
+ ],
+ "salt": "3746db96b11d2df56179ef326b6c29b3",
+ "story": "Zgubiła żółty szlak we mgle tuż za Szpiglasową Przełęczą przy zejściu w stronę Morskiego Oka, zeszła za daleko na południowy zachód w piarg nad Wyżnim/Niżnim Stawem Staszica, poślizg, uraz kostki, siedzi pod blokiem skalnym ok. 280 m od szlaku.",
+ "state": "alive, immobile, phone off since 15:05",
+ "timeline": [
+  {
+   "provider": "SegmentSearched",
+   "at": "19:00",
+   "resource": "topr-a",
+   "title": "topr-a: S5 przeszukany, nic",
+   "detail": "Patrol przeszukał S5, POD 45%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S5"
+   ],
+   "pod": 0.45,
+   "wave": 1
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:00",
+   "resource": "topr-a",
+   "title": "topr-a: S12 przeszukany, nic",
+   "detail": "Patrol przeszukał S12, POD 45%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S12"
+   ],
+   "pod": 0.45,
+   "wave": 1
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:05",
+   "resource": "drone",
+   "title": "drone: S3 przeszukany, nic",
+   "detail": "Patrol przeszukał S3, POD 27%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S3"
+   ],
+   "pod": 0.27,
+   "wave": 1
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:10",
+   "resource": "topr-b",
+   "title": "topr-b: S13 przeszukany, nic",
+   "detail": "Patrol przeszukał S13, POD 45%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S13"
+   ],
+   "pod": 0.45,
+   "wave": 1
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:10",
+   "resource": "topr-b",
+   "title": "topr-b: S12 przeszukany, nic",
+   "detail": "Patrol przeszukał S12, POD 45%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S12"
+   ],
+   "pod": 0.45,
+   "wave": 1
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:15",
+   "resource": "dog",
+   "title": "dog: S4 przeszukany, nic",
+   "detail": "Patrol przeszukał S4, POD 55%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S4"
+   ],
+   "pod": 0.55,
+   "wave": 1
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:20",
+   "resource": "drone",
+   "title": "drone: S3 przeszukany, nic",
+   "detail": "Patrol przeszukał S3, POD 27%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S3"
+   ],
+   "pod": 0.27,
+   "wave": 2
+  },
+  {
+   "provider": "Clue",
+   "at": "19:35",
+   "title": "drone: ZNALEZIONO w S12",
+   "detail": "Odnaleziona przez patrol (test na ślepo, odsłonięte).",
+   "point": [
+    49.19597,
+    20.04655
+   ],
+   "radiusM": 50,
+   "wave": 3
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "20:25",
+   "resource": "dog",
+   "title": "dog: S2 przeszukany, nic",
+   "detail": "Patrol przeszukał S2, POD 56%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S2"
+   ],
+   "pod": 0.56,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "21:30",
+   "resource": "topr-a",
+   "title": "topr-a: S18 przeszukany, nic",
+   "detail": "Patrol przeszukał S18, POD 40%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S18"
+   ],
+   "pod": 0.4,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "21:50",
+   "resource": "dog",
+   "title": "dog: S5 przeszukany, nic",
+   "detail": "Patrol przeszukał S5, POD 55%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S5"
+   ],
+   "pod": 0.55,
+   "wave": 3
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "23:00",
+   "resource": "topr-b",
+   "title": "topr-b: S4 przeszukany, nic",
+   "detail": "Patrol przeszukał S4, POD 46%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S4"
+   ],
+   "pod": 0.46,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "23:00",
+   "resource": "topr-b",
+   "title": "topr-b: S6 przeszukany, nic",
+   "detail": "Patrol przeszukał S6, POD 46%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S6"
+   ],
+   "pod": 0.46,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "23:10",
+   "resource": "topr-a",
+   "title": "topr-a: S4 przeszukany, nic",
+   "detail": "Patrol przeszukał S4, POD 46%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S4"
+   ],
+   "pod": 0.46,
+   "wave": 3
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "00:55",
+   "resource": "topr-b",
+   "title": "topr-b: S7 przeszukany, nic",
+   "detail": "Patrol przeszukał S7, POD 40%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "S7"
+   ],
+   "pod": 0.4,
+   "wave": 3
+  }
+ ]
+}
