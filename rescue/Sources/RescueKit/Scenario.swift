@@ -71,6 +71,10 @@ public struct Scenario: Codable, Sendable {
         public var precip: String?     // none | rain | snow
         public var dark: Bool?
         public var ice: Bool?
+        /// Clue only: this report closes the case (person found).
+        public var found: Bool?
+        /// Optional epilogue event (e.g. a late Ratunek ping): skipped unless --epilogue / showEpilogue.
+        public var epilogue: Bool?
     }
 
     public let incident: String
@@ -83,12 +87,19 @@ public struct Scenario: Codable, Sendable {
     public var terrain: Terrain
     public let segments: [Segment]
     public let truth: Spot?           // used ONLY for the backtest number, never fed to the grid
-    public let events: [Event]
+    public var events: [Event]
+    /// true = include events marked epilogue (default off).
+    public var showEpilogue: Bool? = nil
     public var resources: [Resource]? = nil
 
     public static func load(_ path: String) throws -> Scenario {
         let data = try Data(contentsOf: URL(fileURLWithPath: path))
         return try JSONDecoder().decode(Scenario.self, from: data)
+    }
+
+    /// Drops epilogue events unless asked for. Call before running providers.
+    public mutating func applyEpilogue(_ on: Bool? = nil) {
+        if !(on ?? showEpilogue ?? false) { events.removeAll { $0.epilogue == true } }
     }
 
     public func minute(_ clock: String) -> Int {

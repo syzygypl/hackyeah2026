@@ -5,7 +5,9 @@ public struct ClueProvider: HintProvider {
     public init(_ s: Scenario) { scenario = s }
     public func hints(clock: ScenarioClock) -> AsyncStream<LocationHint> {
         let items = scenario.events(for: name).enumerated().map { i, e in
-            hint(scenario, e, i, .sector(center: Coord(e.point!), radiusM: e.radiusM ?? 500), marker: Coord(e.point!))
+            e.found == true
+                ? hint(scenario, e, i, .point(at: Coord(e.point!), accuracyM: e.radiusM ?? 30), marker: Coord(e.point!))   // found: sharp
+                : hint(scenario, e, i, .sector(center: Coord(e.point!), radiusM: e.radiusM ?? 500), marker: Coord(e.point!))
         }
         return scripted(items, clock: clock)
     }

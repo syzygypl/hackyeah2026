@@ -191,7 +191,7 @@ function drawEvidence(h){
   if (h.kind==='route') L.polyline(g.points,{color:'#f2b134',weight:4,opacity:.9}).bindTooltip(h.title).addTo(ev);
   if (h.kind==='sector') L.circle(g.center,{radius:g.radius,color:'#9b59b6',weight:2,fillOpacity:.05}).bindTooltip(h.title).addTo(ev);
   if (h.kind==='point'){L.circle(g.center,{radius:Math.max(g.radius,40),color:'#3ec28f',weight:3,fillOpacity:.3}).addTo(ev);
-    L.marker(g.center,{icon:L.divIcon({className:'',html:'<div class="lbl" style="background:#3ec28f;border-color:#3ec28f">Ratunek</div>'})}).addTo(ev);}
+    L.marker(g.center,{icon:L.divIcon({className:'',html:`<div class="lbl" style="background:#3ec28f;border-color:#3ec28f">${h.source==='Clue'?'ZNALEZIONO':'Ratunek'}</div>`})}).addTo(ev);}
   if (h.kind==='containment'){L.polyline(g.points,{color:'#888',weight:10,opacity:.35}).bindTooltip(h.title).addTo(ev);}
   if (g.marker) L.marker(g.marker,{icon:L.divIcon({className:'',html:'<div class="lbl">Auto</div>'})}).bindTooltip(h.title).addTo(ev);
 }
@@ -257,7 +257,9 @@ function render(){
   document.getElementById('clock').textContent=H[step-1].clock;
   document.getElementById('stepinfo').textContent=`${step}/${H.length}: ${H[step-1].title}`;
   const b=document.getElementById('banner');
-  if(H[step-1].kind==='point'){b.textContent='Ratunek: pozycja GPS w segmencie, który mapa wskazała przed pingiem';b.style.display='block';}
+  const sm0=D.summary, fa=sm0.findAssigned;
+  if(H[step-1].kind==='point'&&H[step-1].source==='Clue'){b.textContent=`ZNALEZIONO w ${sm0.findSeg}: ${fa?`${fa.resourceName} wysłany przez plan o ${fa.clock}, `:''}segment #1 na mapie od ${sm0.findRank1Since||'?'}`;b.style.display='block';}
+  else if(H[step-1].source==='RatunekPing'){b.textContent=sm0.pingClock?`Epilog: ping przyszedł o ${sm0.pingClock}; mapa miała ten segment na #1 od ${sm0.findRank1Since||'?'}`:'Ratunek: pozycja GPS';b.style.display='block';}
   else if(H[step-1].kind==='conditions'&&D.plans[step-1].resources.some(r=>!r.available&&r.type==='drone'&&r.reason.includes('uziemiony'))){b.textContent='Pogoda: dron uziemiony, plan zespołów przeliczony';b.style.display='block';}
   else if(H[step-1].kind==='searched'){b.textContent='Segment przeszukany, nic nie znaleziono: prawdopodobieństwo przepływa dalej';b.style.display='block';}
   else b.style.display='none';
@@ -292,7 +294,7 @@ function renderTeams(){
 
 // backtest
 const sm=D.summary;
-document.getElementById('bt').innerHTML= sm.blind ? `<b>Tryb ślepy:</b> scenariusz nie zna miejsca odnalezienia, więc nie ma backtestu. Mapa pokazuje tylko, gdzie szukać.<br>Przydział zespołów (symulacja od ${H[sm.beforePing].clock}): szansa odnalezienia po 2 h <b>${(sm.pos2hPlanned*100).toFixed(0)}%</b> vs ${(sm.pos2hNaive*100).toFixed(0)}% przy "największe POA najpierw".` : `Przed pingiem Ratunek (${H[sm.beforePing].clock}): segment z miejscem odnalezienia (${sm.truthSeg}) na pozycji <b>#${sm.rankFused}</b> po fuzji vs <b>#${sm.rankRings}</b> w samych pierścieniach Koestera.<br>Obszar do przeszukania do trafienia: <b>${(sm.areaFused*100).toFixed(2)}%</b> vs ${(sm.areaRings*100).toFixed(1)}%.<br>Przydział zespołów (symulacja od ${H[sm.beforePing].clock}): szansa odnalezienia po 2 h <b>${(sm.pos2hPlanned*100).toFixed(0)}%</b> vs ${(sm.pos2hNaive*100).toFixed(0)}% przy "największe POA najpierw"; 40% szansy po <b>${fmtM(sm.t40Planned)}</b> vs ${fmtM(sm.t40Naive)}.`;
+document.getElementById('bt').innerHTML= sm.blind ? `<b>Tryb ślepy:</b> scenariusz nie zna miejsca odnalezienia, więc nie ma backtestu. Mapa pokazuje tylko, gdzie szukać.<br>Przydział zespołów (symulacja od ${H[sm.beforePing].clock}): szansa odnalezienia po 2 h <b>${(sm.pos2hPlanned*100).toFixed(0)}%</b> vs ${(sm.pos2hNaive*100).toFixed(0)}% przy "największe POA najpierw".` : `${sm.findSeg?`<b>Odnalezienie ${sm.findClock}</b> (${sm.findSource==='Clue'?'przez zespół z planu':'ping Ratunek'}) w ${sm.findSeg}; segment #1 od ${sm.findRank1Since||'?'}${sm.findAssigned?`, plan wysłał tam ${sm.findAssigned.resourceName} o ${sm.findAssigned.clock}`:''}.<br>`:''}Przed odnalezieniem (${H[sm.beforePing].clock}): segment z miejscem odnalezienia (${sm.truthSeg}) na pozycji <b>#${sm.rankFused}</b> po fuzji vs <b>#${sm.rankRings}</b> w samych pierścieniach Koestera.<br>Obszar do przeszukania do trafienia: <b>${(sm.areaFused*100).toFixed(2)}%</b> vs ${(sm.areaRings*100).toFixed(1)}%.<br>Przydział zespołów (symulacja od ${H[sm.beforePing].clock}): szansa odnalezienia po 2 h <b>${(sm.pos2hPlanned*100).toFixed(0)}%</b> vs ${(sm.pos2hNaive*100).toFixed(0)}% przy "największe POA najpierw"; 40% szansy po <b>${fmtM(sm.t40Planned)}</b> vs ${fmtM(sm.t40Naive)}.`;
 function fmtM(m){return m<0?'> 6 h':`${Math.floor(m/60)} h ${String(Math.round(m%60)).padStart(2,'0')} min`;}
 
 const slider=document.getElementById('slider'); slider.max=H.length; slider.value=step;

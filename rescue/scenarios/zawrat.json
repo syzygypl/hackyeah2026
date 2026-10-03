@@ -1125,15 +1125,28 @@
    "precip": "rain"
   },
   {
-   "provider": "RatunekPing",
-   "at": "20:05",
-   "title": "Ratunek: ping GPS, dokładność 25 m",
-   "detail": "Telefon złapał zasięg na chwilę, aplikacja wysłała pozycję (bateria 3%).",
+   "provider": "Clue",
+   "at": "20:03",
+   "found": true,
    "point": [
     49.2158,
     20.0188
    ],
-   "radiusM": 25
+   "radiusM": 30,
+   "title": "ZNALEZIONO: śmigłowiec TOPR (kamera termowizyjna) w żlebie pod Zawratem",
+   "detail": "Meldunek z pokładu: osoba przytomna, wychłodzona, uraz nogi, 150 m poniżej szlaku. Śmigłowiec poleciał do S7 z planu o 19:45 (ETA 15 min)."
+  },
+  {
+   "provider": "RatunekPing",
+   "at": "20:05",
+   "title": "Epilog: Ratunek, ping GPS, dokładność 25 m",
+   "detail": "Telefon złapał zasięg na chwilę i aplikacja wysłała pozycję (bateria 3%). Przyszedł już po odnalezieniu - domyślnie wyłączony (--epilogue).",
+   "point": [
+    49.2158,
+    20.0188
+   ],
+   "radiusM": 25,
+   "epilogue": true
   }
  ],
  "resources": [

@@ -3,6 +3,33 @@ import Foundation
 /// Same pipeline as rescue-demo, as a function: scenario -> run.json document (schema rescue-run/1).
 /// Used by rescue-studio. Copy of the demo logic on purpose (speed over structure).
 public enum StoryPipeline {
+    /// Index of the decisive hint: a found Clue (search found the person) or a Ratunek ping, whichever comes first.
+    public static func decisiveIndex(_ hints: [LocationHint]) -> Int? {
+        hints.firstIndex { ($0.source == "Clue" && $0.kind == "point") || $0.source == "RatunekPing" }
+    }
+
+    /// How the case was closed and whether the map/plan had it before: segment, since when #1, which team was sent.
+    public static func findInfo(grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], poas: [[Double]]) -> [String: Any] {
+        guard let d = decisiveIndex(hints), d > 0, case let .point(at, _) = hints[d].evidence else { return [:] }
+        let seg = grid.scenario.segments[grid.segmentOf[grid.cellIndex(at)]]
+        var since: Int? = nil
+        for k in stride(from: d - 1, through: 0, by: -1) {
+            if grid.segments(poas[k]).first?.id == seg.id { since = k } else { break }
+        }
+        var info: [String: Any] = ["findSource": hints[d].source, "findClock": hints[d].clock, "findSeg": seg.id, "findSegName": seg.name,
+                                   "findTitle": hints[d].title]
+        if let since { info["findRank1Since"] = hints[since].clock }
+        for k in stride(from: d - 1, through: 0, by: -1) {   // the plan in force when the find happened
+            if let a = plans[k].assignments.first(where: { $0.segmentId == seg.id }) {
+                info["findAssigned"] = ["clock": hints[k].clock, "resourceId": a.resourceId, "resourceName": a.resourceName, "etaMin": Int(a.travelMin.rounded())]
+                break
+            }
+        }
+        // epilogue ping after a search find
+        if let p = hints.firstIndex(where: { $0.source == "RatunekPing" }), p > d { info["pingClock"] = hints[p].clock }
+        return info
+    }
+
     /// JSON bytes of the run document (Sendable, for servers / actors).
     public static func runData(_ scenario: Scenario) async -> Data {
         let doc = await run(scenario)
@@ -13,7 +40,9 @@ public enum StoryPipeline {
                                                       "categories": koesterCategories.keys.sorted()])) ?? Data("{}".utf8)
     }
 
-    public static func run(_ scenario: Scenario) async -> [String: Any] {
+    public static func run(_ scenarioIn: Scenario) async -> [String: Any] {
+        var scenario = scenarioIn
+        scenario.applyEpilogue()
         let providers = allProviders(scenario)
         var arrived: [LocationHint] = []
         for await h in HintStream.merge(providers, clock: ScenarioClock(msPerMinute: 0)) { arrived.append(h) }
@@ -36,7 +65,7 @@ public enum StoryPipeline {
         }
 
         // value block. Blind mode (no truth): no backtest fields, nobody knows the find spot.
-        let beforePing = max(0, (arrived.firstIndex { $0.source == "RatunekPing" } ?? arrived.count) - 1)
+        let beforePing = max(0, (decisiveIndex(arrived) ?? arrived.count) - 1)
         let fused = grid.segments(poas[beforePing])
         var backtest: [String: Any] = [:]
         if let t = scenario.truth {
@@ -66,6 +95,7 @@ public enum StoryPipeline {
             "curvePlanned": smart.map { [$0.0, $0.1] }, "curveNaive": naive.map { [$0.0, $0.1] },
         ]
         summary.merge(backtest) { $1 }
+        summary.merge(findInfo(grid: grid, hints: arrived, plans: plans, poas: poas)) { $1 }
         var doc = runJSONObject(scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
         // extras for the studio UI (ignored by validators)
         doc["hints"] = arrived.map { h -> [String: Any] in

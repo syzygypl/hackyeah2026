@@ -30,13 +30,15 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
 - `SearchPlanner` (searcher side, recomputed on every hint): for each available team and segment, expected find rate = POA x POD / (travel + sweep time). Terrain difficulty sets speed and POD per pass, weather sets POD multipliers, resource gates (drone grounded in wind, helicopter no-fly in fog / at night with poor visibility) and the hypothermia clock. Greedy assignment, one team per segment, each team takes the segment's hasty-task core (top-POA cells holding 70% of its POA, max 15 ha). Safety flags: exposed terrain (slab/cliff > 25%) + ice or wind > 12 m/s -> rope team only; no dogs there.
 - Demo screen: terrain-difficulty layer toggle and per-evidence toggles (left), "Przydział zespołów" team cards with status, assigned segment, ETA, expected find % and safety flags (right), weather strip on the timeline, heatmap + segment labels (map), top 3 segments with "% probability in % area" and a task line (right), timeline slider / Play to replay the stream incl. the "searched, nothing found" re-flow and the late Ratunek ping.
 
-## Demo numbers (scenario `zawrat.json` on real OSM + DEM terrain, state at 19:45 just before the Ratunek ping)
+## Demo numbers (scenario `zawrat.json` on real OSM + DEM terrain, state at 19:45 just before the find)
 
 - Top 3 segments hold **42% of probability in 8% of the area** (36 km2 box).
 - Fictional find spot (S7 Żleb pod Zawratem) is segment **#1** after fusion (from 19:35) vs #19 with plain Koester rings.
 - Area to sweep in POA order before reaching the find spot: **0.11% fused vs 41% rings only**.
 - 19:45 wind 14 m/s: drone grounded, helicopter cleared (fog blown away, NVG night flight), plan re-allocates.
-- 20:05 Ratunek ping lands inside S7, which was already #1.
+- **The find comes from the search, not from GPS:** at 19:45 the planner sends the helicopter to S7 (ETA 15 min). At 20:03 a field report (`Clue` with `"found": true`) says "ZNALEZIONO" in S7, which had been #1 on the map since 19:35.
+- The 20:05 Ratunek ping is an **optional epilogue** (`"epilogue": true` on the event, off by default; `swift run rescue-demo --epilogue` or `"showEpilogue": true` in the scenario). With it on, the page says "ping przyszedł o 20:05; mapa miała ten segment na #1 od 19:35".
+- Blind mode: a scenario without `truth` runs end to end. `value` then has no backtest fields (`rankFused`, `rankRings`, `areaFused`, `areaRings`, `truthSeg`), and `blind: true` is set. The page shows "Tryb ślepy" instead of the backtest.
 - Team allocation vs naive "biggest POA first" (same teams, same physics, simulated from 19:45): 20% chance of find after **1 h 46 min vs 2 h 00 min**, then roughly equal. Honest reading: in this scenario the planner's value is ETAs, safety gating and instant re-allocation when weather changes, not a big POS gain.
 
 ## Providers
@@ -116,7 +118,12 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
   ],
   "value": {                            // numbers measured at step index beforePing (0-based)
     "top3poa": 0.46, "top3area": 0.06, "rankFused": 1, "rankRings": 19,
-    "areaFused": 0.0017, "areaRings": 0.364, "truthSeg": "S7", "beforePing": 10,
+    "areaFused": 0.0017, "areaRings": 0.364, "truthSeg": "S7",   // backtest: only when the scenario has truth
+    "beforePing": 10,                   // step before the decisive hint (search find or Ratunek ping); name kept for compatibility
+    "blind": false, "epilogue": false,
+    "findSource": "Clue", "findClock": "20:03", "findSeg": "S7", "findSegName": "...", "findTitle": "...",
+    "findRank1Since": "19:35", "findAssigned": { "clock": "19:45", "resourceId": "heli", "resourceName": "...", "etaMin": 15 },
+    "pingClock": "20:05",               // only with the epilogue on
     // added: team allocation simulation from beforePing, planned vs naive "biggest POA first" (-1 = not within 6 h)
     "pos2hPlanned": 0.21, "pos2hNaive": 0.20, "t40Planned": 340, "t40Naive": 342, "t50Planned": -1, "t50Naive": -1,
     "curvePlanned": [[0, 0], [15.2, 0.04], "..."], "curveNaive": [["minutes", "cumulative POS"]]

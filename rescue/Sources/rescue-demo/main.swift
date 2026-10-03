@@ -19,6 +19,7 @@ if FileManager.default.fileExists(atPath: terrainPath) {
 } else {
     print("Terrain: scenario's own terrain (\(scenario.terrain.trails.count) trails\(scenario.terrain.trails.isEmpty ? ", FLAT" : "")). For real terrain: python3 rescue/tools/terrain/osm_terrain.py --scenario \(scenarioPath)")
 }
+scenario.applyEpilogue(args.contains("--epilogue") ? true : nil)
 let clock = ScenarioClock(msPerMinute: args.contains("--fast") ? 0 : 8)
 
 let grid = ProbabilityGrid(scenario)
@@ -66,7 +67,8 @@ for h in arrived {
 }
 
 // Value numbers, measured just BEFORE the Ratunek ping (what the search leader had on the paper map)
-let beforePing = (arrived.firstIndex { $0.source == "RatunekPing" } ?? arrived.count) - 1
+// state just before the decisive hint (search find or Ratunek ping): what the search leader had
+let beforePing = max(0, (StoryPipeline.decisiveIndex(arrived) ?? arrived.count) - 1)
 let fused = snaps[beforePing].segs
 let top3poa = fused.prefix(3).map(\.poa).reduce(0, +)
 let top3area = fused.prefix(3).map(\.areaFrac).reduce(0, +)
@@ -82,7 +84,7 @@ func areaToFind(_ poa: [Double]) -> Double {
 let ringsPoa = grid.poa(upTo: ringsOnlyIdx + 1, disabled: Set(arrived.filter { $0.source != "KoesterRings" }.map(\.id)))
 let areaFused = areaToFind(snaps[beforePing].poa), areaRings = areaToFind(ringsPoa)
 
-print("\n== VALUE (state at \(arrived[beforePing].clock), before the Ratunek ping) ==")
+print("\n== VALUE (state at \(arrived[beforePing].clock), before \(StoryPipeline.decisiveIndex(arrived).map { arrived[$0].source == "Clue" ? "the find" : "the Ratunek ping" } ?? "the end")) ==")
 print("Top 3 segments hold \(pct(top3poa)) of probability in \(pct(top3area)) of the area (36 km2 box).")
 print("  1. \(fused[0].id) \(fused[0].name): \(pct(fused[0].poa)) in \(pct(fused[0].areaFrac)) area")
 print("  2. \(fused[1].id) \(fused[1].name): \(pct(fused[1].poa)) in \(pct(fused[1].areaFrac)) area")
@@ -105,18 +107,27 @@ print("  time to 50% chance of find: \(hm(t50s)) planned vs \(hm(t50n)) naive (b
 print("  chance of find after 2 h: \(pct(pos2s)) planned vs \(pct(pos2n)) naive")
 for target in [0.2, 0.3, 0.4] { print("  time to \(pct(target)): \(hm(SearchPlanner.timeTo(target, smartCurve))) planned vs \(hm(SearchPlanner.timeTo(target, naiveCurve))) naive") }
 print("  after 1 h / 3 h: \(pct(SearchPlanner.posAt(60, smartCurve)))/\(pct(SearchPlanner.posAt(180, smartCurve))) planned vs \(pct(SearchPlanner.posAt(60, naiveCurve)))/\(pct(SearchPlanner.posAt(180, naiveCurve))) naive")
+let find = StoryPipeline.findInfo(grid: grid, hints: arrived, plans: plans, poas: snaps.map(\.poa))
+if let seg = find["findSeg"] as? String {
+    let a = find["findAssigned"] as? [String: Any]
+    print("Find: \(find["findClock"]!) \(find["findSource"]!) in \(seg) \(find["findSegName"]!); #1 on the map since \(find["findRank1Since"] ?? "-")" +
+          (a.map { ", plan sent \($0["resourceName"]!) there at \($0["clock"]!) (ETA \($0["etaMin"]!) min)" } ?? ", no team was assigned there before"))
+    if let p = find["pingClock"] { print("Epilogue: Ratunek ping at \(p) - the map had \(seg) as #1 since \(find["findRank1Since"] ?? "-")") }
+}
 let finalTop = snaps.last!.segs[0]
-print("After Ratunek ping: \(finalTop.id) \(finalTop.name) \(pct(finalTop.poa)).")
+print("Final state: \(finalTop.id) \(finalTop.name) \(pct(finalTop.poa)).")
 
 // HTML
 let out = pkgDir.appendingPathComponent("out")
 try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
 var summary: [String: Any] = [
     "top3poa": top3poa, "top3area": top3area, "beforePing": beforePing, "blind": blind,
+    "epilogue": scenario.events.contains { $0.epilogue == true },
     "t40Planned": SearchPlanner.timeTo(0.4, smartCurve) ?? -1, "t40Naive": SearchPlanner.timeTo(0.4, naiveCurve) ?? -1,
     "t50Planned": t50s ?? -1, "t50Naive": t50n ?? -1, "pos2hPlanned": pos2s, "pos2hNaive": pos2n,
     "curvePlanned": smartCurve.map { [$0.0, $0.1] }, "curveNaive": naiveCurve.map { [$0.0, $0.1] },
 ]
+summary.merge(find) { $1 }
 if !blind {
     summary["rankFused"] = rankFused; summary["rankRings"] = rankRings
     summary["areaFused"] = areaFused; summary["areaRings"] = areaRings; summary["truthSeg"] = truthSeg
