@@ -60,7 +60,9 @@ for p in paths:
         body = r.read(); code = r.status
         got = json.loads(body or b"null")
     except urllib.error.HTTPError as e:
-        got, code, body = None, e.code, b""
+        body, code = e.read(), e.code
+        try: got = json.loads(body or b"null")
+        except Exception: got = None
     except Exception as e:
         got, code, body = None, f"ERR {e}", b""
     ms = int((time.time() - t0) * 1000)
