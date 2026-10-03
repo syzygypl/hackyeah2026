@@ -2,7 +2,7 @@
 
 Scenariusz rundy blind-01 jako demo do obejrzenia. Jedno AI (AI Marcina) chowa zaginionego i odpowiada na patrole tak, jak odpowiedziałby teren. Pozostałe AI szukają samą aplikacją. Pełny dziennik: [`../log.md`](../log.md).
 
-**Status: szablon.** Wyniki wpisujemy dopiero z wątku. Nic tutaj nie jest zgadywane. Wszystko z oznaczeniem (po odsłonięciu) zostaje puste do odsłonięcia.
+**Status: runda zakończona i odsłonięta (14:59, ad2ced5).** To jedna runda, nie liczba do pitchu.
 
 ## Runda
 
@@ -15,24 +15,26 @@ Scenariusz rundy blind-01 jako demo do obejrzenia. Jedno AI (AI Marcina) chowa z
 
 ## Jak odtworzyć
 
+Odtworzenie 1:1: wskazówki i patrole do znalezienia, z odsłoniętą prawdą do metryk (`scenarios/blind-01-replay.json`, od AI Marcina).
+
 ```sh
 cd rescue
-swift run rescue-demo --fast scenarios/blind-01.json      # pisze out/blind-01.html i out/blind-01.run.json
-# odpowiedzi sędziego i meldunki patroli jako live events:
-cp <plik live events rundy blind-01> out/live-events.json   # ? ścieżka do potwierdzenia z agentem szukającym
-swift run rescue-field replay                                # scenariusz + live-events.json, top 3 po każdym meldunku (? czy bierze blind-01)
-python3 -m http.server 8000 &                                 # z katalogu rescue/
-open "http://localhost:8000/web/?run=../out/blind-01.run.json&scenario=../scenarios/blind-01.json"
+swift run rescue-demo --fast scenarios/blind-01-replay.json   # pisze out/blind-01-replay.html i out/blind-01-replay.run.json
+python3 -m http.server 8000 &                                  # z katalogu rescue/
+open "http://localhost:8000/web/?run=../out/blind-01-replay.run.json&scenario=../scenarios/blind-01-replay.json"
+# odsłonięcie i weryfikacja hasha:
+python3 blindtest/reveal.py --round blind-01 --at 49.19597,20.04655 --salt 3746db96b11d2df56179ef326b6c29b3 --run out/blind-01-replay.run.json
+# -> commitment OK fdd079df019d7bf044c1d5892802245ec085200dc7b6a2fe10c45baf8895b474
 ```
 
 Ekrany:
 
 | Kiedy | Ekran | Adres |
 |---|---|---|
-| Wskazówki, mapa, top 3, przydział zespołów | Ekran kierownika akcji | `http://localhost:8000/web/?run=../out/blind-01.run.json&scenario=../scenarios/blind-01.json` |
+| Wskazówki, mapa, top 3, przydział zespołów | Ekran kierownika akcji | `http://localhost:8000/web/?run=../out/blind-01-replay.run.json&scenario=../scenarios/blind-01-replay.json` |
 | Patrol w terenie, meldunek "Przeszukane" / "ŚLAD / ZNALEZIONO" | Widok patrolu (telefon) | `swift run rescue-field serve` + `http://127.0.0.1:8772/web/patrol/?team=topr-a` (serwer `python3 -m http.server 8772` w `rescue/`) |
 | Jak powstała sprawa (opcjonalnie) | Story Studio | `swift run rescue-studio` -> `http://127.0.0.1:8771/` |
-| Odsłonięcie | Terminal: sól + `reveal.py` (weryfikacja hasha, metryki) | (po odsłonięciu) |
+| Odsłonięcie | Terminal: `reveal.py` (weryfikacja hasha, metryki) | komenda powyżej |
 
 ## Scenariusz minuta po minucie
 
@@ -69,22 +71,21 @@ Na demo pokazujemy patrole do 19:35. Przydziały z późniejszym startem były w
 
 Wniosek do powiedzenia: blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. S12 miał wcześniej dwa przejścia we mgle (POD 0,45 każde), które jej nie znalazły: realistyczny POD poniżej 1.
 
-**Odsłonięcie** (terminal, `reveal.py`): miejsce, sól, zgodność hasha (po odsłonięciu).
+**Odsłonięcie** (terminal, `reveal.py`, 14:59): miejsce 49.19597, 20.04655 (S12, piarg nad Stawami Staszica, ok. 280 m od szlaku), sól `3746db96b11d2df56179ef326b6c29b3`, hash zgodny.
 
-## Metryki (po odsłonięciu)
+## Metryki (odsłonięte, stan o 19:00 przed pierwszym patrolem)
 
 | Metryka | Wartość |
 |---|---|
-| Znaleziony | tak, S12, fala 3, dron (miejsce po odsłonięciu) |
-| Patrole do znalezienia | 12 przydziałów w 3 falach |
-| Ranga prawdziwego segmentu przed 1. patrolem | |
-| Procent obszaru przeszukany do znalezienia | |
-| Czas do znalezienia vs naiwne przeszukiwanie | |
-| Odległość od szczytu mapy | |
-| Hash zgodny | |
+| Znaleziony | tak, 19:35, S12, dron, fala 3 |
+| Patrole do znalezienia | 8. przeszukanie segmentu w kolejności czasu (12 przydziałów w 3 falach) |
+| Ranga prawdziwego segmentu przed 1. patrolem | #5 z 20 (same pierścienie: #11) |
+| Procent obszaru przeszukany do znalezienia | 4,1% (same pierścienie 18,7%) |
+| Naiwnie od schroniska | 32,3% obszaru (silnik ok. 8x lepiej) |
+| Odległość od szczytu mapy | 1,95 km (szczyt przy schronisku) |
+| Hash zgodny | tak |
 
 ## Lektor (30 s, PL)
 
-Nawias kwadratowy uzupełniamy po odsłonięciu.
 
-> Nie wiemy, gdzie jest Ewa. Wie tylko AI, które ją schowało, i zapisało to miejsce jako hash, zanim zaczęliśmy. Mamy to, co ratownik miałby naprawdę: plan od partnera, świadka w schronisku, sektor BTS, mgłę. Dwie fale patroli, osiem razy "nic". Wtedy liczymy od ostatniego miejsca, gdzie ktoś ją widział, a nie od schroniska. Trzecia fala: dron nad Szpiglasową Przełęczą. Znaleziona. Uczciwie: planer wysłałby drona gdzie indziej, tę poprawkę zrobiliśmy ręcznie. [Odsłonięcie: hash się zgadza.]
+> Nie wiemy, gdzie jest Ewa. Wie tylko AI, które ją schowało, i zapisało to miejsce jako hash, zanim zaczęliśmy. Mamy to, co ratownik miałby naprawdę: plan od partnera, świadka w schronisku, sektor BTS, mgłę. Dwie fale patroli, osiem razy "nic". Wtedy liczymy od ostatniego miejsca, gdzie ktoś ją widział, a nie od schroniska. Trzecia fala: dron nad Szpiglasową Przełęczą. Znaleziona. Uczciwie: planer wysłałby drona gdzie indziej, tę decyzję podjął agent-szukający. Odsłonięcie: hash się zgadza, miejsce było zapisane, zanim zaczęliśmy. To jedna runda, nie wynik. Mapa miała ją w najlepszych czterech procentach obszaru.

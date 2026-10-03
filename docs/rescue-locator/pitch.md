@@ -2,7 +2,7 @@
 
 Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research.md). All demo data is mocked and fictitious. Numbers come from `rescue/README.md` (demo numbers) and `rescue/validate/backtest.md` (4262ffe). **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** They come from scenarios we wrote ourselves, so they only show the engine works as designed. The validation method is the blind test below.
 
-Blind test log and story for materials: [`blind-test/log.md`](blind-test/log.md), [`blind-test/story.md`](blind-test/story.md). Round 1 so far: blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. (hash check and metrics pending the reveal.)
+Blind test log and story for materials: [`blind-test/log.md`](blind-test/log.md), [`blind-test/story.md`](blind-test/story.md). Round 1 so far: blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. Reveal 14:59 (ad2ced5): hash OK; at 19:00 the true cell was in the top 4.1% of the area (naive search from the hut: 32.3%), but the true segment was only #5/20 and the map peak 1.95 km away. One round, not the pitch number.
 
 ## Demo script
 

@@ -9,7 +9,9 @@ Materiał marketingowy na podstawie [`log.md`](log.md). Wszystko, co zależy od 
 3. **Przyjęliśmy to w minutę.** O 14:36 wszystkie liczby w prezentacji dostały etykietę "tymczasowe - do czasu testu na ślepo". Ping GPS przestał być zakończeniem demo.
 4. **Gra w chowanego.** Jedno AI chowa zaginionego i zapisuje miejsce jako hash SHA-256. My szukamy samą aplikacją. Sędzia (to samo AI) odpowiada na każdy patrol tak, jak odpowiedziałby teren: nic, ślad albo znaleziony.
 5. **Wynik serii, z porażkami (po odsłonięciu).**
-6. **Runda 1.** blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. S12 miał wcześniej dwa przejścia we mgle (POD 0,45 każde), które jej nie znalazły: realistyczny POD poniżej 1. Potwierdzenie hasha i metryki (po odsłonięciu).
+6. **Runda 1.** blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. S12 miał wcześniej dwa przejścia we mgle (POD 0,45 każde), które jej nie znalazły: realistyczny POD poniżej 1.
+
+   **Odsłonięcie (14:59):** hash zgodny. Zgubiła żółty szlak we mgle za Szpiglasową Przełęczą i siedziała z urazem kostki pod blokiem skalnym, ok. 280 m od szlaku. Stan mapy o 19:00, przed pierwszym patrolem: prawdziwa komórka w najlepszych 4,1% obszaru (naiwnie od schroniska 32,3%, ok. 8x lepiej), ale segment dopiero #5 z 20, a szczyt mapy 1,95 km obok. Najbardziej pomógł sektor BTS. **To jedna runda, nie liczba do pitchu** (sędzia). Liczba do pitchu to wynik serii.
 
 Dlaczego to działa w pitchu: jury słyszy liczby co pięć minut. Rzadko słyszy, jak zespół je sam podważył i zbudował test, którego nie da się nagiąć.
 

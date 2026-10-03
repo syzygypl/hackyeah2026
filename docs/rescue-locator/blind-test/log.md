@@ -65,15 +65,21 @@ Bez pingu GPS.
 
 ### Wskazówki
 
-Pełna lista wskazówek z czasami jeszcze nie trafiła do wątku. Z opisu mapy wiadomo, gdzie silnik umieścił trzy z nich:
+Z odsłoniętego przebiegu (`rescue/blindtest/blind-01-result.md`). Kolumny "segment" i "obszar" pokazują, jak każda wskazówka zmieniała rangę prawdziwego segmentu S12 i procent obszaru do przeszukania przed trafieniem w prawdziwą komórkę.
 
-| Czas | Wskazówka | Typ (plan, auto, BTS, świadek, telefon gaśnie, pogoda) | Gdzie na mapie |
-|---|---|---|---|
-| ... | Start ze schroniska | punkt startu | S3 |
-| 13:40 | Świadek | świadek | S5 |
-| ... | Ostatni sektor BTS (środek sektora i przełęcz) | BTS | S12 |
-| od 13:30 | Mgła powyżej 1800 m | pogoda | przełęcz ok. 2110 m |
-| 19:00 | Widzialność 40 m, 1°C, wiatr 9 m/s | pogoda | śmigłowiec uziemiony (< 500 m), ryzyko hipotermii wysokie (4,2 h) |
+| Czas zgłoszenia | Wskazówka | Typ | Ranga S12 | Obszar do trafienia |
+|---|---|---|---|---|
+| 18:15 | Teren: szlaki, potoki, schroniska | teren | #11 | 9,58% |
+| 18:15 | Trudność terenu | teren | #12 | 16,36% |
+| 18:15 | Warunki: mgła 40 m, wiatr 9 m/s | pogoda | #12 | 16,36% |
+| 18:15 | Koester: turysta pieszy, góry (od schroniska) | statystyka | #11 | 18,69% |
+| 18:20 | Plan od partnera: pętla przez ... | plan | #7 | 9,50% |
+| 18:30 | Auto nadal na parkingu Palenica | auto | #6 | 9,25% |
+| 18:45 | Świadek: para turystów widzi ją o 13:40 (S5) | świadek | #7 | 9,92% |
+| 18:55 | CPR 112: ostatni sektor BTS (14:48) | BTS | #5 | 4,75% |
+| 19:00 | IMGW: mgła, mżawka, zmrok | pogoda | #5 | 4,08% |
+
+Telefon wyłączony od 15:05 (z historii chowającego). Najbardziej pomógł sektor BTS: komórka z rangi 342 na 171, segment z #7 na #5.
 
 ### Co pokazała mapa
 
@@ -161,32 +167,47 @@ S12 miał wcześniej dwa przejścia we mgle (POD 0,45 każde), które jej nie zn
 
 Znalezione w trakcie rundy. Nie poprawiamy silnika w trakcie gry, żeby nie dopasować go do ukrytego miejsca.
 
+Po odsłonięciu (lista sędziego):
+
 - **(1)** Pierścienie Koestera liczone od schroniska (11:50) zamiast od ostatniego znanego punktu (świadek 13:40, S5). Koester: IPP = LKP. Zgłosił AI Michała, 14:52.
 - Planer nie wie, które zespoły są zajęte (proponuje segment, który już ktoś przeszukuje).
 - Dron zapętla się na S3 po przelocie z niskim POD.
 - Brak zachowania "zgubiony szlak we mgle -> zejście żlebem".
+- Słabe zdarzenie "znaleziono": wskazówka z promieniem 50 m w miejscu odnalezienia daje komórce tylko rangę 83. Potrzebny osobny typ zdarzenia "Found", który zamyka akcję.
+- Godziny po północy sortowane przed wieczornymi (00:55 przed 18:15).
+- Obszar mapy dopasowany do wskazówek, a nie skopiowany z innego scenariusza.
 
 
 ### Odsłonięcie
 
-- **Miejsce i sól:** ...
-- **Weryfikacja hasha:** ... (zgodny / niezgodny)
-- **Wynik:** znaleziona w S12, fala 3, dron, po 12 przydziałach w 3 falach (potwierdzenie miejsca po odsłonięciu)
+**14:59, AI Marcina, commit ad2ced5.**
+
+- **Miejsce:** 49.19597, 20.04655 (komórka r58 c30, segment S12).
+- **Sól:** `3746db96b11d2df56179ef326b6c29b3`
+- **Weryfikacja hasha:** zgodny. `python3 rescue/blindtest/reveal.py --round blind-01 --at 49.19597,20.04655 --salt 3746db96b11d2df56179ef326b6c29b3 --run rescue/out/blind-01-replay.run.json` -> `commitment OK fdd079df...b474`.
+- **Historia chowającego:** zgubiła żółty szlak we mgle tuż za Szpiglasową Przełęczą, przy zejściu w stronę Morskiego Oka. Zeszła za daleko na południowy zachód, w piarg nad Stawami Staszica. Poślizg, uraz kostki. Siedzi pod blokiem skalnym ok. 280 m od szlaku. Żywa, nie może iść, telefon wyłączony od 15:05.
+- **Wynik:** ZNALEZIONO o 19:35 w S12, dron termowizyjny, fala 3. W kolejności czasu było to 8. przeszukanie segmentu w akcji.
 
 ### Metryki
 
 | Metryka | Wartość |
 |---|---|
-| Znaleziony | tak, fala 3, S12, dron (miejsce po odsłonięciu) |
-| Liczba patroli do znalezienia | 12 przydziałów w 3 falach; znalazł dron z fali 3 |
-| Ranga prawdziwego segmentu przed pierwszym patrolem | ... |
-| Procent obszaru przeszukany do znalezienia | ... |
-| Czas do znalezienia vs naiwne przeszukiwanie | ... |
-| Odległość od szczytu mapy | ... |
+| Znaleziony | tak, 19:35, S12, dron, fala 3 |
+| Liczba patroli do znalezienia | 8. przeszukanie segmentu w kolejności czasu (12 przydziałów wysłanych w 3 falach) |
+| Ranga prawdziwego segmentu przed pierwszym patrolem | #5 z 20 (8,3% POA); same teren + pierścienie: #11 |
+| Procent obszaru przeszukany do znalezienia (19:00, w kolejności POA) | 4,1% (komórka 147 / 3600); same pierścienie: 18,7% |
+| Naiwne przeszukiwanie od schroniska (IPP) | 32,3% obszaru, czyli silnik ok. 8x lepiej |
+| Odległość od szczytu mapy | 1,95 km (szczyt przy schronisku, S3 27%: top 1 planera był błędny) |
 
 ### Co z tego wynika
 
-...
+**To jedna runda, nie liczba do pitchu** (sędzia). Liczba do pitchu to wynik serii 3-5 rund.
+
+1. **Silnik dobrze zawęża, ale nie trafia w top.** Prawdziwa komórka w najlepszych ok. 4% obszaru, ok. 8x lepiej niż naiwnie od schroniska. Ale segment dopiero #5, a szczyt mapy 1,95 km obok.
+2. **Główna słabość: stały punkt startu.** Pierścienie Koestera liczone od schroniska (11:50) przeważają nad późniejszymi wskazówkami (świadek 13:40, BTS 14:48). Zauważył to AI Michała (14:52), a agent-szukający AI Mateusza zastosował to ręcznie w fali 3, co dało znalezienie.
+3. **Znalezienie przyszło z decyzji agenta-szukającego AI wbrew planerowi.** Planer w tym czasie dawał drona trzeci raz nad S3 i sam by jej nie znalazł.
+4. **POD poniżej 1 jest realny.** S12 przeszły dwa patrole we mgle (POD 0,45 każdy) i jej nie zauważyły.
+5. **Błąd projektu rundy (sędzia):** obszar mapy skopiowany z zawrat.json. Ukryte miejsce leżało w 2. rzędzie od południowej krawędzi, a część koła BTS wypadła poza mapę. Od blind-02 obszar jest dopasowany do wskazówek.
 
 ## Runda blind-02
 
@@ -206,6 +227,6 @@ Znalezione w trakcie rundy. Nie poprawiamy silnika w trakcie gry, żeby nie dopa
 
 | Runda | Znaleziony | Patrole | Ranga przed 1. patrolem | Obszar do znalezienia | Czas vs naiwne | Odległość od szczytu |
 |---|---|---|---|---|---|---|
-| blind-01 | | | | | | |
+| blind-01 | tak (19:35, dron, S12) | 8. przeszukanie segmentu | #5 z 20 | 4,1% (naiwnie 32,3%) | ok. 8x mniej obszaru niż naiwnie | 1,95 km |
 | blind-02 | | | | | | |
 | blind-03 | | | | | | |
