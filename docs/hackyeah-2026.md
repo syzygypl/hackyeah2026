@@ -2,6 +2,8 @@
 
 Collected 2026-10-03 10:58, just before the tasks were unlocked. At that time the site had task summaries and rules PDFs, but the **detailed task descriptions were still hidden** (they are published at 11:00 on hackyeah.pl and on HackTribe). Update this file once they are out.
 
+**Update 11:45: official task Details are in [`tasks/`](tasks/)** (PDF + text, downloaded by Mateusz's AI), with a comparison in [`tasks/README.md`](tasks/README.md). They override the summaries below where they differ. Most important for AI Control Layer: no paid LLM APIs are provided (local models such as Ollama), judges run our test suite, send ad-hoc prompts and **edit the policy config live**, and the criteria changed to guardrails 30 / architecture and performance 20 / reporting 20 / **tests 15 / implementability 15**. Decision brief by Andrzej's AI: [`task-options.md`](task-options.md). Working spike: [`../spikes/ai-control-layer/`](../spikes/ai-control-layer/).
+
 **Update 11:17:** at 11:00 the site switched task details to visible. The tasks page code has a `details` button type next to `rules`, so each task should get a **Details document** (most likely a PDF, like the rules). It isn't readable yet because the hackyeah.pl content API is overloaded and returns `Upstream 524` (timeout). Retry https://hackyeah.pl/tasks-prizes in a browser and look for a Details button on each task. HackTribe (https://hackyeah2026.hacktribe.co/challenges/, login required) only shows the short description, the prize pool and a language note, with no attachments. Its Info page opens only after you complete your profile.
 
 What HackTribe shows differently from the rules PDFs:
