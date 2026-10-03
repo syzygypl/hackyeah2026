@@ -4,7 +4,7 @@
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (p) => Math.round((p || 0) * 100) + "%";
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
-let C, team = new URLSearchParams(location.search).get("team") || ls.get("rescue-team", null), gps   // ?team=topr-a (QR code per phone) wins = null, gpsMarker = null, lastTaskKey = "";
+let C, team = new URLSearchParams(location.search).get("team") || ls.get("rescue-team", null), gps = null, gpsMarker = null, lastTaskKey = ""; // ?team=topr-a (QR code per phone) wins
 const $ = (id) => document.getElementById(id);
 
 export function initRescuer(ctx) {
