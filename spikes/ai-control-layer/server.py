@@ -84,5 +84,8 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8787
+    LAYER._load_policy()
+    for tier, model, digest, ms in LAYER.semantic.warmup(LAYER.policy["controls"].get("semantic") or {}, LAYER.policy.get("models", {}).get("allowed")):
+        print(f"warm-up {tier}: {model} ({digest}) {ms} ms")
     print(f"AI Control Layer gateway on http://127.0.0.1:{port}  (GET / for endpoints; edit policy.json live)")
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()
