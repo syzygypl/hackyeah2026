@@ -9,6 +9,8 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { Line2 } from 'three/addons/lines/Line2.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { colorFor, gradientCSS, STOPS } from '../../app/scale.js'; // shared heat scale (decision S2), same as 2D
 import { FX, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
 
@@ -247,6 +249,9 @@ const PROG = (() => {
 
 // ---------- renderer / scene ----------
 const host = $('scene');
+// render scheduler state (see "loop"): wake() asks for full-rate frames for a moment, labelsDirty for a label re-layout
+let labelsDirty = true, wakeAt = 0;
+const wake = () => { wakeAt = performance.now(); };
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
@@ -268,13 +273,14 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true; controls.dampingFactor = 0.08;
 controls.maxPolarAngle = Math.PI * 0.46; controls.minDistance = 0.5; controls.maxDistance = 30;
 controls.autoRotateSpeed = 0.3;
+controls.addEventListener('change', wake);
 
 const lineMats = new Set();
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); labels.setSize(innerWidth, innerHeight);
   for (const m of lineMats) m.resolution.set(innerWidth, innerHeight);
-  applyInsets();
+  applyInsets(); wake();
 });
 // insets (plumbing): in /app the shell's floating panels cover the frame's edges (?insets=T,R,B,L px, then {type:'insets'}).
 // The camera's principal point moves to the middle of the free area and the overlays read --inset-* (style3d.css).
@@ -285,6 +291,7 @@ function applyInsets() {
   [['t', T], ['r', Rr], ['b', Bm], ['l', L]].forEach(([k, v]) => st.setProperty('--inset-' + k, v + 'px'));
   const dx = (L - Rr) / 2, dy = (T - Bm) / 2;
   if (dx || dy) camera.setViewOffset(innerWidth, innerHeight, -dx, -dy, innerWidth, innerHeight); else camera.clearViewOffset();
+  wake();
 }
 applyInsets();
 
@@ -557,22 +564,51 @@ function makeLine(vecs, { color = '#222', width = 2, opacity = 1, dashed = false
   return l;
 }
 // draped polyline in [lat, lon]; parts outside the DEM are dropped
+// Batched: every group keeps one LineSegments2 per style (colour, width, dash...), so a layer of 100 outlines is one
+// draw call. Runs are collected here and uploaded once, right before the next frame renders (flushLines).
+const dirtyLines = new Set();
 function drapeRuns(latlon, lift, opts, group) {
+  const key = JSON.stringify(opts), batches = group.userData.lines || (group.userData.lines = new Map());
+  let b = batches.get(key);
+  if (!b) batches.set(key, (b = { group, opts, pts: [], obj: null }));
   let run = [];
-  const flush = () => { if (run.length > 1) group.add(makeLine(run.map(([la, lo]) => v3(la, lo, lift)), opts)); run = []; };
+  const flush = () => {
+    if (run.length > 1) {
+      let a = v3(run[0][0], run[0][1], lift);
+      for (let i = 1; i < run.length; i++) { const c = v3(run[i][0], run[i][1], lift); b.pts.push(a.x, a.y, a.z, c.x, c.y, c.z); a = c; }
+      dirtyLines.add(b);
+    }
+    run = [];
+  };
   for (const p of densify(latlon)) { if (inside(p)) run.push(p); else flush(); }
   flush();
+}
+function flushLines() {
+  for (const b of dirtyLines) {
+    const { color = '#222', width = 2, opacity = 1, dashed = false, dash = 0.05, gap = 0.04 } = b.opts;
+    if (!b.obj) {
+      const mat = new LineMaterial({ color, linewidth: width, transparent: opacity < 1, opacity, dashed, dashSize: dash, gapSize: gap });
+      mat.resolution.set(innerWidth, innerHeight); lineMats.add(mat);
+      b.obj = new LineSegments2(new LineSegmentsGeometry(), mat); b.group.add(b.obj);
+    } else { b.obj.geometry.dispose(); b.obj.geometry = new LineSegmentsGeometry(); }
+    b.obj.geometry.setPositions(b.pts);
+    if (dashed) b.obj.computeLineDistances();
+  }
+  dirtyLines.clear();
 }
 const ringLL = (poly) => poly.map(([lo, la]) => [la, lo]); // polygons are [lon, lat]
 const circleLL = ([la, lo], rM, n = 96) => Array.from({ length: n + 1 }, (_, i) => {
   const a = (i / n) * Math.PI * 2; return [la + (Math.sin(a) * rM) / 1000 / KM, lo + (Math.cos(a) * rM) / 1000 / (KM * KX)];
 });
 function disposeGroup(g) {
+  for (const b of g.userData.lines?.values() || []) dirtyLines.delete(b);
+  g.userData.lines = null; labelsDirty = true;
   g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) { lineMats.delete(o.material); o.material.dispose(); } if (o.isCSS2DObject) o.element.remove(); });
   g.clear();
 }
 function label(html, cls, pos) {
-  const el = document.createElement('div'); el.className = 'lbl3d ' + (cls || ''); el.innerHTML = html;
+  const el = document.createElement('div'); el.className = 'lbl3d ' + (cls || ''); el.innerHTML = html; labelsDirty = true;
+  el.style.willChange = 'transform'; // own compositor layer: moving a label is not a repaint of its shadow over the canvas (-4 ms/frame while orbiting)
   const o = new CSS2DObject(el); o.position.copy(pos); return o;
 }
 const ballGeo = new THREE.SphereGeometry(1, 16, 12);
@@ -800,6 +836,7 @@ function setStep(i, animate = true) {
   drawTeams(s);
   if (foundPin) foundPin.visible = foundStep >= 0 && i >= foundStep;
   if (revealPin) revealPin.visible = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1);
+  labelsDirty = true; wake();
   setMood(s.weather);
   renderUI(i, ranked, searched, prev);
   renderSignals(i);
@@ -1088,7 +1125,28 @@ function cineTick(dt) {
 const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
 let hoverPending = false, lastEv = null, downAt = null;
 const diffLabel = new Map((R.difficultyClasses || []).map((d) => [d.id, d.label]));
-const pick = (e) => { mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(mouse, camera); return ray.intersectObject(terrain)[0]; };
+// terrain under the pointer: the ray is marched over the DEM height field (bilinear, 8 m steps, then bisection),
+// not tested against the ~200k mesh triangles, so hover costs microseconds instead of a frame
+const H_TOP = ((zMax - zMin) * EX) / 1000;
+function pickRay(r) {
+  const o = r.origin, d = r.direction;
+  let t0 = 0, t1 = 400;
+  for (const [oo, dd, lo, hi] of [[o.x, d.x, -WKM / 2, WKM / 2], [o.y, d.y, -1, H_TOP + 0.01], [o.z, d.z, -HKM / 2, HKM / 2]]) {
+    if (Math.abs(dd) < 1e-9) { if (oo < lo || oo > hi) return null; continue; }
+    let a = (lo - oo) / dd, b = (hi - oo) / dd; if (a > b) [a, b] = [b, a];
+    t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) return null;
+  }
+  const above = (t) => o.y + d.y * t - hAt(toLat(o.z + d.z * t), toLon(o.x + d.x * t));
+  if (above(t0) < 0) return { point: r.at(t0, new THREE.Vector3()) };
+  for (let t = t0, step = 0.008; t < t1; t += step) {
+    if (above(t + step) < 0) {
+      let a = t, b = t + step; for (let k = 0; k < 12; k++) { const m = (a + b) / 2; if (above(m) < 0) b = m; else a = m; }
+      return { point: r.at(b, new THREE.Vector3()) };
+    }
+  }
+  return null;
+}
+const pick = (e) => { mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(mouse, camera); return pickRay(ray.ray); };
 const cv = renderer.domElement;
 cv.addEventListener('pointermove', (e) => { lastEv = e; if (!hoverPending) { hoverPending = true; requestAnimationFrame(hover); } });
 cv.addEventListener('pointerleave', () => { $('tip').hidden = true; });
@@ -1338,7 +1396,41 @@ function fitShadow(now) {
   forest.children.forEach((m) => { m.castShadow = S !== SH_FULL; });
   renderer.shadowMap.needsUpdate = true; shFit = { x: cx, z: cz, S };
 }
+// Render scheduler. Nothing is drawn while the view cannot be seen (background tab, or /app showing 2D: the iframe is
+// display:none and its IntersectionObserver reports it). A still camera with only ambient animation (wind, ripples,
+// heat pulse, team dots) renders at 30 fps; moving, flying, Kino and crossfades render every frame. The CSS labels are
+// re-laid out only when the camera or the label set changed. Resolution can step down while frames run slow (> 24 ms)
+// and back up once there is headroom - only with ?dpr=auto: on the Asahi laptop orbiting is bound by the page
+// compositor, not fill rate, so a lower resolution only blurred the picture. ?dpr=<n> pins it, ?stats=1 shows fps,
+// CPU split, draw calls and resolution (?gpu=1 adds a gl.finish so "render" includes GPU time).
+const DPR_AUTO = Q.get('dpr') === 'auto', DPR_PIN = Q.has('dpr') && !DPR_AUTO;
+const DPR_MAX = DPR_PIN ? +Q.get('dpr') : Math.min(devicePixelRatio, 1.5), DPR_MIN = DPR_AUTO ? Math.max(0.75, DPR_MAX * 0.6) : DPR_MAX;
+let dpr = DPR_MAX, offscreen = false, lastRender = 0, lastLabels = 0, ema = 16, slowFor = 0, fastFor = 0, upWait = 4000, upAt = 0;
+renderer.setPixelRatio(dpr);
+new IntersectionObserver(([en]) => { offscreen = !en.isIntersecting; if (!offscreen) wake(); }).observe(host);
+addEventListener('visibilitychange', wake);
+const camSig = new Float64Array(32);
+function cameraMoved() {
+  camera.updateMatrixWorld();
+  const a = camera.matrixWorld.elements, b = camera.projectionMatrix.elements; let moved = false;
+  for (let i = 0; i < 16; i++) { if (camSig[i] !== a[i]) { camSig[i] = a[i]; moved = true; } if (camSig[16 + i] !== b[i]) { camSig[16 + i] = b[i]; moved = true; } }
+  return moved;
+}
+function adaptResolution(now, interval) {
+  if (!DPR_AUTO || interval > 100) return; // fixed resolution, or a hitch (tab switch, GC)
+  ema += (interval - ema) * 0.08;
+  slowFor = ema > 24 ? slowFor + interval : 0; fastFor = ema < 18 ? fastFor + interval : 0;
+  if (slowFor > 1000 && dpr > DPR_MIN) { dpr = Math.max(DPR_MIN, +(dpr - 0.15).toFixed(2)); renderer.setPixelRatio(dpr); slowFor = 0; if (now - upAt < 6000) upWait = Math.min(upWait * 2, 60000); }
+  else if (fastFor > upWait && dpr < DPR_MAX) { dpr = Math.min(DPR_MAX, +(dpr + 0.15).toFixed(2)); renderer.setPixelRatio(dpr); fastFor = 0; upAt = now; }
+}
+const GPU_SYNC = Q.has('gpu');
+const statsEl = Q.has('stats') ? Object.assign(document.createElement('div'), { id: 'stats3d' }) : null;
+if (statsEl) { Object.assign(statsEl.style, { position: 'fixed', left: '8px', bottom: '8px', zIndex: 99, font: '11px/1.35 monospace', background: 'rgba(0,0,0,.65)', color: '#cfe', padding: '4px 7px', borderRadius: '4px', pointerEvents: 'none', whiteSpace: 'pre' }); document.body.appendChild(statsEl); }
+let statN = 0, statT = 0, statAt = 0, statCalls = 0, statTris = 0, cpuR = 0, cpuL = 0, cpuF = 0, nL = 0;
 function frame() {
+  requestAnimationFrame(frame);
+  const now = performance.now();
+  if (document.hidden || offscreen) { clock.getDelta(); return; }
   const dt = Math.min(clock.getDelta(), 0.1);
   if (heatT < 1) { heatT = Math.min(1, heatT + dt / 0.7); heatU.uHeatT.value = heatT; }
   heatU.uTime.value += dt;
@@ -1353,14 +1445,31 @@ function frame() {
   cineTick(dt);
   fitShadow(performance.now());
   if (!CINE.on || fly) controls.update();
+  let oneShot = false;
   for (let i = movers.length - 1; i >= 0; i--) {
     const m = movers[i];
-    if (m.once) { m.t += dt / 1.1; m.dot.position.copy(m.curve.getPoint(Math.min(1, m.t))); if (m.t >= 1) { movers.splice(i, 1); m.done(); } }
+    if (m.once) { oneShot = true; m.t += dt / 1.1; m.dot.position.copy(m.curve.getPoint(Math.min(1, m.t))); if (m.t >= 1) { movers.splice(i, 1); m.done(); } }
     else { m.t = (m.t + dt * 0.15) % 1; m.dot.position.copy(m.curve.getPoint(m.t)); m.mat.dashOffset -= dt * 0.08; }
   }
+  flushLines();
+  const moved = cameraMoved();
+  const active = moved || fly || CINE.on || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
+  if (!active && now - lastRender < 1000 / 31) return; // ambient only: 30 fps
+  const interval = now - lastRender; lastRender = now;
+  if (active) adaptResolution(now, interval);
+  const c0 = performance.now();
   renderer.render(scene, camera);
-  labels.render(scene, camera);
-  requestAnimationFrame(frame);
+  if (GPU_SYNC) renderer.getContext().finish(); // ?gpu=1: stats count the GPU time in "render" (diagnostic only)
+  const c1 = performance.now();
+  if (moved || labelsDirty || now - lastLabels > 1000) { labels.render(scene, camera); labelsDirty = false; lastLabels = now; nL++; }
+  if (statsEl) {
+    const c2 = performance.now();
+    statN++; statT += interval; cpuR += c1 - c0; cpuL += c2 - c1; cpuF += c0 - now; statCalls = renderer.info.render.calls; statTris = renderer.info.render.triangles;
+    if (now - statAt > 500) {
+      statsEl.textContent = `${(1000 / (statT / statN)).toFixed(0)} fps  ${(statT / statN).toFixed(1)} ms\ncpu: update ${(cpuF / statN).toFixed(1)}  render ${(cpuR / statN).toFixed(1)}  labels ${(cpuL / statN).toFixed(1)} ms (${nL}/${statN})\n${statCalls} draw calls  ${(statTris / 1000).toFixed(0)}k tris\ndpr ${dpr} (${DPR_MIN}-${DPR_MAX})  ${active ? 'active' : 'idle 30'}`;
+      statN = 0; statT = 0; cpuR = 0; cpuL = 0; cpuF = 0; nL = 0; statAt = now;
+    }
+  }
 }
 
 // ---------- start ----------
