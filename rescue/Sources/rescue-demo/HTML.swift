@@ -283,7 +283,7 @@ function renderTeams(){
   document.getElementById('teams').innerHTML=P.resources.map(r=>{const a=byRes[r.id];
     return `<div class="team ${r.available?'':'off'}"><div class="hd"><span>${r.name}</span><span class="pill ${r.available?'':'off'}">${r.available?(a?'przydział':'wolny'):'niedostępny'}</span></div>
     ${r.available?'':`<div class="why">${r.reason}</div>`}
-    ${a?`<div class="as">-> <b>${a.segmentId} ${a.segmentName}</b>: ETA ${Math.round(a.travelMin)} min, przeszukanie ${Math.round(a.sweepMin)} min, szansa odnalezienia <b>${(a.expectedFind*100).toFixed(0)}%</b></div><div class="why">${a.reason}</div>${a.safety.map(f=>`<div class="flag">! ${f}</div>`).join('')}`:''}</div>`}).join('');
+    ${a?`<div class="as">-> <b>${a.segmentId} ${a.segmentName}</b>: ETA ${Math.round(a.travelMin)} min, przeszukanie ${Math.round(a.sweepMin)} min, szansa odnalezienia <b>${(a.expectedFind*100).toFixed(0)}%</b></div><div class="why">${a.reason}</div>${a.why?`<div class="why" style="color:#cfe">${a.why.replace(/ \| niedostępne:.*$/,'')}</div>`:''}${a.safety.map(f=>`<div class="flag">! ${f}</div>`).join('')}`:''}</div>`}).join('');
   assignLayer.clearLayers();
   P.assignments.forEach(a=>{const si=D.segments.findIndex(x=>x.id===a.segmentId), c=segCenter[si], b=D.resBases[a.resourceId]; if(!c||!b) return;
     const to=[c[0]/c[2],c[1]/c[2]];

@@ -261,7 +261,7 @@ function renderPanels(S) {
   $("teams").innerHTML = (S.resources || []).map((r) => { const a = by[r.id];
     return `<div class="box team ${r.available ? "" : "off"}"><div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b><span class="pill ${r.available ? "" : "off"}">${r.available ? (a ? "przydział" : "wolny") : "niedostępny"}</span></div>
       ${r.available ? "" : `<div class="help">${esc(r.reason)}</div>`}
-      ${a ? `<div>-> <b>${esc(a.segmentId)} ${esc(a.segmentName)}</b>, ETA ${Math.round(a.travelMin)} min, szansa ${Math.round(a.expectedFind * 100)}%</div>${a.safety.map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}` : ""}</div>`; }).join("") || `<div class="help">Brak zespołów w scenariuszu.</div>`;
+      ${a ? `<div>-> <b>${esc(a.segmentId)} ${esc(a.segmentName)}</b>, ETA ${Math.round(a.travelMin)} min, szansa ${Math.round(a.expectedFind * 100)}%</div>${a.why ? `<div class="help">${esc(a.why.replace(/ \| niedostępne:.*$/, ""))}</div>` : ""}${a.safety.map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}` : ""}</div>`; }).join("") || `<div class="help">Brak zespołów w scenariuszu.</div>`;
   // terrain notice
   const T = D.terrain || {};
   $("terrain").style.display = T.flat ? "block" : "none";

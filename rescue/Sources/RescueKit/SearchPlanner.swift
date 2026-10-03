@@ -34,6 +34,9 @@ public enum SearchPlanner {
         public let expectedFind: Double, ratePerHour: Double
         public let reason: String
         public let safety: [String]
+        /// "dlaczego ten segment": evidence that raised / lowered this segment (percentage points of its POA) and why this team
+        public var why: String = ""
+        public var whyLayers: [(title: String, deltaPP: Double)] = []
     }
     public struct Survival: Sendable {
         public let hoursOut: Double, level: String, text: String
@@ -329,6 +332,18 @@ public enum SearchPlanner {
             statuses.append(ResourceStatus(id: r.id, name: r.name, type: r.type, available: ok, reason: why))
             if ok { opts += options(ctx, res, idx: i, from: from, poa: poa, c, urgency: urgency, history: history) }
         }
+        // Contribution of each evidence layer to each segment: POA with all layers minus POA without that layer (pp).
+        func segSums(_ p: [Double]) -> [Double] {
+            var out = [Double](repeating: 0, count: s.segments.count)
+            for i in 0..<grid.count { out[grid.segmentOf[i]] += p[i] }
+            return out
+        }
+        let allSeg = segSums(poa)
+        let explain = grid.layers.filter { !["terrain", "cost", "difficulty", "conditions"].contains($0.hint.kind) }
+        let contrib: [(String, [Double])] = explain.map { l in
+            let without = segSums(grid.poa(disabled: [l.hint.id]))
+            return (l.hint.title, zip(allSeg, without).map { ($0 - $1) * 100 })
+        }
         // Greedy: best rate first, one resource per segment, never a segment another team is already sweeping
         var usedR = Set<Int>(), usedS = Set(s.segments.indices.filter { sweeping.contains(s.segments[$0].id) })
         var out: [Assignment] = []
@@ -339,9 +354,29 @@ public enum SearchPlanner {
             let reason = String(format: "POA %.0f%%, POD %.0f%% (%@%@), %@ %.0f min, przeszukanie %.0f min",
                                 o.poa * 100, o.pod * 100, mix.label, c.visibilityM < 200 ? ", mgła" : c.dark ? ", noc" : "",
                                 o.byVehicle ? "dojazd autem + dojście" : "dojście", o.travel, o.sweep)
-            out.append(Assignment(resourceId: r.id, resourceName: r.name, segmentId: sg.id, segmentName: sg.name,
-                                  travelMin: o.travel, sweepMin: o.sweep, pod: o.pod, poa: o.poa,
-                                  expectedFind: o.poa * o.pod, ratePerHour: o.rate, reason: reason, safety: o.safety))
+            var a = Assignment(resourceId: r.id, resourceName: r.name, segmentId: sg.id, segmentName: sg.name,
+                               travelMin: o.travel, sweepMin: o.sweep, pod: o.pod, poa: o.poa,
+                               expectedFind: o.poa * o.pod, ratePerHour: o.rate, reason: reason, safety: o.safety)
+            let layers = contrib.map { (title: $0.0, deltaPP: ($0.1[o.seg] * 10).rounded() / 10) }.filter { abs($0.deltaPP) >= 0.5 }
+            let up = layers.filter { $0.deltaPP > 0 }.sorted { $0.deltaPP > $1.deltaPP }.prefix(2)
+            let down = layers.filter { $0.deltaPP < 0 }.sorted { $0.deltaPP < $1.deltaPP }.prefix(1)
+            a.whyLayers = Array(up) + Array(down)
+            // runner-up team for this segment
+            let rivals = opts.filter { $0.seg == o.seg && $0.r != o.r }.sorted { $0.rate > $1.rate }
+            var parts: [String] = []
+            if !up.isEmpty { parts.append("podnosi: " + up.map { "\($0.title) +\(String(format: "%.0f", $0.deltaPP)) pp" }.joined(separator: ", ")) }
+            if !down.isEmpty { parts.append("obniża: " + down.map { "\($0.title) \(String(format: "%.0f", $0.deltaPP)) pp" }.joined(separator: ", ")) }
+            if let rv = rivals.first(where: { $0.rate <= o.rate }) {
+                parts.append(String(format: "%@: %.1f%%/h vs %@ %.1f%%/h (ETA %.0f vs %.0f min)", r.name, o.rate * 100, res[rv.r].name, rv.rate * 100, o.travel, rv.travel))
+            } else if let rv = rivals.first, let elsewhere = out.first(where: { $0.resourceId == res[rv.r].id }) {
+                parts.append(String(format: "%@ byłby tu szybszy (%.1f%%/h), ale ma ważniejsze zadanie w %@; %@: %.1f%%/h", res[rv.r].name, rv.rate * 100, elsewhere.segmentId, r.name, o.rate * 100))
+            } else {
+                parts.append("jedyny dostępny zespół dla tego segmentu")
+            }
+            let off = statuses.filter { !$0.available }.map { "\($0.name): \($0.reason)" }
+            if !off.isEmpty { parts.append("niedostępne: " + off.joined(separator: "; ")) }
+            a.why = "Dlaczego \(sg.id): " + parts.joined(separator: " | ")
+            out.append(a)
         }
         return Plan(conditions: c, resources: statuses, assignments: out, survival: surv, state: state, history: history, stateBefore: state)
     }

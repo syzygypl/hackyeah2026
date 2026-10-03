@@ -92,5 +92,6 @@ public func assignmentJSON(_ a: SearchPlanner.Assignment) -> [String: Any] {
     return ["resourceId": a.resourceId, "segmentId": a.segmentId, "segmentName": a.segmentName,
             "travelMin": r(a.travelMin), "sweepMin": r(a.sweepMin), "etaMin": r(a.travelMin),
             "poa": r(a.poa), "pod": r(a.pod), "expectedFind": r(a.expectedFind), "ratePerHour": r(a.ratePerHour),
-            "reason": a.reason, "safety": a.safety]
+            "reason": a.reason, "safety": a.safety, "why": a.why,
+            "whyLayers": a.whyLayers.map { ["title": $0.title, "deltaPP": $0.deltaPP] }]
 }
