@@ -243,7 +243,9 @@ class SemanticGuard:
         """cacheable only for a tier's PRIMARY model: fallback verdicts (e.g. llama-guard filling in while qwen3guard
         is on cooldown) are less reliable and must not stick. Entries expire after semantic.cache_ttl_s."""
         fmt = model_format(model)
-        key = hmac.new(self.key, f"{model}\0{system}\0{context}\0{text}".encode(), hashlib.sha256).hexdigest()  # 7c
+        inv = self.installed or {}
+        digest = inv.get(model) or inv.get(model + ":latest") or model  # F15: a re-pulled tag (new weights) misses the cache
+        key = hmac.new(self.key, f"{model}\0{digest}\0{system}\0{context}\0{text}".encode(), hashlib.sha256).hexdigest()  # 7c
         hit = self.cache.get(key) if cacheable else None
         if hit and time.time() - hit["_at"] < cfg.get("cache_ttl_s", 600):
             self.stats["cache_hits"] += 1

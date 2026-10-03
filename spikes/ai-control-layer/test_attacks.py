@@ -1029,6 +1029,22 @@ class SemanticCache(unittest.TestCase):
         self.assertEqual(layer.semantic.stats["model_calls"], 2)
         self.assertEqual(len(layer.semantic.cache), 0)
 
+    def test_new_model_digest_misses_the_cache(self):  # F15
+        self.fake = FakeOllama({QWEN: "q1"}, reply=SAFE[QWEN])
+        layer, s, _ = fresh(edit=semantic_env(self.fake.url))
+        cached = lambda: layer.check_prompt(s, "hello")["event"]["semantic"]["stages"][0].get("cached", False)
+        self.assertFalse(cached())
+        self.assertTrue(cached())
+        self.fake.models[QWEN] = "q2"  # same tag, re-pulled weights
+        layer.semantic._checked_at = 0
+        for _ in range(50):  # inventory refreshes in the background (NEW-5)
+            layer.check_prompt(s, "poke")
+            if (layer.semantic.installed or {}).get(QWEN) == "q2":
+                break
+            time.sleep(0.05)
+        self.assertEqual(layer.semantic.installed[QWEN], "q2")
+        self.assertFalse(cached())
+
     def test_primary_verdict_cached_with_ttl_and_cleared_on_policy_change(self):
         self.fake = FakeOllama({"sileader/qwen3guard:0.6b": "q1"}, reply="Safety: Safe\nCategories: None")
         layer, s, env = fresh(edit=semantic_env(self.fake.url, cache_ttl_s=0.3))
