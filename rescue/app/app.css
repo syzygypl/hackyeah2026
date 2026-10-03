@@ -461,3 +461,13 @@ body.signals,body.mode-edycja{--dock-h:166px}
   .advbox #advNextT,.ticker{display:none}
   body:not(.signals):not(.mode-edycja) #events{display:none}
 }
+/* app bar never wraps on desktop (demo review + 1791052271523): one row, the live title takes the leftover space and
+   ellipsises; under 1500 px the live badge hides too, because the Na żywo / Historia switch already shows the mode */
+@media (min-width:901px){
+  header{flex-wrap:nowrap}
+  header>*{flex-shrink:0}
+  header .livehead{flex:1 1 auto;min-width:0}
+  header .livehead b{max-width:none;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  header>span[style*="flex:1"]{flex:0 0 0}
+}
+@media (min-width:901px) and (max-width:1499px){ header .livehead{display:none} }
