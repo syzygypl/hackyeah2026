@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf8f3">
+<title>Ślad: zdjęcie - gdzie zrobiono to zdjęcie?</title>
+<link rel="stylesheet" href="../vendor/maplibre-gl.css">
+<link rel="stylesheet" href="../../app/tokens.css">
+<link rel="icon" href="data:,">
+<style>
+  /* Demo of the "ślad: zdjęcie" module (docs/rescue-locator/slad-zdjecie.md). Colours from app/tokens.css, heat from app/scale.js. */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--rl-bg); color: var(--rl-ink); font: 15px/1.45 var(--rl-font); }
+  header { padding: var(--rl-sp-4) var(--rl-sp-4) 0; max-width: 1400px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: var(--rl-fs-xl); }
+  header p { margin: 4px 0 0; color: var(--rl-ink-2); font-size: var(--rl-fs); }
+  header .nav { float: right; font-size: var(--rl-fs-s); }
+  a { color: var(--rl-accent); }
+  .grid { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; gap: var(--rl-sp-4); padding: var(--rl-sp-4); max-width: 1400px; margin: 0 auto; }
+  .card { background: var(--rl-panel-solid); border: 1px solid var(--rl-line); border-radius: var(--rl-radius-l); box-shadow: var(--rl-shadow); padding: var(--rl-sp-3) var(--rl-sp-4); }
+  .card + .card { margin-top: var(--rl-sp-3); }
+  .card h2 { margin: 0 0 var(--rl-sp-2); font-size: var(--rl-fs-l); }
+  .label { display: inline-block; font-size: var(--rl-fs-xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: var(--rl-warn); color: var(--rl-ink);
+           padding: 2px 8px; border-radius: 999px; margin-bottom: var(--rl-sp-2); }
+  .photo { position: relative; border-radius: var(--rl-radius); overflow: hidden; border: 1px solid var(--rl-line-strong); line-height: 0; }
+  .photo img { width: 100%; display: block; }
+  .photo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .photo .exifbadge { position: absolute; left: 8px; bottom: 8px; line-height: 1.3; background: rgba(35,39,42,.82); color: #faf8f3; font: 12px var(--rl-mono); padding: 4px 8px; border-radius: 6px; }
+  .cap { font-size: var(--rl-fs-s); color: var(--rl-mute); margin-top: var(--rl-sp-2); }
+  .seg { display: flex; gap: 6px; margin: var(--rl-sp-3) 0 0; flex-wrap: wrap; }
+  .seg button { flex: 1 1 160px; min-height: 44px; font: inherit; font-weight: 600; font-size: var(--rl-fs); border: 1px solid var(--rl-line-strong); background: var(--rl-card);
+                color: var(--rl-ink); border-radius: var(--rl-radius); cursor: pointer; padding: 6px 10px; }
+  .seg button[aria-pressed=true] { background: var(--rl-accent); color: var(--rl-on-accent); border-color: var(--rl-accent); }
+  .grid { align-items: start; }
+  .mapwrap { position: sticky; top: var(--rl-sp-4); height: calc(100vh - 2 * var(--rl-sp-4)); min-height: 480px; }
+  #map { position: absolute; inset: 0; border-radius: var(--rl-radius-l); border: 1px solid var(--rl-line-strong); overflow: hidden; box-shadow: var(--rl-shadow); }
+  .overlay { position: absolute; top: 10px; left: 10px; max-width: 300px; background: var(--rl-panel); backdrop-filter: blur(var(--rl-blur)); -webkit-backdrop-filter: blur(var(--rl-blur));
+             border: 1px solid var(--rl-line); border-radius: var(--rl-radius); padding: 8px 10px; font-size: var(--rl-fs-s); z-index: 2; }
+  .overlay label { display: flex; gap: 6px; align-items: center; margin-top: 6px; cursor: pointer; }
+  .overlay .title { font-weight: 700; margin-bottom: 4px; }
+  .num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 700 13px var(--rl-font-num); color: #fff; background: var(--rl-chrome);
+         border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .num.r1 { background: var(--rl-danger); width: 30px; height: 30px; font-size: 15px; }
+  .truth { width: 18px; height: 18px; border: 3px solid var(--rl-ok); background: rgba(255,255,255,.7); transform: rotate(45deg); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .exifpt { width: 16px; height: 16px; border-radius: 50%; background: var(--rl-accent); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--rl-sp-2); }
+  .stat { background: var(--rl-panel-2); border-radius: var(--rl-radius-s); padding: 6px 10px; }
+  .stat b { display: block; font: 700 24px/1.1 var(--rl-font-num); }
+  .stat span { font-size: var(--rl-fs-xs); color: var(--rl-ink-2); }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin: 4px 0; font-size: var(--rl-fs); }
+  .limits li { color: var(--rl-ink-2); }
+  .toplist { font-size: var(--rl-fs-s); font-family: var(--rl-mono); color: var(--rl-ink-2); margin-top: var(--rl-sp-2); }
+  footer { max-width: 1400px; margin: 0 auto; padding: 0 var(--rl-sp-4) var(--rl-sp-5); font-size: var(--rl-fs-s); color: var(--rl-mute); }
+  @media (max-width: 860px) {
+    header .nav { float: none; display: block; margin-bottom: 6px; }
+    .grid { grid-template-columns: 1fr; padding: var(--rl-sp-3); }
+    .mapwrap { position: relative; top: 0; height: 70vh; min-height: 420px; order: 2; }
+    .side { display: contents; }
+    .side > .card { order: 3; margin-top: 0; }
+    .side > .card:first-child { order: 1; }
+    .overlay { max-width: 220px; font-size: var(--rl-fs-xs); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="nav"><a href="../../app/">Wróć do aplikacji</a> · <a href="https://github.com/syzygypl/hackyeah2026/blob/main/docs/rescue-locator/slad-zdjecie.md" target="_blank" rel="noopener">Opis metody (GitHub)</a></span>
+  <h1>Ślad: zdjęcie - gdzie zrobiono to zdjęcie?</h1>
+  <p>Zaginiony wysłał rodzinie zdjęcie z gór. Pokazujemy, jak jedno zdjęcie zawęża obszar poszukiwań na Zawracie.</p>
+</header>
+
+<div class="grid">
+  <div class="side">
+    <div class="card">
+      <span class="label">Przykład syntetyczny</span>
+      <h2>Zdjęcie od zaginionego</h2>
+      <div class="photo" id="photo">
+        <img id="img" alt="Syntetyczne zdjęcie grani, wygenerowane z modelu terenu" src="data/synthetic-zawrat-truth-h217.png">
+        <svg id="hz" viewBox="0 0 640 480" preserveAspectRatio="none"></svg>
+        <div class="exifbadge" id="exifbadge" hidden></div>
+      </div>
+      <div class="cap" id="cap">Zdjęcie od zaginionego - przykład syntetyczny, wygenerowany z modelu terenu. Czerwona linia: horyzont wykryty automatycznie na zdjęciu.</div>
+      <div class="seg" role="group" aria-label="Tryb">
+        <button type="button" id="mHorizon" aria-pressed="true">Bez GPS - dopasowanie linii horyzontu</button>
+        <button type="button" id="mExif" aria-pressed="false">Z GPS w zdjęciu (EXIF)</button>
+      </div>
+    </div>
+
+    <div class="card" id="sumH">
+      <h2>Wynik (prawdziwe liczby z testu)</h2>
+      <div class="stats">
+        <div class="stat"><b id="sRank">1 / 3600</b><span>miejsce prawdziwej komórki w rankingu</span></div>
+        <div class="stat"><b id="sDist">61 m</b><span>od kandydata nr 1 do prawdziwego miejsca</span></div>
+        <div class="stat"><b id="sHead">1°</b><span>błąd kierunku patrzenia</span></div>
+        <div class="stat"><b id="sRand">40 m</b><span>mediana na 20 losowych punktach</span></div>
+      </div>
+      <div class="toplist" id="toplist"></div>
+      <p class="cap">Czas liczenia ok. <span id="sTime">6,5</span> s na laptopie. Na mapie: 5 najlepszych kandydatów i stożek widoku (FOV 65°) z kandydata nr 1.</p>
+    </div>
+    <div class="card" id="sumE" hidden>
+      <h2>Wynik z EXIF</h2>
+      <div class="stats">
+        <div class="stat"><b id="eAcc">±8 m</b><span>dokładność GPS zapisana w zdjęciu</span></div>
+        <div class="stat"><b id="eErr">0 m</b><span>od prawdziwego miejsca</span></div>
+      </div>
+      <p class="cap">Gdy telefon zapisał GPS, zdjęcie to po prostu punkt z godziną i dokładnością - trafia do mapy jak każdy inny ślad. Uwaga: komunikatory często usuwają EXIF, dlatego potrzebny jest tryb bez GPS.</p>
+    </div>
+
+    <div class="card">
+      <h2>Jak to działa</h2>
+      <ul>
+        <li>Na zdjęciu wykrywamy linię horyzontu (granica nieba i grani).</li>
+        <li>Z modelu terenu liczymy, jak wygląda horyzont z każdej z 3600 komórek siatki i w każdym kierunku.</li>
+        <li>Porównujemy profile - im lepsze dopasowanie, tym większe prawdopodobieństwo komórki. Wynik dokłada się do mapy poszukiwań.</li>
+      </ul>
+    </div>
+    <div class="card limits">
+      <h2>Uczciwe ograniczenia</h2>
+      <ul>
+        <li>Zdjęcie jest syntetyczne (wygenerowane z tego samego modelu terenu) - prawdziwe zdjęcia będą trudniejsze.</li>
+        <li>Zły kąt widzenia aparatu (FOV) psuje wynik: przy FOV 55° zamiast 65° prawdziwe miejsce spada na <span id="lFov55">42.</span> pozycję.</li>
+        <li>Chmury, mgła i bliski pierwszy plan (skała, drzewo, osoba) zasłaniają horyzont.</li>
+        <li>Kierunek ma znaczenie: dla <span id="lSweep">9 z 12</span> kierunków patrzenia prawdziwe miejsce jest w górnych 5% komórek.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="mapwrap">
+    <div id="map"></div>
+    <div class="overlay">
+      <div class="title" id="ovTitle">Gdzie mogło powstać zdjęcie</div>
+      <div id="legend"></div>
+      <label><input type="checkbox" id="truthToggle"> prawdziwe miejsce (do oceny)</label>
+    </div>
+  </div>
+</div>
+<footer>Dane: scenariusz Zawrat (fikcyjny), mapa © OpenStreetMap contributors, Protomaps. Moduł: rescue/tools/photo/photo_clue.py.</footer>
+
+<script type="module">
+  import * as maplibregl from "../vendor/maplibre-gl.mjs";
+  import { offlineStyle, loadBasemap, hillshadeFor, ZAWRAT_BOUNDS } from "../basemap/basemap.js";
+  import { colorFor, legendHTML } from "../../app/scale.js";
+
+  const $ = id => document.getElementById(id);
+  const [clue, cells, ev, exif] = await Promise.all([
+    fetch("data/zawrat-horizon.clue.json").then(r => r.json()),
+    fetch("data/zawrat-horizon-cells.geojson").then(r => r.json()),
+    fetch("data/eval-zawrat.json").then(r => r.json()),
+    fetch("data/synthetic-zawrat-exif-gps.clue.json").then(r => r.json()),
+  ]);
+  const N = clue.cellsTotal || 3600;
+  const fmt = (x, d = 0) => x.toFixed(d).replace(".", ",");
+
+  // ---------- numbers from eval-zawrat.json ----------
+  const run = ev.runs["synthetic-zawrat-truth-h217"];
+  $("sRank").textContent = `${run.truthRank} / ${run.cellsTotal}`;
+  $("sDist").textContent = `${run.top1DistM} m`;
+  $("sHead").textContent = `${fmt(run.headingErrDeg)}°`;
+  $("sRand").textContent = `${Math.round(ev.random.medianTop1DistM)} m`;
+  $("sTime").textContent = fmt(run.runtimeS, 1);
+  $("lFov55").textContent = `${ev.runs["synthetic-zawrat-truth-fov55"].truthRank}.`;
+  $("lSweep").textContent = `${ev.truthHeadingSweep.truthInTop5pct} z ${ev.truthHeadingSweep.runs.length}`;
+  $("eAcc").textContent = `±${Math.round(exif.point.accM)} m`;
+  $("eErr").textContent = `${Math.round(ev.exif.errM)} m`;
+  $("toplist").innerHTML = clue.top.slice(0, 5).map((t, i) => `${i + 1}. ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)} · p=${fmt(t.p * 100, 1)}% · kier. ${Math.round(t.headingDeg)}°`).join("<br>");
+  $("legend").innerHTML = legendHTML("Prawdopodobieństwo względem średniej komórki");
+
+  // ---------- horizon line over the photo ----------
+  const [W, H] = clue.imageWH;
+  $("hz").setAttribute("viewBox", `0 0 ${W} ${H}`);
+  let d = "", pen = false;
+  clue.horizonRows.forEach((y, x) => { if (y == null) { pen = false; return; } d += `${pen ? "L" : "M"}${x},${y} `; pen = true; });
+  $("hz").innerHTML = `<path d="${d}" fill="none" stroke="#faf8f3" stroke-width="6" stroke-linejoin="round" opacity=".8"/><path d="${d}" fill="none" stroke="#b8322a" stroke-width="3" stroke-linejoin="round"/>`;
+
+  // ---------- geometry helpers ----------
+  const R = 6371000, rad = Math.PI / 180;
+  function dest(lat, lon, brg, m) {
+    const p1 = lat * rad, l1 = lon * rad, b = brg * rad, dd = m / R;
+    const p2 = Math.asin(Math.sin(p1) * Math.cos(dd) + Math.cos(p1) * Math.sin(dd) * Math.cos(b));
+    const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(dd) * Math.cos(p1), Math.cos(dd) - Math.sin(p1) * Math.sin(p2));
+    return [l2 / rad, p2 / rad];
+  }
+  function wedge(lat, lon, az, fov, m) {
+    const ring = [[lon, lat]];
+    for (let a = az - fov / 2; a <= az + fov / 2 + 0.01; a += fov / 16) ring.push(dest(lat, lon, a, m));
+    ring.push([lon, lat]);
+    return { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [ring] } };
+  }
+  function circle(lat, lon, m) {
+    const ring = []; for (let a = 0; a <= 360; a += 10) ring.push(dest(lat, lon, a, m));
+    return { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [ring] } };
+  }
+  for (const f of cells.features) { const [r, g, b, a] = colorFor(f.properties.p, N); f.properties.c = `rgba(${r},${g},${b},${a.toFixed(3)})`; }
+  const t1 = clue.top[0], az = clue.bestAzimuthDeg ?? t1.headingDeg, fov = clue.fovDeg || 65;
+  const view = { type: "FeatureCollection", features: [wedge(t1.lat, t1.lon, az, fov, 1800)] };
+  const arrow = { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [[t1.lon, t1.lat], dest(t1.lat, t1.lon, az, 1100)] } }] };
+  const ep = exif.point;
+  const accC = { type: "FeatureCollection", features: [circle(ep.lat, ep.lon, Math.max(ep.accM, 8)), circle(ep.lat, ep.lon, 60)] };
+  accC.features[1].properties.halo = 1;
+
+  // ---------- map ----------
+  let style;
+  try {
+    await loadBasemap(maplibregl);
+    let hs = null; try { hs = await hillshadeFor({ west: 20.005, south: 49.195, east: 20.0875, north: 49.249 }); } catch (e) {}
+    style = offlineStyle({ hillshade: hs });
+  } catch (e) {
+    console.warn("[photo] offline basemap failed", e);
+    style = { version: 8, sources: { osm: { type: "raster", tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], tileSize: 256, attribution: "© OpenStreetMap contributors" } }, layers: [{ id: "osm", type: "raster", source: "osm" }] };
+  }
+  const map = new maplibregl.Map({ container: "map", style, bounds: [[20.005, 49.195], [20.0875, 49.249]], fitBoundsOptions: { padding: 20 },
+    maxBounds: ZAWRAT_BOUNDS, attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false });
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+  map.touchZoomRotate.disableRotation();
+
+  const markers = { horizon: [], exif: [], truth: [] };
+  function mk(cls, text, lngLat, group, title) {
+    const el = document.createElement("div"); el.className = cls; if (text) el.textContent = text; if (title) el.title = title;
+    markers[group].push(new maplibregl.Marker({ element: el }).setLngLat(lngLat));
+  }
+  clue.top.slice(0, 5).reverse().forEach((t, j) => { const i = 4 - j; mk("num" + (i === 0 ? " r1" : ""), String(i + 1), [t.lon, t.lat], "horizon", `Kandydat ${i + 1}: p=${fmt(t.p * 100, 1)}%, kierunek ${Math.round(t.headingDeg)}°`); });
+  mk("exifpt", "", [ep.lon, ep.lat], "exif", `EXIF GPS ±${ep.accM} m, ${ep.at}`);
+  mk("truth", "", [clue.truth[1], clue.truth[0]], "truth", "Prawdziwe miejsce (fikcyjne, do oceny)");
+
+  let mode = "horizon";
+  map.on("load", () => {
+    map.addSource("cells", { type: "geojson", data: cells });
+    map.addLayer({ id: "heat", type: "fill", source: "cells", paint: { "fill-color": ["get", "c"], "fill-antialias": false } });
+    map.addSource("view", { type: "geojson", data: view });
+    map.addLayer({ id: "view-fill", type: "fill", source: "view", paint: { "fill-color": "#1f4e79", "fill-opacity": 0.12 } });
+    map.addLayer({ id: "view-line", type: "line", source: "view", paint: { "line-color": "#1f4e79", "line-width": 1.5, "line-dasharray": [3, 2] } });
+    map.addSource("arrow", { type: "geojson", data: arrow });
+    map.addLayer({ id: "arrow", type: "line", source: "arrow", layout: { "line-cap": "round" }, paint: { "line-color": "#1f4e79", "line-width": 3 } });
+    map.addSource("acc", { type: "geojson", data: accC });
+    map.addLayer({ id: "acc-fill", type: "fill", source: "acc", paint: { "fill-color": "#1f4e79", "fill-opacity": ["case", ["has", "halo"], 0.08, 0.3] } });
+    map.addLayer({ id: "acc-line", type: "line", source: "acc", paint: { "line-color": "#1f4e79", "line-width": ["case", ["has", "halo"], 1, 2] } });
+    apply();
+  });
+
+  function apply() {
+    const h = mode === "horizon";
+    $("mHorizon").setAttribute("aria-pressed", h); $("mExif").setAttribute("aria-pressed", !h);
+    $("sumH").hidden = !h; $("sumE").hidden = h;
+    $("legend").hidden = !h; $("hz").style.display = h ? "" : "none";
+    $("exifbadge").hidden = h;
+    $("exifbadge").innerHTML = `EXIF GPS: ${ep.lat.toFixed(5)}, ${ep.lon.toFixed(5)} ±${Math.round(ep.accM)} m<br>${exif.exif.dateTimeOriginal}, wys. ${Math.round(ep.altM)} m`;
+    $("img").src = h ? "data/synthetic-zawrat-truth-h217.png" : "data/synthetic-zawrat-exif-gps.jpg";
+    $("cap").textContent = h ? "Zdjęcie od zaginionego - przykład syntetyczny, wygenerowany z modelu terenu. Czerwona linia: horyzont wykryty automatycznie na zdjęciu."
+                             : "Zdjęcie od zaginionego - przykład syntetyczny z dopisanym GPS w EXIF (jak z telefonu z włączoną lokalizacją).";
+    $("ovTitle").textContent = h ? "Gdzie mogło powstać zdjęcie" : "Punkt z EXIF i jego dokładność";
+    const vis = v => v ? "visible" : "none";
+    if (map.getLayer("heat")) {
+      for (const id of ["heat", "view-fill", "view-line", "arrow"]) map.setLayoutProperty(id, "visibility", vis(h));
+      for (const id of ["acc-fill", "acc-line"]) map.setLayoutProperty(id, "visibility", vis(!h));
+    }
+    markers.horizon.forEach(m => h ? m.addTo(map) : m.remove());
+    markers.exif.forEach(m => h ? m.remove() : m.addTo(map));
+    markers.truth.forEach(m => $("truthToggle").checked ? m.addTo(map) : m.remove());
+    if (!h) map.easeTo({ center: [ep.lon, ep.lat], zoom: 15 });
+    else if (map.loaded()) map.fitBounds([[20.005, 49.195], [20.0875, 49.249]], { padding: 20 });
+  }
+  $("mHorizon").onclick = () => { mode = "horizon"; apply(); };
+  $("mExif").onclick = () => { mode = "exif"; apply(); };
+  $("truthToggle").onchange = apply;
+  window.__photoReady = true;
+</script>
+</body>
+</html>
