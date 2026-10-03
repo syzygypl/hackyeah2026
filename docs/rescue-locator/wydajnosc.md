@@ -134,4 +134,58 @@ Największe 5 plików: `krakow-nowa-huta-osm3d.json` 3.32 MB, `zawrat-dem-wide.j
 
 ## Runda 2
 
-(do uzupełnienia)
+AI Andrzeja (sesja "rust"), niedziela 2026-10-04 ok. 00:30 CEST. Backend przepisany ze Swifta na Rust (`rescue/rs`), odpowiedzi bajt w bajt jak Swift (parity 93/105 wzorców; reszta to zegar i losowa kolejność słowników w samym Swifcie).
+
+### Wersje
+
+- Produkcja: https://rescue-locator.vercel.app, `/version.json` = `8b97c7a` (zawiera: Rust `0cb99ca`, region `fra1` `c18e869`, ETag + 304 `0f59ef4`, `fetch` bez `no-store` `71e426a`, nagłówki cache statyk `ab71835`). `x-vercel-id: arn1::fra1::...` (edge Sztokholm, funkcja Frankfurt, Neon Frankfurt). Wcześniej `arn1::iad1` - funkcja w USA, kilka rund przez Atlantyk na żądanie.
+- Lokalnie: `cargo build --release` (`rescue/rs`), aarch64, ten sam zestaw scenariuszy.
+
+### Metoda
+
+- Python `urllib`, `Accept-Encoding: gzip`, 15 żądań pod rząd na endpoint z sali (Wi-Fi HackYeah). "first" = pierwsze żądanie w serii (instancja mogła być już ciepła), p50/p95 z 15. TTFB = do nagłówków, total = z pobraniem treści. Tylko GET. Kolejność endpointów jak w tabeli.
+- p95 to prawie zawsze zimna instancja Vercela (nowy kontener liczy runy przy pierwszym żądaniu). Rozgrzewka przy starcie liczy wszystkie scenariusze równolegle; w toku: liczenie runów już w obrazie Dockera, żeby zimna instancja odpowiadała od razu.
+
+### API (produkcja, Rust, fra1)
+
+| endpoint | first TTFB ms | p50 TTFB ms | p95 TTFB ms | p50 total ms | p95 total ms | gzip bytes |
+|---|---|---|---|---|---|---|
+| `/health` | 319 | 319 | 1189 | 321 | 1189 | 312 |
+| `/api/scenarios` | 288 | 274 | 340 | 274 | 340 | 1 314 |
+| `/api/incidents?fast=1` | 296 | 314 | 646 | 319 | 646 | 2 441 |
+| `/api/incidents` | 405 | 426 | 760 | 426 | 761 | 2 441 |
+| `/api/advisor` | 227 | 285 | 2411 | 286 | 2411 | 3 482 |
+| `/api/teams` | 223 | 257 | 552 | 257 | 552 | 1 286 |
+| `/api/inventory?sc=zawrat` | 381 | 320 | 577 | 322 | 582 | 7 352 |
+| `/api/run/zawrat` | 600 | 340 | 3434 | 1162 | 4064 | 753 388 |
+| `/api/run/zawrat?live=0` | 330 | 317 | 1178 | 849 | 2575 | 769 399 |
+| `/api/run/zawrat?t=19:00` | 302 | 276 | 744 | 313 | 746 | 13 642 |
+| `/api/tracks/zawrat` | 257 | 277 | 479 | 286 | 481 | 6 408 |
+| `/api/assessment/zawrat?step=5&wait=0` | 391 | 322 | 709 | 323 | 710 | 743 |
+| `/api/live?sc=zawrat&since=0` | 242 | 277 | 346 | 277 | 347 | 90 |
+| `/story` | 308 | 290 | 743 | 374 | 935 | 54 032 |
+| `/modules` | 253 | 267 | 410 | 268 | 410 | 1 707 |
+| `/api/run/rodzina-dziecko-las` | 526 | 308 | 526 | 815 | 1667 | 596 579 |
+| `/api/run/sniardwy` | 483 | 311 | 5629 | 792 | 6144 | 470 759 |
+
+### Porównanie z rundą 1 (Swift, iad1) - mediana, sekundy
+
+| Endpoint | Swift (runda 1) | Rust (runda 2, p50 total) |
+|---|---|---|
+| `/api/incidents` | 34.3 (pierwsze) | 0.43 |
+| `/api/inventory?sc=zawrat` | 9.78 | 0.32 |
+| `/api/run/zawrat?live=0` | 7.36 | 0.85 (z tego ~0.5 s to pobranie 770 KB) |
+| `/api/tracks/zawrat` | 7.48 | 0.29 |
+| `/api/advisor` | 2.61 | 0.29 |
+| `/api/scenarios` | 1.29 | 0.27 |
+| `/api/live?sc=zawrat` | 1.40 | 0.28 |
+| `/api/run/zawrat?live=0&t=19:00` | 0.72 | 0.31 (`?t=19:00`) |
+
+Lokalnie (Rust release, ten sam komputer co wzorce Swifta w debug): silnik 11-240 ms na scenariusz (Swift 2-6 s), `/api/incidents` 22 ms po rozgrzewce (Swift 29.5 s), run z cache 1-2 ms.
+
+### Wnioski
+
+- Ok. 0.2 s z każdego żądania to sieć z sali do Frankfurtu (`/health` p50 0.32 s przy pustej odpowiedzi). Serwer to milisekundy.
+- Największy koszt to już tylko transfer runu (2.6 MB surowo, ~750 KB gzip). Od `0f59ef4` / `71e426a` niezmieniony run przy kolejnym wejściu to puste 304 (ETag), więc przejścia między stronami go nie pobierają ponownie.
+- Przejścia stron (pomiar AI Mateusza #2, `perf-transitions.md`): Akcja 2D 18.6 -> 3.5 s, 3D 14.3 -> 3.3 s, Historia 13.1 -> 5.0 s, Zasoby 6.8 -> 0.45 s. Teraz wąskim gardłem jest frontend; w nocy pracują nad nim trzy agenty (Historia/pierwsza mapa 2D, wagi zasobów i strony poboczne, 3D) oraz AI Marcina (runInline) i AI Mateusza #2 (płynne 2D/3D).
+
