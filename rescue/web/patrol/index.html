@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#b3261e">
+<meta name="theme-color" content="#faf8f3">
 <title>Patrol - Rescue Locator</title>
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
 <link rel="stylesheet" href="../../app/tokens.css">
 <style>
   /* One screen for a rescuer with gloves: map on top, my sector + direction + big report buttons at the bottom.
-     Colours from app/tokens.css (dark by default for night, ☀ = light for daylight). */
+     Colours only from app/tokens.css (docs/rescue-locator/ui-design.md): paper/light by default, ☾ = dark for night. */
   :root { --green: var(--rl-ok); --red: var(--rl-danger); }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--rl-bg); color: var(--rl-ink); font: 16px/1.3 var(--rl-font); }
@@ -19,45 +19,45 @@
   header h1 { font-size: 15px; margin: 0; color: var(--rl-danger); letter-spacing: .4px; text-transform: uppercase; }
   header select { font: inherit; font-size: 15px; padding: 8px; border-radius: var(--rl-radius); border: 1px solid var(--rl-line); background: var(--rl-panel-2); color: var(--rl-ink); flex: 1; min-width: 0; }
   .net { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: var(--rl-panel-2); color: var(--rl-ok); white-space: nowrap; border: 1px solid var(--rl-line); }
-  .net.off { background: var(--rl-warn); color: #1d1600; font-weight: 700; }
+  .net.off { background: var(--rl-warn); color: var(--rl-warn-ink); font-weight: 700; }
   .theme { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); min-height: 36px; min-width: 40px; padding: 0 8px; font-size: 18px; border-radius: var(--rl-radius); }
   #map { min-height: 0; }
-  #sheet { min-width: 0; background: var(--rl-panel); border-top: 1px solid var(--rl-line); border-radius: 18px 18px 0 0; margin-top: -18px; z-index: 4; position: relative;
+  #sheet { min-width: 0; background: var(--rl-panel-solid); border-top: 1px solid var(--rl-line); border-radius: 18px 18px 0 0; margin-top: -18px; z-index: 4; position: relative;
            padding: 12px 12px max(12px, env(safe-area-inset-bottom)); display: grid; gap: 10px; box-shadow: var(--rl-shadow); }
   .task { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; }
   .task-label { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--rl-mute); }
-  .task-seg { font-size: 22px; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
-  .task-seg .id { color: var(--rl-select); margin-right: 6px; }
+  .task-seg { font-size: 23px; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; font-family: var(--rl-font-num); }
+  .task-seg .id { color: var(--rl-danger); margin-right: 6px; }
   .from-op { display: inline-block; margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--rl-on-accent); background: var(--rl-accent); padding: 2px 8px; border-radius: 999px; }
   .dir { grid-row: span 2; text-align: center; min-width: 86px; }
-  .dir .arrow { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 2px; background: var(--rl-panel-2); border: 2px solid var(--rl-select); display: grid; place-items: center; }
-  .dir .arrow svg { width: 30px; height: 30px; transition: transform .4s; fill: var(--rl-select); }
-  .dir .km { font-size: 17px; font-weight: 800; }
+  .dir .arrow { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 2px; background: var(--rl-card); border: 2px solid var(--rl-accent); display: grid; place-items: center; color: var(--rl-on-ok); font-size: 26px; font-weight: 800; }
+  .dir .arrow svg { width: 30px; height: 30px; transition: transform .4s; fill: var(--rl-accent); }
+  .dir .km { font-size: 20px; font-weight: 700; font-family: var(--rl-font-num); font-variant-numeric: tabular-nums; }
   .dir .sub2 { font-size: 12px; color: var(--rl-mute); }
   .dir.inside .arrow { background: var(--rl-ok); border-color: var(--rl-ok); }
-  .dir.inside .arrow svg { fill: var(--rl-bg); }
+  
   .flags { display: flex; flex-wrap: wrap; gap: 6px; }
   .flag { padding: 4px 8px; border-radius: 8px; background: var(--rl-danger); color: var(--rl-on-danger); font-weight: 650; font-size: 12px; line-height: 1.25; max-width: 100%; overflow-wrap: anywhere; }
-  .flag.warn { background: var(--rl-warn); color: #1d1600; }
+  .flag.warn { background: var(--rl-warn); color: var(--rl-warn-ink); }
   details { color: var(--rl-ink-2); font-size: 14px; }
   details summary { cursor: pointer; color: var(--rl-mute); font-size: 13px; padding: 2px 0; }
   .task-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
   .task-meta b { color: var(--rl-ink); }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
-  button { font: inherit; border: 0; border-radius: var(--rl-radius-l); padding: 12px 10px; font-weight: 800; font-size: 18px; cursor: pointer; min-height: 68px; color: #fff; }
+  button { font: inherit; border: 0; border-radius: var(--rl-radius-l); padding: 12px 10px; font-weight: 700; font-size: 18px; cursor: pointer; min-height: 68px; color: var(--rl-ink); }
   button:active { transform: scale(.98); filter: brightness(1.15); }
-  .b-done { background: #2d6a4f; } .b-part { background: #3f5f52; }
+  .b-done { background: var(--rl-ok); color: var(--rl-on-ok); } .b-part { background: var(--rl-card); color: var(--rl-ok); border: 2px solid var(--rl-ok); }
   .b-clue { background: var(--rl-danger); color: var(--rl-on-danger); grid-column: span 2; font-size: 21px; min-height: 72px; letter-spacing: .5px; }
-  .b-more { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); grid-column: span 2; min-height: 48px; font-size: 16px; font-weight: 700; }
-  .b-wx { background: #1f4e79; } .b-status { background: #6b5b45; }
+  .b-more { background: var(--rl-card); color: var(--rl-ink); border: 1px solid var(--rl-line); grid-column: span 2; min-height: 48px; font-size: 16px; font-weight: 700; }
+  .b-wx { background: var(--rl-accent); color: var(--rl-on-accent); } .b-status { background: var(--rl-card); color: var(--rl-accent); border: 2px solid var(--rl-accent); }
   .sub { font-size: 12px; font-weight: 500; display: block; opacity: .9; margin-top: 2px; }
-  textarea, input[type=text] { width: 100%; font: inherit; font-size: 17px; padding: 12px; border-radius: 12px; border: 1px solid var(--rl-line); background: var(--rl-panel-2); color: var(--rl-ink); }
+  textarea, input[type=text] { width: 100%; font: inherit; font-size: 17px; padding: 12px; border-radius: 12px; border: 1px solid var(--rl-line-strong); background: var(--rl-card); color: var(--rl-ink); }
   .row { display: flex; gap: 8px; margin-top: 8px; }
   .row button { flex: 1; min-height: 52px; font-size: 16px; }
   .b-send { background: var(--rl-accent); color: var(--rl-on-accent); }
   .b-ghost { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .chip { background: var(--rl-panel-2); color: var(--rl-ink); border: 1px solid var(--rl-line); min-height: 48px; padding: 8px 14px; font-size: 16px; font-weight: 650; border-radius: 999px; }
+  .chip { background: var(--rl-card); color: var(--rl-ink); border: 1px solid var(--rl-line); min-height: 48px; padding: 8px 14px; font-size: 16px; font-weight: 650; border-radius: 999px; }
   .chip.on { background: var(--rl-accent); color: var(--rl-on-accent); border-color: var(--rl-accent); }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--rl-mute); margin: 0 0 8px; }
   .log { display: grid; gap: 8px; }
@@ -66,8 +66,8 @@
   .item small { color: var(--rl-mute); display: block; }
   .hint { display: inline-block; font-size: 12px; background: var(--rl-panel-2); color: var(--rl-accent); border-radius: 6px; padding: 1px 6px; margin: 2px 4px 0 0; }
   .last { font-size: 13px; color: var(--rl-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #toast { position: fixed; left: 12px; right: 12px; top: calc(64px + env(safe-area-inset-top)); z-index: 10; max-width: 616px; margin: 0 auto; background: var(--rl-ink); color: var(--rl-bg); border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 600; display: none; box-shadow: var(--rl-shadow); }
-  dialog { border: 1px solid var(--rl-line); border-radius: 18px; padding: 16px; width: min(94vw, 520px); background: var(--rl-panel); color: var(--rl-ink); max-height: 86dvh; }
+  #toast { position: fixed; left: 12px; right: 12px; top: calc(64px + env(safe-area-inset-top)); z-index: 10; max-width: 616px; margin: 0 auto; background: var(--rl-chrome); color: var(--rl-on-chrome); border-radius: 12px; padding: 14px; font-size: 16px; font-weight: 600; display: none; box-shadow: var(--rl-shadow); }
+  dialog { border: 1px solid var(--rl-line); border-radius: 18px; padding: 16px; width: min(94vw, 520px); background: var(--rl-panel-solid); color: var(--rl-ink); max-height: 86dvh; }
   dialog::backdrop { background: rgba(0,0,0,.55); }
   .muted { color: var(--rl-mute); font-size: 13px; }
   .maplibregl-ctrl-attrib { font-size: 10px; }
@@ -128,11 +128,11 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
   };
 
-  // Dark by default (night ops, same as the app); ☀ switches to light for daylight. Kept on this phone.
-  const THEME = qs.get("theme") || store.get("rescue-patrol-theme", "dark");
-  document.documentElement.dataset.theme = THEME;
-  $("theme").textContent = THEME === "light" ? "☾" : "☀";
-  $("theme").onclick = () => { store.set("rescue-patrol-theme", THEME === "light" ? "dark" : "light"); location.reload(); };
+  // Paper/light by default (same as the app); ☾ switches to dark for night. Kept on this phone.
+  const THEME = qs.get("theme") || store.get("rescue-patrol-theme", "light");
+  if (THEME === "dark") document.documentElement.dataset.theme = "dark";
+  $("theme").textContent = THEME === "dark" ? "☀" : "☾";
+  $("theme").onclick = () => { store.set("rescue-patrol-theme", THEME === "dark" ? "light" : "dark"); location.reload(); };
 
   let run, step, team, map, queue = store.get(QKEY, []), log = store.get(LKEY, []), online = true;
 
@@ -225,21 +225,21 @@
 
   // ---------- map ----------
   await loadBasemap(maplibregl);
-  map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: THEME === "light" ? "light" : "dark" }), bounds: ZAWRAT_BOUNDS, attributionControl: { compact: true } });
+  map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: THEME === "dark" ? "dark" : "light" }), bounds: ZAWRAT_BOUNDS, attributionControl: { compact: true } });
   map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "top-right");
   map.on("load", () => {
     const fc = { type: "FeatureCollection", features: step.segments.map(s => ({ type: "Feature", properties: { id: s.id, name: s.name, poa: s.poa },
       geometry: { type: "Polygon", coordinates: [s.polygon.concat([s.polygon[0]])] } })) };
     map.addSource("segs", { type: "geojson", data: fc });
-    const SEL = getComputedStyle(document.documentElement).getPropertyValue("--rl-select").trim() || "#ffd84d";
-    const dark = THEME !== "light";
-    map.addLayer({ id: "segs-line", type: "line", source: "segs", paint: { "line-color": dark ? "#8797a4" : "#5f5a52", "line-width": 1, "line-opacity": 0.5 } });
+    const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const SEL = tok("--rl-select"), ACC = tok("--rl-accent");
+    map.addLayer({ id: "segs-line", type: "line", source: "segs", paint: { "line-color": tok("--rl-mute"), "line-width": 1, "line-opacity": 0.6 } });
     map.addLayer({ id: "seg-mine", type: "fill", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "fill-color": SEL, "fill-opacity": 0.22 } });
-    map.addLayer({ id: "seg-mine-line", type: "line", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "line-color": SEL, "line-width": 4 } });
+    map.addLayer({ id: "seg-mine-line", type: "line", source: "segs", filter: ["==", ["get", "id"], ""], paint: { "line-color": tok("--rl-danger"), "line-width": 4 } });
     map.addLayer({ id: "segs-label", type: "symbol", source: "segs", layout: { "text-field": ["get", "id"], "text-font": ["Noto Sans Medium"], "text-size": 13 },
-      paint: { "text-color": dark ? "#eef2f5" : "#1d2327", "text-halo-color": dark ? "#0e1317" : "#fff", "text-halo-width": 1.5 } });
+      paint: { "text-color": tok("--rl-ink"), "text-halo-color": tok("--rl-panel-solid"), "text-halo-width": 1.5 } });
     map.addSource("me-line", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-    map.addLayer({ id: "me-line", type: "line", source: "me-line", paint: { "line-color": SEL, "line-width": 3, "line-dasharray": [1.5, 1.5] } });
+    map.addLayer({ id: "me-line", type: "line", source: "me-line", paint: { "line-color": ACC, "line-width": 3, "line-dasharray": [1.5, 1.5] } });
     highlight();
   });
   function highlight() {
