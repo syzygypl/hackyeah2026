@@ -316,11 +316,6 @@ impl FOVParams {
         self.sweep_width_m.get(key).copied().unwrap_or(0.0)
     }
 
-    /// W (m) for a grid cell: the forest overlay replaces land classes (not water).
-    pub fn width(&self, d: ProbabilityGridDifficulty, forest: bool) -> f64 {
-        self.width_raw(d.raw_value(), forest)
-    }
-
     pub fn max_width(&self) -> f64 {
         self.sweep_width_m.values().cloned().fold(None, |m: Option<f64>, v| Some(match m { Some(x) if x >= v => x, _ => v })).unwrap_or(0.0)
     }
@@ -367,9 +362,6 @@ pub struct TrackSet {
 }
 
 impl TrackSet {
-    pub fn new(actors: Vec<TrackActor>, search_events: &str) -> TrackSet {
-        TrackSet { actors, search_events: search_events.to_string() }
-    }
 
     pub fn kind_of_type(t: &str) -> Option<&'static str> {
         match t {
@@ -501,7 +493,7 @@ impl TrackSet {
                 if cons.iter().any(|c| c.from <= f.minute && c.to > f.minute && c.src.as_deref() != Some("rules")) {
                     continue;
                 }
-                let r = TrackConstraints::read(text, f.minute, id, s, Some(&places));
+                let r = TrackConstraints::read(text, f.minute, s, Some(&places));
                 cons.extend(r.constraints);
             }
             let plan: Vec<Coord> = a
