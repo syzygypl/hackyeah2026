@@ -992,6 +992,17 @@ addEventListener('keydown', (e) => {
 // ---------- legend (shared scale) ----------
 const LEGEND_HEAT = `<span>Prawdopodobieństwo × średnia komórka</span><i class="ramp" style="background:${gradientCSS()}"></i><span class="stops">${STOPS.map((x) => `<b>${x.label}</b>`).join('')}</span>`;
 document.querySelector('.legend').innerHTML = LEGEND_HEAT;
+// embed=scene: legend box top-left and controls top-right, laid out like the 2D screen's #legend / #mapctl
+if (EMB === 'scene') {
+  const avg = 100 / (R.rows * R.cols), el = $('sceneLegend');
+  el.hidden = false;
+  el.innerHTML = `<div class="lg-title">Prawdopodobieństwo × średnia komórka</div><i class="ramp" style="background:${gradientCSS()}"></i>
+    <div class="stops">${STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
+    <div class="lg-note">1× = średnio ${nf(avg, 3)}% na komórkę 100 x 100 m; poniżej 0,5× bez koloru</div>
+    <div class="lg-keys"><span><i class="k-top"></i>top 3</span><span><i class="k-srch"></i>przeszukany</span></div>`;
+  const bd = $('btn-diff'); bd.innerHTML = '<input type="checkbox" tabindex="-1"> trudność'; bd.classList.add('chk');
+  $('btn-all').textContent = 'Cały obszar';
+}
 
 // ---------- camera ----------
 let fly = null;
@@ -1022,6 +1033,7 @@ controls.addEventListener('end', () => { idleAt = performance.now(); });
 if (!(Array.isArray(R.difficulty) && R.difficulty.length === R.rows * R.cols)) $('btn-diff').hidden = true;
 $('btn-diff').addEventListener('click', () => {
   SHOW_DIFF = !SHOW_DIFF; $('btn-diff').classList.toggle('on', SHOW_DIFF); compose();
+  const dc = $('btn-diff').querySelector('input'); if (dc) dc.checked = SHOW_DIFF;
   document.querySelector('.legend').innerHTML = SHOW_DIFF
     ? `<span>Trudność terenu (silnik)</span><div class="lg-diff">${(R.difficultyClasses || []).map((c) => `<span><i style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`
     : LEGEND_HEAT;
