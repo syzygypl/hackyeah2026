@@ -186,7 +186,7 @@ Every live route takes an optional `sc` (JSON body field `sc`, or `?sc=` in the 
 - `POST /api/assignments {team, segmentId, sc}` / `POST /story/assign {resourceId, segmentId, scenario|sc}`: the assignment is stored with `scenario: sc`. `GET /api/assignments?sc=<sc>` returns only assignments of that incident plus ones without a scenario; without `?sc` all of them (as today). Dispatching a roster team to a segment of `sc` also attaches it to `sc` (see roster below).
 - Feed events carry `sc` when they belong to one incident. `GET /api/live?sc=<sc>&since=<seq>` returns events of that incident plus events without `sc` (phone `/report`s, which apply to every scenario); `seq` is then the highest seq among those events (it still only grows). `assignments` is filtered the same way.
 
-### `GET /api/incidents` - all incidents on one screen (poll every 5 s)
+### `GET /api/incidents[?fast=1]` - all incidents on one screen (poll every 5 s)
 
 ```jsonc
 [ { "sc": "zawrat",
@@ -195,13 +195,13 @@ Every live route takes an optional `sc` (JSON body field `sc`, or `?sc=` in the 
     "live": true,                                  // anything happened for this sc since server start (clue, dispatch, roster move)
     "seq": 14, "lastEventAt": "2026-10-04T09:12:03Z",   // per-sc feed seq / time of its last event (null if none)
     "at": "19:45",                                 // scenario clock of the live moment = last step before the replay's scripted find
-    "top3": [ { "segmentId": "S7", "name": "Kozia Dolinka", "weight": 0.31 } ],   // at the live moment, "waga mapy" (POA), 0..1
+    "top3": [ { "segmentId": "S7", "name": "Kozia Dolinka", "weight": 0.31, "areaPct": 1.4 } ],   // at the live moment, ranked by POA; weight 0..1 is for ordering only, the UI shows rank + areaPct (% of the search area), never the POA %
     "teams": { "assigned": 2, "total": 5 },        // assigned = teams with a segment in this incident; total = teams the planner uses for it
     "found": false,                                // a live report/clue said ZNALEZIONO (the replay's own scripted find does not count)
     "replayFound": true } ]                        // the scenario file itself ends with a find (replay)
 ```
 
-Blind-test scenarios are never listed. Runs are cached per (sc, live version), so polling does not re-run the engine unless something changed; the first call after start computes each scenario once.
+Blind-test scenarios are never listed. Runs are cached per (sc, live version), so polling does not re-run the engine unless something changed; the first call after start computes each scenario once. On the shared deploy each computed summary is also stored as document `incb:<sc>` (keyed by the same inputs + a content hash of the scenario files), so a fresh instance reads it instead of running the engine. `?fast=1` (Centrum): answers within ~1.5 s; an incident whose run has not finished comes as its last known summary with `"stale": true`, or as a placeholder from the scenario file with `"pending": true` and `top3: []` - the run goes on and a later poll has it. Without `fast` the call waits for every run (tests, cron). The server warms every incident and the Zasoby timelines in the background at start on Vercel (`RESCUE_PUBLIC=1`) or with `RESCUE_WARM=1`.
 
 ### Shared team roster across incidents
 
@@ -221,7 +221,7 @@ Blind-test scenarios are never listed. Runs are cached per (sc, live version), s
 
 ## Advisor (Doradca: do several incidents share one common source?)
 
-`GET /api/advisor[?llm=1][&only=a,b,c][&skip=<prefix>]` (read; poll every 10 s, cached by scenario files + feed seq). Engine `RescueKit/Advisor.swift`, deterministic; catalogue `rescue/scenarios/hazards/hazards.json` (`rescue-hazards/1`, real public infrastructure from OSM via `tools/terrain/hazards.py`: dams with the downstream river polyline and places with their river km, large industrial sites). Input per listed incident: IPP, `date` + `subject.lastContact` (when it happened) / `startClock` (reported), category, texts (incident, subject note, scripted report events - not the Terrain/Weather/Koester setup - and the live feed notes of that `sc`), wind of its WeatherConditions (`windFromDeg`).
+`GET /api/advisor[?llm=1][&only=a,b,c][&skip=<prefix>]` (read; Centrum polls every 60 s and asks `?llm=1` once per page load or on "Zapytaj model ponownie"; cached by scenario files + feed seq, the `llm=1` narrative 5 min per top hypothesis). Engine `RescueKit/Advisor.swift`, deterministic; catalogue `rescue/scenarios/hazards/hazards.json` (`rescue-hazards/1`, real public infrastructure from OSM via `tools/terrain/hazards.py`: dams with the downstream river polyline and places with their river km, large industrial sites). Input per listed incident: IPP, `date` + `subject.lastContact` (when it happened) / `startClock` (reported), category, texts (incident, subject note, scripted report events - not the Terrain/Weather/Koester setup - and the live feed notes of that `sc`), wind of its WeatherConditions (`windFromDeg`).
 
 ```jsonc
 { "schema": "rescue-advisor/1", "incidents": 17, "summary": "...", "method": "...", "computedAt": "...",

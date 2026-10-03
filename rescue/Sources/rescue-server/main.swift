@@ -615,8 +615,11 @@ func scenarioStamp(_ sc: String) -> String {
 /// so a clue, dispatch or ACK on another incident does not recompute this one.
 func incidentBase(_ sc: String, nLive: Int) async -> Data? {
     let teamsKey = await roster.resources(for: sc).map { $0.map { String(decoding: $0, as: UTF8.self) }.joined(separator: ";") } ?? "-"
-    let key = "\(sc)|\(nLive)|\(await store.reportCount(sc: sc))|\(await cursors.get(sc) ?? "-")|\(teamsKey)|\(scenarioStamp(sc))"
-    return await incidentCache.get(key) {
+    let key = "\(sc)|\(nLive)|\(await store.reportCount(sc: sc))|\(await cursors.get(sc) ?? "-")|\(teamsKey)|\(scenarioHash(sc))"
+    let d = await incidentCache.get(key) {
+        // shared deploy: another instance (or the 4-min cron) may have computed this exact key - one Neon read instead of an engine run
+        if store.shared, let doc = await store.doc("incb:" + sc), let o = (try? JSONSerialization.jsonObject(with: doc.data)) as? [String: Any],
+           o["key"] as? String == key, let b = o["base"] as? [String: Any], let bd = try? JSONSerialization.data(withJSONObject: b) { return bd }
         await engineGate.enter()
         let r = await runScenario(sc, live: true)
         await engineGate.leave()
@@ -633,28 +636,92 @@ func incidentBase(_ sc: String, nLive: Int) async -> Data? {
         let parts = inc.components(separatedBy: " - ")
         let title = parts[0].prefix(1).lowercased() + parts[0].dropFirst()
         let b: [String: Any] = ["title": title, "place": parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc,
-                                "top3": segs.prefix(3).map { ["segmentId": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0] },
+                                "top3": segs.prefix(3).map { ["segmentId": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0, "areaPct": $0["areaPct"] ?? NSNull()] },
                                 "found": steps.contains(where: isFind) || all.contains { isFind($0) && ($0["label"] as? String ?? "").contains("(meldunek)") },   // a live find counts even after the replay's scripted one
                                 "replayFound": cut < all.count, "at": last["t"] ?? "",
                                 "total": ((last["resources"] as? [Any]) ?? []).count]
+        if store.shared { _ = await store.putDoc("incb:" + sc, (try? JSONSerialization.data(withJSONObject: ["key": key, "base": b])) ?? Data()) }
         return try? JSONSerialization.data(withJSONObject: b)
     }
+    if let d { await incidentLast.put(sc, d) }
+    return d
 }
-func incidentsData() async -> Data {
+/// last computed base per incident (any key): GET /api/incidents?fast=1 shows it ("stale": true) while the newer one computes
+actor IncidentLast {
+    var m: [String: Data] = [:]
+    func get(_ sc: String) -> Data? { m[sc] }
+    func put(_ sc: String, _ d: Data) { m[sc] = d }
+}
+let incidentLast = IncidentLast()
+/// content hash of scenarios/<sc>.json + its terrain (FNV-1a), memoized per size+mtime: unlike scenarioStamp it is the same on
+/// every instance (each Vercel instance copies scenarios/ to /tmp with new mtimes), so it can key the shared "incb:<sc>" docs
+final class HashMemo: @unchecked Sendable { let lock = NSLock(); var m: [String: String] = [:] }
+let hashMemo = HashMemo()
+func scenarioHash(_ sc: String) -> String {
+    let st = sc + "|" + scenarioStamp(sc)
+    hashMemo.lock.lock(); let hit = hashMemo.m[st]; hashMemo.lock.unlock()
+    if let hit { return hit }
+    var h: UInt64 = 0xcbf29ce484222325
+    for f in ["\(sc).json", "\(sc)-terrain.json"] {
+        for b in (try? Data(contentsOf: scenariosDir.appendingPathComponent(f))) ?? Data() { h = (h ^ UInt64(b)) &* 0x100000001b3 }
+        h = (h ^ 0xff) &* 0x100000001b3
+    }
+    let r = String(h, radix: 16)
+    hashMemo.lock.lock(); hashMemo.m[st] = r; hashMemo.lock.unlock()
+    return r
+}
+/// cheap card for an incident whose engine run has not finished yet (?fast=1): title, place, clock from the scenario file
+func incidentPlaceholder(_ sc: String) -> [String: Any] {
+    let d = jsonObject((try? Data(contentsOf: scenariosDir.appendingPathComponent("\(sc).json"))) ?? Data())
+    let inc = (d["incident"] as? String ?? sc).replacingOccurrences(of: #"\s*\(scenariusz[^)]*\)\s*$"#, with: "", options: .regularExpression)
+    let parts = inc.components(separatedBy: " - ")
+    let title = parts[0].prefix(1).lowercased() + parts[0].dropFirst()
+    return ["title": title, "place": parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc, "top3": [Any](), "found": false, "replayFound": false,
+            "at": d["startClock"] as? String ?? "", "total": ((d["resources"] as? [Any]) ?? []).count, "pending": true]
+}
+/// collects incident bases as their (unstructured) runs finish; ?fast=1 reads whatever is there at the deadline
+actor BaseBox {
+    var m: [Int: Data] = [:], n = 0
+    func put(_ i: Int, _ d: Data?) { n += 1; if let d { m[i] = d } }
+}
+/// background warm-up (Vercel, or RESCUE_WARM=1): every incident's base and the timeline engines behind Zasoby, so the first
+/// Centrum / Zasoby visit on a fresh instance does not wait for engine runs
+func warmUp() async {
+    try? await Task.sleep(for: .seconds(2))
+    await shared.pull()
+    let t0 = Date(), nLive = await store.reportCount(sc: nil)
+    for sc in scenarioNames() { _ = await incidentBase(sc, nLive: nLive) }
+    for sc in scenarioNames() where FileManager.default.fileExists(atPath: scenariosDir.appendingPathComponent("tracks/\(sc).json").path) {
+        _ = await timelineCache.tracks(sc, live: true, at: nil)
+    }
+    print("warm-up: incidents + timelines in \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
+}
+/// fast (?fast=1, Centrum): wait at most ~1.5 s for the engine; an incident still computing comes as its last known base
+/// ("stale": true) or a placeholder from the scenario file ("pending": true, top3 []); its run goes on and a later poll has it
+func incidentsData(fast: Bool = false) async -> Data {
     async let asgQ = assignmentList(), nLiveQ = store.reportCount(sc: nil)
     let asg = await asgQ, nLive = await nLiveQ, names = scenarioNames()
-    // all incidents at once (Neon round trips overlap, engine runs queue in EngineGate), then the side effects below in a fixed order
-    let rows = await withTaskGroup(of: (Int, Data?, LiveFeedEvent?, Bool).self) { g in
+    // engine part in unstructured tasks (engine runs queue in EngineGate), so a fast answer can leave them running
+    let box = BaseBox()
+    for (i, sc) in names.enumerated() { Task { await box.put(i, await incidentBase(sc, nLive: nLive)) } }
+    let deadline = Date().addingTimeInterval(fast ? 1.5 : 3600)
+    while await box.n < names.count && Date() < deadline { try? await Task.sleep(for: .milliseconds(40)) }
+    let bases = await box.m, complete = await box.n == names.count
+    // the feed / roster part for all incidents at once (Neon round trips overlap), then the side effects below in a fixed order
+    let rows = await withTaskGroup(of: (Int, LiveFeedEvent?, Bool).self) { g in
         for (i, sc) in names.enumerated() {
-            g.addTask { async let b = incidentBase(sc, nLive: nLive), ev = liveFeed.last(sc: sc), t = roster.isTouched(sc); return (i, await b, await ev, await t) }
+            g.addTask { async let ev = liveFeed.last(sc: sc), t = roster.isTouched(sc); return (i, await ev, await t) }
         }
-        var r = [(Data?, LiveFeedEvent?, Bool)](repeating: (nil, nil, false), count: names.count)
-        for await (i, b, ev, t) in g { r[i] = (b, ev, t) }
+        var r = [(LiveFeedEvent?, Bool)](repeating: (nil, false), count: names.count)
+        for await (i, ev, t) in g { r[i] = (ev, t) }
         return r
     }
     var out: [[String: Any]] = []
-    for (sc, (base, lastEv, touched)) in zip(names, rows) {
-        var o = jsonObject(base ?? Data())
+    for (i, (sc, (lastEv, touched))) in zip(names, rows).enumerated() {
+        var o = jsonObject(bases[i] ?? Data())
+        if o.isEmpty && !complete {   // fast answer, this incident's run has not finished yet
+            if let l = await incidentLast.get(sc) { o = jsonObject(l); o["stale"] = true } else { o = incidentPlaceholder(sc) }
+        }
         if o.isEmpty { continue }
         o["sc"] = sc
         o["live"] = lastEv != nil || touched
@@ -689,6 +756,27 @@ actor AdvisorCache {
     func put(_ k: String, _ d: Data) { if c.count > 50 { c.removeAll() }; c[k] = d }
 }
 let advisorCache = AdvisorCache()
+/// ?llm=1 costs a model call: the narrative is kept 5 min per top hypothesis (id, incidents, evidence texts), whatever the feed
+/// seq does, and parallel callers of the same hypothesis share one call
+actor NarrativeCache {
+    var c: [String: (at: Date, n: Data)] = [:]
+    var inFlight: [String: Task<Data, Never>] = [:]
+    func narrate(_ h: Data) async -> Data {
+        let top = jsonObject(h)
+        let ev = ((top["evidence"] as? [[String: Any]]) ?? []).map { "\($0["id"] ?? "")=\($0["text"] ?? "")" }
+        let k = "\(top["id"] ?? "")|\((top["incidents"] as? [String] ?? []).joined(separator: ","))|\(ev.joined(separator: ";"))"
+        if let e = c[k], Date().timeIntervalSince(e.at) < 300 { return e.n }
+        if let t = inFlight[k] { return await t.value }
+        let t = Task { (try? JSONSerialization.data(withJSONObject: await Advisor.narrate(jsonObject(h)))) ?? Data("{}".utf8) }
+        inFlight[k] = t
+        let d = await t.value
+        inFlight[k] = nil
+        if c.count > 20 { c.removeAll() }
+        c[k] = (Date(), d)
+        return d
+    }
+}
+let narrativeCache = NarrativeCache()
 func advisorIncidents(only: Set<String>?, skip: String?) async -> [Advisor.Incident] {
     let feed = await liveFeed.since(0, sc: nil).1
     var out: [Advisor.Incident] = []
@@ -732,7 +820,7 @@ func advisorData(_ q: Req) async -> Data {
     let incs = await advisorIncidents(only: only, skip: skip)
     var r = Advisor.analyze(incs, catalogue: Advisor.Catalogue.load(catPath))
     if let top = (r["hypotheses"] as? [[String: Any]])?.first {
-        r["narrative"] = llm ? await Advisor.narrate(top) : Advisor.rulesNarrative(top)
+        r["narrative"] = llm ? jsonObject(await narrativeCache.narrate((try? JSONSerialization.data(withJSONObject: top)) ?? Data())) : Advisor.rulesNarrative(top)
     }
     r["computedAt"] = ISO8601DateFormatter().string(from: Date())
     r["positions"] = Dictionary(uniqueKeysWithValues: incs.map { ($0.sc, ["at": $0.at, "time": Advisor.clock($0.minute), "status": $0.status] as [String: Any]) })
@@ -1525,7 +1613,7 @@ func invTrackActor(_ sc: String, _ id: String) -> [String: Any]? {
     return ((d["actors"] ?? d["units"]) as? [[String: Any]])?.first { $0["id"] as? String == id }
 }
 /// fixes of one actor up to `upTo`: (minute, src, accM, lat, lon, text, origin tracks|livefix)
-func invFixes(_ sc: String, _ id: String, start: Int) async -> [(Int, String, Double, Double, Double, String?, String)] {
+func invFixes(_ sc: String, _ id: String, start: Int, live: [LiveFix]? = nil) async -> [(Int, String, Double, Double, Double, String?, String)] {
     var out: [(Int, String, Double, Double, Double, String?, String)] = []
     for f in (invTrackActor(sc, id)?["fixes"] as? [Any]) ?? [] {
         if let a = f as? [Any], a.count >= 3, let m = (a[0] as? NSNumber)?.intValue {
@@ -1534,17 +1622,27 @@ func invFixes(_ sc: String, _ id: String, start: Int) async -> [(Int, String, Do
             out.append((m, o["src"] as? String ?? "gps", (o["accM"] as? NSNumber)?.doubleValue ?? 20, (o["lat"] as? NSNumber)?.doubleValue ?? 0, (o["lon"] as? NSNumber)?.doubleValue ?? 0, o["text"] as? String, "tracks"))
         }
     }
-    for f in await liveFixes.all(sc) where f.actor == id {
+    let lf: [LiveFix]; if let live { lf = live } else { lf = await liveFixes.all(sc) }
+    for f in lf where f.actor == id {
         if let m = invMin(start, f.t) { out.append((m, f.src, f.accM, f.lat, f.lon, f.text, "livefix")) }
     }
     return out.sorted { $0.0 < $1.0 }
 }
 /// feed events of one actor (team == id) for sc; local: the whole in-memory feed, shared: the latest 50 of the incident
-func invFeedEvents(_ id: String, sc: String?) async -> [LiveFeedEvent] {
-    let all: [LiveFeedEvent] = store.shared ? await liveFeed.since(0, sc: sc).1 : await liveFeed.events
+func invFeedEvents(_ id: String, sc: String?, pre: [LiveFeedEvent]? = nil) async -> [LiveFeedEvent] {
+    let all: [LiveFeedEvent]
+    if let pre { all = pre } else { all = await invFeedAll(sc) }
     var out: [LiveFeedEvent] = []
     for var e in all where e.team == id && (sc == nil || e.sc == nil || e.sc == sc) { e.acked = await acks.has(e.seq); out.append(e) }
     return out
+}
+/// the feed one incident's units are filtered from (shared deploy: one Neon query - GET /api/inventory reads it once per sc, not per unit)
+func invFeedAll(_ sc: String?) async -> [LiveFeedEvent] { store.shared ? await liveFeed.since(0, sc: sc).1 : await liveFeed.events }
+/// per-request prefetch for GET /api/inventory: live fixes and feed per sc, so ~25 units cost 2 Neon reads per incident, not 2 per unit
+actor InvPre {
+    var fixes: [String: [LiveFix]] = [:], feed: [String: [LiveFeedEvent]] = [:]
+    func fixesFor(_ sc: String) async -> [LiveFix] { if let f = fixes[sc] { return f }; let f = await liveFixes.all(sc); fixes[sc] = f; return f }
+    func feedFor(_ sc: String?) async -> [LiveFeedEvent] { if let f = feed[sc ?? ""] { return f }; let f = await invFeedAll(sc); feed[sc ?? ""] = f; return f }
 }
 
 /// condition of one unit from its estimated path up to atMin (CONTRACT "Zasoby i dziennik" 3)
@@ -1711,7 +1809,7 @@ func invUnitSc(_ t: InvTeam, _ q: String?) -> String? {
     if let s = t.sc { return s }
     return t.home.first { FileManager.default.fileExists(atPath: scenariosDir.appendingPathComponent("tracks/\($0).json").path) } ?? t.home.first
 }
-func invUnitDoc(_ t: InvTeam, sc: String?, tl: (String, Int, [String: [[Double]]])?, atMin: Int?, liveMin: Int?, params: [String: Any], events: [InvEvent], file: [String: [String: Any]]?) async -> [String: Any] {
+func invUnitDoc(_ t: InvTeam, sc: String?, tl: (String, Int, [String: [[Double]]])?, atMin: Int?, liveMin: Int?, params: [String: Any], events: [InvEvent], file: [String: [String: Any]]?, pre: InvPre? = nil) async -> [String: Any] {
     let fu = file?[t.id]
     let kind = t.kind.isEmpty ? (fu?["kind"] as? String ?? "") : t.kind
     let unit = fu ?? [:]
@@ -1729,8 +1827,8 @@ func invUnitDoc(_ t: InvTeam, sc: String?, tl: (String, Int, [String: [[Double]]
     let w = invWarnings(kind: kind, h, params: params)
     o["warnings"] = w
     o["level"] = w.contains { $0["level"] as? String == "red" } ? "red" : w.isEmpty ? "ok" : "amber"
-    let fixes = sc != nil ? await invFixes(sc!, t.id, start: start) : []
-    o["feeds"] = invFeeds(id: t.id, kind: kind, sc: sc, atMin: am, liveMin: liveMin ?? am, start: start, fixes: fixes, feed: await invFeedEvents(t.id, sc: sc),
+    let fixes = sc != nil ? await invFixes(sc!, t.id, start: start, live: await pre?.fixesFor(sc!)) : []
+    o["feeds"] = invFeeds(id: t.id, kind: kind, sc: sc, atMin: am, liveMin: liveMin ?? am, start: start, fixes: fixes, feed: await invFeedEvents(t.id, sc: sc, pre: await pre?.feedFor(sc)),
                           telemetry: ["dron", "smiglowiec", "lodz"].contains(kind), working: working, params: params)
     o["events"] = mine.reversed().prefix(10).map { e -> [String: Any] in jsonObject((try? JSONEncoder().encode(e)) ?? Data()) }
     o["atSc"] = sc ?? NSNull()
@@ -1743,7 +1841,7 @@ func invInventory(_ q: Req) async -> Data {
     let params = invParams(), file = invFileUnits(), events = await invEvents.all()
     let teams = await invTeams()
     var tls: [String: (String, Int, [String: [[Double]]])?] = [:], lives: [String: Int?] = [:]
-    var units: [[String: Any]] = []
+    var units: [[String: Any]] = []; let pre = InvPre()
     for t in teams {
         let sc = invUnitSc(t, qsc)
         // with ?sc=, a unit attached to another incident keeps static values
@@ -1756,7 +1854,7 @@ func invInventory(_ q: Req) async -> Data {
             live = lives[sc]!
         }
         let atMin = tl == nil ? sc.flatMap { invMin(invStart($0), q.query["at"]) } ?? live : nil
-        units.append(await invUnitDoc(t, sc: onSc ? sc : nil, tl: tl, atMin: atMin, liveMin: live, params: params, events: events, file: file))
+        units.append(await invUnitDoc(t, sc: onSc ? sc : nil, tl: tl, atMin: atMin, liveMin: live, params: params, events: events, file: file, pre: pre))
     }
     let order = ["red": 0, "amber": 1, "ok": 2]
     units.sort { (order[$0["level"] as? String ?? ""] ?? 3, $0["kind"] as? String ?? "", $0["id"] as? String ?? "") < (order[$1["level"] as? String ?? ""] ?? 3, $1["kind"] as? String ?? "", $1["id"] as? String ?? "") }
@@ -2059,7 +2157,7 @@ func route(_ q: Req) async -> Data {
         if let one = (o["seq"] as? NSNumber)?.intValue { seqs = [one] } else { seqs = (await liveFeed.since(0, sc: scParam(q, o)).1).map(\.seq) }
         let n = await acks.add(seqs)
         return response("200 OK", json, Data(#"{"ok":true,"acked":\#(n)}"#.utf8))
-    case ("GET", "/api/incidents"): return await incidentsData()
+    case ("GET", "/api/incidents"): return await incidentsData(fast: q.query["fast"] == "1")
     case ("GET", "/api/advisor"): return await advisorData(q)   // MARK: advisor
     case ("GET", "/api/teams"): return await teamsData()
     case ("POST", "/api/teams/assign"): return await rosterAssign(q)
@@ -2233,6 +2331,7 @@ let listener = listenTCP(host: guardian.host, port: port)
 print("rescue-server on http://\(guardian.host):\(port)/  - frontends (/app, /web, /out), live engine (/api/run/<scenario>), assessment (/api/assessment/<scenario>), field reports, Studio, /metrics")
 if publicMode { print("  public: reads open, writes need the action key\(guardian.pinGenerated ? " - RESCUE_PIN IS NOT SET, every write will be refused" : "")") }
 else { for l in guardian.banner(name: "rescue-server", lanAddresses: localIPv4Addresses()) { print(l) } }
+if publicMode || env["RESCUE_WARM"] == "1" { Task.detached { await warmUp() } }
 print("LLM: \(LLM.off ? "off" : "\(LLM.model) at \(LLM.endpoint)") (reports, narratives, assessment); fallback: rules. Store: \(store.label)")
 Thread.detachNewThread {
     while true {
