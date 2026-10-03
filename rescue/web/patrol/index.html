@@ -242,7 +242,7 @@
   // ---------- map ----------
   // Regional offline basemap from the run's bbox (Tatry, Bieszczady, Karkonosze, Śniardwy, Mamry, Morzycko, Międzyzdroje).
   const bb = run.bbox, file = regionFor(bb)?.file || "tatry.pmtiles";
-  await loadBasemap(maplibregl, file);
+  await loadBasemap(maplibregl, file, { full: true });   // whole region in memory + service worker cache: works without coverage
   const hs = await hillshadeFor(bb);
   map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: THEME === "dark" ? "dark" : "paper", file, hillshade: hs }),
     bounds: [[bb.west, bb.south], [bb.east, bb.north]], attributionControl: { compact: true } });
