@@ -298,10 +298,15 @@ class SemanticGuard:
             return out
         raise StageUnavailable(f"{name}: {'; '.join(errors)}")
 
-    def score(self, text, cfg, high_risk=False, allowed=None, context=None, risk="medium", phase="prompt"):
-        """-> dict(score, backend, signals, heuristic_score, stages, flags, timings_us, fail, error)."""
+    def score(self, text, cfg, high_risk=False, allowed=None, context=None, risk="medium", phase="prompt", decoded=()):
+        """-> dict(score, backend, signals, heuristic_score, stages, flags, timings_us, fail, error).
+        decoded: extra decoded views of the text (base64, URL, hex... from the deterministic layer) - F12."""
         t = time.perf_counter_ns()
         h, signals = self.heuristic.score(text)
+        for layer in decoded:  # F12: an injection hidden in base64/URL/hex is scored like plain text
+            hl, sl = self.heuristic.score(layer)
+            if hl > h:
+                h, signals = hl, sl + ["decoded_layer"]
         res = {"score": h, "backend": "heuristic", "signals": signals, "heuristic_score": h, "stages": [], "flags": [],
                "timings_us": {"semantic_heuristic": round((time.perf_counter_ns() - t) / 1000, 1)}, "fail": None, "error": None}
         mode = cfg.get("backend", "auto")

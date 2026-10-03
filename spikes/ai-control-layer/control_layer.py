@@ -805,7 +805,7 @@ class ControlLayer:
         fail: None | 'deny' | 'approve' | 'disagree_deny' | 'disagree_allow_flag' | 'disagree_approve' | 'disagree_resolved_safe'."""
         risk = risk or pi.get("prompt_risk", "medium")
         res = self.semantic.score(text, pi, high_risk=high_risk, allowed=(self.policy.get("models") or {}).get("allowed"),
-                                  context=context, risk=risk, phase=where)
+                                  context=context, risk=risk, phase=where, decoded=layers(text)[1:])
         for k, v in res["timings_us"].items():
             ev["checks_us"][k] = round(ev["checks_us"].get(k, 0) + v, 1)
         model_ms = sum(r["latency_ms"] for r in res["stages"])
