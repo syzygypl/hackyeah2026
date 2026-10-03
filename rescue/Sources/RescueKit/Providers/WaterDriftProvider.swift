@@ -12,7 +12,7 @@ import Foundation
 ///   Experiments and Implementation", USCG R&D Center CG-D-08-99; Allen (2005), "Leeway Divergence", CG-D-05-05;
 ///   Breivik, Allen, Maisondieu & Roth (2011), "Wind-induced drift of objects at sea: The leeway field method",
 ///   Applied Ocean Research 33. Real tables give per-object slopes, offsets and crosswind (jibing) components.
-/// - Uncertainty: leeway rate x0.3 .. x1.5 (unknown capsize time, rate error), along-track; cross-track spread
+/// - Uncertainty: leeway rate x0.3 .. x1.5, weighted as a normal around x1 (sd 30%), along-track; cross-track spread
 ///   grows with distance (~25% of the drift, the "divergence"), plus the LKP's own radius.
 /// - Land: cells in the water get the plume; the part of the plume that would cross the shoreline is deposited at the
 ///   first land cell on the path (x2, "beached"); other land cells next to water get a little (swam / walked out),
@@ -31,8 +31,15 @@ public struct WaterDriftProvider: HintProvider {
         guard !events.isEmpty else { return scripted([], clock: clock) }
         let g = WaterMask.cells(scenario)
         let water = WaterMask.cellWater(scenario, g.centers)
+        // The subject MOVES: a later drift estimate replaces the earlier one instead of stacking on it. Layers multiply,
+        // so event k emits plume_k / plume_(k-1) (the product of all drift layers = the latest plume). Caveat: disabling
+        // an earlier drift hint in the UI breaks that chain.
+        var prev: [Double]? = nil
         let items = events.enumerated().map { i, e in
-            hint(scenario, e, i, .layer(kind: "drift", factor: Self.plume(scenario, e, g, water)), marker: e.point.map(Coord.init))
+            let p = Self.plume(scenario, e, g, water)
+            let f = prev.map { pv in zip(p, pv).map { $0 / $1 } } ?? p
+            prev = p
+            return hint(scenario, e, i, .layer(kind: "drift", factor: f), marker: e.point.map(Coord.init))
         }
         return scripted(items, clock: clock)
     }
@@ -78,6 +85,7 @@ public struct WaterDriftProvider: HintProvider {
         let steps = 24
         for k in 0...steps {
             let m = 0.3 + 1.2 * Double(k) / Double(steps)          // leeway / time multiplier
+            let w = exp(-(m - 1) * (m - 1) / (2 * 0.3 * 0.3))       // most likely: the nominal drift (x1), sd 30%
             let dx = vx * secs * m, dy = vy * secs * m
             let dist = (dx * dx + dy * dy).squareRoot()
             let sigma = r0 + 0.25 * dist
@@ -88,8 +96,8 @@ public struct WaterDriftProvider: HintProvider {
                 let q = at(dx * Double(j) / Double(nStep), dy * Double(j) / Double(nStep))
                 if let ci = cell(q), !water[ci] { beach = g.centers[ci]; break }
             }
-            if let bp = beach { add(bp, max(120, r0), 2.0, waterOnly: false) }
-            else { add(at(dx, dy), sigma, 1.0, waterOnly: true) }
+            if let bp = beach { add(bp, max(120, r0), 2.0 * w, waterOnly: false) }
+            else { add(at(dx, dy), sigma, w, waterOnly: true) }
         }
         let mx = f.max() ?? 0
         guard mx > 0 else { return [Double](repeating: 1, count: n) }
