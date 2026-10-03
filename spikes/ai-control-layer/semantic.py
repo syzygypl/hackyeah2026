@@ -137,33 +137,55 @@ class SemanticGuard:
         self.key = os.urandom(32)  # cache keys are keyed hashes (7c); in-memory only, so a per-process key is enough
         self.warm, self.cooldown, self._warming = set(), {}, set()
         self._ps_checked_at = 0
+        self._refreshing = False
         self._timeouts = {}  # model -> consecutive short-input timeouts  # models loaded once; circuit breaker: model -> retry-after timestamp
         self.stats = {"model_calls": 0, "cache_hits": 0, "errors": 0, "last_backend": None, "last_error": None}
 
     # -- model inventory (name -> digest), refreshed every 30 s
     def _refresh(self, url):
-        if url != self._url or time.time() - self._checked_at > 30:
-            self._url, self._checked_at = url, time.time()
-            try:
-                with urllib.request.urlopen(url.rstrip("/") + "/api/tags", timeout=0.5) as r:
-                    self.installed = {m["name"]: m.get("digest", "") for m in json.load(r).get("models", [])}
-                self.ollama_ok = True
-            except Exception as e:
-                # F1: down / slow is NOT "not installed". Keep the last good inventory (calls will then fail and
-                # fail modes apply); with no inventory ever, installed stays None = unreachable. Retry in 5 s.
-                self.ollama_ok = False
-                self.stats["last_error"] = f"ollama inventory unavailable: {type(e).__name__}"
-                self._checked_at = time.time() - 25
-        if time.time() - self._ps_checked_at > 10:  # F5: the warm set must follow what Ollama actually has loaded
-            self._ps_checked_at = time.time()
-            try:
-                with urllib.request.urlopen(url.rstrip("/") + "/api/ps", timeout=0.5) as r:
-                    loaded = {m["name"] for m in json.load(r).get("models", [])}
-                for m in list(self.warm):
-                    if m not in loaded and m + ":latest" not in loaded:
-                        self.warm.discard(m)
-            except Exception:
-                pass
+        """NEW-5: the request path never waits on Ollama's inventory. The very first poll (no inventory yet) is
+        synchronous with a short timeout; after that, due refreshes run in a background thread."""
+        tags_due = url != self._url or time.time() - self._checked_at > 30
+        ps_due = time.time() - self._ps_checked_at > 10
+        if not (tags_due or ps_due):
+            return
+        if self.installed is None and self._url != url:  # first contact: decide now, but fast
+            self._do_refresh(url, True, True, timeout=0.3)
+            return
+        if not self._refreshing:
+            self._refreshing = True
+            self._url = url
+            if tags_due:
+                self._checked_at = time.time()
+            if ps_due:
+                self._ps_checked_at = time.time()
+            threading.Thread(target=self._do_refresh, args=(url, tags_due, ps_due), daemon=True).start()
+
+    def _do_refresh(self, url, tags, ps, timeout=0.5):
+        try:
+            if tags:
+                self._url, self._checked_at = url, time.time()
+                try:
+                    with urllib.request.urlopen(url.rstrip("/") + "/api/tags", timeout=timeout) as r:
+                        self.installed = {m["name"]: m.get("digest", "") for m in json.load(r).get("models", [])}
+                    self.ollama_ok = True
+                except Exception as e:
+                    # F1: down / slow is NOT "not installed": keep the last good inventory, retry in 5 s
+                    self.ollama_ok = False
+                    self.stats["last_error"] = f"ollama inventory unavailable: {type(e).__name__}"
+                    self._checked_at = time.time() - 25
+            if ps:  # F5: the warm set follows what Ollama actually has loaded
+                self._ps_checked_at = time.time()
+                try:
+                    with urllib.request.urlopen(url.rstrip("/") + "/api/ps", timeout=timeout) as r:
+                        loaded = {m["name"] for m in json.load(r).get("models", [])}
+                    for m in list(self.warm):
+                        if m not in loaded and m + ":latest" not in loaded:
+                            self.warm.discard(m)
+                except Exception:
+                    pass
+        finally:
+            self._refreshing = False
 
     def _on_model_error(self, cfg, model, err, text_len):
         """F4 circuit breaker: trip at once on connection errors; on timeouts only after k consecutive timeouts on SHORT

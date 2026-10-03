@@ -738,9 +738,12 @@ class WarmSet(unittest.TestCase):
         self.fake.loaded = []  # Ollama evicted it
         layer.semantic._ps_checked_at = 0
         n = len(self._warmups())
-        layer.check_prompt(s, "second")
+        layer.semantic._refresh(self.fake.url)  # background inventory refresh (NEW-5: never inline)
         time.sleep(0.3)
-        self.assertGreater(len(self._warmups()), n)  # re-warm fired
+        self.assertNotIn(LLAMA, layer.semantic.warm)
+        layer.check_prompt(s, "third")  # cold model seen on the request path -> background re-warm
+        time.sleep(0.3)
+        self.assertGreater(len(self._warmups()), n)
 
     def test_timeout_marks_cold_and_rewarms(self):
         self.fake = FakeOllama({LLAMA: "l"}, reply="safe")
@@ -866,6 +869,21 @@ class WarmupAll(unittest.TestCase):
             out = layer.semantic.warmup(layer.policy["controls"]["semantic"], layer.policy["models"]["allowed"])
             self.assertEqual({m for _, m, *_ in out}, {QWEN, LLAMA, GRANITE})  # prefilter, its fallback, judge
             self.assertEqual(layer.semantic.warm, {QWEN, LLAMA, GRANITE})
+        finally:
+            fake.stop()
+
+
+class InventoryNonBlocking(unittest.TestCase):
+    def test_hung_ollama_inventory_does_not_slow_requests(self):  # NEW-5
+        fake = FakeOllama({QWEN: "q"}, reply=SAFE[QWEN])
+        try:
+            layer, s, _ = fresh(edit=semantic_env(fake.url, prefilter={"fallback_models": []}))
+            layer.check_prompt(s, "first contact")
+            fake.delay = 2.0  # Ollama hangs: inventory + chat both slow
+            layer.semantic._checked_at = layer.semantic._ps_checked_at = 0
+            t = time.time()
+            layer.check_prompt(s, "next request")
+            self.assertLess(time.time() - t, 1.5)  # bounded by the 800 ms prefilter timeout, not by inventory polls
         finally:
             fake.stop()
 
@@ -1451,7 +1469,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization", "InjectionNotHiddenByPii": "injection not hidden behind PII",
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "FallbackVerdicts": "fallback verdicts (NEW-1/F14)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "FallbackVerdicts": "fallback verdicts (NEW-1/F14)", "InventoryNonBlocking": "inventory refresh off the request path (NEW-5)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "AuditPrivacy": "audit privacy: HMAC, no bare PII hashes (7c)", "Performance": "performance"}
 
 
