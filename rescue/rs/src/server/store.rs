@@ -345,24 +345,32 @@ impl NeonStore {
     }
     /// same contract as the in-memory feed: sc nil -> all; sc -> that incident + sc-less events; seq = highest among them
     pub async fn feed_since(&self, s: i64, sc: Option<&str>) -> (i64, Vec<LiveFeedEvent>) {
-        let top = match sc {
-            None => self.sql("SELECT coalesce(max(seq), 0) AS s FROM rescue_feed", vec![]).await,
-            Some(x) => self.sql("SELECT coalesce(max(seq), 0) AS s FROM rescue_feed WHERE sc IS NULL OR sc = $1", vec![json!(x)]).await,
-        }
-        .ok()
-        .and_then(|r| r.first().map(|x| int(x.get("s"))))
-        .unwrap_or(0);
         if s == i64::MAX {
-            return (top, vec![]);
+            let top = match sc {
+                None => self.sql("SELECT coalesce(max(seq), 0) AS s FROM rescue_feed", vec![]).await,
+                Some(x) => self.sql("SELECT coalesce(max(seq), 0) AS s FROM rescue_feed WHERE sc IS NULL OR sc = $1", vec![json!(x)]).await,
+            };
+            return (top.ok().and_then(|r| r.first().map(|x| int(x.get("s")))).unwrap_or(0), vec![]);
         }
+        // one round trip: the top seq on every row (one row with null seq/body when nothing is newer)
         let rows = match sc {
-            None => self.sql("SELECT seq, body FROM rescue_feed WHERE seq > $1 AND TRUE ORDER BY seq DESC LIMIT 50", vec![json!(s)]).await,
+            None => {
+                self.sql(
+                    "WITH t AS (SELECT coalesce(max(seq), 0) AS s FROM rescue_feed) SELECT t.s AS top, f.seq, f.body FROM t LEFT JOIN LATERAL (SELECT seq, body FROM rescue_feed WHERE seq > $1 ORDER BY seq DESC LIMIT 50) f ON true",
+                    vec![json!(s)],
+                )
+                .await
+            }
             Some(x) => {
-                self.sql("SELECT seq, body FROM rescue_feed WHERE seq > $1 AND (sc IS NULL OR sc = $2) ORDER BY seq DESC LIMIT 50", vec![json!(s), json!(x)])
-                    .await
+                self.sql(
+                    "WITH t AS (SELECT coalesce(max(seq), 0) AS s FROM rescue_feed WHERE sc IS NULL OR sc = $2) SELECT t.s AS top, f.seq, f.body FROM t LEFT JOIN LATERAL (SELECT seq, body FROM rescue_feed WHERE seq > $1 AND (sc IS NULL OR sc = $2) ORDER BY seq DESC LIMIT 50) f ON true",
+                    vec![json!(s), json!(x)],
+                )
+                .await
             }
         }
         .unwrap_or_default();
+        let top = rows.first().map(|x| int(x.get("top"))).unwrap_or(0);
         let mut ev = Self::feed_events(&rows);
         ev.reverse();
         (top, ev)
