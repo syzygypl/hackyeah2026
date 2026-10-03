@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="dock.css">
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="intro.css">
+<link rel="stylesheet" href="chat.css">
 </head>
 <body class="mode-akcja view-2d">
 <div id="app">
@@ -116,6 +117,7 @@
 <script src="vendor/qrcode.min.js"></script>
 <script type="module" src="app.js"></script>
 <script type="module" src="intro.js"></script>
+<script type="module">import { mountAppChat } from "./chat.js"; mountAppChat();</script>
 <script src="../web/version.js" defer></script>
 </body>
 </html>

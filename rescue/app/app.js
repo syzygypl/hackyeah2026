@@ -1114,6 +1114,7 @@ $("scen").onchange = () => loadScenario($("scen").value).catch((e) => toast(plEr
 
 window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, setMode, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
 Object.assign(window.rescueApp, { setTime, loadScenario });   // intro.js (guided tour) drives the shell through these
+Object.assign(window.rescueApp, { applyRun, onStore: (f) => subs.push(f) });   // chat.js (Czat): Historia what-if run + refresh hook
 async function boot() {
   try {
     await detect();
