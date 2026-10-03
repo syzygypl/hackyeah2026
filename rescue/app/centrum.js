@@ -45,8 +45,8 @@ async function loadIncidents() {
   return fallbackIncidents();
 }
 function normIncident(x) {
-  return { sc: x.sc, title: x.title || "", place: x.place || x.sc, live: !!x.live, found: !!x.found, mode: x.mode || null, lastEventAt: x.lastEventAt || null,
-    lastClock: x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0 })), teams: x.teams || null, pending: false };
+  return { sc: x.sc, title: x.title || "", place: x.place || x.sc, live: !!x.live, found: !!x.found, replayFound: !!x.replayFound, mode: x.mode || null, lastEventAt: x.lastEventAt || null,
+    lastClock: x.at || x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0 })), teams: x.teams || null, pending: false };
 }
 // fallback: /api/scenarios (every 60 s) + one /api/run/<sc> at a time (first engine run can take ~15 s), summarized and cached
 let scenCache = null, scenAt = 0;
@@ -63,7 +63,7 @@ async function fallbackIncidents() {
   const out = scenCache.map((s) => {
     const sc = s.name, r = runSum[sc], lv = liveBySc[sc];
     if ((!r || (lv && lv.seq > (runWant[sc] || 0))) && !runQueue.includes(sc) && runBusy !== sc) runQueue.push(sc);
-    return { sc, ...splitIncident(s.incident, sc), live: !!lv || !!(r && r.liveFolded), found: !!(r && r.found), mode: null, lastEventAt: lv ? lv.t : null,
+    return { sc, ...splitIncident(s.incident, sc), live: !!lv || !!(r && r.liveFolded), found: false, replayFound: !!(r && r.replayFound), mode: null, lastEventAt: lv ? lv.t : null,
       lastClock: r ? r.lastClock : s.startClock || null, top3: r ? r.top3 : [], teams: r ? r.teams : null, pending: !r };
   });
   pumpRuns();
@@ -77,15 +77,16 @@ async function pumpRuns() {
   catch (e) { runSum[sc] = runSum[sc] || { top3: [], teams: null, found: false, lastClock: null, err: true }; }
   runWant[sc] = seq; runBusy = null;
   const x = !has.incidents && incidents.find((i) => i.sc === sc), r = runSum[sc];   // patch the shown card now, not at the next 5 s tick
-  if (x) { Object.assign(x, { top3: r.top3, teams: r.teams, found: r.found, lastClock: r.lastClock || x.lastClock, pending: false }); x.live = x.live || !!r.liveFolded; render(); }
+  if (x) { Object.assign(x, { top3: r.top3, teams: r.teams, replayFound: !!r.replayFound, lastClock: r.lastClock || x.lastClock, pending: false }); x.live = x.live || !!r.liveFolded; render(); }
   setTimeout(pumpRuns, 300);   // stagger: never two engine runs at once from this page
 }
 function summarize(run) {
-  const steps = run.steps || [], last = steps[steps.length - 1] || {};
+  // like /api/incidents: the "live moment" is the last step before the replay's scripted find
+  const steps = run.steps || [], fi = steps.findIndex((s) => s.kind === "found"), last = steps[(fi > 0 ? fi : steps.length) - 1] || {};
   const segs = (last.segments || []).slice().sort((a, b) => b.poa - a.poa).slice(0, 3);
   const assigned = new Set((last.assignments || []).map((a) => a.resourceId));
   return { top3: segs.map((s) => ({ segmentId: s.id, name: s.name, weight: s.poa })), teams: { assigned: assigned.size, total: (last.resources || []).length },
-    found: steps.some((s) => s.kind === "found"), lastClock: last.t || null, liveFolded: (run.liveEventsFolded || 0) > 0 };
+    replayFound: fi >= 0, lastClock: last.t || null, liveFolded: (run.liveEventsFolded || 0) > 0 };
 }
 async function pollLive() {
   if (has.live === false && Date.now() < liveRetry) return;
@@ -147,7 +148,7 @@ const ICON = {
 const icon = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k] || '<circle cx="12" cy="12" r="6"/>'}</svg>`;
 // short names for the map labels and card headings (incident text is long and not always "title - place")
 const SHORT = { zawrat: "Zawrat", "morskie-oko": "Morskie Oko", kasprowy: "Kasprowy Wierch", "bieszczady-wetlinska": "Połonina Wetlińska", "karkonosze-sniezka": "Śnieżka",
-  sniardwy: "Śniardwy", morzycko: "Morzycko", miedzyzdroje: "Międzyzdroje", mamry: "Mamry", krakow: "Kraków", "night-test": "Test nocny" };
+  sniardwy: "Śniardwy", morzycko: "Morzycko", miedzyzdroje: "Międzyzdroje", mamry: "Mamry", krakow: "Kraków", "krakow-nowa-huta": "Kraków - Nowa Huta", "night-test": "Test nocny" };
 const short = (x) => SHORT[x.sc] || (x.place && x.place !== x.sc ? x.place.split(/[,/]/)[0].trim() : x.sc);
 const longText = (x) => [x.title, x.place !== x.sc ? x.place : ""].filter(Boolean).join(" - ");
 const modeOf = (x) => x.live ? "live" : x.found ? "found" : x.mode === "plan" ? "plan" : "replay";
@@ -169,9 +170,10 @@ function renderCards() {
   $("cards").innerHTML = list.map((x) => {
     const m = modeOf(x), mine = teams.filter((t) => t.sc === x.sc);
     const when = x.lastEventAt ? `ost. zdarzenie ${hhmm(x.lastEventAt)}` : x.lastClock ? `scenariusz ${esc(x.lastClock)}` : "";
+    const rf = x.replayFound && !x.found ? `<span class="mute" title="Plik scenariusza kończy się odnalezieniem; tu pokazujemy moment przed nim">odtworzenie z odnalezieniem</span>` : "";
     return `<article class="card ${m} ${hl === x.sc ? "hl" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
       <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="mute">${esc(x.sc)}</span><span class="when mono">${when}</span></div>
-      <h3><a href="${openURL(x.sc)}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}</div>
+      <h3><a href="${openURL(x.sc)}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>
       ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw · waga mapy</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span><b>${pct(s.weight)}</b></div>`).join("")}</div>`
         : `<div class="loading">${x.pending ? "Liczę mapę (pierwsze przeliczenie do ~15 s)..." : "Brak mapy dla tej akcji."}</div>`}
       <div class="cteams">${x.teams ? `Zespoły z sektorem: <span class="n">${x.teams.assigned}/${x.teams.total}</span>` : ""}
