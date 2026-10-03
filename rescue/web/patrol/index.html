@@ -442,14 +442,23 @@
   setInterval(pollAssignments, 15000); pollAssignments();
   // Incident ended (live ZNALEZIONO, GET /api/incidents ended/found): tell the team to stop and return
   const SC = SCN || "zawrat";
-  let endedShown = false;
+  let endedShown = false, endedBusy = false;
+  // /api/incidents runs the engine for every incident (~30 s on Vercel, see docs/rescue-locator/wydajnosc.md): one call at a time,
+  // long timeout, every 60 s; the cheap /api/live poll below also ends the action on a "found" feed event of this incident
   async function pollEnded() {
-    if (endedShown) return;
+    if (endedShown || endedBusy) return;
+    endedBusy = true;
     try {
-      const r = await fetch(API + "/api/incidents", { headers: headers(), signal: AbortSignal.timeout(5000) });
+      const r = await fetch(API + "/api/incidents", { headers: headers(), signal: AbortSignal.timeout(60000) });
       if (!r.ok) return;
       const x = (await r.json()).find((i) => i.sc === SC);
       if (!x || !(x.ended ?? x.found)) return;
+      showEnded();
+    } catch {} finally { endedBusy = false; }
+  }
+  function showEnded() {
+    if (endedShown) return;
+    {
       endedShown = true;
       const b = document.createElement("div"); b.id = "ended"; b.setAttribute("role", "alert");
       b.innerHTML = `<b>Akcja zakończona</b><span>Osoba odnaleziona. Przerwijcie przeszukiwanie i wracajcie do bazy.</span><button type="button">OK</button>`;
@@ -457,9 +466,9 @@
       document.body.appendChild(b);
       navigator.vibrate?.([300, 150, 300]);
       tell("ended", { team, sc: SC });
-    } catch {}
+    }
   }
-  setInterval(pollEnded, 20000); pollEnded();
+  setInterval(pollEnded, 60000); pollEnded();
   // Operator ACK of this team's reports (GET /api/live, "acked"): short confirmation on the phone
   let lastAck = store.get("rescue-patrol-lastack", 0), lastScen = null;
   async function pollAcks() {
@@ -467,6 +476,7 @@
       const r = await fetch(API + "/api/live?since=0" + (SCN ? "&sc=" + encodeURIComponent(SCN) : ""), { headers: headers(), signal: AbortSignal.timeout(5000) });
       if (!r.ok) return;
       const evs = (await r.json()).events || [];
+      if (evs.some((e) => e.kind === "found" && (!e.sc || e.sc === SC))) showEnded();
       // the operator moved the incident on (POST /api/advance, kind "scenario"): new plan and map, so reload this view (not mid-typing)
       const scn = evs.filter((e) => e.kind === "scenario"), top = scn.length ? Math.max(...scn.map((e) => e.seq)) : 0;
       if (lastScen === null) lastScen = top;
