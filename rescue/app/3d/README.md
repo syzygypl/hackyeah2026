@@ -23,6 +23,8 @@ When a run includes `rescue-timeline/1`, `timeline3d.js` replaces decorative tea
 
 The shell sends `{type:'time', minute, t}`; one-minute advances blend for 0.5 s, large seeks and backward jumps snap. Before the first fix the actor is hidden. Heat and FOV use the most recent earlier engine frame; a run with `frames=0` fetches exact frames through `/api/run/<sc>?t=` and ignores late responses after a seek. The controls select a unit and enter FPP at its eye height (aircraft use their AGL height); Esc or overview restores the orbit camera. No client estimate is sent back to coverage.
 
+Click a unit marker or its label (also Enter / Space on a focused label) to highlight that unit's track and send `{source:'rescue3d', type:'actor', id}` for the shell's log panel. Parent selection with `{type:'actor',id}` highlights it without echoing. The view does not calculate equipment health or invent log entries.
+
 Local verification on Zawrat with the real Swift engine: no actors or coverage before the first fix, 5 actors at minute 100, fractional movement 100 -> 101, FPP disables orbit and Esc restores it; scenarios without timeline still load. Syntax and temporal boundary checks also pass.
 
 ## Blind test (button "Test na ślepo")
@@ -51,6 +53,7 @@ For the combined app (`rescue/app/`). Same origin only: messages from other orig
 | parent -> 3D | `{type: 'step', i}` | jump to step `i` |
 | parent -> 3D | `{type: 'time', minute, t, frame?}` | scrub engine minutes; optional exact engine frame |
 | parent -> 3D | `{type: 'fpp', actorId, on?}` | follow a unit at eye height; `on:false` restores orbit |
+| parent -> 3D | `{type: 'actor', id}` | highlight the unit's track without echoing |
 | parent -> 3D | `{type: 'select', segmentId}` | outline the segment in blue, highlight it in the ranking, fly to it |
 | parent -> 3D | `{type: 'evidence', id, on}` | switch a signal on/off (id = step `hintId`, or the step index; `'*'` + `on: true` restores all), map recomputed as with the checkbox |
 | parent -> 3D | `{type: 'run', url}` | reload with `?run=<url>` |
@@ -58,6 +61,7 @@ For the combined app (`rescue/app/`). Same origin only: messages from other orig
 | 3D -> parent | `{source: 'rescue3d', type: 'ready', scenario, steps, step}` | page loaded |
 | 3D -> parent | `{source: 'rescue3d', type: 'step', i, t}` | user changed the step (not echoed for parent-driven changes) |
 | 3D -> parent | `{source: 'rescue3d', type: 'fpp', on, actorId?}` | camera mode changed |
+| 3D -> parent | `{source: 'rescue3d', type: 'actor', id}` | unit selected: open its log |
 | 3D -> parent | `{source: 'rescue3d', type: 'select', segmentId}` | user clicked a segment (ranking or terrain) |
 | 3D -> parent | `{source: 'rescue3d', type: 'evidence', id, on}` | user toggled a signal (`id` = hintId; `'*'` = Przywróć) |
 

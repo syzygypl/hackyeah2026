@@ -1699,7 +1699,9 @@ cv.addEventListener('pointerleave', () => { $('tip').hidden = true; });
 cv.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 cv.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
-  const h = pick(e); if (!h) return;
+  const h = pick(e);
+  if (G.phase === 'off' && TL3D?.pickActor(ray, h ? ray.ray.origin.distanceTo(h.point) : Infinity)) return;
+  if (!h) return;
   if (G.phase === 'hide') return hideAt(toLat(h.point.z), toLon(h.point.x));
   const k = cellOf(toLat(h.point.z), toLon(h.point.x)); if (k < 0) return;
   if (G.phase === 'off') selectSeg(R.segOf[k], { fly: false });
@@ -1709,6 +1711,7 @@ cv.addEventListener('dblclick', (e) => { const h = pick(e); if (h && G.phase !==
 TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, line: makeLine, drape: drapeRuns,
   dispose: disposeGroup, label, esc, nf, wake,
   onFrame: (f, minute) => {
+    if (G.phase !== 'off') return;
     TL_COV = f?.cov || [];
     if (!f) {
       let i = 0; R.steps.forEach((s, k) => { if (s.minute <= minute) i = k; });
@@ -1722,6 +1725,7 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, line: make
   },
   onStopCamera: () => { if (CINE.on) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
   onCamera: (on, actorId) => toParent({ type: 'fpp', on, actorId }),
+  onActor: (id) => toParent({ type: 'actor', id }),
   getFrame: async (t) => {
     const f = await getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}`, true);
     return f?.schema === 'rescue-frame/1' && Number.isFinite(f.minute) ? f : null;
@@ -1766,6 +1770,7 @@ function gamePanel(html) { const p = $('game'); p.hidden = false; p.innerHTML = 
 function lockTimeline(on) { document.body.classList.toggle('searching', on && G.phase === 'search'); }
 function startGame() {
   if (G.phase !== 'off') return endGame();
+  TL3D?.setVisible(false);
   const base = Q.has('blindStep') ? +Q.get('blindStep') : R.value?.beforePing ?? STEP;
   if (STEP !== base) setStep(base);
   Object.assign(G, { phase: 'hide', base, target: null, salt: null, key: null, commit: null, patrols: [], attempts: new Map(), searched: new Set(), found: false });
@@ -1871,6 +1876,7 @@ async function finish(found) {
   flyTo(v3(G.target[0], G.target[1]), 3);
 }
 function endGame() {
+  TL3D?.setVisible(true);
   G.phase = 'off'; G.auto = false; disposeGroup(dyn.game);
   $('game').hidden = true; $('btn-game').textContent = 'Test na ślepo';
   document.body.classList.remove('hiding', 'searching'); lockTimeline(false);
@@ -1924,6 +1930,8 @@ addEventListener('message', (e) => {
     if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
     else if (m.type === 'time' && Number.isFinite(m.minute)) TL3D?.setTime(m.minute, m.t, true, m.frame);
     else if (m.type === 'fpp') { if (m.on === false) TL3D?.stopFpp(); else TL3D?.startFpp(m.actorId); }
+    else if (m.type === 'actor' && typeof m.id === 'string') TL3D?.selectActor(m.id, false);
+    else if (m.type === 'highlight' && typeof m.actor === 'string') TL3D?.selectActor(m.actor, false);
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
     else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
     else if (m.type === 'evidence' && (typeof m.id === 'string' || Number.isInteger(m.id))) setEvidence(m.id, m.on !== false);
