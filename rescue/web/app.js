@@ -1085,7 +1085,7 @@
     let text;
     switch (h.type) {
       case 'segmentSearched': text = `Przeszukano ${segTxt || '?'}${h.pod != null ? ', POD ' + pct(h.pod) : ''}${h.resource ? ' (' + h.resource + ')' : ''}, nic`; break;
-      case 'clue': text = `Trop${segTxt ? ' w ' + segTxt : ''}: ${h.description || '?'}${h.strength ? ' (' + (STRENGTH[h.strength] || h.strength) + ')' : ''}`; break;
+      case 'clue': text = `${h.clueKind === 'sighting' ? 'Świadek' + (h.seenAt ? ' ' + h.seenAt : '') : 'Trop'}${segTxt ? ' w ' + segTxt : ''}: ${h.description || '?'}${h.strength ? ' (' + (STRENGTH[h.strength] || h.strength) + ')' : ''}`; break;
       case 'weatherObs': text = 'Pogoda: ' + [h.visibilityM != null ? `widoczność ${h.visibilityM} m` : '', h.windMs != null ? `wiatr ${h.windMs} m/s` : '', h.precip ? PRECIP[h.precip] || h.precip : ''].filter(Boolean).join(', '); break;
       case 'resourceStatus': text = `${h.resource || 'Zasób'}: ${h.available === false ? 'niedostępny' : h.available ? 'dostępny' : '?'}${h.reason ? ' - ' + h.reason : ''}`; break;
       default: text = h.description || h.type || 'wskazówka';

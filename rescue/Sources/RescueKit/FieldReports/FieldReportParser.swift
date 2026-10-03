@@ -311,9 +311,6 @@ public struct FieldReportParser: Sendable {
         h.clueKind = "sighting"
         h.description = h.description ?? text
         h.strength = h.strength ?? "medium"
-        if h.segmentId == nil {   // nearest segment seed, for views that group clues by segment
-            h.segmentId = segments.min { Geo.meters(Coord($0.seed), Coord(lat, lon)) < Geo.meters(Coord($1.seed), Coord(lat, lon)) }?.id
-        }
         if let i { out[i] = h } else { out.append(h) }
         return out
     }
