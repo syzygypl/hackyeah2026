@@ -1062,6 +1062,7 @@ actor Exercises {
                                     "status": active ? (s.minute < j!.arrive ? "w drodze" : "szuka") : (t["available"] as? Bool == true ? "wolny" : "niedostępny"),
                                     "segmentId": active ? j!.seg : NSNull(), "busyUntil": active ? s.clock(j!.end) : NSNull()]
             o["eta"] = ((t["options"] as? [[String: Any]]) ?? []).reduce(into: [String: Int]()) { $0[$1["segmentId"] as? String ?? ""] = Int((($1["travelMin"] as? Double ?? 0) + ($1["sweepMin"] as? Double ?? 0)).rounded()) }
+            o["travel"] = ((t["options"] as? [[String: Any]]) ?? []).reduce(into: [String: Int]()) { $0[$1["segmentId"] as? String ?? ""] = Int(($1["travelMin"] as? Double ?? 0).rounded()) }   // dojście only (eta = dojście + przeszukanie)
             return o
         }
         let over = s.found || s.minute >= s.end

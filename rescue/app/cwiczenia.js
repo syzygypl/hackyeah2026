@@ -17,7 +17,14 @@ const pct = (x) => (x > 0 && x < 0.01 ? (x * 100).toFixed(1) : Math.round(x * 10
 const short = (n) => String(n || "").split(" (")[0];
 function show(id) { for (const s of ["scrList", "scrBrief", "scrPlay", "scrScore"]) $(s).hidden = s !== id; window.scrollTo(0, 0); }
 
-const G = { st: null, team: null, busy: false, frameReady: false, runUrl: "", steps: 0 };
+const G = { st: null, team: null, seg: null, sent: null, pending: null, busy: false, frameReady: false, runUrl: "", steps: 0 };
+// team ids (gopr-a, dog...) as the trainee sees them: the short team name (feed, messages, decisions come from the server with ids)
+function tName(id) { const t = G.st && G.st.teams.find((x) => x.id === id); return t ? short(t.name) : id; }
+function named(text) {
+  let out = String(text ?? "");
+  for (const t of (G.st && G.st.teams) || []) out = out.replace(new RegExp(`(^|[^\\w-])${t.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w-])`, "g"), `$1${short(t.name)}`);
+  return out;
+}
 
 // ---------- 1. list
 async function loadList() {
@@ -35,7 +42,8 @@ $("exList").onclick = (e) => { const b = e.target.closest("button[data-id]"); if
 
 // ---------- 2. briefing (the session starts here: the clock waits until the first decision or "Czekaj")
 async function start(id) {
-  $("exList").querySelectorAll("button").forEach((b) => (b.disabled = true));
+  $("exList").querySelectorAll("button").forEach((b) => { b.disabled = true; if (b.dataset.id === id) b.textContent = "Przygotowuję odprawę..."; });
+  G.team = null; G.seg = null; G.sent = null; G.pending = null; G.shownEnd = false; msg("");
   try { G.st = await api("/api/exercise/start", { id }); } catch (e) { alert("Nie udało się rozpocząć: " + e.message); loadList(); return; }
   const s = G.st;
   try { history.replaceState(null, "", "?ex=" + encodeURIComponent(id)); } catch (e) {}
@@ -52,14 +60,15 @@ $("briefGo").onclick = () => { show("scrPlay"); G.frameReady = false; G.runUrl =
 
 function feedHTML(feed, newestFirst) {
   const xs = newestFirst ? [...feed].reverse() : feed;
-  return xs.map((f) => `<li class="${esc(f.kind)}"><span class="t">${esc(f.clock)}</span><span>${esc(f.title)}</span></li>`).join("") || `<li class="mute">brak</li>`;
+  return xs.map((f) => `<li class="${esc(f.kind)}"><span class="t">${esc(f.clock)}</span><span>${esc(named(f.title))}</span></li>`).join("") || `<li class="mute">brak</li>`;
 }
 function teamHTML(t, pick) {
   const st = t.status.replace(" ", "-");
   const free = pick && t.status === "wolny";
   const extra = t.segmentId ? `${esc(t.segmentId)} do ${esc(t.busyUntil)}` : t.status === "niedostępny" ? esc(t.reason) : "";
-  return `<li class="${free ? "free" : ""}${G.team === t.id ? " sel" : ""}" data-team="${esc(t.id)}"><span class="st ${esc(st)}">${esc(t.status)}</span>
-    <span class="nm">${esc(short(t.name))}<div class="why">${extra}</div></span></li>`;
+  const sel = pick && G.team === t.id, sent = pick && !sel && G.sent && G.sent.team === t.id && t.segmentId === G.sent.seg;
+  return `<li class="${free ? "free" : ""}${sel ? " sel" : ""}${sent ? " sent" : ""}" data-team="${esc(t.id)}"${sel ? ' aria-selected="true"' : ""}><span class="st ${esc(st)}">${esc(t.status)}</span>
+    <span class="nm">${esc(short(t.name))}<div class="why">${extra}</div></span>${sel ? '<span class="tag">wybrany</span>' : sent ? '<span class="tag">wysłany</span>' : ""}</li>`;
 }
 
 // ---------- 3. play
@@ -77,6 +86,7 @@ function syncMap() {
   const s = G.st; if (!s || $("scrPlay").hidden) return;
   if (s.run === G.runUrl) return;
   G.runUrl = s.run;
+  $("mapBusy").hidden = false;
   if (G.frameReady) { G.frameReady = false; post2({ type: "run", url: s.run }); } else $("map").src = mapURL(s);
 }
 function post2(msg) { const w = $("map").contentWindow; if (w) w.postMessage({ source: "rescue-app", ...msg }, location.origin); }
@@ -87,8 +97,12 @@ addEventListener("message", (e) => {
     G.frameReady = true; G.steps = m.steps || 0;
     if (G.steps) post({ type: "step", i: G.steps - 1 });   // the moment of now: the last thing that happened
     post({ type: "insets", insets: insets() });
+    $("mapBusy").hidden = true;
+    if (G.seg) post({ type: "select", segmentId: G.seg });   // the map reloads after every change: keep the chosen / dispatched sector outlined
   }
-  if (m.type === "select" && typeof m.segmentId === "string") pickSegment(m.segmentId);
+  if (m.type === "select" && typeof m.segmentId === "string") pickSegment(m.segmentId, true);
+  // the map toggles a sector off on a second click: with a team chosen that click means "send it there"
+  if (m.type === "select" && m.segmentId === null) { if (G.team && G.seg) pickSegment(G.seg); else { G.seg = null; renderPlay(); } }
 });
 addEventListener("resize", () => post({ type: "insets", insets: insets() }));
 
@@ -103,39 +117,55 @@ function renderPlay() {
   const sel = s.teams.find((t) => t.id === G.team);
   const where = {}; for (const t of s.teams) if (t.segmentId) (where[t.segmentId] = where[t.segmentId] || []).push(short(t.name).split(" ").slice(-2).join(" "));
   $("pSegs").innerHTML = s.segments.map((g) => {
-    const eta = sel ? sel.eta[g.id] : null, no = sel && eta == null;
-    return `<li class="${no ? "no" : ""}" data-seg="${esc(g.id)}" title="${esc(g.name)}"><span class="rk">${g.rank}</span><span class="w">${pct(g.weight)}</span>
+    const eta = sel ? sel.eta[g.id] : null, no = sel && eta == null, tr = sel && sel.travel ? sel.travel[g.id] : null;
+    const cls = [no ? "no" : "", G.seg === g.id ? "sel" : "", G.pending && G.pending.seg === g.id ? "pending" : ""].filter(Boolean).join(" ");
+    const etaTxt = eta == null ? "nie dojdzie" : tr != null ? `dojście ${tr} min` : eta + " min";
+    const etaTip = eta == null ? "" : tr != null ? `dojście ${tr} min + przeszukanie ${eta - tr} min` : `dojście i przeszukanie ${eta} min`;
+    return `<li class="${cls}" data-seg="${esc(g.id)}" title="${esc(g.name)}${etaTip ? " - " + etaTip : ""}"><span class="rk">${g.rank}</span><span class="w">${pct(g.weight)}</span>
       <span class="nm"><b>${esc(g.id)}</b> ${esc(g.name)}</span>${where[g.id] ? `<span class="who">${esc(where[g.id].join(", "))}</span>` : ""}
-      ${sel ? `<span class="eta">${eta == null ? "nie dojdzie" : eta + " min"}</span>` : ""}</li>`;
+      ${sel ? `<span class="eta">${etaTxt}</span>` : ""}</li>`;
   }).join("");
   $("pFeed").innerHTML = feedHTML(s.feed, true);
   for (const b of ["pWait", "pWait60"]) $(b).disabled = s.over || G.busy;
   $("pEnd").textContent = s.over ? "Zobacz ocenę" : "Zakończ i oceń";
   syncMap();
-  if (s.over && !G.shownEnd) { G.shownEnd = true; msg(s.found ? "ZNALEZIONO. Ćwiczenie zakończone - zobacz ocenę." : "Koniec czasu na decyzje - zobacz ocenę.", !s.found); setTimeout(showScore, 1800); }
+  if (s.over && !G.shownEnd) {
+    G.shownEnd = true;
+    const last = $("pMsg").hidden || /^Czekam/.test($("pMsg").textContent) ? "" : $("pMsg").textContent + " · ";
+    msg(last + (s.found ? "ZNALEZIONO. Ćwiczenie zakończone - zobacz ocenę." : "Koniec czasu na decyzje - zobacz ocenę."), !s.found);
+    setTimeout(showScore, s.found ? 1800 : 3500);
+  }
 }
-function msg(t, bad) { const m = $("pMsg"); m.hidden = !t; m.textContent = t || ""; m.classList.toggle("bad", !!bad); }
+function msg(t, bad, ok) { const m = $("pMsg"); m.hidden = !t; m.textContent = named(t || ""); m.classList.toggle("bad", !!bad); m.classList.toggle("ok", !bad && !!ok); }
 
 $("pTeams").onclick = (e) => {
   const li = e.target.closest("li[data-team]"); if (!li) return;
   const t = G.st.teams.find((x) => x.id === li.dataset.team);
   if (!t || t.status !== "wolny") { msg(t ? `${short(t.name)}: ${t.status === "niedostępny" ? t.reason : t.status + (t.segmentId ? " " + t.segmentId : "")}` : ""); return; }
   G.team = G.team === t.id ? null : t.id;
-  msg(G.team ? `${short(t.name)}: kliknij sektor na liście albo na mapie` : "");
+  msg(G.team ? `Wybrany: ${short(t.name)}. Teraz kliknij sektor na liście albo na mapie.` : "");
   renderPlay();
 };
 $("pSegs").onclick = (e) => { const li = e.target.closest("li[data-seg]"); if (li) pickSegment(li.dataset.seg); };
-async function pickSegment(seg) {
-  if (!G.team) { post({ type: "select", segmentId: seg }); msg(`Sektor ${seg}: najpierw wybierz wolny zespół`); return; }
-  if (G.busy || G.st.over) return;
-  G.busy = true;
+// fromMap: the 2D view already outlined the sector itself (user click), so it is not echoed back
+async function pickSegment(seg, fromMap) {
+  if (!G.st || G.busy) return;
+  G.seg = seg;
+  if (!fromMap) post({ type: "select", segmentId: seg });
+  if (!G.team) { msg(`Sektor ${seg} zaznaczony. Wybierz wolny zespół, potem kliknij sektor jeszcze raz, żeby go wysłać.`); renderPlay(); return; }
+  if (G.st.over) return;
+  const t = G.st.teams.find((x) => x.id === G.team);
+  if (t && t.eta && t.eta[seg] == null) { msg(`${short(t.name)} nie dojdzie do sektora ${seg} w tych warunkach. Wybierz inny sektor.`, true); renderPlay(); return; }
+  const team = G.team;
+  G.busy = true; G.pending = { team, seg };
+  msg(`Wysyłam: ${tName(team)} -> sektor ${seg}...`); renderPlay();
   try {
-    const team = G.team;
     G.st = await api(`/api/exercise/${G.st.sid}/act`, { team, segmentId: seg });
     const d = G.st.decision || {};
-    G.team = null; msg(`${team} → ${seg}: dojście ${d.etaMin} min, przeszukanie ${d.sweepMin} min`);
+    G.team = null; G.sent = { team, seg };
+    msg(`${tName(team)} -> sektor ${seg}: wysłany (dojście ${d.etaMin} min, przeszukanie ${d.sweepMin} min)`, false, true);
   } catch (e) { msg(e.message, true); }
-  G.busy = false; renderPlay();
+  G.busy = false; G.pending = null; renderPlay();
 }
 async function wait(minutes) {
   if (G.busy || G.st.over) return;
@@ -154,7 +184,7 @@ $("pEnd").onclick = () => { if (G.st.over || confirm("Zakończyć teraz? Ćwicze
 // ---------- 4. score
 const PARTS = { found: ["Znalezienie i czas", 50], coverage: ["Pokrycie mapy", 15], decisions: ["Jakość decyzji", 25], safety: ["Bezpieczeństwo", 10] };
 const POL = { engine: "Plan silnika", expert: "Prosty ekspert (ostatni ślad)", naive: "Naiwnie (najbliżej IPP)" };
-function resLine(x) { return x.found ? `znaleziono ${esc(x.foundAt)} (po ${x.timeToFind} min)` : `nie znaleziono, pokrycie ${Math.round((x.coverage || 0) * 100)}%`; }
+function resLine(x) { return x.found ? `znaleziono ${esc(x.foundAt)} (po ${x.timeToFind} min)` : `nie znaleziono, pokrycie mapy ${Math.round((x.coverage || 0) * 100)}%`; }
 async function showScore() {
   show("scrScore");
   const s = G.st;
@@ -167,9 +197,9 @@ async function showScore() {
   f.textContent = sc.found ? `ZNALEZIONO o ${sc.foundAt} (${esc(short((s.teams.find((t) => t.id === sc.foundBy) || {}).name || sc.foundBy))}), ${sc.timeToFind} min od przejęcia` : `Nie znaleziono do ${sc.clock}`;
   $("sParts").innerHTML = Object.entries(PARTS).map(([k, [l, max]]) => { const v = (sc.parts || {})[k] || 0;
     return `<div class="part"><span>${l}</span><span class="bar"><i style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%"></i></span><span class="n">${v}/${max}</span></div>`; }).join("") +
-    `<p class="mute small">Przeszukano ${sc.areaSearchedPct}% obszaru, ${sc.searches} przeszukań, ${sc.unsafeDecisions} decyzji z uwagą bezpieczeństwa.</p>`;
+    `<p class="mute small">Pokrycie mapy ${Math.round((sc.coverage || 0) * 100)}% (waga przeszukanych miejsc), przeszukano ${sc.areaSearchedPct}% powierzchni, ${sc.searches} przeszukań, ${sc.unsafeDecisions} decyzji z uwagą bezpieczeństwa.</p>`;
   $("sDec").innerHTML = (sc.decisions || []).map((d) => `<li><span class="t">${esc(d.t)}</span><span class="verdict ${esc(d.verdict)}">${esc(d.verdict)}</span>
-    <span><b>${d.action === "wait" ? "Czekaj" : `${esc(d.team)} → ${esc(d.segment)}`}</b> ${d.action === "wait" ? "" : esc(d.segmentName)}<div class="why">${esc(d.why)}</div></span></li>`).join("") ||
+    <span><b>${d.action === "wait" ? "Czekaj" : `${esc(tName(d.team))} → ${esc(d.segment)}`}</b> ${d.action === "wait" ? "" : esc(d.segmentName)}<div class="why">${esc(named(d.why))}</div></span></li>`).join("") ||
     `<li class="mute">Brak decyzji: żaden zespół nie został wysłany.</li>`;
   const t = sc.truth;
   $("sTruth").innerHTML = t ? `Sektor <b>${esc(t.segmentId)}</b> (teraz #${t.rankNow ?? "?"} na mapie, waga ${t.weightNow != null ? pct(t.weightNow) : "?"}), punkt ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}.` : "";

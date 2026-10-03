@@ -196,7 +196,7 @@
       if (j < 0 && events[k] && events[k].provider === s.source && !used.has(k)) j = k;
       if (j >= 0) { used.add(j); ev = events[j]; }
       let segIds = ev && ev.segments ? ev.segments.slice() : [];
-      if (!segIds.length && s.kind === 'searched') segIds = (s.label.match(/\bS\d+\b/g) || []).filter((id) => segs.has(id));
+      if (!segIds.length && s.kind === 'searched') segIds = (s.label.match(/\b[A-Z]{1,3}\d+\b/g) || []).filter((id) => segs.has(id));
       return { k, id: s.hintId, kind: s.kind, label: s.label, source: s.source, t: s.t, minute: s.minute, ev, segIds, pod: ev && ev.pod };
     });
 
