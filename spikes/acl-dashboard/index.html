@@ -354,7 +354,7 @@ $("btnCsv").onclick = () => {
   download(`acl-audit-${stamp()}.csv`, [cols.join(","), ...state.audit.map(e => cols.map(c => cell(e[c])).join(","))].join("\n"), "text/csv");
 };
 $("btnReport").onclick = async () => { const r = await fetch("/api/report"); if (r.ok) download(`acl-security-report-${stamp()}.md`, await r.text(), "text/markdown"); };
-$("btnRerun").onclick = async () => { $("btnRerun").textContent = "Running…"; await fetch("/api/rerun"); $("btnRerun").textContent = "Re-run demo"; state.first = true; state.seen.clear(); load(); };
+$("btnRerun").onclick = async () => { $("btnRerun").textContent = "Running…"; await fetch("/api/rerun", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"}); $("btnRerun").textContent = "Re-run demo"; state.first = true; state.seen.clear(); load(); };
 
 // ---------- live console ----------
 const PRESETS = [

@@ -73,14 +73,19 @@ class Handler(SimpleHTTPRequestHandler):
             if body is not None:
                 return self._send(body, "text/markdown", "live")
             return self._send(read(os.path.join(OUT, "security_report.md")), "text/markdown", "demo")
-        if p == "/api/rerun":
-            subprocess.run([sys.executable, "demo.py"], cwd=SPIKE, capture_output=True)
-            return self._send(b'{"ok": true}', "application/json", "demo")
         return super().do_GET()
 
     def do_POST(self):
         p = self.path.split("?")[0]
+        # CSRF guard: a page on another origin can only send "simple" requests (text/plain, no custom headers).
+        # Requiring JSON and a same-origin Origin header makes the browser preflight them, and we never answer CORS.
+        origin = self.headers.get("Origin")
+        if not (self.headers.get("Content-Type", "").startswith("application/json")) or (origin and origin != f"http://{self.headers.get('Host')}"):
+            return self._json(403, {"error": "cross-origin or non-JSON request refused"})
         body = self.rfile.read(int(self.headers.get("Content-Length", 0)) or 0)
+        if p == "/api/rerun":
+            subprocess.run([sys.executable, "demo.py"], cwd=SPIKE, capture_output=True)
+            return self._json(200, {"ok": True})
         if p in ("/api/prompt", "/api/tool"):
             req = urllib.request.Request(GATEWAY + ("/v1/prompt" if p == "/api/prompt" else "/v1/tool"), data=body,
                                          headers={"Content-Type": "application/json"}, method="POST")
