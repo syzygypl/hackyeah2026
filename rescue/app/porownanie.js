@@ -29,28 +29,34 @@
     return { j, t };
   }
 
+  // default: the two runs precomputed with this exact witness (porownanie-data/), so a visit costs no engine run; ?live=1 ("Przelicz
+  // na żywo") runs both through POST /api/run now, falling back to the saved runs if the server can't
   async function load() {
-    let A, B, live = true;
-    try {
-      const [scen, terr] = await Promise.all([getJSON("/scenarios/" + SC + ".json"), getJSON("/scenarios/" + SC + "-terrain.json")]);
-      G.scen = scen;
-      const base = Object.assign({}, scen, { terrain: terr });
-      base.events = scen.events.filter((e) => e.provider !== "Found" && e.provider !== "RatunekPing" && e.at <= CUT);
-      const withW = Object.assign({}, base, { events: base.events.concat([WITNESS]) });
-      [A, B] = await Promise.all([runEngine(base), runEngine(withW)]);
-    } catch (e) {
-      console.warn("live run failed, precomputed fallback:", e.message);
-      live = false;
-      const [a, b] = await Promise.all(["bez", "z"].map((k) => fetch("porownanie-data/" + SC + "-" + k + ".json").then((r) => r.text())));
+    let A, B, live = Q.get("live") === "1";
+    const saved = async () => {
+      const [a, b] = await Promise.all(["bez", "z"].map((k) => fetch("porownanie-data/" + SC + "-" + k + ".json").then((r) => { if (!r.ok) throw new Error("porownanie-data " + r.status); return r.text(); })));
       A = { t: a, j: JSON.parse(a) }; B = { t: b, j: JSON.parse(b) };
       if (!G.scen) try { G.scen = await getJSON("/scenarios/" + SC + ".json"); } catch (e2) { G.scen = null; }
+    };
+    if (live) {
+      try {
+        const [scen, terr] = await Promise.all([getJSON("/scenarios/" + SC + ".json"), getJSON("/scenarios/" + SC + "-terrain.json")]);
+        G.scen = scen;
+        const base = Object.assign({}, scen, { terrain: terr });
+        base.events = scen.events.filter((e) => e.provider !== "Found" && e.provider !== "RatunekPing" && e.at <= CUT);
+        const withW = Object.assign({}, base, { events: base.events.concat([WITNESS]) });
+        [A, B] = await Promise.all([runEngine(base), runEngine(withW)]);
+      } catch (e) { console.warn("live run failed, saved runs:", e.message); live = false; G.liveFailed = true; }
     }
+    if (!live) await saved();
     G.A = A.j; G.B = B.j;
     G.bBefore = G.B.steps.findIndex((s) => s.source === "Clue") - 1;
     G.bAfter = G.B.steps.length - 1;
     $("source").textContent = live
       ? "Obie mapy policzone przed chwilą tym samym silnikiem (POST /api/run). Wspólna akcja na żywo nie jest zmieniana."
-      : "Serwer nie odpowiedział: pokazuję mapy obliczone wcześniej tym samym silnikiem (porownanie-data/).";
+      : G.liveFailed ? "Serwer nie odpowiedział: pokazuję mapy obliczone wcześniej tym samym silnikiem (porownanie-data/)."
+      : "Mapy obliczone wcześniej tym samym silnikiem dla tej relacji (porownanie-data/). Wspólna akcja na żywo nie jest zmieniana.";
+    $("relive").hidden = live;
     // the 2D view takes a parent-supplied run from sessionStorage (?runInline=1, same tab = same storage, no polling);
     // one key for both frames, so B is parked only after A has read it (A's "ready")
     G.textB = B.t;
@@ -62,7 +68,8 @@
   function mapURL(step) {
     const po = encodeURIComponent(location.origin);
     return `../web/index.html?embed=bare&theme=light&parentOrigin=${po}&sc=${SC}&runInline=1` +
-      `&scenario=${encodeURIComponent("/scenarios/" + SC + ".json")}&live=${encodeURIComponent("data:application/json,[]")}&step=${step}&insets=0,0,0,0`;
+      `&scenario=${encodeURIComponent("/scenarios/" + SC + ".json")}&live=${encodeURIComponent("data:application/json,[]")}&step=${step}&insets=0,0,0,0` +
+      (NARROW() ? "&legend=compact" : "");   // phone: the 2D view's own compact legend (web/ d286009)
   }
   function post(frame, msg) { const w = $(frame).contentWindow; if (w) w.postMessage({ source: "rescue-app", ...msg }, location.origin); }
   addEventListener("message", (e) => {
@@ -70,7 +77,6 @@
     const k = e.source === $("mapA").contentWindow ? "A" : e.source === $("mapB").contentWindow ? "B" : null;
     if (!k) return;
     G.ready[k] = true; $("busy" + k).hidden = true;
-    if (NARROW()) compactFrame($("map" + k));
     if (k === "A" && !$("mapB").src) { sessionStorage.setItem("rescue2d-run", G.textB); $("mapB").src = mapURL(G.bBefore); }
     if (G.ready.A && G.ready.B && !G.started) {
       G.started = true;
@@ -167,18 +173,8 @@
     render(true);
   }
   const NARROW = () => matchMedia("(max-width:860px)").matches;
-  // phone: the 2D view's legend takes a third of a 330 px map; same-origin frame, so shrink it from here (web/ stays as is)
-  function compactFrame(f) {
-    try {
-      const d = f.contentDocument; if (!d || d.getElementById("porCompact")) return;
-      const st = d.createElement("style"); st.id = "porCompact";
-      st.textContent = "#legend{padding:4px 7px!important;font-size:10px!important}#legend .lg-title{font-size:10.5px;margin-bottom:1px}" +
-        "#legend .lg-ramp,#legend .lg-stops{width:150px!important}#legend .lg-ramp{height:6px}#legend .lg-stops{font-size:9px}#legend .lg-keys{gap:8px;margin-top:2px}" +
-        ".maplibregl-ctrl-scale{display:none}";
-      d.head.appendChild(st);
-    } catch (e) { /* not reachable: leave the frame as is */ }
-  }
   // phone: the user taps at the top, the change happens in map B below - bring it into view first
+  $("relive").onclick = () => { const q = new URLSearchParams(location.search); q.set("live", "1"); location.search = q; };
   $("toggle").onclick = () => { toggle(); if (NARROW()) $("colB").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start" }); };
   load().catch((e) => { $("status").textContent = "Nie udało się wczytać: " + e.message; console.error(e); });
 })();

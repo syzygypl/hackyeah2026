@@ -57,6 +57,7 @@ ol.top3,ul.teams{list-style:none;margin:0;padding:0;position:relative}
 .why ul{margin:0;padding-left:20px}
 .why li{margin:4px 0}
 .dim{opacity:.55}
+.src #relive{margin-left:6px;min-height:36px;font-size:var(--rl-fs-s)}
 .foot{margin-top:24px;border-top:1px solid var(--rl-line);padding-top:10px;color:var(--rl-mute);font-size:var(--rl-fs-s)}
 .foot p{margin:4px 0}
 @media (max-width:860px){.cols{grid-template-columns:1fr}.witness{flex-direction:column;align-items:stretch}.wbtn{width:auto}.teams .tn{min-width:0}
