@@ -422,8 +422,10 @@ class ControlLayer:
         return {"decision": ev["decision_final"], "output": output, "event": ev}
 
     # -- entry point 2: prompt to / response from an LLM (app -> model)
-    def check_prompt(self, session, text, direction="input"):
-        """direction: input (user prompt), output (model response), document (pasted/forwarded content).
+    def check_prompt(self, session, text, direction="input", source=None):
+        """direction: input (user prompt), output (model response / tool output), document (pasted/forwarded content).
+        Taint: input and document taint the session here (label = source or '<direction> prompt'); for output the hit
+        is reported and the caller sets the taint with its own label (e.g. the tool name), unless source is given.
         Order: collect every hit, redact first, run signatures + semantic on the redacted text, then decide once.
         An injection hit always taints the session, even when PII/secrets would also block, so it cannot hide."""
         t0 = time.perf_counter_ns()
@@ -479,7 +481,8 @@ class ControlLayer:
                 if fail == "disagree" and not hit:
                     hit, guard, why = (True, "guard_disagreement", f"guards disagreed ({self._votes(ev)})")
                 if hit:
-                    session.tainted_by = session.tainted_by or f"{direction} prompt"
+                    if direction != "output" or source:
+                        session.tainted_by = session.tainted_by or source or f"{direction} prompt"
                     if direction == "document" or pi.get("prompt_on_detect", "block") == "taint":
                         ev["guardrails"] += [guard, "taint"]
                         ev["reasons"].append(f"{why}; session tainted: later high-risk calls need a human")
