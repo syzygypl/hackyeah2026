@@ -1,0 +1,44 @@
+/* Actor drawer (dziennik zespołu / sprzętu + źródła danych). Shared by app, Centrum and Zasoby; only --rl-* tokens. */
+#alDrawer{position:fixed;top:12px;right:12px;bottom:12px;width:min(420px,calc(100vw - 24px));z-index:60;display:flex;flex-direction:column;
+  background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);
+  font:var(--rl-fs)/1.4 var(--rl-font);transform:translateX(calc(100% + 24px));transition:transform .18s ease;overflow:hidden}
+#alDrawer.open{transform:none}
+#alDrawer .al-h{padding:12px 14px 10px;border-bottom:1px solid var(--rl-line);display:flex;gap:10px;align-items:flex-start}
+#alDrawer .al-h h2{margin:0;font-size:var(--rl-fs-l);line-height:1.2;color:var(--rl-ink);text-transform:none;letter-spacing:0;display:block}
+#alDrawer .al-sub{font-size:var(--rl-fs-s);color:var(--rl-ink-2)}
+#alDrawer .al-x{margin-left:auto;background:var(--rl-card);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-s);color:var(--rl-ink);font:inherit;cursor:pointer;padding:2px 9px}
+#alDrawer .al-body{overflow:auto;padding:10px 14px 14px;flex:1}
+#alDrawer h3{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rl-mute);margin:14px 0 6px}
+#alDrawer .lvl{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;padding:1px 7px;border-radius:6px;border:1px solid var(--rl-line-strong);color:var(--rl-ink-2)}
+#alDrawer .lvl.red{background:var(--rl-danger);border-color:var(--rl-danger);color:var(--rl-on-danger)}
+#alDrawer .lvl.amber{background:var(--rl-warn);border-color:var(--rl-warn);color:var(--rl-ink)}
+#alDrawer .lvl.ok{border-color:var(--rl-ok);color:var(--rl-ok)}
+#alDrawer .warn{font-size:var(--rl-fs-s);padding:4px 8px;border-radius:var(--rl-radius-s);margin:4px 0;border-left:4px solid var(--rl-warn);background:var(--rl-panel-2)}
+#alDrawer .warn.red{border-left-color:var(--rl-danger);color:var(--rl-danger);font-weight:600}
+#alDrawer .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#alDrawer .kv div{background:var(--rl-card);border:1px solid var(--rl-line);border-radius:var(--rl-radius-s);padding:4px 7px}
+#alDrawer .kv b{display:block;font:600 var(--rl-fs-l)/1.1 var(--rl-font-num);font-variant-numeric:tabular-nums}
+#alDrawer .kv span{font-size:var(--rl-fs-xs);color:var(--rl-mute)}
+#alDrawer .feed{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rl-line);font-size:var(--rl-fs-s)}
+#alDrawer .dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--rl-mute);opacity:.45}
+#alDrawer .dot.live{background:var(--rl-ok);opacity:1}
+#alDrawer .dot.stale{background:var(--rl-warn);opacity:1}
+#alDrawer .feed .fl{flex:1;min-width:0}
+#alDrawer .feed .fm{font-size:var(--rl-fs-xs);color:var(--rl-mute)}
+#alDrawer .feed button,#alDrawer .chips button{font:inherit;font-size:var(--rl-fs-xs);background:var(--rl-card);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-s);color:var(--rl-accent);cursor:pointer;padding:2px 7px;white-space:nowrap}
+#alDrawer .chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+#alDrawer .chips button{color:var(--rl-ink-2)}
+#alDrawer .chips button[aria-pressed=true]{background:var(--rl-accent);border-color:var(--rl-accent);color:var(--rl-on-accent)}
+#alDrawer .chips button .n{opacity:.7;margin-left:3px}
+#alDrawer .ent{display:grid;grid-template-columns:44px 1fr;gap:2px 8px;padding:5px 0;border-bottom:1px solid var(--rl-line);font-size:var(--rl-fs-s)}
+#alDrawer .ent .t{font-family:var(--rl-mono);font-variant-numeric:tabular-nums;color:var(--rl-ink-2)}
+#alDrawer .ent .ty{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--rl-mute);margin-right:4px}
+#alDrawer .ent .ty.inventory{color:var(--rl-accent)}
+#alDrawer .ent .ty.search{color:var(--rl-ok)}
+#alDrawer .ent .ty.clue{color:var(--rl-danger)}
+#alDrawer .ent .d{grid-column:2;color:var(--rl-mute);font-size:var(--rl-fs-xs)}
+#alDrawer .ent .ack{color:var(--rl-ok);font-size:var(--rl-fs-xs)}
+#alDrawer .chart{background:var(--rl-card);border:1px solid var(--rl-line);border-radius:var(--rl-radius-s);padding:6px}
+#alDrawer .chart svg{width:100%;height:90px;display:block}
+#alDrawer .note{font-size:var(--rl-fs-xs);color:var(--rl-mute);margin-top:12px}
+#alDrawer .help{color:var(--rl-mute);font-size:var(--rl-fs-s)}

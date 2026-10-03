@@ -1092,6 +1092,7 @@
       if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
       else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
       else if (m.type === 'time' && Number.isFinite(m.minute)) tlTime(m.minute);
+      else if (m.type === 'highlight') highlightActor(m);   // actor drawer (CONTRACT "Zasoby i dziennik" 6)
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
       else if (m.type === 'run' && typeof m.url === 'string') reloadWith({ run: m.url }, ['runInline', 'sc', 'step']);
       else if (m.type === 'run' && m.run && typeof m.run === 'object' && typeof m.run.url === 'string' && !m.run.schema) reloadWith({ run: m.run.url }, ['runInline', 'sc', 'step']);
@@ -1104,6 +1105,36 @@
     } catch (err) { warn('embed message ignored: ' + err.message); }
   }
   window.addEventListener('message', onParentMessage);
+  // actor highlight: {type:'highlight', actor|null, sc, at} -> that actor's estimated track (GET /api/tracks/<sc>?at=, never truth),
+  // bold over the map; clicking its marker posts {type:'actor', id} back (the shell opens the actor drawer)
+  async function highlightActor(m) {
+    const map = S.view && S.view.map; if (!map) return;
+    const css = (v, d) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || d;
+    const empty = { type: 'FeatureCollection', features: [] };
+    if (!map.getSource('hl-actor')) {
+      map.addSource('hl-actor', { type: 'geojson', data: empty });
+      map.addLayer({ id: 'hl-actor-halo', type: 'line', source: 'hl-actor', filter: ['==', ['geometry-type'], 'LineString'], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': css('--rl-panel-solid', '#faf8f3'), 'line-width': 8, 'line-opacity': 0.85 } });
+      map.addLayer({ id: 'hl-actor-line', type: 'line', source: 'hl-actor', filter: ['==', ['geometry-type'], 'LineString'], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': css('--accent', '#1f4e79'), 'line-width': 4 } });
+      map.addLayer({ id: 'hl-actor-pt', type: 'circle', source: 'hl-actor', filter: ['==', ['geometry-type'], 'Point'], paint: { 'circle-radius': 9, 'circle-color': css('--accent', '#1f4e79'), 'circle-stroke-color': css('--rl-panel-solid', '#faf8f3'), 'circle-stroke-width': 3 } });
+      map.on('click', 'hl-actor-pt', (e) => { const id = e.features && e.features[0] && e.features[0].properties.id; if (id) toParent({ type: 'actor', id }); });
+      map.on('mouseenter', 'hl-actor-pt', () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', 'hl-actor-pt', () => { map.getCanvas().style.cursor = ''; });
+    }
+    if (!m.actor) { map.getSource('hl-actor').setData(empty); return; }
+    const sc = m.sc || Q.get('sc'); if (!sc) return;
+    try {
+      const r = await fetch(`/api/tracks/${encodeURIComponent(sc)}${m.at ? '?at=' + encodeURIComponent(m.at) : ''}`, { cache: 'no-store' });
+      if (!r.ok) { warn('highlight: no tracks for ' + sc); return; }
+      const a = ((await r.json()).actors || []).find((x) => x.id === m.actor);
+      if (!a || !a.path || !a.path.length) { map.getSource('hl-actor').setData(empty); return; }
+      const coords = a.path.map((p) => [p[1], p[0]]), last = coords[coords.length - 1];
+      map.getSource('hl-actor').setData({ type: 'FeatureCollection', features: [
+        { type: 'Feature', properties: { id: a.id }, geometry: { type: 'LineString', coordinates: coords } },
+        { type: 'Feature', properties: { id: a.id }, geometry: { type: 'Point', coordinates: last } }] });
+      const b = coords.reduce((bb, c) => [[Math.min(bb[0][0], c[0]), Math.min(bb[0][1], c[1])], [Math.max(bb[1][0], c[0]), Math.max(bb[1][1], c[1])]], [last, last]);
+      map.fitBounds(b, { padding: 80, maxZoom: 15, duration: 600 });
+    } catch (err) { warn('highlight: ' + err.message); }
+  }
   // insets (plumbing): in /app the shell's floating panels cover the frame's edges (?insets=T,R,B,L px, then {type:'insets'});
   // MapLibre pads its camera so the scenario sits in the free area, and the overlays read --inset-* (style.css)
   let INSETS = (Q.get('insets') || '').split(',').map(Number);

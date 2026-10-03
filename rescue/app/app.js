@@ -964,10 +964,10 @@ $("tl").addEventListener("click", (e) => {
 $("ticker").onclick = (e) => { const t = e.target.closest("[data-step]"); if (t && !liveOn()) setStep(+t.dataset.step); };
 function renderLiveFeed() {
   const el = $("liveFeed"); if (!el) return;
-  const K = { clue: "ślad", dispatch: "przydział", report: "meldunek", scenario: "zdarzenie" };
+  const K = { clue: "ślad", dispatch: "przydział", report: "meldunek", scenario: "zdarzenie", inventory: "sprzęt", fix: "pozycja" };
   // operator ACK (Mateusz): unconfirmed messages stand out, ✓ confirms one, "Potwierdź wszystkie" confirms the rest (POST /api/ack)
   const unacked = live.events.filter((e) => !e.acked && e.by !== "operator");
-  el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"><span class="lft">${esc(hhmm(e.t))}</span> <b>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`).join("")
+  el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"><span class="lft">${esc(hhmm(e.t))}</span> <b${e.team ? ` data-actor="${esc(e.team)}" title="Dziennik: ${esc(e.team)}"` : ""}>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`).join("")
     || `<div class="help">Brak zdarzeń na żywo. Dodaj ślad albo wyślij zespół - mapa przeliczy się od razu.</div>`;
   if ($("ackCount")) $("ackCount").textContent = unacked.length ? `Niepotwierdzone: ${unacked.length}` : "Wszystko potwierdzone";
   if ($("liveAckAll")) $("liveAckAll").disabled = !unacked.length || !liveNow();
@@ -1283,3 +1283,17 @@ subs.push((why) => {
   for (const id of ["events", "liveFeed"]) if ($(id)) mo.observe($(id), { childList: true });
   decorate();
 })();
+// ---------- Zasoby i dziennik (CONTRACT.md "Zasoby i dziennik" 6): actor drawer from the Na żywo feed and the 2D view, Zasoby link
+{
+  const zl = $("zasobyLink");
+  const upd = () => { if (zl) zl.href = "zasoby.html?sc=" + encodeURIComponent(store.scenario || ""); };
+  subs.push(upd); upd();
+  const atNow = () => { const T = tlDoc(); return T && store.minute != null ? tlClock(T, store.minute) : curClock(); };   // timeline minute when scrubbing
+  const highlight = (a) => postTo("2da", { type: "highlight", actor: a, sc: store.scenario, at: atNow() });
+  const showActor = (id) => import("./actorlog.js").then((m) => m.openActor(id, { sc: store.backend === "api" ? store.scenario : undefined, at: liveOn() ? undefined : atNow(),
+    onTrack: (a) => { if (store.mode !== "akcja" || store.view === "3d") toast("Ślad zespołu rysuje widok 2D (Akcja, 2D)"); highlight(a); }, onClose: () => highlight(null) }));
+  $("liveFeed") && $("liveFeed").addEventListener("click", (e) => { const b = e.target.closest("[data-actor]"); if (b) { showActor(b.dataset.actor); highlight(b.dataset.actor); } });
+  addEventListener("message", (e) => { if (e.origin === location.origin && e.data && e.data.source === "rescue2d" && e.data.type === "actor" && typeof e.data.id === "string") showActor(e.data.id); });
+  const qa = new URLSearchParams(location.search).get("actor");
+  if (qa) setTimeout(() => { showActor(qa); highlight(qa); }, 2500);
+}

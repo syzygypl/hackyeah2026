@@ -214,6 +214,11 @@ function renderTeams() {
   });
   $("teams").querySelectorAll("select").forEach((s) => s.onchange = () => doAssign(s.dataset.team, s.value || null));
   wireDrops($("teams"));
+  // actor drawer (CONTRACT "Zasoby i dziennik"): click a team name -> its log and data feeds
+  $("teams").querySelectorAll(".team .nm").forEach((n) => {
+    n.style.cursor = "pointer"; n.title = "Dziennik i źródła danych";
+    n.onclick = () => { const id = n.closest(".team").dataset.team, t = teams.find((x) => x.id === id); import("./actorlog.js").then((m) => m.openActor(id, { sc: (t && t.sc) || undefined })); };
+  });
 }
 function wireDrops(root) {
   root.querySelectorAll("[data-drop]").forEach((el) => {

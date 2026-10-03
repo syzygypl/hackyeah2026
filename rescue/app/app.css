@@ -334,6 +334,9 @@ body.role-operator header #status{display:none}
 #liveFeed{max-height:180px;overflow:auto}
 #centrumLink{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-accent);font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap}
 #centrumLink:hover{border-color:var(--rl-accent)}
+#zasobyLink{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-accent);font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap}
+#zasobyLink:hover{border-color:var(--rl-accent)}
+#liveFeed [data-actor]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
 
 /* "+ Nowa akcja" (AI Michała): operator starts a new search - who, where, when -> /story/new. Tokens only. */
 #newActionBtn{min-height:40px;border-radius:20px;padding:0 16px;font-weight:600;white-space:nowrap}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zasoby - zespoły i sprzęt</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="zasoby.css">
+</head>
+<body>
+<header id="bar">
+  <a class="brand" href="./?role=operator" title="Wróć do aplikacji"><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</a>
+  <h1>Zasoby - zespoły i sprzęt</h1>
+  <label class="mute">Akcja <select id="sc"></select></label>
+  <label class="mute" title="Godzina akcji (zegar scenariusza). Puste = moment na żywo.">Godzina <input id="at" size="5" placeholder="na żywo" autocomplete="off"></label>
+  <button id="now" title="Wróć do momentu na żywo">Na żywo</button>
+  <span id="counts" class="mute"></span>
+  <span style="flex:1"></span>
+  <label id="pinbox" hidden title="Klucz akcji: pozwala zapisywać zdarzenia sprzętu. Bez klucza tylko podgląd.">Klucz <input id="pin" size="8" autocomplete="off"></label>
+  <a href="centrum.html" title="Wszystkie akcje i zespoły na jednej mapie">Centrum</a>
+</header>
+<main>
+  <p class="banner"><b>Dane fikcyjne.</b> Załogi, sprzęt i przeglądy są wymyślone na potrzeby demo. Zmęczenie, bateria i paliwo to <b>szacunki</b> z osi czasu akcji (ślad szacowany ze stałych punktów GPS i meldunków), nie odczyty z urządzeń. Czerwone = twardy limit (bateria &lt; 20%, załoga ponad limit służby, zaległy przegląd, usterka), piaskowe = wkrótce. <span id="src" class="mono"></span></p>
+  <section><h2>W tej akcji <span class="mute" id="atLabel"></span></h2><div id="onSc" class="grid"><div class="help">Wczytuję zasoby…</div></div></section>
+  <section><h2>Pozostałe zasoby <span class="mute">stan bez osi czasu</span></h2><div id="others" class="grid"></div></section>
+</main>
+<div id="toast" role="status"></div>
+<script type="module" src="zasoby.js"></script>
+</body>
+</html>
