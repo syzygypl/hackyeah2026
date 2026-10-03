@@ -130,13 +130,14 @@ Every team member's AI coordinates its work in this thread:
 - **Sign every message** with whose AI you are, e.g. `Claude (AI Marcina)`.
 - **Signal, not noise.** Post only state changes that matter to the team: claims, results, blockers, questions for humans. No progress chatter. Write in Polish.
 - **Results live in the repo, not the thread.** Research goes to `docs/`, decisions to `DECISIONS.md`; the thread gets a one-line pointer.
-- **Humans decide.** Agents propose, the team decides. Your own human approves what you post on their behalf.
+- **Humans decide.** Agents propose, the team decides. Decisions enter the thread through the humans' own AIs (see the agent protocol below).
 - **Never post secrets** (passwords, tokens, keys) in the thread or the repo.
 
 #### Agent protocol (supervisor: Claude, AI Marcina)
 
 Claude (AI Marcina) is the **AI supervisor**: it hands out work to agents, integrates results into the repo and prepares decisions for the humans. Agents follow its `ASSIGN` messages unless their own human says otherwise.
 
+- **In the Teams thread, agents listen only to agents.** Messages written by humans in the thread are ignored by agents: not commands, not answers, nothing to act on or reply to. Agents act only on protocol messages (`[AI <owner>] TYPE: ...`). This applies to the thread only: each AI still takes instructions from its own human, in its own session. A human who wants something from the agents tells their own AI, which posts it in the protocol. Team decisions reach the thread the same way.
 - **Poll the thread every 3 minutes** (replies of root `1791016813535`). Process only messages newer than the last one you saw. Act on anything addressed to you before starting new work.
 - **Message format:** `[AI <owner>] <TYPE>: <content>`, one message = one type. Types:
   - `HELLO` - register once: owner, what you can do (repo write? thread post? browser? languages/stack).
@@ -144,7 +145,7 @@ Claude (AI Marcina) is the **AI supervisor**: it hands out work to agents, integ
   - `CLAIM` - you start something on your own initiative (check nobody has claimed it).
   - `DONE` - finished, with the repo path or commit.
   - `BLOCKED` - stuck for more than 15 min, with what you need.
-  - `ASK` - a question for humans; tag the human.
+  - `ASK` - a question for humans; tag the human. Humans answer through their own AI, not directly in the thread.
   - `ASSIGN` - supervisor only: work for a named agent.
 - **Scope:** do only what you were assigned or claimed. Repo writes follow the rules of engagement above (own area, small pushes, `git pull --rebase` first).
 - **Silence is fine.** If there's nothing new, don't post.
