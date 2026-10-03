@@ -195,17 +195,19 @@ function setStep(n, from) {
   set({ step: n }, "step");
   for (const k in FRAMES) if (k !== from) { if (FRAMES[k].ready) postTo(k, { type: "step", i: n - 1 }); else syncFrame(k, "step"); }
   clearTimeout(setStep.h); setStep.h = setTimeout(fetchAssessment, 300);
+  tlFromStep(from);   // timeline mode: the minute jumps to the step's minute
 }
 
 // ---------- panels
 function renderPanels() {
   const R = D(), S = curStep(); if (!R || !S) return;
-  const t3 = S.segments.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
+  const SEGS = tlSegments(S);   // timeline mode: ranking of the current minute's frame (coverage folded in); else the step's
+  const t3 = SEGS.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
   // no POA % on screen (najmocniejsze-funkcje.md "Czego NIE pokazywać"): a juror reads "45%" as a chance, it holds ~19%; show rank and area
   $("vbig").innerHTML = `<b>${Math.round(ta)}%</b><span>obszaru to top 3<br><em>tu szukać najpierw</em></span>`;
-  $("vsub").textContent = `Top 3 z ${S.segments.length} segmentów · krok ${store.step}/${R.steps.length} (${S.t})`;
-  const segRows = [...t3]; const sel = S.segments.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
-  $("segs").innerHTML = segRows.map((s) => { const k = S.segments.indexOf(s);
+  $("vsub").textContent = tlDoc() && store.minute != null && SEGS !== S.segments ? `Top 3 z ${SEGS.length} segmentów · ${tlClock(tlDoc(), store.minute)} (z pokryciem)` : `Top 3 z ${S.segments.length} segmentów · krok ${store.step}/${R.steps.length} (${S.t})`;
+  const segRows = [...t3]; const sel = SEGS.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
+  $("segs").innerHTML = segRows.map((s) => { const k = SEGS.indexOf(s);
     const a = segTeam(S, s.id);
     return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p"><span class="mute" style="font-size:13px">${(+s.areaPct).toFixed(1).replace(".", ",")}% obszaru</span></div><i class="segbar" style="--w:${Math.min(100, s.poa * 100 / Math.max(t3[0].poa, 1e-9) * 0.9).toFixed(0)}%"></i>${a ? `<div class="segteam"><span class="tk">${esc((a.name || "?")[0])}</span>${esc(a.name)}</div>` : ""}</div>`; }).join("");
   const W = S.weather || {}; $("surv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
@@ -218,7 +220,7 @@ function renderPanels() {
       <details><summary>Szczegóły</summary>${isFinite(a.travelMin) ? `<div>Dojście ok. ${Math.round(a.travelMin)} min.</div>` : ""}<div>${esc(a.reason || `Skuteczność przeszukania ${pct(a.pod)}, przeszukanie ok. ${Math.round(a.sweepMin || 0)} min.`)}</div></details>` : ""}</div>`; }).join("") || `<div class="help">Ten scenariusz nie ma jeszcze zespołów.</div>`;
   renderProgress(); renderEvents();
   $("clock").textContent = S.label;   // the time sits in the k/n · HH:MM counter (#dkStep)
-  $("slider").max = R.steps.length; $("slider").value = store.step;
+  $("slider").max = R.steps.length; $("slider").value = store.step; tlSlider();
   $("status").textContent = `${R.incident || ""}${store.backend !== "studio" ? " · tylko odczyt" : ""}`;
   document.body.classList.toggle("readonly", !store.editable);
   $("readonly").style.display = store.editable || store.mode !== "edycja" ? "none" : "";
@@ -328,7 +330,7 @@ function setEvidence(id, on, from) {
 $("events").addEventListener("change", (e) => { const c = e.target.closest(".evt"); if (c) setEvidence(c.dataset.hint, c.checked, "panel"); });
 $("events").addEventListener("click", (e) => { if (e.target.closest(".evt")) e.stopPropagation(); }, true);
 $("evReset").onclick = () => setEvidence("*", true, "panel");
-$("slider").oninput = () => setStep(+$("slider").value);
+$("slider").oninput = () => tlScrub() ? setMinute(+$("slider").value) : setStep(+$("slider").value);
 $("events").onclick = async (e) => {
   if (suppressClick) return;
   const b = e.target.closest("button"), card = e.target.closest(".ev"); if (!card) return;
@@ -343,6 +345,13 @@ $("events").onclick = async (e) => {
 let playing = null;
 $("play").onclick = () => {
   if (playing) { clearInterval(playing); playing = null; $("play").textContent = "▶"; return; }
+  const T = tlScrub();
+  if (T) {   // timeline mode: one frame (frameMin minutes) per 0.5 s (CONTRACT "Timeline mode" 6)
+    if (store.minute >= T.endMinute) setMinute(tlLo(T));
+    $("play").textContent = "❚❚";
+    playing = setInterval(() => { if (!tlScrub() || store.minute >= T.endMinute) { $("play").onclick(); return; } setMinute(store.minute + (T.frameMin || 5)); }, 500);
+    return;
+  }
   if (store.step >= D().steps.length) setStep(1);
   $("play").textContent = "❚❚";
   playing = setInterval(() => { if (store.step >= D().steps.length) { $("play").onclick(); return; } setStep(store.step + 1); }, 1400);
@@ -639,7 +648,9 @@ addEventListener("message", (e) => {
     if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
     for (const id of evOff) postTo(k, { type: "evidence", id, on: false });
     postTo(k, { type: "insets", insets: insetsFor(F.el) });
+    if (tlDoc() && store.minute != null) postTo(k, { type: "time", minute: store.minute, t: tlClock(tlDoc(), store.minute) });
   }
+  if (m.type === "time" && Number.isFinite(m.minute) && F.ready) setMinute(m.minute, k);
   if (m.type === "cinema") { document.body.classList.toggle("cinema", !!m.on); pushInsets(); } // 3D Kino: panels step aside, full-frame shots
   if (m.type === "select" && (typeof m.segmentId === "string" || m.segmentId === null)) selectSeg(m.segmentId, k);
   if (m.type === "evidence" && typeof m.id === "string") setEvidence(m.id, !!m.on, k);
@@ -805,7 +816,7 @@ const runUrlFor = (u) => store.time === "hist" ? u + (u.includes("?") ? "&" : "?
 const liveAvail = () => store.backend === "api" && live.ok;          // this scenario has a live action on the server
 const liveOn = () => store.time === "live" && store.backend === "api" && store.mode !== "edycja";
 const liveNow = () => liveOn() && live.ok;                            // live functions are active
-function syncFrames() { const R = D(); if (!R || !R.steps) return; for (const k in FRAMES) if (FRAMES[k].ready) postTo(k, { type: "step", i: store.step - 1 }); $("slider").value = store.step; }
+function syncFrames() { const R = D(); if (!R || !R.steps) return; for (const k in FRAMES) if (FRAMES[k].ready) postTo(k, { type: "step", i: store.step - 1 }); $("slider").value = store.step; tlSlider(); }
 async function setTime(t) {
   if (t === store.time) return;
   if (t === "live" && store.backend !== "api") { toast("Ten scenariusz to tylko nagranie - nie ma akcji na żywo. Wybierz scenariusz z serwera albo „+ Nowa akcja”.", 4500); return; }
@@ -835,7 +846,7 @@ async function advance(op) {
 $("advNext").onclick = () => advance("next");
 // Historia: rewind the recording to its first event (local to this screen, nobody else sees it)
 $("stepPrev").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); setStep(store.step - 1); };   // ported from b069c21 (AI Andrzeja)
-$("histStart").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); setStep(1); };
+$("histStart").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); if (tlScrub()) setMinute(tlLo(tlScrub())); else setStep(1); };
 $("advStart").onclick = () => advance("start");
 $("tmode").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) setTime(b.dataset.t); };
 // live-only header actions (+ Nowa akcja, Centrum): inactive in Historia, a click explains how to switch
@@ -912,22 +923,26 @@ const EV_COL = { terrain: "--rl-ev-terrain", cost: "--rl-ev-terrain", difficulty
   searched: "--rl-ok", found: "--rl-danger", clue: "--rl-accent", report: "--rl-accent" };
 function renderDock() {
   const R = D(); if (!R || !R.steps || !$("tlMarks")) return;
-  const n = R.steps.length, S = curStep();
-  $("tlMarks").innerHTML = R.steps.map((s, k) => `<i class="tlk k-${evKind(s)}${k + 1 === store.step ? " cur" : k + 1 > store.step ? " fut" : ""}" style="left:${n > 1 ? (k / (n - 1) * 100).toFixed(2) : 50}%${evKind(s) !== "found" && EV_COL[s.kind] ? `;--c:var(${EV_COL[s.kind]})` : ""}"></i>`).join("");
+  const n = R.steps.length, S = curStep(), T = tlScrub();
+  $("tlMarks").innerHTML = R.steps.map((s, k) => `<i class="tlk k-${evKind(s)}${k + 1 === store.step ? " cur" : (T ? s.minute > store.minute : k + 1 > store.step) ? " fut" : ""}" style="left:${T ? (tlFrac(T, s.minute) * 100).toFixed(2) : n > 1 ? (k / (n - 1) * 100).toFixed(2) : 50}%${evKind(s) !== "found" && EV_COL[s.kind] ? `;--c:var(${EV_COL[s.kind]})` : ""}"></i>`).join("");
   if (S) $("clock").title = S.t + " · " + S.label;
   // step counter "k/n · HH:MM" (ported from b069c21, AI Andrzeja); Na żywo: "teraz HH:MM"
-  if (S) $("dkStep").innerHTML = liveOn() ? `teraz <b>${esc(S.t)}</b>` : `<b>${store.step}</b>/${n} · ${esc(S.t)}`;
+  if (S) $("dkStep").innerHTML = liveOn() ? `teraz <b>${esc(S.t)}</b>` : T ? `<b>${esc(tlClock(T, store.minute))}</b> · ${store.step}/${n}` : `<b>${store.step}</b>/${n} · ${esc(S.t)}`;
   $("stepPrev").disabled = store.step <= 1;
   // the native range stays on top, invisible: drag + arrow keys + screen readers; our markers are the picture (ported from b069c21, AI Andrzeja)
-  $("tlFill").style.width = `calc((100% - 16px) * ${n > 1 ? ((store.step - 1) / (n - 1)).toFixed(4) : 0})`;
-  if (S) $("slider").setAttribute("aria-valuetext", `Krok ${store.step} z ${n}, ${S.t}, ${S.label}`);
+  $("tlFill").style.width = `calc((100% - 16px) * ${T ? tlFrac(T, store.minute).toFixed(4) : n > 1 ? ((store.step - 1) / (n - 1)).toFixed(4) : 0})`;
+  if (S) $("slider").setAttribute("aria-valuetext", T ? `${tlClock(T, store.minute)}, krok ${store.step} z ${n}, ${S.label}` : `Krok ${store.step} z ${n}, ${S.t}, ${S.label}`);
   const byTitle = (t) => { const st = R.steps.find((s) => s.label === t); return st ? evKind(st) : /^ZNALEZIONO/i.test(t || "") ? "found" : "slad"; };
   const items = liveOn() && live.events.length
     ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title) }))
     : R.steps.slice(0, store.step - 1).slice(-4).reverse().map((s, j) => ({ at: s.t, label: s.label, k: evKind(s), step: store.step - 1 - j }));
   $("ticker").innerHTML = items.map((it) => `<span class="tk k-${it.k}"${it.step && !liveOn() ? ` data-step="${it.step}"` : ""} title="${esc(it.at + " · " + it.label)}"><i></i><b>${esc(it.at)}</b><span class="tx">${esc(shortEv(it.label, it.k))}</span></span>`).join("");
 }
-function tlIndexAt(x) { const r = $("tlMarks").getBoundingClientRect(), n = D().steps.length; return n < 2 ? 1 : Math.round(Math.max(0, Math.min(1, (x - r.left) / (r.width || 1))) * (n - 1)) + 1; }
+function tlIndexAt(x) {
+  const r = $("tlMarks").getBoundingClientRect(), n = D().steps.length, f = Math.max(0, Math.min(1, (x - r.left) / (r.width || 1))), T = tlScrub();
+  if (T) { let best = 1, bd = 1e9; D().steps.forEach((s, k) => { const d = Math.abs(tlFrac(T, s.minute) - f); if (d < bd) { bd = d; best = k + 1; } }); return best; }   // nearest event tick
+  return n < 2 ? 1 : Math.round(f * (n - 1)) + 1;
+}
 function tlTip(k) {
   const tip = $("tlTip"), s = k && D() && D().steps[k - 1], m = s && $("tlMarks").children[k - 1];
   if (!m) { tip.hidden = true; return; }
@@ -942,6 +957,7 @@ $("tl").addEventListener("click", (e) => {
   if (!D() || !D().steps) return;
   const k = tlIndexAt(e.clientX);
   if (liveOn()) toast("Na żywo mapa pokazuje teraz. Wcześniejsze kroki przewiniesz w trybie Historia.", 3000);
+  else if (tlScrub()) { const s = D().steps[k - 1], r = $("tlMarks").getBoundingClientRect(), T = tlScrub(); if (e.target !== $("slider") && s && Math.abs((tlFrac(T, s.minute) * r.width + r.left) - e.clientX) <= 8) setMinute(s.minute); }   // tick click = jump to that minute; the range handles the rest
   else if (k !== store.step) setStep(k);
   tlTip(k); clearTimeout(tlTip.h); tlTip.h = setTimeout(() => tlTip(0), 2200);
 });
@@ -1140,3 +1156,63 @@ boot();
     try { await api("/api/reset", {}); toast("Akcja wyczyszczona"); $("shareDlg").close(); boot(); } catch (e) { toast(plErr(e), 5000); }
   };
 }
+
+// ---------- timeline mode (CONTRACT.md "Timeline mode" 6, AI Mateusza after AI Andrzeja): with run.timeline the dock scrubs MINUTES
+// (startMinute..endMinute, 1 min; event steps stay as ticks), and the views get {type:"time", minute, t} after every move. The step
+// in force (last step with minute <= the minute) still drives panels and the views' "step". Na żywo: held, the views get the live
+// moment's minute. Without timeline nothing here runs (old runs behave exactly as before).
+store.minute = null;
+var tlBusy = false;
+function tlDoc() { const T = D() && D().timeline; return T && Number.isFinite(T.startMinute) && Number.isFinite(T.endMinute) && T.endMinute > T.startMinute && D().steps ? T : null; }
+function tlScrub() { return !liveOn() && store.mode !== "edycja" ? tlDoc() : null; }
+function tlLo(T) { const s0 = D() && D().steps && D().steps[0]; return Math.min(T.startMinute, s0 && Number.isFinite(s0.minute) ? s0.minute : T.startMinute); }
+function tlFrac(T, m) { const lo = tlLo(T); return Math.max(0, Math.min(1, (m - lo) / ((T.endMinute - lo) || 1))); }
+function tlClock(T, m) {
+  const [h, mm] = String(T.start || "00:00").split(":").map(Number), x = (((h * 60 + mm + m - T.startMinute) % 1440) + 1440) % 1440;   // T.start = clock of startMinute
+  return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0");
+}
+// frame in force at a minute (last frame with minute <= m), null before the first frame / for a frames=0 run
+function tlFrame(T, m) { let f = null; for (const x of T.frames || []) { if (x.minute > m) break; f = x; } return f; }
+// "Gdzie szukać najpierw" from the frame: frame.segments (poa desc, coverage folded in) + areaPct from the step's segment list
+function tlSegments(S) {
+  const T = tlDoc(), f = T && store.minute != null && !liveOn() ? tlFrame(T, store.minute) : null;
+  if (!f || !Array.isArray(f.segments) || !f.segments.length) return S.segments;
+  const by = new Map(S.segments.map((g) => [g.id, g]));
+  return f.segments.map((g) => ({ ...(by.get(g.id) || { areaPct: 0 }), id: g.id, name: g.name, poa: g.poa, cumPod: g.cumPod }));
+}
+function tlPostTime(from) {
+  const T = tlDoc(); if (!T || store.minute == null) return;
+  const frame = tlFrame(T, store.minute);
+  for (const k in FRAMES) if (k !== from) postTo(k, { type: "time", minute: store.minute, t: tlClock(T, store.minute), ...(frame ? { frame } : {}) });
+}
+// the range becomes a minute axis (or back to steps for a run without timeline)
+function tlSlider() {
+  const T = tlScrub(), sl = $("slider");
+  if (T) { sl.min = tlLo(T); sl.max = T.endMinute; sl.step = 1; sl.value = store.minute != null ? store.minute : tlLo(T); }
+  else { sl.min = 1; sl.step = 1; if (D() && D().steps) { sl.max = D().steps.length; sl.value = store.step; } }
+}
+function setMinute(m, from) {
+  const T = tlDoc(); if (!T) return;
+  m = Math.max(tlLo(T), Math.min(T.endMinute, Math.round(m)));
+  if (m === store.minute) return;
+  store.minute = m;
+  const R = D(); let k = 1; R.steps.forEach((s, i) => { if (s.minute <= m) k = i + 1; });
+  if (k !== store.step) { tlBusy = true; try { setStep(k, from); } finally { tlBusy = false; } }
+  else renderPanels();   // the ranking follows the frame even inside one step
+  tlPostTime(from); tlSlider(); renderDock();
+}
+// an event jump (ticker, cards, ◀, a view's own step) moves the minute to that step; in live the minute follows the held step
+function tlFromStep(from) {
+  const T = tlDoc(), S = curStep(); if (tlBusy || !T || !S) return;
+  const m = Math.max(tlLo(T), Math.min(T.endMinute, S.minute));
+  if (m === store.minute) return;
+  store.minute = m; tlPostTime(from); tlSlider(); renderDock(); renderPanels();
+}
+// a new run (scenario switch, live refetch, Historia/Na żywo): start at the current step's minute, or reset without timeline
+subs.push((why) => {
+  if (why !== "load" && why !== "run" && why !== "edit" && why !== "mode") return;
+  const T = tlDoc(), S = curStep();
+  if (!T) { store.minute = null; tlSlider(); return; }
+  if (why === "load" || store.minute == null || liveOn() || store.minute < tlLo(T) || store.minute > T.endMinute) store.minute = Math.max(tlLo(T), Math.min(T.endMinute, S ? S.minute : tlLo(T)));
+  tlSlider(); tlPostTime(); renderDock(); renderPanels();
+});

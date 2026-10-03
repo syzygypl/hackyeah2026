@@ -512,6 +512,18 @@
       map.addLayer({ id: 'seg-line', type: 'line', source: 'segs', layout: { 'line-join': 'round', 'line-sort-key': ['get', 'z'] }, paint: { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity'] } });
       map.addLayer({ id: 'ov-line', type: 'line', source: 'ov', filter: ['all', Ln, ['==', ['get', 'dash'], 0]], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: lineP });
       map.addLayer({ id: 'ov-line-dash', type: 'line', source: 'ov', filter: ['all', Ln, ['==', ['get', 'dash'], 1]], paint: { ...lineP, 'line-dasharray': [2.5, 1.6] } });
+      // timeline mode (CONTRACT "Timeline mode" 6): coverage cells, accuracy circles, FOV, tracks (solid gps / dashed est), fixes, positions
+      map.addSource('tl', { type: 'geojson', data: empty });
+      const K = (k) => ['==', ['get', 'k'], k];
+      map.addLayer({ id: 'tl-cov', type: 'fill', source: 'tl', filter: K('cov'), paint: { 'fill-color': '#7fe0d4', 'fill-opacity': ['*', 0.5, ['get', 'pod']], 'fill-antialias': false } });
+      map.addLayer({ id: 'tl-fov', type: 'fill', source: 'tl', filter: K('fov'), paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 } });
+      map.addLayer({ id: 'tl-fov-line', type: 'line', source: 'tl', filter: K('fov'), paint: { 'line-color': ['get', 'color'], 'line-width': 1.4, 'line-opacity': 0.85 } });
+      map.addLayer({ id: 'tl-acc', type: 'fill', source: 'tl', filter: K('acc'), paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.08 } });
+      map.addLayer({ id: 'tl-acc-line', type: 'line', source: 'tl', filter: K('acc'), paint: { 'line-color': ['get', 'color'], 'line-width': 1, 'line-opacity': 0.7, 'line-dasharray': [1, 1.6] } });
+      map.addLayer({ id: 'tl-path', type: 'line', source: 'tl', filter: ['all', K('path'), ['==', ['get', 'est'], 0]], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 2.6, 'line-opacity': 0.95 } });
+      map.addLayer({ id: 'tl-path-est', type: 'line', source: 'tl', filter: ['all', K('path'), ['==', ['get', 'est'], 1]], paint: { 'line-color': ['get', 'color'], 'line-width': 2.2, 'line-opacity': 0.9, 'line-dasharray': [1.4, 1.4] } });
+      map.addLayer({ id: 'tl-fix', type: 'circle', source: 'tl', filter: K('fix'), paint: { 'circle-radius': 3, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#0b1014', 'circle-stroke-width': 1 } });
+      map.addLayer({ id: 'tl-pos', type: 'circle', source: 'tl', filter: K('pos'), paint: { 'circle-radius': 6.5, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
       map.on('mousemove', 'heat', (e) => { const f = e.features && e.features[0]; if (f) opt.onHover(f.properties.i, e.point); });
       map.on('mouseleave', 'heat', () => opt.onHover(null));
       map.on('click', 'heat', (e) => { const f = e.features && e.features[0]; if (f) opt.onCellClick(f.properties.i); });
@@ -529,6 +541,19 @@
     this.setDiff = (on) => { map.setLayoutProperty('diff', 'visibility', on ? 'visible' : 'none'); map.setLayoutProperty('heat', 'visibility', on ? 'none' : 'visible'); };
     this.setHeat = (p) => { for (let i = 0; i < M.N; i++) { const pr = M.cells[i].properties; pr.p = p[i]; pr.c = heatRGBA(p[i], M.N); } map.getSource('cells').setData(FC(M.cells)); };
     this.setOverlay = (fc) => map.getSource('ov').setData(fc);
+    this.setTimeline = (fc, labels) => {   // timeline mode: GeoJSON + actor name labels (HTML markers, own map, not the chips)
+      map.getSource('tl').setData(fc);
+      const seen = new Set();
+      for (const l of labels) {
+        seen.add(l.id);
+        let m = tlLabels.get(l.id);
+        if (!m) { const el = document.createElement('div'); el.className = 'tl-lab'; m = new maplibregl.Marker({ element: el, anchor: 'left', offset: [10, 0] }).setLngLat(l.at).addTo(map); tlLabels.set(l.id, m); }
+        const el = m.getElement(); if (el.dataset.html !== l.html) { el.innerHTML = l.html; el.dataset.html = l.html; }
+        el.style.setProperty('--c', l.color); m.setLngLat(l.at);
+      }
+      for (const [k, m] of tlLabels) if (!seen.has(k)) { m.remove(); tlLabels.delete(k); }
+    };
+    const tlLabels = new Map();
     this.setSegments = (fc) => map.getSource('segs').setData(fc);
     this.setChips = (chips) => {
       const seen = new Set();
@@ -729,6 +754,78 @@
     renderTimeline();
     link3d();
     document.body.dataset.step = String(step);
+    S.tlHeatAt = null; if (S.tlMf != null) tlDraw(S.tlMf);
+  }
+
+  /* ---------- timeline mode (CONTRACT "Timeline mode" 4 + 6): the shell sends {type:'time', minute, t}; we draw each actor's
+     track so far (solid = gps, dashed = estimate), fixes (dots), accuracy circle, FOV of the frame and the cumulative coverage,
+     and the frame's poaGrid as heat (unless signals are switched off: then the step heat stays). Between minutes the markers
+     glide (display-only smoothing on run.timeline.actors[].path; it never feeds coverage). Runs without timeline: no-op. */
+  const TLC = { pieszy: '#ffb74d', pies: '#d7a86e', dron: '#64b5f6', smiglowiec: '#ef5350', lodz: '#4dd0e1', osoba: '#f48fb1' };
+  function tlPos(path, mf) {   // path: [[lat, lon, minute, accM, est]] one per minute
+    if (!path.length || mf < path[0][2]) return null;
+    let i = Math.min(path.length - 1, Math.max(0, Math.floor(mf - path[0][2])));
+    while (i > 0 && path[i][2] > mf) i--;
+    const a = path[i], b = path[i + 1];
+    if (!b || mf <= a[2]) return { lat: a[0], lon: a[1], acc: a[3], est: !!a[4] };
+    const u = Math.max(0, Math.min(1, (mf - a[2]) / ((b[2] - a[2]) || 1)));
+    return { lat: a[0] + (b[0] - a[0]) * u, lon: a[1] + (b[1] - a[1]) * u, acc: a[3] + (b[3] - a[3]) * u, est: !!(u < 0.5 ? a[4] : b[4]) };
+  }
+  function tlDraw(mf) {
+    const T = S.M && S.M.R.timeline;
+    if (!T || !S.view || !S.view.setTimeline || !Array.isArray(T.actors)) return;
+    const feats = [], labels = [], frames = T.frames || [];
+    let fr = null; for (const f of frames) { if (f.minute <= mf) fr = f; else break; }
+    if (fr) for (const c of fr.cov || []) { const cell = S.M.cells[c[0]]; if (cell) feats.push(feat(cell.geometry, { k: 'cov', pod: c[1] })); }
+    // heat = the frame's posterior (drop-in for steps[].poaGrid); only when the frame changed and no signal is switched off
+    if (fr && Array.isArray(fr.poaGrid) && fr.poaGrid.length === S.M.N && !S.disabled.size && S.tlHeatAt !== fr.minute) { S.view.setHeat(fr.poaGrid); S.tlHeatAt = fr.minute; }
+    else if (!fr && S.tlHeatAt != null && S.lastP) { S.view.setHeat(S.lastP); S.tlHeatAt = null; }   // before the first frame: the step heat
+    for (const a of T.actors) {
+      const path = a.path || [], col = TLC[a.kind] || '#ffd54f', cur = tlPos(path, mf);
+      if (!cur) continue;
+      let run = [], est = null;
+      const flush = () => { if (run.length > 1) feats.push(line(run, { k: 'path', est: est ? 1 : 0, color: col })); };
+      for (const p of path) {
+        if (p[2] > mf) break;
+        const c = [p[1], p[0]], e = !!p[4];
+        if (est === null) est = e;
+        if (e !== est) { run.push(c); flush(); run = [c]; est = e; } else run.push(c);
+      }
+      run.push([cur.lon, cur.lat]); flush();
+      for (const f of a.fixes || []) if (f.minute <= mf) feats.push(pt([f.lon, f.lat], { k: 'fix', color: col }));
+      if (cur.acc > 0) feats.push(poly(circle(cur.lat, cur.lon, cur.acc, 48), { k: 'acc', color: col }));
+      // FOV outline of the frame, moved with the actor between frames (same shape until the next frame)
+      const fa = fr && Math.abs(mf - fr.minute) <= 10 && (fr.actors || []).find((x) => x.id === a.id);
+      if (fa && Array.isArray(fa.fov) && fa.fov.length > 2 && Array.isArray(fa.pos)) {
+        const dLat = cur.lat - fa.pos[0], dLon = cur.lon - fa.pos[1];
+        feats.push(poly(fa.fov.map((q) => [q[0] + dLon, q[1] + dLat]), { k: 'fov', color: col }));
+      }
+      feats.push(pt([cur.lon, cur.lat], { k: 'pos', color: col }));
+      labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col,
+        html: `<b>${esc(String(a.name || a.id).split(' (')[0])}</b> <span>${cur.est ? 'szac.' : 'GPS'} · dokładność ±${Math.round(cur.acc)} m</span>` });
+    }
+    S.view.setTimeline(FC(feats), labels);
+    const lg = $('#tllegend');
+    if (lg) {
+      lg.hidden = false;
+      // area share (cells with POD >= 0.1, like coverageFinal.areaPct), not a probability: no POA / POS % on screen
+      const covPct = fr ? ` · przeszukano ${nf((fr.cov || []).filter((c) => c[1] >= 0.1).length / S.M.N * 100, 1)}% obszaru` : '';
+      lg.innerHTML = `<b>${esc(T.start ? tlClock(T, mf) : '')}</b>${covPct}<div><i class="sw solid"></i>ślad GPS <i class="sw dash"></i>ślad szacowany</div><div><i class="sw fov"></i>pole widzenia <i class="sw cov"></i>pokrycie (POD) <i class="sw acc"></i>dokładność ±N m</div>`;
+    }
+  }
+  function tlClock(T, mf) {
+    const [h, m] = String(T.start || '00:00').split(':').map(Number), x = ((Math.floor(h * 60 + m + mf - T.startMinute) % 1440) + 1440) % 1440;
+    return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
+  }
+  // a minute from the shell: glide from the shown minute when it is a short step forward (play / drag), jump otherwise
+  function tlTime(minute) {
+    const T = S.M && S.M.R.timeline; if (!T) return;
+    const to = Math.min(T.endMinute, minute), from = S.tlMf;   // before startMinute: no actors yet, step heat
+    cancelAnimationFrame(S.tlAnim);
+    if (from == null || to <= from || to - from > 15 || matchMedia('(prefers-reduced-motion: reduce)').matches) { S.tlMf = to; tlDraw(to); return; }
+    const t0 = performance.now(), dur = 450;
+    const tick = (now) => { const u = Math.min(1, (now - t0) / dur); S.tlMf = from + (to - from) * u; tlDraw(S.tlMf); if (u < 1) S.tlAnim = requestAnimationFrame(tick); };
+    S.tlAnim = requestAnimationFrame(tick);
   }
 
   function renderCards() {
@@ -982,6 +1079,7 @@
     try {
       if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
       else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
+      else if (m.type === 'time' && Number.isFinite(m.minute)) tlTime(m.minute);
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
       else if (m.type === 'run' && typeof m.url === 'string') reloadWith({ run: m.url }, ['runInline', 'sc', 'step']);
       else if (m.type === 'run' && m.run && typeof m.run === 'object' && typeof m.run.url === 'string' && !m.run.schema) reloadWith({ run: m.run.url }, ['runInline', 'sc', 'step']);

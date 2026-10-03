@@ -326,3 +326,13 @@ body.embed-scene #legend { padding: 6px 9px; font-size: 11.5px; }
 body.embed-scene .lg-title { font-size: 12px; margin-bottom: 3px; }
 body.embed-scene .lg-stops { font-size: 10px; }
 body.embed-scene .lg-keys { gap: 10px; margin-top: 3px; font-size: 11px; }
+/* timeline mode (CONTRACT "Timeline mode" 6): legend bottom-left, actor labels next to their position */
+.tllegend { position: absolute; z-index: 5; left: calc(var(--inset-l, 0px) + 10px); bottom: calc(var(--inset-b, 0px) + 10px); padding: 6px 9px; border-radius: 8px; background: rgba(11, 16, 20, .82); color: #e8eef2; font: 12px/1.45 system-ui, sans-serif; pointer-events: none; max-width: 340px; }
+.tllegend b { font-size: 13px; }
+.tllegend .sw { display: inline-block; width: 16px; height: 0; margin: 0 4px 3px 8px; vertical-align: middle; border-top: 2.5px solid #ffb74d; }
+.tllegend .sw.dash { border-top-style: dashed; }
+.tllegend .sw.fov { height: 9px; border: 1.4px solid #64b5f6; background: rgba(100, 181, 246, .2); border-radius: 2px; }
+.tllegend .sw.cov { height: 9px; border: 0; background: rgba(127, 224, 212, .5); }
+.tllegend .sw.acc { height: 9px; width: 9px; border: 1px dashed #ffb74d; border-radius: 50%; }
+.tl-lab { pointer-events: none; padding: 1px 6px; border-radius: 6px; background: rgba(11, 16, 20, .78); color: #e8eef2; font: 11px/1.3 system-ui, sans-serif; white-space: nowrap; border-left: 3px solid var(--c, #ffb74d); }
+.tl-lab span { opacity: .75; }
