@@ -48,6 +48,9 @@
     $("sc").onchange = () => { location.search = new URLSearchParams({ sc: $("sc").value }); };
     $("t").onchange = () => { const q = new URLSearchParams({ sc: SC }); if ($("t").value) q.set("t", $("t").value); location.search = q; };
     $("print").onclick = () => window.print();
+    const K = Q.get("karty") === "1"; document.body.classList.toggle("karty", K);
+    $("mode").textContent = K ? "Odprawa (1 strona)" : "Karty zadań";
+    $("mode").onclick = () => { const q = new URLSearchParams(location.search); K ? q.delete("karty") : q.set("karty", "1"); location.search = q; };
   }
 
   function render(run, scen, st, inv, start) {
@@ -102,6 +105,49 @@
     $("src").textContent = `Źródło: silnik Rescue Locator, ${live ? "GET /api/run (na żywo)" : "nagranie scenariusza"}, krok ${run.steps.indexOf(st) + 1}/${run.steps.length}, wydruk ${new Date().toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })}.`;
     drawMap(run, st, top);
     fit();
+    cards(run, st, top, now, warns, inv, live);
+  }
+
+  // Karty zadań: one card per assigned team (two per A4 page) - sector sketch, centre coordinates, times, safety, report boxes
+  function cards(run, st, top, now, warns, inv, live) {
+    const units = {}; for (const u of (inv && inv.units) || []) units[u.id] = u;
+    const el = $("cards"); if (!el) return;
+    const title = String(run.incident || SC).replace(/\s*\(scenariusz fikcyjny\)\s*$/, "");
+    el.innerHTML = st.assignments.map((a, i) => {
+      const seg = st.segments.find((x) => x.id === a.segmentId) || {}, poly = (seg.polygon || []).slice(0, -1);
+      const lat = poly.reduce((s2, q) => s2 + q[1], 0) / (poly.length || 1), lon = poly.reduce((s2, q) => s2 + q[0], 0) / (poly.length || 1);
+      const u = units[a.resourceId] || {}, tr = Math.round(a.travelMin ?? a.etaMin), sw = Math.max(1, Math.round(a.sweepMin || 0));
+      const rank = top.findIndex((x) => x.id === a.segmentId) + 1;
+      const flags = (a.safety || []).map((x) => `<li class="red">${esc(x)}</li>`).concat((warns[a.resourceId] || []).map((x) => `<li class="${x.level === "red" ? "red" : ""}">${esc(x.text)}</li>`));
+      return `<article class="tcard">
+        <header><span class="od-kicker">Karta zadania ${i + 1}/${st.assignments.length}</span><h2>${esc(short(resName(st, a.resourceId)))}${u.callsign ? ` <span class="cs">${esc(u.callsign)}</span>` : ""}</h2>
+          <div class="mute">${esc(title)} · ${esc(run.date || "")} ${esc(st.t)} · ${live ? "na żywo" : "nagranie"}</div></header>
+        <div class="tc-body">
+          <canvas class="tc-map" data-i="${i}" role="img" aria-label="Sektor ${esc(a.segmentId)} na schemacie"></canvas>
+          <div class="tc-info">
+            <p class="tc-seg"><b>${esc(a.segmentId)}</b> ${esc(a.segmentName)}${rank ? ` <span class="rkb">${rank}. w kolejności</span>` : ""}</p>
+            <p class="mono">środek sektora: ${lat.toFixed(5)} N, ${lon.toFixed(5)} E</p>
+            <p>Sektor: ${(+seg.areaPct || 0).toFixed(1).replace(".", ",")}% obszaru</p>
+            <table class="tc-t"><tr><th>Wyjście</th><td>${esc(st.t)}</td></tr><tr><th>Na miejscu ok.</th><td>${hm(now + tr)} (dojście ${tr} min)</td></tr>
+              <tr><th>Koniec przeszukania ok.</th><td>${hm(now + tr + sw)} (${sw} min)</td></tr><tr><th>Skuteczność (POD)</th><td>${a.pod != null ? "ok. " + Math.round(a.pod * 100) + "%" : "-"}</td></tr>
+              <tr><th>Meldunek co</th><td>30 min i po sektorze</td></tr><tr><th>Kanał</th><td></td></tr></table>
+            ${u.crew && u.crew.length ? `<p class="small">Skład: ${esc(u.crew.map((c) => c.name).join(", "))}</p>` : ""}
+          </div>
+        </div>
+        <div class="tc-safety"><h3>Bezpieczeństwo</h3>${flags.length ? `<ul>${flags.join("")}</ul>` : `<p class="mute">Brak uwag silnika i sprzętu. Zasady ogólne obowiązują.</p>`}</div>
+        <div class="tc-report"><h3>Meldunek zwrotny</h3><span>☐ przeszukane, nic</span><span>☐ częściowo</span><span>☐ ślad / znaleziono</span><span>godz. ______</span><span>uwagi: ____________________________</span></div>
+        <footer>Dane fikcyjne / narzędzie pomocnicze - decyzję podejmuje kierownik akcji.</footer>
+      </article>`;
+    }).join("") || `<p class="mute">Brak przydziałów w tej chwili.</p>`;
+    el.querySelectorAll("canvas.tc-map").forEach((cv) => {
+      const a = st.assignments[+cv.dataset.i], seg = st.segments.find((x) => x.id === a.segmentId);
+      if (!seg || !seg.polygon) return;
+      const lons = seg.polygon.map((q) => q[0]), lats = seg.polygon.map((q) => q[1]);
+      let v = { west: Math.min(...lons), east: Math.max(...lons), south: Math.min(...lats), north: Math.max(...lats) };
+      const pw = (v.east - v.west) * 0.45 + 0.004, ph = (v.north - v.south) * 0.45 + 0.003;
+      v = { west: v.west - pw, east: v.east + pw, south: v.south - ph, north: v.north + ph };
+      drawMap(run, st, top, cv, v, a.segmentId, 420);
+    });
   }
   // one A4 page: at sheet width (screen >= 821 px uses the print layout) step the density up until the content fits 297 mm
   function fit() {
@@ -115,20 +161,23 @@
   const catPL = (c) => ({ hiker: "turysta pieszy", child: "dziecko", dementia: "osoba z demencją", hunter: "grzybiarz / myśliwy", water: "na wodzie", skier: "narciarz" })[c] || c;
   const precipPL = (p) => ({ rain: "deszcz", snow: "śnieg", drizzle: "mżawka" })[p] || p;
 
-  function drawMap(run, st, top) {
-    const cv = $("map"), bb = run.bbox, lat0 = (bb.north + bb.south) / 2;
+  // whole area (briefing) or one sector zoomed (task card: view = padded sector bbox, focus = its id, outlined in navy)
+  function drawMap(run, st, top, cv = $("map"), view = null, focus = null, W = 760) {
+    const bb = view || run.bbox, lat0 = (bb.north + bb.south) / 2;
     const kmW = (bb.east - bb.west) * 111.32 * Math.cos(lat0 * Math.PI / 180), kmH = (bb.north - bb.south) * 110.57;
-    const W = 760, H = Math.round(W * kmH / kmW); cv.width = W * 2; cv.height = H * 2;
+    const H = Math.round(W * kmH / kmW); cv.width = W * 2; cv.height = H * 2;
     const g = cv.getContext("2d"); g.scale(2, 2);
     const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
     const X = (lon) => (lon - bb.west) / (bb.east - bb.west) * W, Y = (lat) => (bb.north - lat) / (bb.north - bb.south) * H;
     g.fillStyle = "#fbfaf6"; g.fillRect(0, 0, W, H);
     // heat: map weight per cell relative to the max, sqrt so the tail stays visible
-    const P = st.poaGrid || [], max = Math.max(...P), cw = W / run.cols, ch = H / run.rows;
+    const P = st.poaGrid || [], max = Math.max(...P), RB = run.bbox, cLon = (RB.east - RB.west) / run.cols, cLat = (RB.north - RB.south) / run.rows;
     for (let r = 0; r < run.rows; r++) for (let c = 0; c < run.cols; c++) {
       const v = Math.sqrt((P[r * run.cols + c] || 0) / max); if (v < 0.12) continue;
+      const x0 = X(RB.west + c * cLon), y0 = Y(RB.north - r * cLat), x1 = X(RB.west + (c + 1) * cLon), y1 = Y(RB.north - (r + 1) * cLat);
+      if (x1 < 0 || y1 < 0 || x0 > W || y0 > H) continue;
       g.fillStyle = `rgba(${Math.round(240 - 60 * v)},${Math.round(200 - 150 * v)},${Math.round(120 - 80 * v)},${0.15 + 0.55 * v})`;
-      g.fillRect(c * cw, r * ch, cw + 0.5, ch + 0.5);
+      g.fillRect(x0, y0, x1 - x0 + 0.5, y1 - y0 + 0.5);
     }
     const hatch = document.createElement("canvas"); hatch.width = hatch.height = 8;
     const hg = hatch.getContext("2d"); hg.strokeStyle = "rgba(31,78,121,.45)"; hg.lineWidth = 1.2; hg.beginPath(); hg.moveTo(0, 8); hg.lineTo(8, 0); hg.stroke();
@@ -152,12 +201,13 @@
       g.fillStyle = i === 0 ? "#fff" : red; g.font = "700 15px Barlow, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(i + 1), x, y + 0.5);
       g.font = "700 12px Barlow, sans-serif"; g.lineWidth = 3; g.strokeStyle = "#fff"; g.strokeText(s.id, x, y + 23); g.fillStyle = "#23272a"; g.fillText(s.id, x, y + 23);
     });
+    if (focus) { const f = st.segments.find((x) => x.id === focus); if (f && f.polygon) { path(f.polygon); g.fillStyle = "rgba(31,78,121,.12)"; g.fill(); g.strokeStyle = "#1f4e79"; g.lineWidth = 4; g.setLineDash([]); g.stroke(); if (!topIds.includes(focus)) { const [x, y] = cen(f.polygon); g.font = "700 16px Barlow, sans-serif"; g.textAlign = "center"; g.lineWidth = 4; g.strokeStyle = "#fff"; g.strokeText(focus, x, y); g.fillStyle = "#1f4e79"; g.fillText(focus, x, y); } } }   // a top-3 focus already has its rank badge and id
     // IPP / last known point
     const ix = X(run.ipp.lon), iy = Y(run.ipp.lat);
     g.beginPath(); g.moveTo(ix, iy - 9); g.lineTo(ix + 8, iy + 6); g.lineTo(ix - 8, iy + 6); g.closePath(); g.fillStyle = "#23272a"; g.fill();
     g.font = "700 12px Barlow, sans-serif"; g.textAlign = "left"; g.lineWidth = 3; g.strokeStyle = "#fff"; g.strokeText("IPP", ix + 10, iy); g.fillStyle = "#23272a"; g.fillText("IPP", ix + 10, iy);
     // scale bar (1 km) and north
-    const px1 = W / kmW; g.fillStyle = "#23272a"; g.fillRect(14, H - 18, px1, 4); g.textAlign = "left"; g.font = "600 12px Barlow, sans-serif"; g.fillText("1 km", 14, H - 28);
+    const sk = kmW > 3 ? 1 : 0.5, px1 = W / kmW * sk; g.fillStyle = "#23272a"; g.fillRect(14, H - 18, px1, 4); g.textAlign = "left"; g.font = "600 12px Barlow, sans-serif"; g.fillText(sk === 1 ? "1 km" : "500 m", 14, H - 28);
     g.textAlign = "center"; g.font = "700 14px Barlow, sans-serif"; g.fillText("N", W - 20, 20); g.beginPath(); g.moveTo(W - 20, 26); g.lineTo(W - 25, 40); g.lineTo(W - 15, 40); g.closePath(); g.fill();
   }
 

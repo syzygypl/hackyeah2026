@@ -15,6 +15,7 @@
   <label>Akcja <select id="sc"></select></label>
   <label>Godzina <input id="t" type="time" step="300"></label>
   <span class="sp"></span>
+  <button id="mode" type="button" title="Przełącz: jedna strona odprawy / karty zadań dla zespołów (2 na stronę A4)">Karty zadań</button>
   <button id="print" type="button" class="primary">Drukuj / PDF</button>
 </nav>
 
@@ -89,6 +90,7 @@
     Kolejność sektorów to kolejność przeszukiwania (waga mapy), nie szansa znalezienia. <span id="src"></span>
   </footer>
 </main>
+<section class="cards" id="cards" aria-label="Karty zadań dla zespołów"></section>
 <script src="odprawa.js" defer></script>
 </body>
 </html>
