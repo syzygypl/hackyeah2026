@@ -51,6 +51,8 @@ On Mateusz's demo Mac (M4 Pro 48 GB): `qwen3:4b-instruct-2507-q4_K_M`, `sileader
 | (a) Self-consistency | 3 runs of qwen3:4b with different prompts and temperatures (0 / 0.4 / 0.8) | nothing to pull, one model in RAM, start now | same weights, so correlated errors; agreement is a weaker signal and the quote verifier carries more weight |
 | (b) More families | pull `gemma3:4b` (~3.3 GB, good Polish) and optionally `llama3.2:3b` (~2 GB, weaker Polish) | real diversity, a stronger "swarm" story | download on the team hotspot, ~5 GB RAM more (fine on 48 GB); **a human decision for Mateusz's Mac** |
 
+**Update 12:10:** `gemma3:4b` is being pulled on the demo Mac (Mateusz agreed); add it as the second worker family once warm. Per [`swarm-math.md`](swarm-math.md), three qwen3:4b variants are correlated (rho ~0.6, assumed): ~89% of fields resolve locally, but ~6.7% are wrong even when all three agree. **So the no-AI verbatim-quote verifier is what carries safety, not the vote. Keep it MUST and say so in the pitch.**
+
 **Recommendation:** build on (a) now, with the worker model list in `policy.json`, so adding a family is config, not code. Mateusz decides on pulling `gemma3:4b` in the background now. If it's there by 17:00, the demo runs with 2 families; `llama3.2:3b` only if Polish passes a 2-letter test.
 
 - **Arbiter:** optional big API model, keys only in `.env` (never in the repo or the thread), with a spend cap in `policy.json`. Without a key, a dispute ends as GREY, which is still a valid demo.
@@ -69,6 +71,7 @@ On Mateusz's demo Mac (M4 Pro 48 GB): `qwen3:4b-instruct-2507-q4_K_M`, `sileader
 | Blackboard endpoints on the gateway (`POST /v1/swarm/task`, `/proposal`, `GET /v1/swarm/{id}`), every message through the existing checks | 1.5 | TBD |
 | Workers: qwen3:4b x 3 prompt/temperature variants, Ollama JSON mode, in parallel | 1.5 | TBD |
 | Quote verifier (normalized verbatim match) plus date and PLN parsers | 1 | TBD |
+| Hidden-text stripping before workers see the document: HTML comments, zero-width characters, white-on-white text. Every model shares this blind spot, so it's code, not more models | 0.5 | TBD |
 | Aggregator: GREEN / AMBER / GREY, escalation stub (no key gives GREY) | 1 | TBD |
 | 3 synthetic letters (ZUS, tax office, municipality) with ground-truth JSON, one with a hidden injection | 1.5 | TBD |
 | Simple swarm view: paste box, field cards with votes, click a card to highlight its quote, metrics footer | 2.5 | TBD |
@@ -85,4 +88,4 @@ On Mateusz's demo Mac (M4 Pro 48 GB): `qwen3:4b-instruct-2507-q4_K_M`, `sileader
 | Streaming animation (SSE) | polling every 500 ms is enough |
 | Faked | letters are synthetic, no PDF/OCR (paste text) |
 
-About 9.5 h of MUST work, which fits 20:00 with 2-3 people in parallel.
+About 10 h of MUST work, which fits 20:00 with 2-3 people in parallel.
