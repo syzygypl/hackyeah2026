@@ -16,7 +16,7 @@ Status deck (10 slides by default, 12 with the live-pitch slides): https://claud
 | 1:20 | Demo 3 | "Now the worst case. We script a fully hijacked agent against the same gateway. 95,000 euros to the attacker. Denied. Customer list to evil-mail.ru. Denied. Card numbers. Redacted. 58 microseconds per check." | Dashboard live console: one-click attacks |
 | 1:45 | Demo 4 | "Change the rules live." Dashboard policy editor, PII from block to redact. "Next call, card masked. No restart. The edit itself is authenticated and audited." | Dashboard policy editor |
 | 2:00 | One more thing | "One more thing. A second payment. Approved vendor. Under the limit. Every rule says yes." Pause. "Three guard models from three families vote. They disagree. Airlock settles it by risk: an arbiter decides, low risk passes with a flag, high risk is denied. A human steps in only where your policy says so." Pause. "This payment? Denied." | Slide: consensus, black |
-| 2:25 | Proof | "Every decision lands in a tamper-evident log, the kind of record AI Act Article 12 and DORA expect. On our test set it caught 19 of 20 attacks. 129 demo cases, all green. Any Ollama agent, one URL." | Numbers slide |
+| 2:25 | Proof | "Every decision lands in a tamper-evident log, the kind of record AI Act Article 12 and DORA expect. On our test set it caught 19 of 20 attacks. 170 demo cases, all green. Any Ollama agent, one URL." | Numbers slide |
 | 2:45 | Close | "Your agents act. Airlock decides." | Last slide |
 
 ## Hero number per criterion
@@ -26,7 +26,7 @@ Status deck (10 slides by default, 12 with the live-pitch slides): https://claud
 | Guardrails | 30 | **95,000 EUR. Denied.** | 19/20 attacks caught, 1 false alarm in 16 benign items on our 36-item test set (EN + PL, smoke test, not a benchmark); 18 of 29 interactions blocked in the demo run; 16 signatures incl. SSRF, SSTI, XXE, markdown exfil; Polish injection heuristics; IBANs tokenized in prompts; in consensus mode, guard disagreement is settled by risk (arbiter, weighted votes, then allow + flag or deny) |
 | Architecture / perf | 20 | **58 µs** | benchmark p99 118 µs (demo run p50 73 µs); Qwen3Guard p50 134 ms; Granite 521 ms on short text (1.9 s at 2,000 chars), only on high-risk calls; consensus runs guards in parallel: 165 ms for two, 569 ms s with Granite |
 | Reporting | 20 | **29 of 29** decisions in a verified hash chain | dashboard live console with µs per check, "where guards disagreed" report section, JSONL export |
-| Tests | 15 | **129/129** | demo cases with real models; 108 unit tests (fcba685); 10 proxy tests; weakening the policy fails tests on purpose |
+| Tests | 15 | **170/170** | demo cases with real models; 117 unit tests; 10 proxy tests; weakening the policy fails tests on purpose |
 | Implementability | 15 | **1 URL** | Ollama-compatible proxy (:11434 to :11500), or 1 stdlib client file and 2 calls; 3 commands to deploy; policy edits via authenticated PUT |
 
 ## 10 slides for the final PDF (one sentence each)
@@ -36,7 +36,7 @@ Status deck (10 slides by default, 12 with the live-pitch slides): https://claud
 | 1 | Hook | "This invoice asks your agent to wire 95,000 euros." | - |
 | 2 | Problem | Agents with real tools can be turned by one document. | Guardrails |
 | 3 | Airlock | Cheap rules first, local models second, a human only where policy says so. | Architecture |
-| 4 | Measured | 58 µs, 134 ms, 521 ms, 129/129, 19/20 on our test set. | Performance, tests |
+| 4 | Measured | 58 µs, 134 ms, 521 ms, 170/170, 19/20 on our test set. | Performance, tests |
 | 5 | Demo | Real model held for a human; scripted hijack denied. | Guardrails |
 | 6 | One URL | Any Ollama agent, governed by changing one URL. | Implementability |
 | 7 | One more thing | When guards disagree, Airlock settles it by risk; a human only where policy says so. | Guardrails |
@@ -50,9 +50,10 @@ Deck variants: the artifact shows the 10-slide version by default (consensus fol
 
 - Say "scripted" for the 95k scene. The real-model scene right before it carries the truth.
 - Never say "secure" or "production-ready". Say "blocks these attacks in our tests". Planned items (MCP proxy, shared audit store) only if asked.
+- Remaining weak spots, only if asked: an instruction in the middle of very long text (models see head and tail), and the NEW-1/NEW-2 issues open with Marcin. Fixed since the last refresh: F7 judge criterion by phase, F11 multi-line injections, F12 decoded layers (base64, URL, hex, entities).
 - Approval is a real admin-gated control now (42be894): admin-only `POST /v1/approvals/{id}`, bound to the exact payload, single use, 10-minute expiry; a caller's `approved_by` is ignored. Good live beat: a self-approved 15k transfer is held, then denied. Same through the proxy (4ec9f90); proxy-held calls are approved on :11500, because approvals live in process memory.
 - Never claim consensus is more accurate: on our test set it caught 18/20 with 4 false alarms vs tiered 19/20 with 1. Tiered stays the default; consensus is about visible disagreement and the risk rule (shipped in 2fcd99a).
-- Granite slows with long text (1.9 s at 2,000 chars, 4.1 s at 6,000), so keep demo inputs short and the model warm. Polish benign prompts are the weak spot (7/42 wrongly blocked).
+- Granite slows with long text (1.9 s at 2,000 chars, 4.1 s at 6,000), so keep demo inputs short and the model warm. Polish benign prompts are the weak spot (4/42 wrongly blocked after the latest fixes, was 7/42).
 - Four-eyes is an internal control, not PSD2 SCA: the bank still authenticates the payment. Never "authorises".
 - "Models run on your machine, no prompt goes to a model provider" is true: the committed policy allows only local models (d16de01).
 - Compliance: "supports AI Act Art. 12/14 and DORA logging", never "compliant", "AI Act-ready" or "certified". The log is tamper-evident, never "immutable". Redaction covers PESEL, IBAN, card numbers and e-mails on configured paths, not "all PII". Stored hashes are pseudonymised, so still personal data.

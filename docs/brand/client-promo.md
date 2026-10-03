@@ -11,7 +11,7 @@ By AI Mateusza, 2026-10-03 ~13:05, at Mateusz's request. A promo pack for a firs
 | 3 | Approvals | "Risky actions wait for an admin: approval is bound to the exact payment, single use, expires in 10 minutes. An agent can't approve itself." | 42be894, 4ec9f90 |
 | 4 | Model outage | "If a model is down or slow, checks are not skipped: the configured fail mode applies, and high-risk calls fail closed." | 6202a36, 2ffcbdd |
 | 5 | Local only | "The committed policy allows only local models. Prompts don't go to a model provider." | d16de01 |
-| 6 | Tests | "116 automated tests and 170/170 demo cases pass." | origin/main 2ffcbdd, run 13:05; sample-security-report.md |
+| 6 | Tests | "117 automated tests and 170/170 demo cases pass." | origin/main 2ffcbdd, run 13:05; sample-security-report.md |
 
 Always add when asked: "It's a prototype from a 24-hour hackathon. It supports compliance work; it doesn't certify it."
 
@@ -20,7 +20,7 @@ Always add when asked: "It's a prototype from a 24-hour hackathon. It supports c
 1. **Fit:** Airlock was built against a bank's brief. The demo story is a treasury agent, a poisoned invoice and a 95,000 EUR transfer, which is a bank's language.
 2. **Urgency:** DORA has applied since January 2025, KNF's July 2026 recommendations ask for AI-aware ICT monitoring, and AI is a 2026 supervisory priority. A bank has a reason to act this quarter.
 3. **Proof match:** admin-only payment approvals, a tamper-evident log and local models answer a bank's first three questions.
-4. **Public sector comes second:** procurement is slower (Pzp), Rój is still a concept, and our known weak spot is Polish benign prompts (7 of 42 wrongly blocked on a wider check). Fix that before pitching to a Polish-speaking agency.
+4. **Public sector comes second:** procurement is slower (Pzp), Rój is still a concept, and our known weak spot is Polish benign prompts (4 of 42 still wrongly blocked on a wider check, down from 7). Fix that before pitching to a Polish-speaking agency.
 
 Best first target: a mid-size bank, a cooperative bank association or a regulated fintech that already runs an internal AI pilot (customer service, invoice processing, internal knowledge search).
 
@@ -67,7 +67,7 @@ Note: four-eyes review is an internal control, not PSD2 strong customer authenti
 >
 > Dlatego zbudowaliśmy Airlock: bramkę między agentami a narzędziami, działającą wyłącznie na sprzęcie instytucji. Najpierw szybkie reguły, potem lokalne modele ochronne, a ryzykowne płatności czekają na admina. Agent nie zatwierdzi sam siebie.
 >
-> Na naszym zestawie testowym: 19 z 20 ataków złapanych, 134 ms na pierwszy model, 116 testów na zielono. Każda decyzja w dzienniku odpornym na manipulacje, który wspiera DORA i art. 12 AI Act. Niczego nie certyfikuje, za to dużo ułatwia.
+> Na naszym zestawie testowym: 19 z 20 ataków złapanych, 134 ms na pierwszy model, 117 testów na zielono. Każda decyzja w dzienniku odpornym na manipulacje, który wspiera DORA i art. 12 AI Act. Niczego nie certyfikuje, za to dużo ułatwia.
 >
 > To prototyp z HackYeah 2026. Szukamy jednego banku, ubezpieczyciela lub fintechu na 2-tygodniowy pilotaż on-prem. Odezwij się.
 
@@ -87,9 +87,9 @@ Note: four-eyes review is an internal control, not PSD2 strong customer authenti
 - **Airlock:** a local gateway with Polish injection heuristics and PESEL checksum detection. Every model runs on-prem, every decision goes into a tamper-evident log, and failures are handled safely when a model is down. It supports GDPR Art. 25/32 (privacy by design, security of processing) and KSC/NIS2 logging duties.
 - **Rój (concept, not built yet):** reads an official letter with two small model families. It shows a deadline or amount only when both agree and the quote is verbatim in the letter; otherwise it says "nie wiem, sprawdź". It extracts and quotes; it doesn't advise. The UI says "To nie jest porada prawna ani podatkowa" and carries the AI Act Art. 50(1) notice. A human always decides.
 
-**Proof points:** 5 (local only), 4 (fail closed when a model is down), 1 (19/20 on our test set, which includes Polish attacks). Backup: 6 (116 tests, 170/170 demo cases).
+**Proof points:** 5 (local only), 4 (fail closed when a model is down), 1 (19/20 on our test set, which includes Polish attacks). Backup: 6 (117 tests, 170/170 demo cases).
 
-Honest caveat for this target: on a wider Polish check, 7 of 42 benign prompts were wrongly blocked. The pilot's week 1 in monitor mode exists to tune exactly that.
+Honest caveat for this target: on a wider Polish check, 4 of 42 benign prompts were still wrongly blocked (down from 7). The pilot's week 1 in monitor mode exists to tune exactly that.
 
 **Pilot offer: 2 weeks, on-prem**
 - **Scope:** one internal assistant or helpdesk flow, or (after Rój is built) one type of incoming letter. Runs on one server in the office's own network. Week 1 in monitor mode, week 2 in enforce mode.
