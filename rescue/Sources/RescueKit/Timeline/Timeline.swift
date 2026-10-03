@@ -31,10 +31,25 @@ public final class TimelineEngine {
         self.init(scenario: scenario, grid: grid, hints: hints, tracks: ts, dem: dem)
     }
 
-    public init(scenario: Scenario, grid: ProbabilityGrid, hints: [LocationHint], tracks: TrackSet, dem: DEM?) {
+    public init(scenario: Scenario, grid: ProbabilityGrid, hints: [LocationHint], tracks tracksIn: TrackSet, dem: DEM?) {
         self.scenario = scenario
         self.grid = grid
         self.hints = hints
+        // the missing person's estimated route (sightings + behaviour, never truth) joins the actors as kind osoba
+        var tracks = tracksIn
+        if let person = PersonTrack.actor(scenario, dem: dem) {
+            if let i = tracks.actors.firstIndex(where: { $0.kind == "osoba" }) {
+                var a = tracks.actors[i]
+                var m = a.fixes
+                for f in person.fixes where !m.contains(where: { $0.minute == f.minute }) { m.append(f) }
+                a.fixes = m.sorted { $0.minute < $1.minute }
+                if a.plan.isEmpty { a.plan = person.plan }
+                a.note = a.note ?? person.note
+                tracks.actors[i] = a
+            } else {
+                tracks.actors.append(person)
+            }
+        }
         self.tracks = tracks
         fov = FieldOfView(grid: grid, dem: dem)
         // the window starts with the searchers (a sighting of the person hours earlier would stretch it)
@@ -172,13 +187,17 @@ public final class TimelineEngine {
         let lastBase = stepPOA(stepIndex(endMinute))
         let finalPos = (0..<grid.count).reduce(0.0) { $0 + lastBase[$1] * finalPod[$1] }
         let actors: [[String: Any]] = tracks.actors.map { a in
-            ["id": a.id, "kind": a.kind, "name": a.name, "fov": a.fov.json,
+            var extra: [String: Any] = [:]
+            if a.kind == "osoba" { extra["estimated"] = true; if let n = a.note { extra["basis"] = n } }
+            if !a.constraints.isEmpty { extra["constraints"] = a.constraints.map { TrackConstraints.json($0, scenario: scenario) } }
+            return ["id": a.id, "kind": a.kind, "name": a.name, "fov": a.fov.json,
              "fixes": a.fixes.map { f -> [String: Any] in
                  var o: [String: Any] = ["t": scenario.clock(f.minute), "minute": f.minute, "lat": f.lat, "lon": f.lon, "accM": f.accM, "src": f.src]
                  if let t = f.text { o["text"] = t }
                  return o
              },
              "path": (samples[a.id] ?? []).map { [r6($0.lat), r6($0.lon), Double($0.minute), $0.accM.rounded(), $0.est ? 1 : 0] }]
+                .merging(extra) { a, _ in a }
         }
         var o: [String: Any] = ["schema": "rescue-timeline/1", "frameMin": frameMin, "searchEvents": tracks.searchEvents,
                                 "start": scenario.clock(startMinute), "end": scenario.clock(endMinute),
@@ -196,7 +215,7 @@ public final class TimelineEngine {
             guard let ss = samples[a.id], !ss.isEmpty else { return nil }
             let upTo = ss.filter { $0.minute <= minute }
             guard let s = upTo.last else { return nil }
-            var o: [String: Any] = ["id": a.id, "kind": a.kind, "name": a.name, "est": s.est,
+            var o: [String: Any] = ["id": a.id, "kind": a.kind, "name": a.name, "est": s.est || a.kind == "osoba",
                                     "pos": ["lat": r6(s.lat), "lon": r6(s.lon), "accM": s.accM.rounded()],
                                     "path": upTo.map { [r6($0.lat), r6($0.lon), Double($0.minute), $0.accM.rounded(), $0.est ? 1 : 0] }]
             if let h = heading(a.id, s.minute) { o["headingDeg"] = h }
