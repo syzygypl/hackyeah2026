@@ -13,8 +13,10 @@ For each round (blindtest/<round>.reveal.json + scenarios/<round>-replay.json):
   - actual:        the revealed timeline (planner + the searching AI's overrides)
     -> searches until the find, time after the first patrol, segment area searched (with repeats) until the find
 
-  python3 ablation.py [--rounds blind-01,blind-02] [--waves 12]
-Needs the Swift toolchain (cd rescue && swift build). Writes temporary files under rescue/eval/tmp/ and
+  python3 ablation.py [--rounds blind-01,blind-02] [--waves 12] [--features <list|all>]
+--features is passed to rescue-demo (engine flags after rescue-engine-v2.1, see Scenario.allFeatures); without it the
+engine runs the frozen v2.1 behaviour. Output: eval/ablation.json (v2.1) or eval/ablation-features-<list>.json.
+Needs the built engine (cd rescue && swift build). Writes temporary files under rescue/eval/tmp/ and
 rescue/out/eval-*.run.json and removes them afterwards.
 """
 import hashlib
@@ -51,12 +53,20 @@ def is_patrol_or_find(e):
     return bool(e.get("resource")) or e.get("provider") == "Found" or e.get("found") or "ZNALEZION" in e.get("title", "").upper()
 
 
+FEATURES = None  # None = frozen engine tag rescue-engine-v2.1; "all" or "a,b" -> rescue-demo --features (as calibrate.py)
+
+
 def run_engine(scen, terrain, name):
     os.makedirs(os.path.join(HERE, "tmp"), exist_ok=True)
     sp = os.path.join(HERE, "tmp", name + ".json")
     json.dump(scen, open(sp, "w"), ensure_ascii=False)
     json.dump(terrain, open(sp.replace(".json", "-terrain.json"), "w"), ensure_ascii=False)
-    p = subprocess.run(["swift", "run", "-c", "debug", "rescue-demo", "--fast", sp], cwd=ROOT, capture_output=True, text=True)
+    # the built binary directly, not `swift run` (hangs with piped output, see calibration/calibrate.py)
+    binary = os.path.join(ROOT, ".build", "debug", "rescue-demo")
+    if not os.path.exists(binary):
+        raise SystemExit("rescue-demo not built: cd rescue && swift build")
+    cmd = [binary, "--fast", sp] + (["--features", FEATURES] if FEATURES else [])
+    p = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, timeout=120, stdin=subprocess.DEVNULL)
     out = os.path.join(ROOT, "out", name + ".run.json")
     if p.returncode != 0 or not os.path.exists(out):
         raise SystemExit(f"engine failed for {name}:\n{p.stdout[-800:]}\n{p.stderr[-800:]}")
@@ -165,11 +175,17 @@ def evaluate(round_id, waves):
 
 
 def main(argv):
+    global FEATURES
     rounds = (argv[argv.index("--rounds") + 1] if "--rounds" in argv else "blind-01,blind-02").split(",")
     waves = int(argv[argv.index("--waves") + 1]) if "--waves" in argv else 12
+    FEATURES = argv[argv.index("--features") + 1] if "--features" in argv else None
+    tag = "v2.1" if not FEATURES else "features-" + FEATURES.replace(",", "+")
+    print(f"engine: rescue-engine-v2.1{' + --features ' + FEATURES if FEATURES else ' (default, no feature flags)'}")
     res = [evaluate(r, waves) for r in rounds]
+    for r in res:
+        r["engineConfig"] = tag
     shutil.rmtree(os.path.join(HERE, "tmp"), ignore_errors=True)
-    json.dump(res, open(os.path.join(HERE, "ablation.json"), "w"), ensure_ascii=False, indent=1)
+    json.dump(res, open(os.path.join(HERE, "ablation.json" if not FEATURES else f"ablation-{tag}.json"), "w"), ensure_ascii=False, indent=1)
     pct = lambda x: f"{x * 100:.1f}%"
     print("| Round | Method | Segment rank | Area swept before hidden cell |")
     print("|---|---|---|---|")

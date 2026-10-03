@@ -46,7 +46,7 @@
    "effort": 0.5124378109452739,
    "by": null
   },
-  "engineConfig": "v2.1"
+  "engineConfig": "features-all"
  },
  {
   "round": "blind-02",
@@ -60,10 +60,10 @@
    19.94323
   ],
   "engine": {
-   "area": 0.3739737274220033,
-   "cellRank": 911,
-   "segRank": 6,
-   "segRankPOA": 8
+   "area": 0.2319376026272578,
+   "cellRank": 565,
+   "segRank": 8,
+   "segRankPOA": 9
   },
   "expert": {
    "area": 0.39860426929392445,
@@ -79,16 +79,16 @@
    "found": false,
    "searches": 31,
    "minutes": 420,
-   "effort": 1.5418719211822651,
+   "effort": 1.5422824302134637,
    "waves": 7,
    "log": [
     "wave 1 17:45: drone->D13, heli->D12, gopr-a->D8",
     "wave 2 18:45: drone->D13, heli->D12, gopr-a->D7",
-    "wave 3 19:45: drone->D13, heli->D8, dog->D14, gopr-a->D12, gopr-b->D3",
-    "wave 4 20:45: drone->D13, heli->D9, dog->D8, gopr-b->D2, gopr-a->D17",
-    "wave 5 21:45: drone->D13, heli->D18, dog->D7, gopr-a->D11, gopr-b->D6",
-    "wave 6 22:45: drone->D19, heli->D14, dog->D13, gopr-a->D12, gopr-b->D18",
-    "wave 7 23:45: heli->D4, drone->D9, dog->D19, gopr-a->D3, gopr-b->D17",
+    "wave 3 19:45: drone->D12, heli->D13, dog->D8, gopr-b->D9, gopr-a->D7",
+    "wave 4 20:45: drone->D13, heli->D12, dog->D3, gopr-b->D14, gopr-a->D2",
+    "wave 5 21:45: drone->D13, heli->D12, dog->D8, gopr-a->D6, gopr-b->D9",
+    "wave 6 22:45: drone->D12, heli->D13, dog->D19, gopr-a->D11, gopr-b->D4",
+    "wave 7 23:45: drone->D17, heli->D18, dog->D14, gopr-a->D12, gopr-b->D7",
     "stop at 00:45 (6 h or midnight limit)"
    ]
   },
@@ -99,6 +99,6 @@
    "effort": 0.5545977011494247,
    "by": "gopr-a"
   },
-  "engineConfig": "v2.1"
+  "engineConfig": "features-all"
  }
 ]

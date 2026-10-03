@@ -4,7 +4,8 @@ Does the engine actually help, compared with what a search leader would do anywa
 
 ```sh
 cd rescue && swift build
-python3 eval/ablation.py            # ~1 min: re-runs the engine per simulated wave; writes eval/ablation.json
+python3 eval/ablation.py                   # ~1 min, frozen engine rescue-engine-v2.1 -> eval/ablation.json
+python3 eval/ablation.py --features all    # engine feature flags (Scenario.allFeatures) -> eval/ablation-features-all.json
 python3 eval/expert.py scenarios/blind-02-replay.json out/blind-02-replay.run.json 17:45   # expert order alone
 ```
 
@@ -41,6 +42,31 @@ The first three use reveal.py's metric: the area swept in rank order before reac
 Planner-only simulation (from `ablation.py`):
 - **blind-01:** the planner sends only TOPR A to S5 in waves 1-2. The drone reaches S12 in wave 4 and finds her at 22:00.
 - **blind-02:** the planner sends the **drone to D13 in five consecutive waves**, already searched with nothing found. It covers D18 (the hiding spot) only in waves 5 and 6, with the heli (true POD 0.15) and a ground team (0.45), and both rolls miss.
+
+## Engine v2.1 vs `--features all`
+
+`--features` is passed to `rescue-demo` the same way as in `calibration/calibrate.py`: the built binary, `--fast <scenario> --features <list|all>`. `all` enables `traceWindow`, `eventsBeforeStart`, `podModel`, `availabilityWindows`, `hypothermiaModel` and `behaviourLayers`. Without the flag the engine runs the frozen `rescue-engine-v2.1` behaviour (it reproduces the tables above exactly).
+
+| Round | Metric | v2.1 (default) | `--features all` |
+|---|---|---|---|
+| blind-01 | engine: segment rank (by POA mass) | #2 / 20 | #2 / 20 |
+| blind-01 | engine: area before hidden cell | 2.1% | 2.1% |
+| blind-02 | engine: segment rank (by POA mass / first reached) | #8 / #6 | #9 / #8 |
+| blind-02 | engine: area before hidden cell | 37.4% | **23.2%** |
+| blind-02 | for reference: expert / naive | 39.9% / 35.7% | 39.9% / 35.7% |
+| blind-01 | planner only: found / searches / minutes | yes / 7 / 180 | yes / 7 / 180 |
+| blind-02 | planner only: found within 6 h | **NO** (31 searches) | **NO** (31 searches) |
+| blind-02 | actual (planner + AI overrides) | found, 11 searches, 215 min | (same timeline) |
+
+- **Map:** with all features, blind-02's hidden cell moves from 37.4% to 23.2% of the area, now clearly better than both naive (35.7%) and the expert (39.9%). One flag at a time on blind-02:
+  - `behaviourLayers` alone (dementia: drainages, brush, less trail-following) gives 28.6%;
+  - `traceWindow` alone (the found cap as a time-windowed trace, not a last known point) gives 33.0%;
+  - `podModel` alone leaves the map unchanged (37.4%), since it only affects the planner;
+  - both map flags together give 23.2%. The segment rank by POA mass gets slightly worse (#8 to #9), because probability spreads over more forest cells. blind-01 (a hiker) is unchanged.
+- **Planner:** **still does not find blind-02 within 6 h.** With `podModel` the drone and heli no longer repeat the same segment, but they alternate between the already-cleared D12 and D13 for six waves. D18 (the hiding spot) gets one heli pass in wave 7, which misses.
+  - None of the six flags implements team memory, diminishing returns after "nothing" or mid-wave readiness. The planner changes after v2.1 are `podModel`, `availabilityWindows` and `hypothermiaModel`, so those planner fixes cannot show up here.
+  - Likely cause: a low declared POD (drone or heli in forest at dusk) lowers a searched segment's POA only a little (Koopman: POA x (1 - POD)), so D12 and D13 stay near the top and keep being re-tasked.
+- **Not an independent test.** The features were developed after seeing these two reveals (dementia layer, trace window, POD by land cover), so blind-02 getting better is expected and is NOT evidence. The independent check is the calibration on the simulator (`calibration/`), with cases that nobody tuned against.
 
 ## Honest reading
 
