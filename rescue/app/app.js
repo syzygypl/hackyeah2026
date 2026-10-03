@@ -11,6 +11,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (p) => Math.round((p || 0) * 100) + "%";
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
+const JOINED = !!new URLSearchParams(location.search).get("key");   // opened from a join link / QR: that is a live action
 // action key (write access): arrives once in the join link / QR (?key=), is kept on this device and removed from the address bar
 { const k = new URLSearchParams(location.search).get("key"); if (k) { try { localStorage.setItem("rescue-pin", k.trim()); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("key"); history.replaceState(null, "", u); } }
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}   // raw like field/ops/2D; web/patrol writes it JSON-quoted
@@ -64,7 +65,7 @@ async function loadScenario(id) {
   teamOps = []; closePop();
   let run, backend;
   if (s.id === "studio") { run = await api("/story"); backend = "studio"; }
-  else if (s.api) { run = await api(s.run); backend = "api"; store.runUrl = s.run; store.assessUrl = s.assessment; }
+  else if (s.api) { const u = runUrlFor(s.run); run = await api(u); backend = "api"; store.runUrl = u; store.assessUrl = s.assessment; }
   else { run = await (await fetch(STATIC[s.id].run, { cache: "no-store" })).json(); backend = "static"; }
   $("scen").value = s.id;
   applyRun(run, { scenario: s.id, backend, editable: backend === "studio" }, "load");
@@ -190,6 +191,7 @@ function setStep(n, from) {
   const R = D(); if (!R || !R.steps) return;
   n = Math.max(1, Math.min(R.steps.length, n));
   if (n === store.step) return;
+  if (liveOn() && n < R.steps.length) { toast("Na żywo widać tylko teraz. Wcześniejsze momenty: przełącz na „Historia” u góry.", 3500); syncFrames(); return; }
   set({ step: n }, "step");
   for (const k in FRAMES) if (k !== from) { if (FRAMES[k].ready) postTo(k, { type: "step", i: n - 1 }); else syncFrame(k, "step"); }
   clearTimeout(setStep.h); setStep.h = setTimeout(fetchAssessment, 300);
@@ -652,6 +654,7 @@ async function assignTeam(resourceId, segmentId) {
 }
 // ---------- roles: ratownik (phone, own task + patrol reports) / operator (all modes). ?role= or remembered; picker on first open
 function setRole(r) {
+  if (r === "ratownik" && store.time !== "live") setTime("live");
   store.role = r; try { localStorage.setItem("rescue-app-role", r); } catch (e) {}
   document.body.classList.toggle("role-ratownik", r === "ratownik"); document.body.classList.toggle("role-operator", r === "operator");
   $("roleBtn").textContent = r === "ratownik" ? "Rola: ratownik" : "Rola: operator";
@@ -785,19 +788,76 @@ function scenTitle() {
   const place = (STATIC[store.scenario] && STATIC[store.scenario].name.replace(/\s*\(.*\)$/, "").split(" - ")[0]) || (parts[1] || store.scenario || "");
   return what ? `${place} - ${what}` : place;
 }
+// ---------- Na żywo vs Historia (Andrzej): two separate time modes for the whole app.
+// Historia = the prerecorded scenario only (GET /api/run/<sc>?live=0), timeline and play; live functions stay visible but inactive,
+// with a note and a switch back. Na żywo = the live run (field reports folded in), timeline held at "now"; + Ślad, Wyślij zespół,
+// confirmations, + Nowa akcja and Centrum work only here. Plan (Studio editing) is neither. Rescuer phones are always live.
+function initTime() {
+  const q = new URLSearchParams(location.search), t = q.get("time");
+  if (t === "live" || t === "hist") return t;
+  if (JOINED || q.get("role") === "ratownik") return "live";
+  if (q.get("step") != null) return "hist";
+  try { const v = localStorage.getItem("rescue-app-time"); if (v === "live" || v === "hist") return v; } catch (e) {}
+  return "hist";
+}
+store.time = initTime();
+const runUrlFor = (u) => store.time === "hist" ? u + (u.includes("?") ? "&" : "?") + "live=0" : u;
+const liveAvail = () => store.backend === "api" && live.ok;          // this scenario has a live action on the server
+const liveOn = () => store.time === "live" && store.backend === "api" && store.mode !== "edycja";
+const liveNow = () => liveOn() && live.ok;                            // live functions are active
+function syncFrames() { const R = D(); if (!R || !R.steps) return; for (const k in FRAMES) if (FRAMES[k].ready) postTo(k, { type: "step", i: store.step - 1 }); $("slider").value = store.step; }
+async function setTime(t) {
+  if (t === store.time) return;
+  if (t === "live" && store.backend !== "api") { toast("Ten scenariusz to tylko nagranie - nie ma akcji na żywo. Wybierz scenariusz z serwera albo „+ Nowa akcja”.", 4500); return; }
+  if (playing) $("play").onclick();
+  store.time = t; try { localStorage.setItem("rescue-app-time", t); } catch (e) {}
+  if (store.backend === "api") { try { await loadScenario(store.scenario); } catch (e) { toast(plErr(e)); } }
+  renderLiveHead();
+  toast(t === "live" ? "Na żywo: mapa pokazuje teraz, ze zgłoszeniami z terenu" : "Historia: nagrany przebieg akcji. Przesuń oś czasu albo naciśnij ▶", 3000);
+}
+$("tmode").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) setTime(b.dataset.t); };
+// live-only header actions (+ Nowa akcja, Centrum): inactive in Historia, a click explains how to switch
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-needslive]"); if (!el || store.time === "live") return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  toast("„" + el.textContent.trim() + "” działa w trybie Na żywo - przełącz u góry: Na żywo / Historia.", 4000);
+}, true);
 function renderLiveHead() {
-  const mode = store.mode === "edycja" || store.backend === "studio" ? "PLAN" : store.backend === "api" && live.ok ? "LIVE" : "ODTWORZENIE";
-  const tip = { LIVE: "Akcja na żywo: zmiany z terenu i od operatora przeliczają mapę co kilka sekund", PLAN: "Plan / edycja historii - nie akcja na żywo", ODTWORZENIE: "Odtworzenie zapisanego scenariusza - bez połączenia na żywo" }[mode];
+  const mode = store.mode === "edycja" || store.backend === "studio" ? "PLAN" : liveOn() ? "LIVE" : "HISTORIA";
+  const tip = { LIVE: live.ok ? "Akcja na żywo: zmiany z terenu i od operatora przeliczają mapę co kilka sekund" : "Na żywo - brak połączenia z serwerem akcji", PLAN: "Plan / edycja historii - nie akcja na żywo", HISTORIA: "Nagrana historia akcji - bez zdarzeń na żywo" }[mode];
   for (const [b, t] of [["modeBadge", "scenTitle"], ["rModeBadge", "rScenTitle"]]) {
     const el = $(b); if (!el) continue;
-    // LIVE blinks only at the live moment (timeline at its end); scrolled back in time = steady dot + hint (Mateusz)
-    const atEnd = !D() || !D().steps || store.step >= D().steps.length;
-    el.className = "lbadge " + mode.toLowerCase() + (atEnd ? " atend" : "");
+    el.className = "lbadge " + mode.toLowerCase() + (mode === "LIVE" && live.ok ? " atend" : "");
     el.innerHTML = `<i></i>${mode}`;
-    el.title = mode === "LIVE" && !atEnd ? "Oglądasz wcześniejszy moment akcji - przewiń oś czasu do końca, aby wrócić na żywo" : tip;
+    el.title = tip;
     $(t).textContent = scenTitle(); $(t).title = (D() && D().incident) || "";
   }
-  if ($("liveBox")) $("liveBox").hidden = !(store.backend === "api" && live.ok) || store.mode === "edycja";
+  const plan = store.mode === "edycja" || store.backend === "studio";
+  $("tmode").hidden = plan;
+  $("tmode").querySelectorAll("button").forEach((b) => {
+    b.classList.toggle("on", b.dataset.t === store.time);
+    if (b.dataset.t === "live") b.disabled = store.backend !== "api";
+  });
+  document.querySelectorAll("[data-needslive]").forEach((el) => { el.classList.toggle("needslive", store.time !== "live"); el.setAttribute("aria-disabled", store.time !== "live"); });
+  // dock: Historia plays the recording; Na żywo holds the timeline at now
+  const on = liveOn();
+  $("slider").disabled = on; $("play").disabled = on;
+  $("play").title = on ? "Odtwarzanie działa w trybie Historia" : "Odtwórz historię";
+  $("tlabel").textContent = plan ? "Historia" : on ? "Na żywo · teraz" : "Historia";
+  document.body.classList.toggle("time-live", on); document.body.classList.toggle("time-hist", !plan && !on);
+  // live box: always in Akcja, active only in Na żywo with a live connection
+  const box = $("liveBox"); if (!box) return;
+  box.hidden = plan || !D();
+  const act = liveNow();
+  box.classList.toggle("frozen", !act);
+  for (const id of ["liveClue", "liveSend", "ldGo"]) $(id).disabled = !act;
+  if (!act) { live.armed = false; $("liveClue").classList.remove("on"); $("liveDispatch").hidden = true; }
+  const note = $("liveNote");
+  note.hidden = act;
+  if (!act) note.innerHTML = store.time === "hist"
+    ? `Oglądasz nagraną historię akcji. Ślady, wysyłanie zespołów, potwierdzenia i nowe akcje działają tylko na żywo.${store.backend === "api" ? ` <button type="button" class="primary golive">Przełącz na żywo</button>` : ""}`
+    : `Brak połączenia na żywo z serwerem akcji. Funkcje na żywo wrócą, gdy serwer odpowie.`;
+  const g = note.querySelector(".golive"); if (g) g.onclick = () => setTime("live");
 }
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
 function renderLiveFeed() {
@@ -808,10 +868,11 @@ function renderLiveFeed() {
   el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"><span class="lft">${esc(hhmm(e.t))}</span> <b>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`).join("")
     || `<div class="help">Brak zdarzeń na żywo. Dodaj ślad albo wyślij zespół - mapa przeliczy się od razu.</div>`;
   if ($("ackCount")) $("ackCount").textContent = unacked.length ? `Niepotwierdzone: ${unacked.length}` : "Wszystko potwierdzone";
-  if ($("liveAckAll")) $("liveAckAll").disabled = !unacked.length;
-  el.querySelectorAll(".ack1").forEach((b) => b.onclick = () => ackEvents(+b.dataset.seq));
+  if ($("liveAckAll")) $("liveAckAll").disabled = !unacked.length || !liveNow();
+  el.querySelectorAll(".ack1").forEach((b) => { b.disabled = !liveNow(); b.onclick = () => ackEvents(+b.dataset.seq); });
 }
 async function ackEvents(seq) {
+  if (!liveNow()) return toast("Potwierdzanie działa tylko na żywo", 3000);
   try {
     await api("/api/ack", seq ? { seq } : { sc: live.sc });
     for (const e of live.events) if (!seq || e.seq === seq) e.acked = true;
@@ -843,12 +904,13 @@ async function pollLive() {
 }
 async function onLiveChange(evs) {
   try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
-  if (store.backend === "api" && store.runUrl) { try { applyRun(await api(store.runUrl), {}, "run"); } catch (e) {} }
+  if (liveOn() && store.runUrl) { try { applyRun(await api(store.runUrl), {}, "run"); } catch (e) {} }
   if (store.role === "ratownik") renderRescuer();
   const other = evs.filter((e) => !(e.by === "operator" && store.role === "operator"));
-  if (other.length) toast("Na żywo: " + other.map((e) => (e.team ? e.team + ": " : "") + e.title).join("; "), 4000);
+  if (other.length) toast("Na żywo: " + other.map((e) => (e.team ? e.team + ": " : "") + e.title).join("; ") + (liveOn() ? "" : " (oglądasz historię - przełącz na „Na żywo”)"), 4000);
 }
 function liveForm(lat, lon, x, y) {
+  if (!liveNow()) { live.armed = false; return; }
   closePop(); live.armed = false; $("liveClue").classList.remove("on");
   const el = document.createElement("form"); el.className = "pop"; el.style.position = "fixed";
   el.style.left = Math.max(8, Math.min(innerWidth - 250, x + 14)) + "px"; el.style.top = Math.max(8, Math.min(innerHeight - 220, y - 20)) + "px";
@@ -867,7 +929,7 @@ function liveForm(lat, lon, x, y) {
   };
   setTimeout(() => el.elements.note.focus(), 0);
 }
-$("liveClue").onclick = () => { live.armed = !live.armed; $("liveClue").classList.toggle("on", live.armed); if (live.armed) toast("Kliknij mapę w miejscu śladu (Esc - anuluj)", 4000); };
+$("liveClue").onclick = () => { if (!liveNow()) return; live.armed = !live.armed; $("liveClue").classList.toggle("on", live.armed); if (live.armed) toast("Kliknij mapę w miejscu śladu (Esc - anuluj)", 4000); };
 addEventListener("keydown", (e) => { if (e.key === "Escape" && live.armed) { live.armed = false; $("liveClue").classList.remove("on"); } });
 addEventListener("message", (e) => {   // 2D view: {source:"rescue2d", type:"mapclick", lat, lon, x, y} (user click on its map)
   if (e.origin !== location.origin || e.source !== $("frame2d").contentWindow || !e.data || e.data.source !== "rescue2d" || e.data.type !== "mapclick" || !live.armed) return;
@@ -875,11 +937,12 @@ addEventListener("message", (e) => {   // 2D view: {source:"rescue2d", type:"map
 });
 map.on("click", (e) => { if (live.armed) { const r = $("map").getBoundingClientRect(); liveForm(e.lngLat.lat, e.lngLat.lng, r.left + e.point.x, r.top + e.point.y); } });
 $("liveSend").onclick = () => {
+  if (!liveNow()) return;
   const box = $("liveDispatch"), S = curStep(); box.hidden = !box.hidden; if (box.hidden || !S) return;
   $("ldTeam").innerHTML = (S.resources || []).map((r) => `<option value="${esc(r.id)}" ${r.available ? "" : "disabled"}>${esc(r.name.split(" (")[0])}</option>`).join("");
   $("ldSeg").innerHTML = S.segments.map((s, k) => `<option value="${esc(s.id)}" ${s.id === store.selSeg ? "selected" : ""}>#${k + 1} ${esc(s.id)} ${esc(s.name)}</option>`).join("");
 };
-$("ldGo").onclick = async () => { const t = $("ldTeam").value, s = $("ldSeg").value; if (!t || !s) return; await assignTeam(t, s); $("liveDispatch").hidden = true; toast(`${t} → ${s}`); pollLive(); };
+$("ldGo").onclick = async () => { if (!liveNow()) return; const t = $("ldTeam").value, s = $("ldSeg").value; if (!t || !s) return; await assignTeam(t, s); $("liveDispatch").hidden = true; toast(`${t} → ${s}`); pollLive(); };
 subs.push((why) => { if (why === "load" || why === "mode" || why === "run" || why === "edit" || why === "step") renderLiveHead(); });
 
 // ---------- wiring
