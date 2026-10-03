@@ -35,7 +35,7 @@ Names are not final: candidates are being shortlisted in `naming.md` (owned by t
 
 ### The pair
 
-Rój runs on Airlock. Every message in the swarm passes through the same gateway. One sentence the whole team can repeat: **"Airlock decides what agents may do. Rój decides what they may claim."** Since 0952c83 the bridge is literal: Airlock's own guards vote like Rój, and a disagreement goes to a human.
+Rój runs on Airlock. Every message in the swarm passes through the same gateway. One sentence the whole team can repeat: **"Airlock decides what agents may do. Rój decides what they may claim."** Since 0952c83 the bridge is literal: Airlock's own guards vote like Rój, and a disagreement escalates (to an arbiter model, or to a human for high-risk payments; routing still being decided).
 
 ## 2. Taglines
 
@@ -107,9 +107,9 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Test suite | **95 cases** (43 unittest methods, 46 table-driven tool cases), green in 11 s | spike README, run 2026-10-03 12:30 | measured. The brief said 93; the README and code say 95, so we use 95 |
 | Demo run | 29 interactions, 18 blocked, 4 human approvals (1 rejected), 12 values redacted, audit chain verified | `sample-security-report.md` | measured (scripted hijacked agent) |
 | Attack signatures feed | **16** signatures incl. SSRF, SSTI, XXE, markdown exfil; hot-reloaded | d076785, 85c9f42 | measured |
-| Self-test | demo.py **129/129** cases (114 after the detection plan, 120 after IBAN tokenization); 81 unit tests + 7 proxy tests green on 00fea5a | sample-security-report.md at 0952c83, run 13:25 | measured. Supersedes 95 |
+| Self-test | demo.py **129/129** cases (114 after the detection plan, 120 after IBAN tokenization); 81 unit tests + 7 proxy tests green on 00fea5a | sample-security-report.md at 0952c83, run ~12:25 | measured. Supersedes 95 |
 | Demo-run overhead | p50 73 µs, p99 155 µs, about 10,700 checks/s with 16 signatures | architecture README at d523cd6 | measured. 58 µs stays the benchmark headline |
-| Guard consensus | 3 families vote in parallel (Qwen, Llama, Granite); disagreement goes to a human. 0.16 s for two guards, 1.07 s p50 with Granite on high-risk calls; the 9k off-task payment split and went to a human | 0952c83, spike README | measured, 1 live run (6 prompts + 3 calls). Opt-in mode |
+| Guard consensus | 3 families vote in parallel (Qwen, Llama, Granite); disagreement escalates (today a human approval; risk-based routing to an arbiter model proposed, decision pending). 0.16 s for two guards, 1.07 s p50 with Granite on high-risk calls; the 9k off-task payment split and was escalated | 0952c83, spike README | measured, 1 live run (6 prompts + 3 calls). Opt-in mode, escalation policy pending |
 | Ollama proxy | protect any Ollama agent by changing one URL (:11434 to :11500); 7 tests | 917b83c | built. Approval via header is simulated |
 | Dashboard | live console: 12 one-click attacks + 2 legit, verdict, reasons, µs per check; policy edits via authenticated PUT, atomic write, audited | f000cb6, 88f1934, 00fea5a | built |
 | IBAN in prompts | tokenized, resolved only inside payment tool calls | f3186a9 | built |
