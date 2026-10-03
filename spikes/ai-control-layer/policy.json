@@ -128,6 +128,7 @@
       "prefilter": {
         "model": "sileader/qwen3guard:0.6b",
         "fallback_models": ["llama-guard3:1b"],
+        "fallback_min_confidence": 0.9,
         "timeout_ms": 500,
         "fail_mode": "open"
       },

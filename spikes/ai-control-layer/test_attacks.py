@@ -858,6 +858,27 @@ class WarmupAll(unittest.TestCase):
             fake.stop()
 
 
+class FallbackVerdicts(unittest.TestCase):
+    """NEW-1: a judge that answered overrides a fallback verdict. F14: low-confidence fallback 'unsafe' abstains."""
+
+    def tearDown(self):
+        self.fake.stop()
+
+    def test_judge_overrides_fallback_false_positive(self):
+        self.fake = FakeOllama({LLAMA: "l", GRANITE: "g"}, reply={LLAMA: "unsafe\nS1", GRANITE: "<score> no </score>"})
+        layer, s, _ = fresh(edit=semantic_env(self.fake.url))  # qwen3guard (primary) not installed -> llama-guard answers
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})
+        self.assertEqual(r["decision"], ALLOW, r["event"]["reasons"])
+        self.assertIn(f"fallback_overridden_by_judge:{LLAMA}", r["event"]["semantic"]["flags"])
+
+    def test_low_confidence_fallback_abstains(self):
+        self.fake = FakeOllama({LLAMA: "l"}, reply="unsafe\nS1")  # no logprobs -> p 0.95
+        layer, s, _ = fresh(edit=semantic_env(self.fake.url, prefilter={"fallback_min_confidence": 0.99}))
+        r = layer.check_prompt(s, "Read invoice INV-2041")
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertIn(f"low_confidence_fallback:{LLAMA}", r["event"]["semantic"]["flags"])
+
+
 class SemanticCache(unittest.TestCase):
     def tearDown(self):
         self.fake.stop()
@@ -1418,7 +1439,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization", "InjectionNotHiddenByPii": "injection not hidden behind PII",
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "FallbackVerdicts": "fallback verdicts (NEW-1/F14)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "AuditPrivacy": "audit privacy: HMAC, no bare PII hashes (7c)", "Performance": "performance"}
 
 

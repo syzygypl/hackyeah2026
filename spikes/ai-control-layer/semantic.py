@@ -290,6 +290,9 @@ class SemanticGuard:
                                    context=context if fmt == "granite_guardian" else None,
                                    cacheable=model == stage.get("model"), max_chars=stage.get("max_input_chars", 6000))
                     counted = r["verdict"] != "safe" and not (fmt == "llama_guard" and r["categories"] and not blocked & set(r["categories"]))
+                    if counted and model != stage.get("model") and r["p_unsafe"] < stage.get("fallback_min_confidence", 0.9):
+                        counted = False  # F14: a low-confidence fallback "unsafe" abstains (llama-guard FPs at p 0.65-0.88)
+                        res["flags"].append(f"low_confidence_fallback:{model}")
                     out.append(dict(r, stage=name, model=model, digest=digest[:12], criterion=crit, counted=counted,
                                     category_names=[LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]))
             except Exception as e:
@@ -347,6 +350,11 @@ class SemanticGuard:
                 # judge called only because the prefilter degraded: its failure inherits the prefilter's fail_mode;
                 # with a real reason to suspect (high risk, Controversial, heuristic signal) the judge fails closed
                 self._fail(res, "judge", jd if suspicious else dict(jd, fail_mode=pf.get("fail_mode", "open")), e, mode)
+        if any(r["stage"] == "judge" for r in res["stages"]):  # NEW-1: a judge that answered overrides a fallback model
+            for r in res["stages"]:
+                if r["stage"] == "prefilter" and r["model"] != pf.get("model") and r["counted"]:
+                    r["counted"], r["overridden_by_judge"] = False, True
+                    res["flags"].append(f"fallback_overridden_by_judge:{r['model']}")
         counted = [r["p_unsafe"] for r in res["stages"] if r["counted"]]
         res["score"] = max([h] + counted)
         res["backend"] = "+".join(used + ["heuristic"]) if used else res["backend"]
