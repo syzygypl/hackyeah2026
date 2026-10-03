@@ -91,28 +91,31 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._send(e.read(), "application/json", "live")
             except Exception:
                 return self._json(503, {"error": f"gateway not running on {GATEWAY} - start: python3 spikes/ai-control-layer/server.py"})
-        if p == "/api/policy":
+        if p in ("/api/policy", "/api/policy/reset"):
+            # The dashboard never writes policy.json itself: an unauthenticated writer would be a hole in the
+            # security layer. It forwards to the gateway's PUT /v1/policy with the admin token typed in the UI.
+            if p == "/api/policy/reset":
+                r = subprocess.run(["git", "show", "HEAD:./policy.json"], cwd=SPIKE, capture_output=True)
+                if r.returncode != 0:
+                    return self._json(500, {"error": "git show failed"})
+                body = r.stdout
+            headers = {"Content-Type": "application/json"}
+            if self.headers.get("Authorization"):
+                headers["Authorization"] = self.headers["Authorization"]
+            req = urllib.request.Request(GATEWAY + "/v1/policy", data=body, headers=headers, method="PUT")
             try:
-                pol = json.loads(body)
-                assert isinstance(pol, dict) and isinstance(pol.get("controls"), dict)
+                with urllib.request.urlopen(req, timeout=10) as r:
+                    return self._send(r.read(), "application/json", "live")
+            except urllib.error.HTTPError as e:
+                if e.code in (404, 405, 501):
+                    return self._json(501, {"error": "gateway has no PUT /v1/policy yet - edit spikes/ai-control-layer/policy.json on disk, it hot-reloads"})
+                data = e.read()
+                self.send_response(e.code)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.end_headers()
+                return self.wfile.write(data)
             except Exception:
-                return self._json(400, {"error": "policy must be a JSON object with a 'controls' section"})
-            os.makedirs(OUT, exist_ok=True)
-            cur = read(POLICY)
-            if cur:
-                open(os.path.join(OUT, "policy.previous.json"), "wb").write(cur)
-            tmp = POLICY + ".tmp"
-            with open(tmp, "w") as f:
-                json.dump(pol, f, indent=2, ensure_ascii=False)
-                f.write("\n")
-            os.replace(tmp, POLICY)  # atomic: the gateway never reads a half-written file
-            return self._json(200, {"ok": True, "live": live("/policy") is not None})
-        if p == "/api/policy/reset":
-            r = subprocess.run(["git", "show", "HEAD:./policy.json"], cwd=SPIKE, capture_output=True)
-            if r.returncode != 0:
-                return self._json(500, {"error": "git show failed"})
-            open(POLICY, "wb").write(r.stdout)
-            return self._json(200, {"ok": True})
+                return self._json(503, {"error": f"gateway not running on {GATEWAY}"})
         return self._json(404, {"error": "unknown endpoint"})
 
     def _json(self, code, obj):
