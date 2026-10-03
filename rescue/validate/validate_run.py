@@ -149,7 +149,8 @@ def validate_run(doc, errors):
         bp = value["beforePing"]
         if not isinstance(bp, int) or not (0 <= bp < len(steps)):
             fail(errors, f"value.beforePing={bp} out of range for {len(steps)} step(s)")
-    if seg_ids is not None and value.get("truthSeg") not in seg_ids:
+    # blind mode (scenario without truth): no backtest block, so no truthSeg
+    if seg_ids is not None and "truthSeg" in value and value.get("truthSeg") not in seg_ids:
         fail(errors, f"value.truthSeg={value.get('truthSeg')!r} not present in segOf")
 
 

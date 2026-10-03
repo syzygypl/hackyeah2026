@@ -35,41 +35,37 @@ public enum StoryPipeline {
             return ["schema": "rescue-run/1", "error": "no events"]
         }
 
-        // value block: "find spot" = scenario truth, else the Ratunek ping, else the final top cell
+        // value block. Blind mode (no truth): no backtest fields, nobody knows the find spot.
         let beforePing = max(0, (arrived.firstIndex { $0.source == "RatunekPing" } ?? arrived.count) - 1)
-        let truthCoord: Coord
-        let truthSource: String
-        if let t = scenario.truth { truthCoord = Coord(t.at); truthSource = "truth" }
-        else if let p = scenario.events.last(where: { $0.provider == "RatunekPing" })?.point { truthCoord = Coord(p); truthSource = "ratunek" }
-        else {
-            let last = poas.last!
-            truthCoord = grid.centers[last.indices.max { last[$0] < last[$1] }!]; truthSource = "topCell"
-        }
-        let truthCell = grid.cellIndex(truthCoord)
-        let truthSeg = scenario.segments[grid.segmentOf[truthCell]].id
         let fused = grid.segments(poas[beforePing])
-        let ringIds = Set(arrived.filter { $0.source != "KoesterRings" }.map(\.id))
-        let ringsPoa = grid.poa(disabled: ringIds)
-        let ringsOnly = grid.segments(ringsPoa)
-        func areaToFind(_ poa: [Double]) -> Double {
-            let sorted = poa.indices.sorted { poa[$0] > poa[$1] }
-            return Double((sorted.firstIndex(of: truthCell) ?? sorted.count - 1) + 1) / Double(poa.count)
+        var backtest: [String: Any] = [:]
+        if let t = scenario.truth {
+            let truthCell = grid.cellIndex(Coord(t.at))
+            let truthSeg = scenario.segments[grid.segmentOf[truthCell]].id
+            let ringIds = Set(arrived.filter { $0.source != "KoesterRings" }.map(\.id))
+            let ringsPoa = grid.poa(disabled: ringIds)
+            let ringsOnly = grid.segments(ringsPoa)
+            func areaToFind(_ poa: [Double]) -> Double {
+                let sorted = poa.indices.sorted { poa[$0] > poa[$1] }
+                return Double((sorted.firstIndex(of: truthCell) ?? sorted.count - 1) + 1) / Double(poa.count)
+            }
+            backtest = ["rankFused": (fused.firstIndex { $0.id == truthSeg } ?? 0) + 1,
+                        "rankRings": (ringsOnly.firstIndex { $0.id == truthSeg } ?? 0) + 1,
+                        "areaFused": areaToFind(poas[beforePing]), "areaRings": areaToFind(ringsPoa), "truthSeg": truthSeg]
         }
         let c = plans[beforePing].conditions, m = arrived[beforePing].minute
         let smart = SearchPlanner.simulate(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: true)
         let naive = SearchPlanner.simulate(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: false)
-        let summary: [String: Any] = [
+        var summary: [String: Any] = [
             "top3poa": min(1, fused.prefix(3).map(\.poa).reduce(0, +)),
             "top3area": fused.prefix(3).map(\.areaFrac).reduce(0, +),
-            "rankFused": (fused.firstIndex { $0.id == truthSeg } ?? 0) + 1,
-            "rankRings": (ringsOnly.firstIndex { $0.id == truthSeg } ?? 0) + 1,
-            "areaFused": areaToFind(poas[beforePing]), "areaRings": areaToFind(ringsPoa),
-            "truthSeg": truthSeg, "truthSource": truthSource, "beforePing": beforePing,
+            "blind": scenario.truth == nil, "beforePing": beforePing,
             "t40Planned": SearchPlanner.timeTo(0.4, smart) ?? -1, "t40Naive": SearchPlanner.timeTo(0.4, naive) ?? -1,
             "t50Planned": SearchPlanner.timeTo(0.5, smart) ?? -1, "t50Naive": SearchPlanner.timeTo(0.5, naive) ?? -1,
             "pos2hPlanned": min(1, SearchPlanner.posAt(120, smart)), "pos2hNaive": min(1, SearchPlanner.posAt(120, naive)),
             "curvePlanned": smart.map { [$0.0, $0.1] }, "curveNaive": naive.map { [$0.0, $0.1] },
         ]
+        summary.merge(backtest) { $1 }
         var doc = runJSONObject(scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
         // extras for the studio UI (ignored by validators)
         doc["hints"] = arrived.map { h -> [String: Any] in

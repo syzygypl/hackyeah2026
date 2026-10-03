@@ -22,8 +22,10 @@ if FileManager.default.fileExists(atPath: terrainPath) {
 let clock = ScenarioClock(msPerMinute: args.contains("--fast") ? 0 : 8)
 
 let grid = ProbabilityGrid(scenario)
-let truthCell = grid.cellIndex(Coord(scenario.truth?.at ?? scenario.events.last { $0.provider == "RatunekPing" }?.point ?? scenario.ipp.at))
-let truthSeg = scenario.segments[grid.segmentOf[truthCell]].id
+// Blind mode: a scenario without `truth` runs end to end, without the backtest (nobody knows the find spot).
+let blind = scenario.truth == nil
+let truthCell = scenario.truth.map { grid.cellIndex(Coord($0.at)) } ?? 0
+let truthSeg = blind ? "" : scenario.segments[grid.segmentOf[truthCell]].id
 
 func pct(_ x: Double) -> String { String(format: "%.0f%%", x * 100) }
 func top3Line(_ segs: [ProbabilityGrid.SegmentScore]) -> String {
@@ -85,8 +87,12 @@ print("Top 3 segments hold \(pct(top3poa)) of probability in \(pct(top3area)) of
 print("  1. \(fused[0].id) \(fused[0].name): \(pct(fused[0].poa)) in \(pct(fused[0].areaFrac)) area")
 print("  2. \(fused[1].id) \(fused[1].name): \(pct(fused[1].poa)) in \(pct(fused[1].areaFrac)) area")
 print("  3. \(fused[2].id) \(fused[2].name): \(pct(fused[2].poa)) in \(pct(fused[2].areaFrac)) area")
-print("Backtest (fictional find spot in \(truthSeg)): segment rank \(rankFused) fused vs \(rankRings) with plain Koester rings.")
-print("Area swept in POA order before reaching the find spot: \(String(format: "%.2f", areaFused * 100))% fused vs \(String(format: "%.1f", areaRings * 100))% rings only.")
+if blind {
+    print("BLIND MODE: the scenario has no find spot (truth), backtest skipped.")
+} else {
+    print("Backtest (fictional find spot in \(truthSeg)): segment rank \(rankFused) fused vs \(rankRings) with plain Koester rings.")
+    print("Area swept in POA order before reaching the find spot: \(String(format: "%.2f", areaFused * 100))% fused vs \(String(format: "%.1f", areaRings * 100))% rings only.")
+}
 // Search allocation value: terrain+weather-aware plan vs naive "biggest POA first", same teams, same physics
 let planC = plans[beforePing].conditions
 let smartCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: true)
@@ -105,13 +111,16 @@ print("After Ratunek ping: \(finalTop.id) \(finalTop.name) \(pct(finalTop.poa)).
 // HTML
 let out = pkgDir.appendingPathComponent("out")
 try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
-let summary: [String: Any] = [
-    "top3poa": top3poa, "top3area": top3area, "rankFused": rankFused, "rankRings": rankRings,
-    "areaFused": areaFused, "areaRings": areaRings, "truthSeg": truthSeg, "beforePing": beforePing,
+var summary: [String: Any] = [
+    "top3poa": top3poa, "top3area": top3area, "beforePing": beforePing, "blind": blind,
     "t40Planned": SearchPlanner.timeTo(0.4, smartCurve) ?? -1, "t40Naive": SearchPlanner.timeTo(0.4, naiveCurve) ?? -1,
     "t50Planned": t50s ?? -1, "t50Naive": t50n ?? -1, "pos2hPlanned": pos2s, "pos2hNaive": pos2n,
     "curvePlanned": smartCurve.map { [$0.0, $0.1] }, "curveNaive": naiveCurve.map { [$0.0, $0.1] },
 ]
+if !blind {
+    summary["rankFused"] = rankFused; summary["rankRings"] = rankRings
+    summary["areaFused"] = areaFused; summary["areaRings"] = areaRings; summary["truthSeg"] = truthSeg
+}
 // default scenario -> out/index.html + out/run.json; others -> out/<name>.html + out/<name>.run.json
 let scenName = URL(fileURLWithPath: scenarioPath).deletingPathExtension().lastPathComponent
 let isDefault = scenName == "zawrat"
