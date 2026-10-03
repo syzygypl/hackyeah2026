@@ -4,6 +4,51 @@ import RescueKit
 // Usage: swift run rescue-demo [scenario.json] [--fast]
 let pkgDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 let args = CommandLine.arguments.dropFirst()
+
+// Timeline part 3 checks: --timeline-selftest (report text -> constraints, zawrat gazetteer), --timeline-eval (estimator
+// error vs the simulator's truth in scenarios/tracks/*.json, with and without report constraints).
+func loadWithTerrain(_ name: String) -> Scenario? {
+    guard var s = try? Scenario.load(pkgDir.appendingPathComponent("scenarios/\(name).json").path) else { return nil }
+    if let d = try? Data(contentsOf: pkgDir.appendingPathComponent("scenarios/\(name)-terrain.json")),
+       let t = try? JSONDecoder().decode(Scenario.Terrain.self, from: d) { s.terrain = t }
+    return s
+}
+if args.contains("--timeline-selftest") {
+    guard let s = loadWithTerrain("zawrat") else { print("no zawrat"); exit(1) }
+    let (ok, lines) = TimelineEval.selftest(s)
+    lines.forEach { print($0) }
+    print(ok ? "selftest OK (\(lines.count) checks)" : "selftest FAILED")
+    if args.contains("--llm") {   // the same phrases through the model (informational, not part of the pass/fail)
+        for c in TimelineEval.cases {
+            let r = await TrackConstraints.fromReportLLM(c.text, at: 100, actor: "topr-a", scenario: s)
+            print("LLM \(r.parsedBy) \(c.text) -> \(r.constraints.map { "\($0.along) \($0.from)-\($0.to) \($0.place ?? "") \($0.color ?? "")" }) fix=\(r.fix != nil) \(r.note ?? "")")
+        }
+    }
+    if let p = PersonTrack.actor(s, dem: nil) {
+        print("osoba: \(p.fixes.map { "\(s.clock($0.minute)) \($0.src) ±\(Int($0.accM))" }) plan \(p.plan.count) pts; \(p.note ?? "")")
+    }
+    exit(ok ? 0 : 1)
+}
+if args.contains("--timeline-eval") {
+    let dir = pkgDir.appendingPathComponent("scenarios/tracks")
+    let names = ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).filter { $0.hasSuffix(".json") }.map { String($0.dropLast(5)) }.sorted()
+    var merged: [String: [String: TimelineEval.Errors]] = [:]
+    for n in names {
+        guard let s = loadWithTerrain(n), let td = try? Data(contentsOf: dir.appendingPathComponent("\(n).json")),
+              let doc = try? JSONSerialization.jsonObject(with: td) else { continue }
+        let dem = (try? Data(contentsOf: pkgDir.appendingPathComponent("tools/terrain/data/\(n)-dem.json")))
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) }.flatMap { DEM(json: $0) }
+        for (variant, thin) in [("gps 5 min, gaps >= 8 min", nil), ("gps thinned to 15 min", 15)] as [(String, Int?)] {
+            let e = TimelineEval.evaluate(scenario: s, tracksDoc: doc, dem: dem, thin: thin)
+            for (k, v) in e { merged[variant, default: [:]][k, default: TimelineEval.Errors()].base += v.base; merged[variant, default: [:]][k, default: TimelineEval.Errors()].withReports += v.withReports }
+            if let a = e["all"] { print(String(format: "%@ [%@]: n=%d", n, variant, a.base.count)) }
+        }
+    }
+    print("| variant | report says | minutes | mean m (fixes only) | p90 m | mean m (+ reports) | p90 m |")
+    print("|---|---|---|---|---|---|---|")
+    for v in merged.keys.sorted() { TimelineEval.rows(merged[v]!, label: v).forEach { print($0) } }
+    exit(0)
+}
 let scenarioPath = args.enumerated().first { i, a in !a.hasPrefix("--") && (i == 0 || args[args.index(args.startIndex, offsetBy: i - 1)] != "--features") }?.element ?? pkgDir.appendingPathComponent("scenarios/zawrat.json").path
 var scenario = try Scenario.load(scenarioPath)
 // Optional precomputed terrain (OSM + DEM) next to the scenario: <name>-terrain.json, same shape as scenario.terrain
