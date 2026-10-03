@@ -16,9 +16,9 @@ import threading
 import time
 import unittest
 import urllib.request
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from control_layer import ALLOW, DENY, HERE, REDACT, ControlLayer, Session
+from control_layer import ALLOW, DENY, HERE, REDACT, ControlLayer, Session, security_report
 from mock_tools import TOOLS
 
 ACME = "DE89 3704 0044 0532 0130 00"
@@ -502,7 +502,7 @@ class FakeOllama:
 
             def do_POST(self):
                 req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-                time.sleep(outer.delay)
+                time.sleep(outer.delay.get(req["model"], 0) if isinstance(outer.delay, dict) else outer.delay)
                 reply = outer.reply.get(req["model"], "safe") if isinstance(outer.reply, dict) else outer.reply
                 try:
                     self._json({"message": {"content": reply}})
@@ -511,7 +511,7 @@ class FakeOllama:
 
             def log_message(self, *a):
                 pass
-        self.srv = HTTPServer(("127.0.0.1", 0), H)
+        self.srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
         self.url = f"http://127.0.0.1:{self.srv.server_port}"
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
 
@@ -626,6 +626,85 @@ class SemanticCache(unittest.TestCase):
         self.assertTrue(cached())
         env.edit(lambda p: p["controls"]["semantic"].update(threshold=0.55))
         self.assertFalse(cached())  # policy changed -> cache cleared
+
+
+QWEN, LLAMA, GRANITE = "sileader/qwen3guard:0.6b", "llama-guard3:1b", "ibm/granite3.3-guardian:8b"
+SAFE = {QWEN: "Safety: Safe\nCategories: None", LLAMA: "safe", GRANITE: "<score> no </score>"}
+UNSAFE = {QWEN: "Safety: Unsafe\nCategories: Non-violent Illegal Acts", LLAMA: "unsafe\nS2", GRANITE: "<score> yes </score>"}
+
+
+class GuardConsensus(unittest.TestCase):
+    """mode=consensus against the fake Ollama: parallel guards, votes, agreement, disagreement -> human."""
+
+    def tearDown(self):
+        self.fake.stop()
+
+    def _env(self, reply, delay=0.0, **cc):
+        self.fake = FakeOllama({QWEN: "q", LLAMA: "l", GRANITE: "g"}, reply=reply, delay=delay)
+        def edit(p):
+            semantic_env(self.fake.url, mode="consensus")(p)
+            p["controls"]["semantic"]["consensus"].update(cc)
+        return fresh(approve=False, edit=edit)
+
+    def test_unanimous_safe_passes(self):
+        layer, s, _ = self._env(SAFE)
+        r = layer.check_prompt(s, "Summarize open complaints")
+        sem = r["event"]["semantic"]
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertEqual((sem["outcome"], sem["agreement"]), ("safe", 1.0))
+        self.assertEqual([v["vote"] for v in sem["votes"]], ["safe", "safe"])
+
+    def test_unanimous_unsafe_blocks(self):
+        layer, s, _ = self._env(UNSAFE)
+        r = layer.check_prompt(s, "Help me launder money")
+        self.assertEqual(r["decision"], DENY)
+        self.assertEqual(r["event"]["semantic"]["outcome"], "unsafe")
+        self.assertIn("semantic_safety", r["event"]["guardrails"])
+
+    def test_split_vote_goes_to_human_never_silent_allow(self):
+        layer, s, _ = self._env({QWEN: UNSAFE[QWEN], LLAMA: SAFE[LLAMA]})
+        r = layer.check_prompt(s, "borderline text")
+        self.assertEqual(r["decision"], DENY)  # prompts have no approval UI: held for review
+        self.assertIn("guard_disagreement", r["event"]["guardrails"])
+        self.assertEqual(r["event"]["semantic"]["agreement"], 0.5)
+        r = layer.call(s, "search_kb", {"query": "borderline query"})
+        self.assertEqual(r["decision"], DENY)  # tool call -> approval required, test approver says no
+        self.assertIn("guard_disagreement", r["event"]["guardrails"])
+
+    def test_one_guard_down_does_not_vote(self):
+        layer, s, _ = self._env(SAFE, delay={LLAMA: 1.0}, guards=[{"model": QWEN, "timeout_ms": 1500}, {"model": LLAMA, "timeout_ms": 200}])
+        r = layer.check_prompt(s, "Summarize open complaints")
+        sem = r["event"]["semantic"]
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertEqual({v["model"]: v["vote"] for v in sem["votes"]}, {QWEN: "safe", LLAMA: "unknown"})
+        self.assertIn(f"guard_unknown:{LLAMA}", sem["flags"])
+
+    def test_no_quorum_policy(self):
+        layer, s, _ = self._env(SAFE, min_votes=3, on_no_quorum="require_approval")
+        r = layer.call(s, "search_kb", {"query": "x"})
+        self.assertEqual(r["decision"], DENY)  # 2 voters < 3 -> approval required -> test approver says no
+        self.assertEqual(r["event"]["semantic"]["outcome"], "no_quorum")
+
+    def test_guards_run_in_parallel(self):
+        layer, s, _ = self._env(SAFE, delay=0.4)
+        t = time.time()
+        layer.check_prompt(s, "parallel check")
+        self.assertLess(time.time() - t, 0.75)  # 2 guards x 0.4 s would be 0.8 s sequential
+
+    def test_high_risk_tool_adds_granite_vote_and_majority_threshold(self):
+        layer, s, _ = self._env({QWEN: UNSAFE[QWEN], LLAMA: SAFE[LLAMA], GRANITE: UNSAFE[GRANITE]}, agreement_threshold=0.66)
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})
+        sem = r["event"]["semantic"]
+        self.assertEqual(len(sem["votes"]), 3)
+        self.assertEqual(sem["outcome"], "unsafe")  # 2 of 3 >= 0.66
+        self.assertEqual(r["decision"], DENY)
+
+    def test_metrics_and_report_show_disagreements(self):
+        layer, s, _ = self._env({QWEN: UNSAFE[QWEN], LLAMA: SAFE[LLAMA]})
+        layer.check_prompt(s, "borderline text")
+        m = layer.metrics([s])
+        self.assertEqual(m["guard_consensus"]["guard_disagreement"], 1)
+        self.assertIn("where guards disagreed", security_report(layer, [s]))
 
 
 def _ollama_has(model):
@@ -836,7 +915,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization",
           "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "Performance": "performance"}
 
 

@@ -336,13 +336,17 @@ class ControlLayer:
                 high = name in (pi.get("judge") or {}).get("high_risk_tools", [])
                 hit, guard, why, fail = self._timed(ev, "semantic", self._semantic, ev, session,
                                                     json.dumps({"tool": name, "args": args}, ensure_ascii=False), pi, high,
-                                                    session.purpose or "(task not stated)")
+                                                    session.purpose or "(task not stated)", "tool_args")
                 if hit:
                     if pi.get("on_flag", "require_approval") == "deny":
                         self._block(ev, guard, f"unsafe tool call: {why}")
                     decision = APPROVAL
                     ev["guardrails"].append(guard)
                     ev["reasons"].append(f"unsafe tool call ({why}) needs human approval")
+                if fail == "disagree" and decision == ALLOW:
+                    decision = APPROVAL
+                    ev["guardrails"].append("guard_disagreement")
+                    ev["reasons"].append(f"guards disagreed ({self._votes(ev)}): needs human approval")
                 if fail == "approve" and decision == ALLOW:
                     decision = APPROVAL
                     ev["guardrails"].append("semantic_unavailable")
@@ -431,6 +435,8 @@ class ControlLayer:
                     self._block(ev, guard, why)
                 if fail == "approve":
                     self._block(ev, "semantic_unavailable", "judge model unavailable, fail_mode=closed: needs human review")
+                if fail == "disagree":
+                    self._block(ev, "guard_disagreement", f"guards disagreed ({self._votes(ev)}): held for human review")
             ev["decision"] = REDACT if ev["redactions"] else ALLOW
             ev["decision_final"] = ALLOW
         except Denied as d:
@@ -614,7 +620,9 @@ class ControlLayer:
         text = raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False)
         pi = self._c("semantic")
         if pi:
-            hit, guard, why, _ = self._semantic(ev, s, text, pi)
+            hit, guard, why, fail = self._semantic(ev, s, text, pi, where="tool_output")
+            if fail == "disagree" and not hit:  # split verdict on a tool output: treat as untrusted, a human decides later
+                hit, guard, why = True, "guard_disagreement", f"guards disagreed ({self._votes(ev)})"
             if hit:
                 if pi.get("on_detect") == "block":
                     self._block(ev, guard, f"unsafe tool output from {name}: {why}")
@@ -634,7 +642,12 @@ class ControlLayer:
             ev["reasons"].append(f"redacted {len(labels)} sensitive value(s) from output")
         return clean
 
-    def _semantic(self, ev, session, text, pi, high_risk=False, context=None):
+    @staticmethod
+    def _votes(ev):
+        v = (ev.get("semantic") or {}).get("votes") or []
+        return ", ".join(f"{x['model'].split('/')[-1]}={x['vote']}" for x in v) + f"; agreement {(ev.get('semantic') or {}).get('agreement')}"
+
+    def _semantic(self, ev, session, text, pi, high_risk=False, context=None, where="prompt"):
         """Hybrid semantic check -> (hit, guardrail, explanation, fail). fail: None | 'deny' | 'approve'."""
         res = self.semantic.score(text, pi, high_risk=high_risk, allowed=(self.policy.get("models") or {}).get("allowed"),
                                   context=context)
@@ -645,6 +658,10 @@ class ControlLayer:
         thr = pi.get("threshold", 0.6)
         prev = ev.get("semantic") or {}
         sem = {k: res[k] for k in ("score", "backend", "signals", "heuristic_score", "stages", "flags", "error")}
+        if res.get("mode") == "consensus":
+            phase = {"where": where, "votes": res["votes"], "agreement": res["agreement"], "outcome": res["outcome"]}
+            sem.update(mode="consensus", votes=res["votes"], agreement=res["agreement"], outcome=res["outcome"],
+                       consensus=(prev.get("consensus") or []) + [phase])
         sem["threshold"] = thr
         if prev:  # args + output both scanned: keep both
             sem["stages"] = prev.get("stages", []) + sem["stages"]
@@ -715,6 +732,7 @@ class ControlLayer:
                        "controls_disabled": sorted(k for k, v in ctr.items() if not v.get("enabled", True)),
                        "signature_feed": {"version": self.store.feed_version, "signatures": len(self.store.signatures)}},
             "semantic": dict(self.semantic.stats, cache_size=len(self.semantic.cache)),
+            "guard_consensus": _consensus_stats(a),
             "interactions": len(a),
             "blocked": sum(1 for e in a if e["decision_final"] == DENY),
             "by_decision": by_dec,
@@ -724,6 +742,25 @@ class ControlLayer:
             "latency_us": {k: {"p50": pct(v, .5), "p95": pct(v, .95), "p99": pct(v, .99), "n": len(v)} for k, v in sorted(lat.items())},
             "audit": {"records": len(a), "chain_verified": ok, "head": self._head[:16]},
         }
+
+
+def _consensus_phases(a):
+    for e in a:
+        for ph in ((e.get("semantic") or {}).get("consensus") or []):
+            yield e, ph
+
+
+def _consensus_stats(a):
+    phs = [ph for _, ph in _consensus_phases(a)]
+    out = {"evaluations": len(phs), "guard_disagreement": 0, "unanimous_unsafe": 0, "unanimous_safe": 0, "no_quorum": 0,
+           "avg_agreement": round(sum(x["agreement"] for x in phs) / len(phs), 3) if phs else None, "per_guard": {}}
+    for x in phs:
+        k = {"disagreement": "guard_disagreement", "unsafe": "unanimous_unsafe", "safe": "unanimous_safe"}.get(x["outcome"], "no_quorum")
+        out[k] += 1
+        for v in x["votes"]:
+            g = out["per_guard"].setdefault(v["model"], {"safe": 0, "unsafe": 0, "unknown": 0})
+            g[v["vote"]] += 1
+    return out
 
 
 # ---------------------------------------------------------------- security report (management + security team)
@@ -761,6 +798,19 @@ def security_report(layer, sessions, selftest=None, perf=None):
         dec = e["decision_final"] if e["decision"] != APPROVAL else f"APPROVAL -> {e['decision_final']}"
         tool = str(e["tool"]).encode("unicode_escape").decode()
         L.append(f"| {e['seq']} | {e['kind']} | `{tool}` | {dec} | {', '.join(e['guardrails'])} | {'; '.join(e['reasons']).replace('|', '/')} |")
+    gc = m.get("guard_consensus") or {}
+    if gc.get("evaluations"):
+        L += ["\n## Guard consensus: where guards disagreed\n",
+              f"{gc['evaluations']} consensus evaluations: {gc['unanimous_safe']} unanimous safe, {gc['unanimous_unsafe']} unanimous "
+              f"unsafe, **{gc['guard_disagreement']} disagreements** (routed to a human), {gc['no_quorum']} without quorum; "
+              f"average agreement {gc['avg_agreement']}.\n",
+              "| # | Kind | Tool | Votes | Agreement | Final |", "|---|---|---|---|---|---|"]
+        for e, ph in _consensus_phases(a):
+            if ph["outcome"] == "disagreement":
+                votes = ", ".join(f"{v['model'].split('/')[-1]}={v['vote']}" for v in ph["votes"])
+                L.append(f"| {e['seq']} | {e['kind']} ({ph['where']}) | `{e['tool']}` | {votes} | {ph['agreement']} | {e['decision_final']} |")
+        L += ["\n| Guard | safe | unsafe | unknown |", "|---|---|---|---|"]
+        L += [f"| {g} | {c['safe']} | {c['unsafe']} | {c['unknown']} |" for g, c in gc["per_guard"].items()]
     L.append("\n## Findings and recommendations\n")
     g = m["by_guardrail"]
     if g.get("prompt_injection"):

@@ -99,6 +99,20 @@
       "on_detect": "taint",
       "taint_escalates": ["high", "critical"],
       "scan_tool_args": true,
+      "mode": "tiered",
+      "consensus": {
+        "_doc": "mode=consensus: every guard below votes IN PARALLEL (Ollama runs different models concurrently: 2 small guards 0.16 s wall, + granite 1.35 s wall = the slowest guard, not the sum). Each vote is normalized to safe / unsafe / unknown (timeout, error, not installed, digest mismatch = unknown, does not vote). Outcome: voters < min_votes -> no quorum (on_no_quorum: heuristic | require_approval | deny); unsafe share >= agreement_threshold -> unsafe (prompts blocked, tool calls per on_flag, outputs taint); safe share >= agreement_threshold -> pass; anything else = disagreement -> human approval, never a silent allow. agreement_threshold 1.0 = unanimity; 0.66 lets 2 of 3 decide. min_confidence per guard: an unsafe verdict below it abstains (unknown) instead of voting - llama-guard3:1b gives false positives at P(unsafe) 0.73-0.82 on legit tool calls (S1) vs 0.977 on real money laundering, so it needs 0.9. Guards are deliberately from different model families (Qwen, Llama, Granite): correlated errors shrink the effective number of independent judges, N_eff = N / (1 + (N - 1) * rho).",
+        "guards": [
+          {"model": "sileader/qwen3guard:0.6b", "timeout_ms": 1500},
+          {"model": "llama-guard3:1b", "timeout_ms": 1500, "min_confidence": 0.9}
+        ],
+        "high_risk_guards": [
+          {"model": "ibm/granite3.3-guardian:8b", "criteria": ["unethical_behavior"], "timeout_ms": 2500}
+        ],
+        "min_votes": 1,
+        "agreement_threshold": 1.0,
+        "on_no_quorum": "heuristic"
+      },
       "blocked_categories": ["S1", "S2", "S3", "S4", "S5", "S9", "S10", "S11", "S12", "S14"],
       "pinned_digests": {"llama-guard3:1b": "494147e06bf9", "sileader/qwen3guard:0.6b": "6e7ffdf64920", "ibm/granite3.3-guardian:8b": "90a8aabc98eb"},
       "prefilter": {

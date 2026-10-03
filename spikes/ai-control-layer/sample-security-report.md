@@ -1,6 +1,6 @@
 # AI Control Layer - Security Report
 
-Generated 2026-10-03 12:11:09 - policy `e40ddcf560` (enforce mode), signature feed 2026-10-03.2 (16 signatures)
+Generated 2026-10-03 12:17:16 - policy `19c10b44bd` (enforce mode), signature feed 2026-10-03.2 (16 signatures)
 
 ## Management summary
 
@@ -13,9 +13,9 @@ Generated 2026-10-03 12:11:09 - policy `e40ddcf560` (enforce mode), signature fe
 | Human approvals | 4 (approved 3, rejected 1) |
 | Sensitive values redacted | 12 |
 | Risk score | 100/100 |
-| Budget used (sess-treasury-01) | 29 calls, 521 tok, $0.0049, 10489.2 ms compute |
-| Audit chain | VERIFIED (29 records, head `d1816d57bc13b585`) |
-| Benchmark | p50 72.7 us, p99 155.1 us added per call, 10,673 checks/s on 1 core |
+| Budget used (sess-treasury-01) | 29 calls, 521 tok, $0.0049, 6993.8 ms compute |
+| Audit chain | VERIFIED (29 records, head `8298c0d4735f7f5b`) |
+| Benchmark | p50 73.0 us, p99 350.4 us added per call, 9,131 checks/s on 1 core |
 
 ## Guardrail activity
 
@@ -41,18 +41,18 @@ Generated 2026-10-03 12:11:09 - policy `e40ddcf560` (enforce mode), signature fe
 
 | Check | p50 | p95 | p99 | n |
 |---|---|---|---|---|
-| _total_overhead | 269.2 | 1713685.8 | 2735600.2 | 29 |
-| attack_signatures | 29.6 | 67.6 | 116.8 | 25 |
-| budget | 6.3 | 40.9 | 151.8 | 21 |
-| business_rules | 4.8 | 73.2 | 73.2 | 16 |
-| dlp_input | 18.8 | 51.8 | 51.8 | 17 |
-| loop_detection | 4.5 | 14.8 | 14.8 | 20 |
-| output_scan | 116646.2 | 2622740.0 | 2622740.0 | 10 |
-| semantic | 110240.5 | 1713461.6 | 1713461.6 | 15 |
-| semantic_heuristic | 50.4 | 159.1 | 159.1 | 15 |
-| semantic_judge | 1394352.0 | 2436101.6 | 2436101.6 | 6 |
-| semantic_prefilter | 202699.7 | 298702.9 | 298702.9 | 15 |
-| tool_authz | 3.5 | 15.3 | 15.8 | 23 |
+| _total_overhead | 694.5 | 998021.9 | 1065988.5 | 29 |
+| attack_signatures | 40.3 | 126.5 | 268.3 | 25 |
+| budget | 8.6 | 54.7 | 152.8 | 21 |
+| business_rules | 7.6 | 196.2 | 196.2 | 16 |
+| dlp_input | 31.5 | 163.1 | 163.1 | 17 |
+| loop_detection | 5.7 | 41.8 | 41.8 | 20 |
+| output_scan | 106687.2 | 956695.2 | 956695.2 | 10 |
+| semantic | 109724.0 | 927445.1 | 927445.1 | 15 |
+| semantic_heuristic | 51.9 | 235.9 | 235.9 | 15 |
+| semantic_judge | 777875.3 | 818053.1 | 818053.1 | 6 |
+| semantic_prefilter | 181536.4 | 287759.6 | 287759.6 | 15 |
+| tool_authz | 5.3 | 22.3 | 33.5 | 23 |
 
 ## Blocked and flagged events (security team)
 
@@ -95,7 +95,7 @@ Generated 2026-10-03 12:11:09 - policy `e40ddcf560` (enforce mode), signature fe
 
 ## Self-test suite
 
-120/120 test cases passed.
+129/129 test cases passed.
 
 | Category | Passed |
 |---|---|
@@ -105,7 +105,8 @@ Generated 2026-10-03 12:11:09 - policy `e40ddcf560` (enforce mode), signature fe
 | concurrency (gateway) | 2/2 |
 | detection plan B1-B5 block / A1-A5 allow | 11/11 |
 | encoding evasion (url, hex, html, \u, base64) | 6/6 |
-| judge live model (skips w/o granite) | 1/1 |
+| guard consensus (parallel votes) | 8/8 |
+| judge live model (skips w/o granite) | 2/2 |
 | negative: attack_signatures | 13/13 |
 | negative: authz | 6/6 |
 | negative: egress | 3/3 |

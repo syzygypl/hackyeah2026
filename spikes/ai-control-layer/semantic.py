@@ -252,6 +252,8 @@ class SemanticGuard:
         if mode == "heuristic":
             return self._done(res)
         self._refresh(cfg.get("ollama_url", "http://localhost:11434"))
+        if cfg.get("mode", "tiered") == "consensus":
+            return self._done(self._consensus(text, cfg, high_risk, allowed, context, res))
         used = []
         pf = cfg.get("prefilter") or {}
         pre = []
@@ -273,6 +275,85 @@ class SemanticGuard:
         res["score"] = max([h] + counted)
         res["backend"] = "+".join(used + ["heuristic"]) if used else res["backend"]
         return self._done(res)
+
+    # -- consensus mode: N guards from different model families vote in parallel
+    def _vote(self, cfg, guard, allowed, text, context, out, i):
+        flags = []
+        cands = self._candidates({"model": guard["model"]}, cfg, allowed, flags)
+        v = {"model": guard["model"], "digest": None, "vote": "unknown", "verdict": None, "categories": [],
+             "latency_ms": None, "error": None}
+        if not cands:
+            v["error"] = ", ".join(flags) or "unavailable"
+            out[i] = v
+            return
+        model, digest = cands[0]
+        v["digest"] = digest[:12]
+        fmt = model_format(model)
+        blocked = set(cfg.get("blocked_categories", LLAMA_GUARD_CATEGORIES))
+        t = time.perf_counter_ns()
+        try:
+            for crit in guard.get("criteria") or [None]:
+                r = self._call(cfg, model, text, guard.get("timeout_ms", 1500) / 1000, system=crit,
+                               context=context if fmt == "granite_guardian" else None, cacheable=True)
+                counted = r["verdict"] != "safe" and not (fmt == "llama_guard" and r["categories"] and not blocked & set(r["categories"]))
+                v["verdict"], v["categories"] = r["verdict"], r["categories"]
+                v["category_names"] = [LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]
+                v["p_unsafe"], v["cached"], v["criterion"] = r["p_unsafe"], r.get("cached", False), crit
+                if counted and r["p_unsafe"] < guard.get("min_confidence", 0.5):
+                    v["vote"], v["error"] = "unknown", f"low-confidence unsafe (p {r['p_unsafe']} < {guard['min_confidence']}): abstains"
+                    break
+                v["vote"] = "unsafe" if counted else "safe"
+                if counted:
+                    break  # one unsafe criterion is enough for this guard's vote
+            self.warm.add(model)
+        except Exception as e:  # timed out / errored guard: does not vote
+            self.cooldown[model] = time.time() + cfg.get("cooldown_s", 15)
+            v["vote"], v["error"] = "unknown", f"{type(e).__name__}: {str(e)[:60]}"
+        v["latency_ms"] = round((time.perf_counter_ns() - t) / 1e6, 1)
+        out[i] = v
+
+    def _consensus(self, text, cfg, high_risk, allowed, context, res):
+        cc = cfg.get("consensus") or {}
+        guards = list(cc.get("guards", [])) + (list(cc.get("high_risk_guards", [])) if high_risk else [])
+        votes = [None] * len(guards)
+        t = time.perf_counter_ns()
+        threads = [threading.Thread(target=self._vote, args=(cfg, g, allowed, text, context, votes, i), daemon=True)
+                   for i, g in enumerate(guards)]
+        [th.start() for th in threads]
+        deadline = time.time() + max([g.get("timeout_ms", 1500) for g in guards] + [0]) / 1000 + 0.3
+        for th in threads:
+            th.join(max(0.0, deadline - time.time()))
+        votes = [v or {"model": g["model"], "vote": "unknown", "error": "no answer before deadline"} for v, g in zip(votes, guards)]
+        res["timings_us"]["semantic_consensus"] = round((time.perf_counter_ns() - t) / 1000, 1)
+        voters = [v for v in votes if v["vote"] != "unknown"]
+        unsafe = sum(v["vote"] == "unsafe" for v in voters)
+        safe = len(voters) - unsafe
+        agreement = round(max(unsafe, safe) / len(voters), 3) if voters else 0.0
+        need = cc.get("agreement_threshold", 1.0)
+        if len(voters) < cc.get("min_votes", 1):
+            outcome = "no_quorum"
+        elif unsafe and unsafe / len(voters) >= need:
+            outcome = "unsafe"
+        elif safe and safe / len(voters) >= need:
+            outcome = "safe"
+        else:
+            outcome = "disagreement"
+        res.update(votes=votes, agreement=agreement, outcome=outcome, mode="consensus")
+        res["stages"] += [dict(v, stage="guard", counted=v["vote"] == "unsafe") for v in voters]
+        for v in votes:
+            if v["vote"] == "unknown":
+                res["flags"].append(f"guard_unknown:{v['model']}")
+        if outcome == "unsafe":
+            res["score"] = max(res["score"], 1.0)
+        elif outcome == "disagreement":
+            res["fail"] = "disagree"  # never a silent allow: the caller routes this to a human
+        elif outcome == "no_quorum":
+            res["flags"].append("semantic=unavailable:consensus")
+            act = cc.get("on_no_quorum", "heuristic")
+            if act in ("require_approval", "deny"):
+                res["fail"] = "approve" if act == "require_approval" else "deny"
+        res["backend"] = "consensus(" + ",".join(f"{v['model'].split('/')[-1]}={v['vote']}" for v in votes) + ")+heuristic"
+        return res
 
     def warmup(self, cfg, allowed=None):
         """Load every tier's first usable model into memory (cold start) so request-time timeouts stay tight."""

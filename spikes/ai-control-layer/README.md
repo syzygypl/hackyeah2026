@@ -28,7 +28,7 @@ python3 server.py                    # HTTP gateway on 127.0.0.1:8787 for ad-hoc
    - real-time metrics (`/metrics`)
    - per-check latency telemetry (p50/p95/p99)
    - a report for management and the security team (`out/security_report.md`, sample in `sample-security-report.md`)
-   - **Self-tests**: 95 positive and negative cases, including budgets, exploit mitigation, live policy edits and semantic fail modes. Live-model tests skip without Ollama.
+   - **Self-tests**: 130+ positive and negative cases, including budgets, exploit mitigation, live policy edits and semantic fail modes. Live-model tests skip without Ollama.
 
 ## Architecture
 
@@ -91,6 +91,29 @@ Findings on this Mac:
   - **Demo moment:** step 4, a second payment to the approved vendor, passes every deterministic rule. Only the judge catches that it's outside the task, and a human rejects it.
 
 Tests: `SemanticFailModes` runs everywhere against a fake Ollama. It covers timeout plus fail-open, fail-closed deny, judge fail-closed approval, digest mismatch, allowlist, and qwen3guard and granite output parsing. `OllamaSemanticLive` (llama-guard) and `GraniteJudgeLive` (granite: out-of-task payment needs a human; on-task email allowed within the timeout) use the real models and skip cleanly when Ollama or the model isn't there, or is too slow at that moment.
+
+## Guard consensus mode (`controls.semantic.mode: "consensus"`, default stays `"tiered"`)
+
+Several guards from **different model families** vote in parallel threads: qwen3guard (Qwen), llama-guard (Llama), plus granite-guardian (Granite) on high-risk tools.
+- **Votes:** each vote is normalized to safe, unsafe or unknown. A timeout, error, missing model, digest mismatch or low-confidence verdict counts as unknown and doesn't vote.
+- **Outcome:** all safe passes; all unsafe takes the configured action; anything else is a disagreement, which goes to human approval, never a silent allow.
+- **Policy knobs:** `min_votes` (quorum; `on_no_quorum`: heuristic | require_approval | deny) and `agreement_threshold` (1.0 = unanimity, 0.66 = 2 of 3).
+- **Confidence gate:** per-guard `min_confidence` makes low-confidence "unsafe" verdicts abstain. llama-guard3:1b needs 0.9: it scored 0.73-0.82 on legit tool calls versus 0.977 on real laundering.
+- **Recording:** every phase (prompt / tool_args / tool_output) records per-guard votes, digests, latency and an agreement score in the audit event. `/metrics.guard_consensus` counts `guard_disagreement`, unanimous outcomes and per-guard votes, and the report has a "where guards disagreed" section.
+
+Measured on this Mac:
+- **Concurrency:** Ollama runs different models concurrently. Two small guards take 0.16 s wall (sequential: about 0.3 s warm); adding granite makes it 1.07-1.35 s wall, which is granite's own latency, not the sum.
+- **Live run** (6 prompts + 3 high-risk calls):
+  - prompts p50 0.16 s
+  - high-risk p50 1.07 s
+  - the legit payment and email were unanimous safe
+  - the out-of-task 9k payment split (granite unsafe) and went to a human
+  - laundering was unanimous unsafe
+
+Why different families (team swarm math): guards trained on similar data make correlated errors, and correlation shrinks the effective number of independent judges, **N_eff = N / (1 + (N - 1) * rho)**.
+- Three guards with rho = 0.5 give N_eff = 1.5, not 3.
+- Three copies of one model (rho near 1) give N_eff near 1.
+- So the guard list mixes Qwen, Llama and Granite, and the per-guard vote counts in `/metrics` show which guard actually carries information. In the live run llama-guard abstained on 7 of 11 votes.
 
 ## Try it live (judges)
 
