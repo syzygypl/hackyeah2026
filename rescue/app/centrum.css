@@ -90,7 +90,19 @@ body.dragging .grp{border-color:var(--rl-line-strong)}
   html,body{overflow:auto}
   #map{position:relative;height:45vh}
   #bar,#list,#roster{position:static;width:auto;margin:var(--gap);bottom:auto}
+  /* phone: title bar first, then the map (it was map first, so the page opened on an unlabeled map) */
+  html,body{height:auto;min-height:100%}
+  body{display:flex;flex-direction:column}body>*{flex:none}
+  #bar{order:-1;gap:8px 14px}
+  #bar h1{white-space:normal}
+  #bar a,#pinbox input{min-height:40px;display:inline-flex;align-items:center}
+  .card h3 a{display:block;padding:4px 0}
+  .top3 .seg{white-space:normal}.top3 .seg .nm{overflow:visible}
+  .team select{min-height:36px;max-width:150px}
+  .maplibregl-ctrl-group button{width:40px;height:40px}
+  .maplibregl-ctrl-bottom-right{bottom:auto;top:0}   /* zoom buttons sat on the southern labels (Bieszczady, Zawrat) */
 }
+:root:not([data-theme=dark]){--rl-mute:#5d6165}
 
 /* current vs ended incidents + "Akcja zakończona" banner (AI Michała for AI Mateusza) */
 .cgrp{font-size:var(--rl-fs-s);text-transform:uppercase;letter-spacing:.6px;color:var(--rl-mute);margin:6px 2px 8px;display:flex;gap:6px;align-items:center}

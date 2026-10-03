@@ -334,7 +334,8 @@ function fitAll() {
   const pts = incidents.map((x) => meta[x.sc] && meta[x.sc].ipp).filter(Boolean);
   if (!pts.length || pts.length < Math.min(incidents.length, 2)) return;
   const lons = pts.map((p) => p[1]), lats = pts.map((p) => p[0]);
-  const wide = innerWidth > 900, pad = wide ? { left: 400 + 40, right: 300 + 160, top: 100, bottom: 40 } : 30;
+  // narrow: labels sit right of their dot, so keep room on the right or the eastern names (Bieszczady, Kraków) are cut off
+  const wide = innerWidth > 900, pad = wide ? { left: 400 + 40, right: 300 + 160, top: 100, bottom: 40 } : { left: 24, right: Math.min(150, innerWidth * 0.35), top: 30, bottom: 30 };
   map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: pad, maxZoom: 9, duration: 0 });
   fitted = pts.length >= incidents.length;
 }
@@ -410,8 +411,8 @@ function advRender() {
     el.innerHTML = head + (advOpen ? tabs + body : `<p class="help one">${esc(h.title)} · wynik ${num2(h.score)} · ${h.incidents.length} akcji</p>`);
     el.querySelectorAll(".advtabs button").forEach((b) => b.onclick = () => { advSel = +b.dataset.i; advRender(); advFit(); });
     el.querySelectorAll("[data-sc]").forEach((c) => { c.onmouseenter = () => setHl(c.dataset.sc); c.onmouseleave = () => setHl(null); });
-    el.querySelector(".advfit").onclick = advFit;
-    el.querySelector(".advllm").onclick = advLlm;
+    const fitB = el.querySelector(".advfit"), llmB = el.querySelector(".advllm");   // both absent while the panel is collapsed (Zwiń)
+    if (fitB) fitB.onclick = advFit; if (llmB) llmB.onclick = advLlm;
   }
   el.querySelector(".advt").onclick = () => { advOpen = !advOpen; try { localStorage.setItem("rescue-advisor-open", advOpen ? "1" : "0"); } catch (e) {} advRender(); };
   advApply(); advMap();
