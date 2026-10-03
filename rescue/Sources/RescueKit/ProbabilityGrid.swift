@@ -66,7 +66,7 @@ public final class ProbabilityGrid {
             if nearCliff[i] { diff.append(.cliff); continue }
             if nearScree[i] { diff.append(.scree); continue }
             if nearPine[i] { diff.append(.dwarfPine); continue }
-            if let slope = t.slopeDeg, slope.count == c.count {
+            if let slope = t.slopeDeg, slope.count == c.count, slope[i] >= 0 {   // -1 = unknown (cell added by auto-expand)
                 let sl = slope[i]
                 diff.append(sl > 45 ? .cliff : sl > 35 ? .slab : sl > 28 ? .scree : sl > 15 && c[i].lat > 49.225 ? .dwarfPine : .meadow)
             } else if t.ridges.isEmpty {

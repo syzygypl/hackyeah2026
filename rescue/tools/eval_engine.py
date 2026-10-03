@@ -52,6 +52,8 @@ def metrics(doc, step, truth):
         "segPoa": next((s["poa"] for s in step["segments"] if s["id"] == seg), 0),
         "cellRank": order.index(ti) + 1 if ti is not None else None,
         "areaPct": round(100 * (order.index(ti) + 1) / len(poa), 2) if ti is not None else None,
+        "areaKm2": round((order.index(ti) + 1) * doc["cellM"] ** 2 / 1e6, 2) if ti is not None else None,
+        "nCells": len(poa),
         "peakDistM": round(dist_m(peak, truth)),
     }
 
@@ -85,13 +87,13 @@ def main():
     run = "--no-run" not in sys.argv
     names = sorted(f[:-5] for f in os.listdir(SCN) if f.endswith(".json") and not f.endswith("-terrain.json"))
     res = [r for r in (evaluate(n, run) for n in names) if r]
-    print(f"{'scenario':<20} {'moment':<7} {'time':<6} {'seg':>8} {'segPOA':>7} {'cell':>10} {'area%':>7} {'peak->truth':>11}")
+    print(f"{'scenario':<20} {'moment':<7} {'time':<6} {'seg':>8} {'segPOA':>7} {'cell':>11} {'area%':>7} {'km2':>6} {'peak->truth':>11}")
     for r in res:
         if "error" in r:
             print(f"{r['name']:<20} ERROR {r['error']}"); continue
         for k in ("clues", "before"):
             m = r[k]
-            print(f"{r['name']:<20} {k:<7} {m['t']:<6} {str(m['segRank'])+'/'+str(m['nSeg']):>8} {m['segPoa']*100:6.1f}% {str(m['cellRank'])+'/3600':>10} {m['areaPct']:>6}% {m['peakDistM']:>9} m")
+            print(f"{r['name']:<20} {k:<7} {m['t']:<6} {str(m['segRank'])+'/'+str(m['nSeg']):>8} {m['segPoa']*100:6.1f}% {str(m['cellRank'])+'/'+str(m['nCells']):>11} {m['areaPct']:>6}% {m['areaKm2']:>6} {m['peakDistM']:>9} m")
     if "--json" in sys.argv:
         json.dump(res, open(sys.argv[sys.argv.index("--json") + 1], "w"), indent=1, ensure_ascii=False)
 

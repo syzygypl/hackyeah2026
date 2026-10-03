@@ -11,6 +11,9 @@ public struct Scenario: Codable, Sendable {
     }
     public struct BBox: Codable, Sendable {
         public let south: Double, west: Double, north: Double, east: Double
+        public init(south: Double, west: Double, north: Double, east: Double) {
+            self.south = south; self.west = west; self.north = north; self.east = east
+        }
     }
     public struct Named: Codable, Sendable {
         public let name: String
@@ -81,7 +84,11 @@ public struct Scenario: Codable, Sendable {
     public let date: String
     public let startClock: String
     public let subject: Subject
-    public let bbox: BBox
+    public var bbox: BBox
+    /// true = never auto-expand the grid to cover evidence (only warn).
+    public var fixedBbox: Bool? = nil
+    /// Set when the grid was auto-expanded: the scenario's own bbox.
+    public var originalBbox: BBox? = nil
     public let cellM: Double
     public let ipp: Spot
     public var terrain: Terrain

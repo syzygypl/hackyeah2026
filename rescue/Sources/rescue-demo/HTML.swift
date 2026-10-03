@@ -243,7 +243,7 @@ function render(){
   const top=order.slice(0,3);
   const tp=top.reduce((s,i)=>s+sp[i],0), ta=top.reduce((s,i)=>s+sa[i],0)/N;
   document.getElementById('vbig').textContent=`${Math.round(tp*100)}% prawdopodobieństwa w ${Math.round(ta*100)}% obszaru`;
-  document.getElementById('vsub').innerHTML=`<small>Top 3 segmenty z ${D.segments.length}, obszar 6 x 6 km</small>`;
+  document.getElementById('vsub').innerHTML=`<small>Top 3 segmenty z ${D.segments.length}, siatka ${D.rows} x ${D.cols} komórek</small>`;
   document.getElementById('segs').innerHTML=top.map((i,k)=>`<div class="seg"><span class="rank">${k+1}</span><b>${D.segments[i].id} ${D.segments[i].name}</b>
     <div class="big">${(sp[i]*100).toFixed(0)}% <small>w ${(sa[i]/N*100).toFixed(1)}% obszaru</small></div>
     <div class="bar"><i style="width:${Math.min(100,sp[i]*100)}%"></i></div><div class="task">${taskFor(i)}</div></div>`).join('');
@@ -298,6 +298,9 @@ function renderTeams(){
 
 // backtest
 const sm=D.summary;
+{const cv=sm.coverage||{}; const it=(cv.items||[]).filter(x=>x.outsidePct>5&&!x.statistic);
+ if(it.length){const b=document.createElement('div');b.className='value';b.style.borderColor='#c0392b';b.innerHTML=`<b>Część dowodów poza mapą:</b> `+it.map(x=>`${x.clock} ${x.source} ${x.outsidePct}%`).join(', ');document.getElementById('right').prepend(b);}
+ else if(cv.expanded){const b=document.createElement('div');b.className='value';b.innerHTML=`<small>Mapa powiększona, żeby objąć wszystkie dowody (np. ${(cv.items||[]).filter(x=>x.outsidePctBefore>0).map(x=>x.source+' '+x.outsidePctBefore+'%').join(', ')} było poza). Komórki spoza danych terenu: teren nieznany.</small>`;document.getElementById('right').prepend(b);}}
 document.getElementById('bt').innerHTML= sm.blind ? `<b>Tryb ślepy:</b> scenariusz nie zna miejsca odnalezienia, więc nie ma backtestu. Mapa pokazuje tylko, gdzie szukać.<br>Przydział zespołów (symulacja od ${H[sm.beforePing].clock}): szansa odnalezienia po 2 h <b>${(sm.pos2hPlanned*100).toFixed(0)}%</b> vs ${(sm.pos2hNaive*100).toFixed(0)}% przy "największe POA najpierw".` : `${sm.findSeg?`<b>Odnalezienie ${sm.findClock}</b> (${sm.findSource==='RatunekPing'?'ping Ratunek':'przez zespół z planu'}) w ${sm.findSeg}; segment #1 od ${sm.findRank1Since||'?'}${sm.findAssigned?`, plan wysłał tam ${sm.findAssigned.resourceName} o ${sm.findAssigned.clock}`:''}.<br>`:''}Przed odnalezieniem (${H[sm.beforePing].clock}): segment z miejscem odnalezienia (${sm.truthSeg}) na pozycji <b>#${sm.rankFused}</b> po fuzji vs <b>#${sm.rankRings}</b> w samych pierścieniach Koestera.<br>Obszar do przeszukania do trafienia: <b>${(sm.areaFused*100).toFixed(2)}%</b> vs ${(sm.areaRings*100).toFixed(1)}%.<br>Przydział zespołów (symulacja od ${H[sm.beforePing].clock}): szansa odnalezienia po 2 h <b>${(sm.pos2hPlanned*100).toFixed(0)}%</b> vs ${(sm.pos2hNaive*100).toFixed(0)}% przy "największe POA najpierw"; 40% szansy po <b>${fmtM(sm.t40Planned)}</b> vs ${fmtM(sm.t40Naive)}.`;
 function fmtM(m){return m<0?'> 6 h':`${Math.floor(m/60)} h ${String(Math.round(m%60)).padStart(2,'0')} min`;}
 

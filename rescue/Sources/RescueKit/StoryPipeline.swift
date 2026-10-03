@@ -48,6 +48,7 @@ public enum StoryPipeline {
     public static func run(_ scenarioIn: Scenario) async -> [String: Any] {
         var scenario = scenarioIn
         scenario.applyEpilogue()
+        let coverage = applyCoverage(&scenario)
         let providers = allProviders(scenario)
         var arrived: [LocationHint] = []
         for await h in HintStream.merge(providers, clock: ScenarioClock(msPerMinute: 0)) { arrived.append(h) }
@@ -102,6 +103,7 @@ public enum StoryPipeline {
             "curvePlanned": smart.map { [$0.0, $0.1] }, "curveNaive": naive.map { [$0.0, $0.1] },
         ]
         summary.merge(backtest) { $1 }
+        summary["coverage"] = coverage
         summary.merge(findInfo(grid: grid, hints: arrived, plans: plans, poas: poas)) { $1 }
         var doc = runJSONObject(scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
         // extras for the studio UI (ignored by validators)

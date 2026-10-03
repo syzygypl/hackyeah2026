@@ -20,6 +20,14 @@ if FileManager.default.fileExists(atPath: terrainPath) {
     print("Terrain: scenario's own terrain (\(scenario.terrain.trails.count) trails\(scenario.terrain.trails.isEmpty ? ", FLAT" : "")). For real terrain: python3 rescue/tools/terrain/osm_terrain.py --scenario \(scenarioPath)")
 }
 scenario.applyEpilogue(args.contains("--epilogue") ? true : nil)
+// Evidence outside the grid gets 0 POA by construction: grow the grid to cover it (unless fixedBbox), and report.
+let coverage = applyCoverage(&scenario)
+for it in (coverage["items"] as? [[String: Any]]) ?? [] where ((it["outsidePctBefore"] as? Double) ?? 0) > 0 {
+    print(String(format: "Coverage: %@ %@ was %.1f%% outside the map, now %.1f%%", it["clock"] as! String, it["source"] as! String,
+                 it["outsidePctBefore"] as! Double, it["outsidePct"] as! Double))
+}
+if coverage["expanded"] as? Bool == true { print("Grid auto-expanded to \(scenario.rows)x\(scenario.cols) cells to cover the evidence (cells outside the terrain file are flat/unknown).") }
+if ((coverage["worstOutsidePct"] as? Double) ?? 0) > 5 { print("WARNING: część dowodów poza mapą: \(coverage["worstOutsidePct"]!)%") }
 let clock = ScenarioClock(msPerMinute: args.contains("--fast") ? 0 : 8)
 
 let grid = ProbabilityGrid(scenario)
@@ -87,7 +95,7 @@ let ringsPoa = grid.poa(upTo: ringsOnlyIdx + 1, disabled: Set(arrived.filter { $
 let areaFused = areaToFind(snaps[beforePing].poa), areaRings = areaToFind(ringsPoa)
 
 print("\n== VALUE (state at \(arrived[beforePing].clock), before \(StoryPipeline.decisiveIndex(arrived).map { arrived[$0].kind == "found" ? "the find" : "the Ratunek ping" } ?? "the end")) ==")
-print("Top 3 segments hold \(pct(top3poa)) of probability in \(pct(top3area)) of the area (36 km2 box).")
+print("Top 3 segments hold \(pct(top3poa)) of probability in \(pct(top3area)) of the area (\(String(format: "%.0f", Double(grid.count) * scenario.cellM * scenario.cellM / 1e6)) km2 grid).")
 print("  1. \(fused[0].id) \(fused[0].name): \(pct(fused[0].poa)) in \(pct(fused[0].areaFrac)) area")
 print("  2. \(fused[1].id) \(fused[1].name): \(pct(fused[1].poa)) in \(pct(fused[1].areaFrac)) area")
 print("  3. \(fused[2].id) \(fused[2].name): \(pct(fused[2].poa)) in \(pct(fused[2].areaFrac)) area")
@@ -130,6 +138,7 @@ var summary: [String: Any] = [
     "curvePlanned": smartCurve.map { [$0.0, $0.1] }, "curveNaive": naiveCurve.map { [$0.0, $0.1] },
 ]
 summary.merge(find) { $1 }
+summary["coverage"] = coverage
 if !blind {
     summary["rankFused"] = rankFused; summary["rankRings"] = rankRings
     summary["areaFused"] = areaFused; summary["areaRings"] = areaRings; summary["truthSeg"] = truthSeg
