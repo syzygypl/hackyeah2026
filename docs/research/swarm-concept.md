@@ -1,83 +1,88 @@
 # Rój (Swarm): concept for the open Artificial Intelligence task
 
-Draft by AI Andrzeja, 2026-10-03 ~12:00, from Andrzej's idea ("swarm of small models, or big ones, we have API keys"). Input for the 13:00 decision. Brief: [`../tasks/artificial-intelligence.txt`](../tasks/artificial-intelligence.txt).
+By AI Andrzeja, 2026-10-03, from Andrzej's ideas: a swarm of models, small or big; **they talk through a common communication gateway, use it to solve problems together, and that gateway is a security layer**. Revised after the ASSIGN from AI Marcina (models, metrics, what is real by 20:00). Brief: [`../tasks/artificial-intelligence.txt`](../tasks/artificial-intelligence.txt).
 
 ## One line
 
-A swarm of small local models reads a document in parallel. They check each other against the exact source text, and a big model is called only where they disagree, so the user sees **what is certain, what was arbitrated and what nobody knows**, each with the sentence it came from.
+A swarm of models reads a document together. They exchange proposals, votes and challenges **only through one gateway**, which checks every message (our AI Control Layer). Where they agree, the user gets an answer with its source sentence; where they disagree, a big model arbitrates or the answer is "nie wiem".
 
-## Why it fits the brief
+## Why a swarm, not one model
 
-The brief asks for AI with a meaningful role, a concrete use case, explained components and limits, and above all **"how users can verify its outputs and remain in control"**. Here verification is the architecture, not an add-on:
+- **It knows when it doesn't know.** One model sounds equally sure when it's wrong. Disagreement between independent answers is a usable error signal, which gives the brief's "users verify outputs and stay in control".
+- **Errors cancel out.** A vote removes random slips (a misread number, a swapped date).
+- **Privacy and cost.** Local models do the bulk work. The big API model sees only the disputed snippet, never the whole letter, and the gateway enforces that.
+- **Resistant to manipulation.** A hidden instruction in the document has to fool several members and the gateway's checks at once.
+- **Limits, said plainly to the jury:** shared mistakes (an ambiguous source fools everyone, so every answer carries a quote and a human checks), no gain for open-ended creative text, and more calls means parallelism is essential. Voting across models (ensembling, self-consistency) is known; what's new is the visible, gateway-governed swarm for end users.
 
-- Every answer must carry a quote that is checked **without AI** (it must exist verbatim in the document). Quotes that don't exist (invented ones) are rejected mechanically.
-- Agreement between independent models from different model families is the confidence signal. Disagreement is shown, never hidden.
-- The user clicks any answer to see the highlighted source sentence, and can override it. Nothing is sent or acted on automatically.
-
-Honest framing for the jury: voting across many runs or models (ensembling, self-consistency) is a known technique. What's new is **showing the voting to the end user** and the economics: small local models do most of the work, and the big model handles only the disputed parts.
-
-## Use case for the demo: "Pismo bez stresu"
-
-User: someone who receives an official letter (ZUS, tax office, municipality) and doesn't understand it. Output: a plain-language summary, a deadline card, what to do, what happens if they don't, and a draft reply.
-
-Letters are **synthetic**, built from public gov.pl templates, with no real personal data. The engine is generic: a list of fields plus a document. A second schema (for example a rental contract or an agency brief) shows that in the pitch.
-
-## Architecture
+## Architecture: a swarm on a shared, guarded bus
 
 ```
-document (paste / text from PDF)
-  -> splitter: fixed field list (deadline, amount, sender, case no., required action, consequence, appeal path)
-  -> workers: per field, N=3 small models from different families, in parallel (Ollama)
-       each returns {value, quote}
-  -> verifier 1 (no AI): quote exists verbatim in the doc (normalized); value parses (date, PLN amount) and matches the quote
-  -> verifier 2 (small model): "does the quote support the value?" yes/no
-  -> aggregator: majority over normalized values -> agreement score per field
-       agree + verified          -> GREEN  "pewne"            (local only)
-       disagree / failed check   -> escalate to big model with all candidates + quotes
-            big model picks one, with a quote that again passes verifier 1  -> AMBER "rozstrzygnięte"
-            big model can't       -> GREY  "nie wiem - zapytaj urząd"
-  -> plain-language summary + draft reply generated ONLY from GREEN/AMBER fields
-  -> audit log: every model call, vote, escalation, latency, cost
+                 +------------------- gateway (AI Control Layer, :8787) -------------------+
+document ->      |  blackboard: task, field list, proposals, votes, challenges, verdicts       |
+coordinator ---> |  every message checked: injection, PII redaction, budget, allowed models,   |
+                 |  quote verifier (no AI), audit log (= the swarm transcript)                |
+                 +---^-----------^-----------^-------------^-------------------^--------------+
+                     |           |           |             |                   |
+                 worker A    worker B    worker C      guard members       arbiter (optional)
+               qwen3:4b    qwen3:4b    qwen3:4b /    qwen3guard 0.6b,     big API model, gets
+               prompt v1   prompt v2   gemma3:4b*    llama-guard3 1b       only the disputed
+                                                     (document safety)     snippet + candidates
 ```
 
-- **Small models (local, Mac demo machine, M4 Pro 48 GB):** for example `qwen3:4b-instruct` (already pulled, handles Polish well), `gemma3:4b`, `llama3.2:3b`, `phi4-mini`. Different families, so their errors are less correlated. Final list after a 15-minute test on 2 letters.
-- **Big model (API, team keys in `.env`):** the arbiter only. The brief allows existing models and APIs. Personal chat subscriptions are not used as a backend.
-- **Stack:** Python stdlib HTTP server (same style as `spikes/ai-control-layer/`) plus one HTML page (same style as `spikes/acl-dashboard/`). No new frameworks.
-- **Offline fallback:** cache all model responses for the demo letters; a "replay" mode is clearly labeled.
+1. The coordinator posts the task to the gateway: a document plus a fixed field list (deadline, amount, sender, case number, required action, consequence, appeal path).
+2. Workers read the task from the gateway and post `{field, value, quote}` proposals.
+3. The gateway checks each message: the quote must exist verbatim in the document (no AI), the value must parse (date, PLN), and the members and the budget must be allowed by `policy.json`. A proposal that fails is rejected and logged.
+4. Workers see each other's proposals and may post a challenge ("my quote says arrears, not total").
+5. Aggregation per field: agreement among verified proposals becomes GREEN. Disagreement goes to the arbiter **through the gateway, which redacts PII and sends only the disputed snippet** and caps API spend; the result is AMBER. No verified answer means GREY, "nie wiem - zapytaj urząd".
+6. The guard members classify the document itself (hidden instructions, manipulation). The demo letter with an injection gets flagged and outvoted.
+7. Members don't have to sit on one machine. Agents on other laptops can join through the gateway's network endpoint (team hotspot only, token required), so a team member's own agent can join the swarm.
 
-## 90-second demo
+**This reuses `spikes/ai-control-layer/` as the bus.** The open-AI build adds the blackboard endpoints, workers and UI; the security layer is already built. One story for two tasks, if a mentor confirms a team may submit to both.
 
-1. **0-15s:** paste a ZUS letter. The swarm view lights up: 7 fields x 3 models working in parallel.
-2. **15-35s:** cards fill in. The deadline is green, 3 of 3 models agree; clicking it highlights the sentence in the letter.
-3. **35-55s:** the amount is disputed (two models read the arrears, one reads the total). The big model is called on that field only, and the card turns amber with its reasoning and quote. One field stays grey: "nie wiem - zapytaj urząd" (for example the appeal path isn't stated).
-4. **55-75s:** change the date in the letter and run again: the card changes, so it isn't canned. Footer: "6 of 7 fields resolved locally, 1 big-model call, cost 0.00X PLN, 4.1 s".
-5. **75-90s:** the draft reply, built only from verified fields, with an editable "send" button the user has to press. Then the audit view: every call and vote.
+## Models: what we actually have
 
-## Mapping to the judging criteria
+On Mateusz's demo Mac (M4 Pro 48 GB): `qwen3:4b-instruct-2507-q4_K_M`, `sileader/qwen3guard:0.6b`, `llama-guard3:1b`, `ibm/granite3.3-guardian:8b`. On Marcin's Mac: `llama-guard3:1b`, `ibm/granite3.3-guardian:8b`.
 
-| Criterion | Weight | Where the demo shows it |
+- The guard models are **classifiers, not extractors**. They can sit in the swarm only for the document-safety field.
+- **The only general extractor we have is `qwen3:4b`.** Diversity options:
+
+| Option | How | Pros | Cons |
+|---|---|---|---|
+| (a) Self-consistency | 3 runs of qwen3:4b with different prompts and temperatures (0 / 0.4 / 0.8) | nothing to pull, one model in RAM, start now | same weights, so correlated errors; agreement is a weaker signal and the quote verifier carries more weight |
+| (b) More families | pull `gemma3:4b` (~3.3 GB, good Polish) and optionally `llama3.2:3b` (~2 GB, weaker Polish) | real diversity, a stronger "swarm" story | download on the team hotspot, ~5 GB RAM more (fine on 48 GB); **a human decision for Mateusz's Mac** |
+
+**Recommendation:** build on (a) now, with the worker model list in `policy.json`, so adding a family is config, not code. Mateusz decides on pulling `gemma3:4b` in the background now. If it's there by 17:00, the demo runs with 2 families; `llama3.2:3b` only if Polish passes a 2-letter test.
+
+- **Arbiter:** optional big API model, keys only in `.env` (never in the repo or the thread), with a spend cap in `policy.json`. Without a key, a dispute ends as GREY, which is still a valid demo.
+
+## Metrics: how the footer numbers are computed
+
+- **% lokalnie** = fields resolved without the arbiter / all fields, per letter and over the demo set. The escalation rate is the complement.
+- **Koszt na zapytanie** = sum over arbiter calls of `in_tokens / 1000 x price_in + out_tokens / 1000 x price_out`. Prices are **placeholders** in `policy.json` (`arbiter.price_per_1k_in/out`). Tokens come from the API response usage, or chars/4 in replay mode. Local calls count as 0 PLN, with latency shown separately.
+- **Baseline for comparison:** the cost of sending the whole letter to the big model once (the same formula with the full letter's tokens). Footer: "6/7 pól lokalnie, 1 wywołanie dużego modelu, koszt X vs Y bez roju, 4.1 s".
+- **Accuracy:** on the synthetic letters with ground truth, fields correct / fields answered, plus how many GREY fields were genuinely missing from the letter (honest unknowns).
+
+## Co realnie działa do 20:00
+
+| MUST (real) | Hours | Owner |
 |---|---|---|
-| Idea & Innovation | 30% | Visible swarm voting; disagreement becomes user-facing uncertainty; cheap local consensus with big-model arbitration |
-| Relation to Category | 20% | AI is the core: many models, verification, arbitration. The brief's "verify outputs, stay in control" is the architecture |
-| Practical Applicability / Usability | 20% | A real pain (official letters, deadlines); one paste, cards, click to source, editable draft |
-| Design | 20% | Swarm view plus green/amber/grey cards; must look polished |
-| Completeness | 10% | Works on a changed input, audit log, cost and latency numbers |
+| Blackboard endpoints on the gateway (`POST /v1/swarm/task`, `/proposal`, `GET /v1/swarm/{id}`), every message through the existing checks | 1.5 | TBD |
+| Workers: qwen3:4b x 3 prompt/temperature variants, Ollama JSON mode, in parallel | 1.5 | TBD |
+| Quote verifier (normalized verbatim match) plus date and PLN parsers | 1 | TBD |
+| Aggregator: GREEN / AMBER / GREY, escalation stub (no key gives GREY) | 1 | TBD |
+| 3 synthetic letters (ZUS, tax office, municipality) with ground-truth JSON, one with a hidden injection | 1.5 | TBD |
+| Simple swarm view: paste box, field cards with votes, click a card to highlight its quote, metrics footer | 2.5 | TBD |
+| Cached replay of the demo letters (venue Wi-Fi) | 0.5 | TBD |
 
-## Build plan (to 20:00 checkpoint)
+| Nice-to-have / faked | Note |
+|---|---|
+| Real API arbiter | only if keys and time allow; otherwise disputes end GREY |
+| gemma3:4b as a second family | Mateusz's decision (see Models) |
+| Guard members on document safety | cheap, since the models are already pulled; do it right after MUST |
+| Remote agents joining over the network | pitch slide plus one live join if the hotspot works |
+| Draft reply generated from GREEN/AMBER fields | the "send" button is a no-op |
+| Second schema (rental contract) | one extra field list to show the engine is generic |
+| Streaming animation (SSE) | polling every 500 ms is enough |
+| Faked | letters are synthetic, no PDF/OCR (paste text) |
 
-| Area | What | Owner |
-|---|---|---|
-| Engine | splitter, workers via Ollama, verifier 1 + 2, aggregator, escalation to API | TBD |
-| Prompts + schema | field list, worker and checker prompts, PL letters (3 synthetic) | TBD |
-| UI | paste box, swarm view, cards, source highlight, draft reply | TBD |
-| Data + eval | 5 synthetic letters with ground truth; script: accuracy per field, % local, cost | TBD |
-| Pitch | deck, video, story | TBD |
-
-Contract between engine and UI: `POST /v1/analyze {text}` returns `{fields: [{name, status, value, quote, votes: [{model, value, quote, ok}], escalated, latency_ms}], summary, draft, stats: {local_pct, cost, latency_ms}}`, streamed as server-sent events so the swarm view can animate.
-
-## Risks
-
-- **Latency:** 21 worker calls plus checks. 3-4B models on M4 Pro answer in about 1 s each, and Ollama can run a few in parallel (`OLLAMA_NUM_PARALLEL`). Target under 10 s per letter; measure first.
-- **Polish quality of small models:** test 2 letters before committing; drop weak models from the swarm.
-- **Two categories:** if the team also runs AI Control Layer, confirm with a mentor that one team may submit to two tasks. The swarm can sit behind the control layer (its audit and redaction), a shared story.
-- **API keys:** in `.env` only, never in the repo or the thread; a budget cap on the arbiter calls.
+About 9.5 h of MUST work, which fits 20:00 with 2-3 people in parallel.
