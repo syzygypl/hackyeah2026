@@ -230,10 +230,16 @@ public enum SearchPlanner {
 
     // MARK: simulation for the value number
 
-    /// Cumulative probability of finding over time (minutes from now) when every available resource keeps
-    /// taking jobs. smart = best POA x POD / time; naive = biggest POA first (classic, ignores terrain and weather).
-    public static func simulate(grid: ProbabilityGrid, poa start: [Double], conditions c: LocationHint.Conditions,
-                                minute: Int, smart: Bool, horizonMin: Double = 360) -> [(Double, Double)] {
+    public struct SimJob: Sendable {
+        public let resource: String, segment: String
+        public let start: Double, end: Double
+        let cells: [Int], pods: [Double]
+    }
+
+    /// Every available resource keeps taking jobs until the horizon. smart = best POA x POD / time;
+    /// naive = biggest POA first (classic, ignores terrain and weather in the choice; physics still applies).
+    public static func simulateJobs(grid: ProbabilityGrid, poa start: [Double], conditions c: LocationHint.Conditions,
+                                    minute: Int, smart: Bool, horizonMin: Double = 360) -> [SimJob] {
         let s = grid.scenario
         let ctx = Ctx(grid)
         let res = resources(s)
@@ -242,36 +248,53 @@ public enum SearchPlanner {
         var pos = res.map { Coord($0.base) }
         var busySeg = [Int?](repeating: nil, count: res.count)
         let avail = res.map { r in gate(r, c, minute: minute + 10_000, scenario: s).0 }  // weather gate now; readiness via `free`
-        var found = 0.0
-        var curve: [(Double, Double)] = [(0, 0)]
-        var jobs = 0
-        while jobs < 200 {
+        var jobs: [SimJob] = []
+        while jobs.count < 200 {
             guard let i = res.indices.filter({ avail[$0] }).min(by: { free[$0] < free[$1] }), free[i] < horizonMin else { break }
             busySeg[i] = nil
             let taken = Set(busySeg.compactMap { $0 })
             var o = options(ctx, res, idx: i, from: pos[i], poa: poa, c, urgency: 1).filter { !taken.contains($0.seg) }
-            if !smart {
-                // naive: biggest POA, ignore terrain/weather in the choice (physics still applies)
-                o.sort { $0.poa > $1.poa }
-            } else {
-                o.sort { $0.rate > $1.rate }
-            }
+            if smart { o.sort { $0.rate > $1.rate } } else { o.sort { $0.poa > $1.poa } }
             guard let best = o.first, let p = profiles[res[i].type] else { break }
             let end = free[i] + best.travel + best.sweep
+            var pods: [Double] = []
             for cell in best.core {
                 let d = cellPod(p, res[i].type, grid.difficulty[cell], c)
-                found += poa[cell] * d
+                pods.append(d)
                 poa[cell] *= (1 - d)
             }
+            jobs.append(SimJob(resource: res[i].id, segment: s.segments[best.seg].id, start: free[i], end: end, cells: best.core, pods: pods))
             free[i] = end
             pos[i] = ctx.centroid(best.core)
             busySeg[i] = best.seg
-            curve.append((end, found))
-            jobs += 1
         }
-        return curve.sorted { $0.0 < $1.0 }.reduce(into: [(Double, Double)]()) { acc, x in
-            acc.append((x.0, max(x.1, acc.last?.1 ?? 0)))
+        return jobs
+    }
+
+    /// Cumulative probability of finding over time (minutes from now): sum over jobs of POA x POD of the swept cells.
+    public static func simulate(grid: ProbabilityGrid, poa start: [Double], conditions c: LocationHint.Conditions,
+                                minute: Int, smart: Bool, horizonMin: Double = 360) -> [(Double, Double)] {
+        let jobs = simulateJobs(grid: grid, poa: start, conditions: c, minute: minute, smart: smart, horizonMin: horizonMin)
+        var poa = start, found = 0.0
+        var curve: [(Double, Double)] = [(0, 0)]
+        for j in jobs.sorted(by: { $0.end < $1.end }) {
+            for (cell, d) in zip(j.cells, j.pods) { found += poa[cell] * d; poa[cell] *= (1 - d) }
+            curve.append((j.end, found))
         }
+        return curve
+    }
+
+    /// Backtest of the plan itself: when a team first sweeps the true cell, and the chance it has been detected there
+    /// after 2 h and 4 h (1 - product of (1 - POD) over the sweeps of that cell).
+    public static func truthDetection(_ jobs: [SimJob], truthCell: Int) -> [String: Any] {
+        let hits = jobs.filter { $0.cells.contains(truthCell) }.sorted { $0.end < $1.end }
+        func p(_ t: Double) -> Double {
+            1 - hits.filter { $0.end <= t }.reduce(1.0) { acc, j in acc * (1 - j.pods[j.cells.firstIndex(of: truthCell)!]) }
+        }
+        var o: [String: Any] = ["p2h": (p(120) * 1000).rounded() / 1000, "p4h": (p(240) * 1000).rounded() / 1000,
+                                "sweeps": hits.map { ["resource": $0.resource, "segment": $0.segment, "endMin": Int($0.end)] }]
+        if let f = hits.first { o["firstSweepMin"] = Int(f.end) }
+        return o
     }
 
     /// Minutes until cumulative POS reaches `target` (nil if not within horizon).

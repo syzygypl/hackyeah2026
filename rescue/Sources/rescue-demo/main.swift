@@ -140,6 +140,15 @@ var summary: [String: Any] = [
 summary.merge(find) { $1 }
 summary["coverage"] = coverage
 if !blind {
+    // plan backtest from the moment all clues are in (before the first search report) and from the value moment
+    let firstSearch = max(0, (arrived.firstIndex { $0.kind == "searched" } ?? arrived.count) - 1)
+    for (key, k) in [("Clues", firstSearch), ("", beforePing)] {
+        let c = plans[k].conditions, m = arrived[k].minute
+        summary["truthPlanned" + key] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: snaps[k].poa, conditions: c, minute: m, smart: true), truthCell: truthCell)
+        summary["truthNaive" + key] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: snaps[k].poa, conditions: c, minute: m, smart: false), truthCell: truthCell)
+    }
+    let tp = summary["truthPlannedClues"] as! [String: Any], tn = summary["truthNaiveClues"] as! [String: Any]
+    print("Plan backtest from \(arrived[firstSearch].clock): true cell detected with p=\(tp["p2h"]!) after 2 h, \(tp["p4h"]!) after 4 h (naive \(tn["p2h"]!) / \(tn["p4h"]!)); first sweep at +\(tp["firstSweepMin"] ?? "-") min (naive +\(tn["firstSweepMin"] ?? "-"))")
     summary["rankFused"] = rankFused; summary["rankRings"] = rankRings
     summary["areaFused"] = areaFused; summary["areaRings"] = areaRings; summary["truthSeg"] = truthSeg
 }

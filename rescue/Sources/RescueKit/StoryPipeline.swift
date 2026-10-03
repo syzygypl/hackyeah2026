@@ -102,6 +102,11 @@ public enum StoryPipeline {
             "pos2hPlanned": min(1, SearchPlanner.posAt(120, smart)), "pos2hNaive": min(1, SearchPlanner.posAt(120, naive)),
             "curvePlanned": smart.map { [$0.0, $0.1] }, "curveNaive": naive.map { [$0.0, $0.1] },
         ]
+        if let t = scenario.truth {
+            let tc = grid.cellIndex(Coord(t.at))
+            backtest["truthPlanned"] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: true), truthCell: tc)
+            backtest["truthNaive"] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: false), truthCell: tc)
+        }
         summary.merge(backtest) { $1 }
         summary["coverage"] = coverage
         summary.merge(findInfo(grid: grid, hints: arrived, plans: plans, poas: poas)) { $1 }

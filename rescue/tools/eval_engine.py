@@ -84,8 +84,9 @@ def evaluate(name, run=True):
     first_search = next((i for i, s in enumerate(steps) if s["kind"] == "searched"), len(steps))
     clues = max(0, first_search - 1)
     before = doc["value"].get("beforePing", len(steps) - 1)
+    v = doc["value"]
     out = {"name": name, "clues": metrics(doc, steps[clues], truth), "before": metrics(doc, steps[before], truth),
-           "coverage": doc["value"].get("coverage")}
+           "coverage": v.get("coverage"), "planClues": v.get("truthPlannedClues"), "naiveClues": v.get("truthNaiveClues")}
     return out
 
 
@@ -100,6 +101,12 @@ def main():
         for k in ("clues", "before"):
             m = r[k]
             print(f"{r['name']:<20} {k:<7} {m['t']:<6} {str(m['segRank'])+'/'+str(m['nSeg']):>8} {m['segPoa']*100:6.1f}% {str(m['cellRank'])+'/'+str(m['nCells']):>11} {m['areaPct']:>6}% {m['areaKm2']:>6} {m['peakDistM']:>9} m")
+    print()
+    print(f"{'plan backtest (from clues)':<28} {'p2h plan':>9} {'p4h plan':>9} {'first sweep':>12} | {'p2h naive':>9} {'p4h naive':>9} {'first':>6}")
+    for r in res:
+        if "error" in r or not r.get("planClues"): continue
+        a, b = r["planClues"], r["naiveClues"]
+        print(f"{r['name']:<28} {a['p2h']:>9} {a['p4h']:>9} {str(a.get('firstSweepMin','-'))+' min':>12} | {b['p2h']:>9} {b['p4h']:>9} {str(b.get('firstSweepMin','-')):>6}")
     if "--json" in sys.argv:
         json.dump(res, open(sys.argv[sys.argv.index("--json") + 1], "w"), indent=1, ensure_ascii=False)
 
