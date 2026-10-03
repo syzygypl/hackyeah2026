@@ -62,12 +62,15 @@ public struct FieldReportParser: Sendable {
             do {
                 let hints = try await parseLLM(text)
                 let ms = Int(Date().timeIntervalSince(t0) * 1000)
+                Metrics.shared.inc("llm_requests_total", ["model": model, "result": "ok"])
                 return FieldReport(t: iso, at: at, text: text, parsedBy: "llm-local:\(model)", latencyMs: ms, hints: hints)
             } catch {
+                Metrics.shared.inc("llm_requests_total", ["model": model, "result": "error"])
                 note = "LLM niedostępny lub zły JSON: \(String((error as? ParseError)?.description ?? error.localizedDescription).prefix(160))"
             }
         } else {
             note = "RESCUE_LLM_OFF"
+            Metrics.shared.inc("llm_requests_total", ["model": model, "result": "off"])
         }
         let hints = parseRules(text)
         let ms = Int(Date().timeIntervalSince(t0) * 1000)

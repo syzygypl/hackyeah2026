@@ -229,7 +229,7 @@ actor Studio {
         nextId += 1
         if let by { item["parsedBy"] = by }
         if let note { item["note"] = note }
-        if !evs.isEmpty { items.append(item) }
+        if !evs.isEmpty { items.append(item); Metrics.shared.inc("story_events_total", ["module": Metrics.clean(input["provider"] as? String, "unknown")]) }
         return item
     }
 

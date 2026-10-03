@@ -17,7 +17,9 @@ public struct ServerGuard: Sendable {
         let flagged = Set(["--host", "--pin"].compactMap { f in args.firstIndex(of: f).map { $0 + 1 } })
         let positional = args.enumerated().filter { i, a in !a.hasPrefix("--") && !flagged.contains(i) }.map(\.element)
         port = positional.compactMap { UInt16($0) }.first ?? defaultPort
-        if ServerGuard.isLoopbackHost(host) {
+        // RESCUE_GUARD_STRICT=1 with an explicit --pin keeps the PIN on a loopback bind (one-machine demo of the guard)
+        let strictPin = ProcessInfo.processInfo.environment["RESCUE_GUARD_STRICT"] == "1" && !(val("--pin") ?? "").isEmpty
+        if ServerGuard.isLoopbackHost(host) && !strictPin {
             pin = nil; pinGenerated = false
         } else if let p = val("--pin"), !p.isEmpty {
             pin = p; pinGenerated = false
@@ -34,6 +36,11 @@ public struct ServerGuard: Sendable {
     public static func isLoopbackPeer(_ ip: String) -> Bool {
         if ProcessInfo.processInfo.environment["RESCUE_GUARD_STRICT"] == "1" { return false }
         return ip == "127.0.0.1" || ip == "::1" || ip.hasPrefix("127.") || ip.hasPrefix("::ffff:127.")
+    }
+
+    /// Loopback regardless of RESCUE_GUARD_STRICT (used for /metrics scraping on the laptop itself).
+    public static func isRealLoopbackPeer(_ ip: String) -> Bool {
+        ip == "127.0.0.1" || ip == "::1" || ip.hasPrefix("127.") || ip.hasPrefix("::ffff:127.")
     }
 
     /// Constant-time string compare (no early exit on first differing byte).

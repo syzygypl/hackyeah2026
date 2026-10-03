@@ -10,7 +10,7 @@ let args = Array(CommandLine.arguments.dropFirst())
 
 func response(_ status: String, _ type: String, _ body: Data) -> Data {
     var h = "HTTP/1.1 \(status)\r\nContent-Type: \(type)\r\nContent-Length: \(body.count)\r\n"
-    h += "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-Rescue-Pin\r\n"
+    h += "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-Rescue-Pin, X-Rescue-Client, X-Rescue-Team, X-Rescue-Source\r\n"
     h += "Cache-Control: no-store\r\nConnection: close\r\n\r\n"
     return Data(h.utf8) + body
 }
@@ -31,12 +31,23 @@ let maxBody = 65_536   // studio bodies (narratives) up to 64 KB
 
 func handle(method: String, path: String, headers: [String: String], body: Data, peer: String) async -> Data {
     // on LAN every API call needs the PIN (reads included: the story is the whole incident); static files and the page do not
+    // /metrics: real loopback (Prometheus, ops page on the laptop) scrapes freely; on LAN it needs the PIN
+    if path == "/metrics" && method == "GET" {
+        if ServerGuard.isRealLoopbackPeer(peer) || guardian.authorized(peer: peer, headers: headers, body: body) {
+            return response("200 OK", Metrics.textType, Metrics.shared.render())
+        }
+        Metrics.shared.inc("reports_rejected_total", ["reason": "pin"])
+        ServerGuard.logReject(401, peer: peer, method: method, path: path)
+        return response("401 Unauthorized", json, Data(#"{"error":"PIN required (X-Rescue-Pin header or JSON pin)"}"#.utf8))
+    }
     let isApi = path == "/modules" || path.hasPrefix("/story")
     if isApi && method != "OPTIONS" && !guardian.authorized(peer: peer, headers: headers, body: body) {
+        Metrics.shared.inc("reports_rejected_total", ["reason": "pin"])
         ServerGuard.logReject(401, peer: peer, method: method, path: path)
         return response("401 Unauthorized", json, Data(#"{"error":"PIN required (X-Rescue-Pin header or JSON pin)"}"#.utf8))
     }
     if method == "POST" && !(headers["content-type"] ?? "").lowercased().hasPrefix("application/json") {
+        Metrics.shared.inc("reports_rejected_total", ["reason": "type"])
         return response("415 Unsupported Media Type", json, Data(#"{"error":"use application/json"}"#.utf8))
     }
     switch (method, path) {
@@ -67,8 +78,11 @@ final class Conn: @unchecked Sendable {
             if let req = self.complete() {
                 Task {
                     let t0 = Date()
+                    if req.0 == "TOOBIG" { Metrics.shared.inc("reports_rejected_total", ["reason": "size"]) }
                     let out = req.0 == "TOOBIG" ? response("413 Payload Too Large", json, Data(#"{"error":"body over 64 KB"}"#.utf8))
                         : await handle(method: req.0, path: req.1, headers: req.3, body: req.2, peer: self.peer)
+                    let code = String(decoding: out.prefix(12).dropFirst(9), as: UTF8.self)
+                    Metrics.shared.inc("http_requests_total", ["path": Metrics.pathLabel(req.1, known: studioPaths), "code": code])
                     if req.0 == "POST" { print("\(req.0) \(req.1) \(Int(Date().timeIntervalSince(t0) * 1000)) ms") }
                     self.c.send(content: out, completion: .contentProcessed { _ in self.c.cancel() })
                 }
@@ -100,6 +114,8 @@ final class Conn: @unchecked Sendable {
 }
 
 let guardian = ServerGuard(args: args, defaultPort: 8771)
+let studioPaths: Set<String> = ["/", "/studio", "/modules", "/story", "/story/new", "/story/event", "/story/edit", "/story/narrate", "/story/save", "/metrics"]
+Metrics.shared.startLLMProbe(url: ProcessInfo.processInfo.environment["RESCUE_LLM_URL"] ?? "http://localhost:11434")
 let params = NWParameters.tcp
 params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(guardian.host), port: NWEndpoint.Port(rawValue: guardian.port ?? 8771)!)
 let listener = try NWListener(using: params)

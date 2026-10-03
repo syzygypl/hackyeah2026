@@ -159,8 +159,8 @@ func parseNarrativeRules(_ text: String) -> [NarrItem] {
 
 func parseNarrativeLLM(_ text: String, segs: [[String]]) async -> ([NarrItem], String?) {
     let env = ProcessInfo.processInfo.environment
-    if env["RESCUE_LLM_OFF"] == "1" { return ([], "RESCUE_LLM_OFF=1") }
     let model = env["RESCUE_LLM_MODEL"] ?? "qwen3:4b-instruct-2507-q4_K_M"
+    if env["RESCUE_LLM_OFF"] == "1" { Metrics.shared.inc("llm_requests_total", ["model": model, "result": "off"]); return ([], "RESCUE_LLM_OFF=1") }
     let base = env["RESCUE_LLM_URL"] ?? "http://localhost:11434"
     guard let url = URL(string: base + "/api/chat"), ["localhost", "127.0.0.1"].contains(url.host ?? "") else { return ([], "LLM URL not local") }
     let segList = segs.map { "\($0[0]): \($0[1])" }.joined(separator: "; ")
@@ -191,7 +191,8 @@ func parseNarrativeLLM(_ text: String, segs: [[String]]) async -> ([NarrItem], S
         guard let o = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let msg = (o["message"] as? [String: Any])?["content"] as? String,
               let parsed = try? JSONDecoder().decode([String: [NarrItem]].self, from: Data(msg.utf8)),
-              let evs = parsed["events"] else { return ([], "LLM: bad JSON") }
+              let evs = parsed["events"] else { Metrics.shared.inc("llm_requests_total", ["model": model, "result": "error"]); return ([], "LLM: bad JSON") }
+        Metrics.shared.inc("llm_requests_total", ["model": model, "result": "ok"])
         // anti-hallucination: keep only places whose stem is in the text, segments that exist
         let known = Set(placesIn(text, segments: []).map { $0.1.name })
         let segIds = Set(segs.map { $0[0] })
@@ -205,6 +206,7 @@ func parseNarrativeLLM(_ text: String, segs: [[String]]) async -> ([NarrItem], S
         }
         return (cleaned, nil)
     } catch {
+        Metrics.shared.inc("llm_requests_total", ["model": model, "result": "error"])
         return ([], "LLM unreachable: \(error.localizedDescription)")
     }
 }
