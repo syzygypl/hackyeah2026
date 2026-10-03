@@ -13,6 +13,8 @@ actor Studio {
     var terrainInfo: [String: Any] = [:]
     var lastRun: Data = Data("{}".utf8)
     var nextId = 1
+    var undoStack: [([String: Any], [[String: Any]])] = []   // (base, items) before each change, for "Cofnij"
+    func snapshot() { undoStack.append((base, items)); if undoStack.count > 30 { undoStack.removeFirst() } }
 
     // MARK: bases
 
@@ -59,6 +61,7 @@ actor Studio {
     }
 
     func newStory(_ body: Data) async -> Data {
+        if !base.isEmpty { snapshot() }
         let o = jsonObj(body)
         let start = o["startClock"] as? String ?? "17:40"
         let cat = o["category"] as? String ?? "hiker"
@@ -241,6 +244,7 @@ actor Studio {
 
     func narrate(_ body: Data) async -> Data {
         let text = jsonObj(body)["text"] as? String ?? ""
+        snapshot()
         let segPairs: [[String]] = segments.map { [$0["id"] as? String ?? "", $0["name"] as? String ?? ""] }
         var (narr, note) = await parseNarrativeLLM(text, segs: segPairs)
         var by = "llm-local"
@@ -385,6 +389,7 @@ actor Studio {
     }
 
     func setStory(_ body: Data) async -> Data {
+        if !base.isEmpty { snapshot() }
         let o = jsonObj(body)
         if let b = o["base"] as? [String: Any] {
             base = b.isEmpty ? zawratTemplate() : b
@@ -399,6 +404,7 @@ actor Studio {
 
     func addEvent(_ body: Data) async -> Data {
         if base.isEmpty { _ = await newStory(jsonData(["template": "zawrat"])) }
+        snapshot()
         let o = jsonObj(body)
         let inp = (o["event"] as? [String: Any]) ?? o
         let item = await add(inp)
@@ -411,9 +417,29 @@ actor Studio {
 
     func edit(_ body: Data) async -> Data {
         let o = jsonObj(body)
+        if (o["op"] as? String) == "undo" {
+            if let (b, it) = undoStack.popLast() { base = b; items = it }
+            return await rerun()
+        }
         guard let id = o["id"] as? String, let idx = items.firstIndex(where: { ($0["id"] as? String) == id }) else { return await rerun() }
+        snapshot()
         switch o["op"] as? String ?? "" {
         case "delete": items.remove(at: idx)
+        case "update":
+            // drag-and-drop: patch the module input (new lat/lon after a pin drag, new "at" after a timeline drag) and re-convert
+            var inp = items[idx]["input"] as? [String: Any] ?? [:]
+            let patch = o["input"] as? [String: Any] ?? [:]
+            if patch["lat"] != nil || patch["lon"] != nil { inp["latlon"] = nil; inp["point"] = nil }
+            for (k, v) in patch { inp[k] = v }
+            let c = await convert(inp)
+            guard !c.events.isEmpty else { undoStack.removeLast(); break }
+            items[idx]["input"] = inp; items[idx]["events"] = c.events
+            // keep the list in scenario-time order
+            let start = base["startClock"] as? String ?? "17:40"
+            func t(_ it: [String: Any]) -> Int { relMin(((it["events"] as? [[String: Any]])?.first?["at"] as? String) ?? start, start) }
+            let moved = items.remove(at: idx)
+            let pos = items.firstIndex { t($0) > t(moved) } ?? items.count
+            items.insert(moved, at: pos)
         case "up", "down":
             // reorder = swap times with the neighbour (the stream is ordered by scenario time)
             let j = (o["op"] as? String) == "up" ? idx - 1 : idx + 1
