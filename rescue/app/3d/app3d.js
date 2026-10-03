@@ -1115,9 +1115,11 @@ const buildings = (() => {
 // The mirrored terrain is its own copy for layer 1: the same vertices split into 8x8 index chunks, so only the chunks
 // inside the scissored mirror frustum are drawn (a lake mirrors a few of them, not the 200k+ triangles of the cut), with
 // a cheaper material - no close-up rock / grass detail, snow glints or shadow-map lookups (the baked sun shadow and cloud
-// shadows stay): the waves blur the mirror image far below that detail.
+// shadows stay): the waves blur the mirror image far below that detail. Slow camera moves (orbit, drift) refresh the
+// mirror every 2nd frame; the skipped frame keeps the previous texture with its own projection, so it stays put on the
+// water (off by one frame of parallax: under 0.0015 rad of view change, a pixel or two).
 const REFL = { ok: false, tried: false, at: 0, rt: null, cam: new THREE.PerspectiveCamera(), v: new THREE.Vector3(), f: new THREE.Vector3(), q: new THREE.Vector4(), p4: new THREE.Vector4(), pl: new THREE.Plane(), cc: new THREE.Color(),
-  chunks: [], fr: new THREE.Frustum(), cm: new THREE.Matrix4() };
+  chunks: [], fr: new THREE.Frustum(), cm: new THREE.Matrix4(), pos: new THREE.Vector3(), quat: new THREE.Quaternion(), stale: false };
 REFL.cam.layers.set(1);
 if (WATER.length && !FX_OFF.has('refl') && renderer.capabilities.isWebGL2) {
   try {
@@ -1181,8 +1183,11 @@ function reflPick() {
 function reflRender(moved, now) {
   if (!REFL.ok) return;
   const rt = REFL.rt, cv = renderer.domElement, W = clamp(Math.round(cv.width * 0.5), 64, 1024), H = clamp(Math.round((W * cv.height) / Math.max(cv.width, 1)), 64, 1024);
-  if (!moved && now - REFL.at < 400) return;
-  REFL.at = now;
+  if (!moved && !REFL.stale && now - REFL.at < 400) return;
+  // slow move since the last mirror render (orbit, drift): keep it for this frame, render the next one
+  if (moved && !REFL.stale && heatU.uReflOn.value > 0 && rt.width === W && rt.height === H && camera.quaternion.angleTo(REFL.quat) < 0.0015
+    && camera.position.distanceTo(REFL.pos) < 0.0015 * camera.position.distanceTo(controls.target)) { REFL.stale = true; return; }
+  REFL.stale = false; REFL.at = now; REFL.pos.copy(camera.position); REFL.quat.copy(camera.quaternion);
   const w = reflPick(); heatU.uReflOn.value = w ? 1 : 0; if (!w) return;
   const h = w.y + ((0.0012 + heatU.uWind.value * 0.02) / Math.sqrt(w.sea ? 0.27 : 1)) * 2.7; // the waves' mean lift (fx3d)
   heatU.uReflY.value = h;
