@@ -1200,9 +1200,9 @@ const movers = [];
 // light, a building cloud deck darkens the sky and hides the sun, snow turns it white. The sun moves in ~3 s, clouds
 // build in ~5 s, rain / snow start only once the deck is there, and the step before rain already builds it.
 const SKY_KEYS = [
-  [-18, { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#d6e2ff', glow: '#000000', hs: '#b4c6ea', hg: '#4e5466', sunI: 2.9, hI: 1.65, exp: 1.2 }],
-  [-11, { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#d6e2ff', glow: '#000000', hs: '#b4c6ea', hg: '#4e5466', sunI: 2.9, hI: 1.65, exp: 1.2 }],
-  [-7, { top: '#25407a', bottom: '#8c9cc8', fog: '#7484ad', sun: '#c8d6ff', glow: '#5a4a8a', hs: '#a5b7e2', hg: '#4a4f63', sunI: 1.5, hI: 1.5, exp: 1.22 }],
+  [-18, { top: '#121c33', bottom: '#4c5874', fog: '#3c4762', sun: '#c6d4f5', glow: '#000000', hs: '#7486ad', hg: '#2a2e3b', sunI: 1.25, hI: 0.95, exp: 1.05 }], // night: darker moonlit (review 1791058388408 pt 4), markers and heat glow carry the picture
+  [-11, { top: '#121c33', bottom: '#4c5874', fog: '#3c4762', sun: '#c6d4f5', glow: '#000000', hs: '#7486ad', hg: '#2a2e3b', sunI: 1.25, hI: 0.95, exp: 1.05 }],
+  [-7, { top: '#203a6e', bottom: '#7a8ab6', fog: '#63739c', sun: '#c8d6ff', glow: '#5a4a8a', hs: '#97a9d6', hg: '#43485c', sunI: 1.3, hI: 1.25, exp: 1.15 }],
   [-4.5, { top: '#2f4a80', bottom: '#a796b4', fog: '#8a8cad', sun: '#ff94a8', glow: '#c05878', hs: '#aab2d6', hg: '#4d4858', sunI: 0, hI: 1.25, exp: 1.22 }],
   [-3, { top: '#3a5689', bottom: '#d9958c', fog: '#9e9ab4', sun: '#ff8c96', glow: '#ff6a5a', hs: '#b4b6d6', hg: '#544a50', sunI: 1.1, hI: 1.1, exp: 1.2 }],
   [0.5, { top: '#4a6ca0', bottom: '#f2a26c', fog: '#bcb4c0', sun: '#ff9a5c', glow: '#ff8a4a', hs: '#c8c4d8', hg: '#5e4a3a', sunI: 2.1, hI: 0.9, exp: 1.18 }],
