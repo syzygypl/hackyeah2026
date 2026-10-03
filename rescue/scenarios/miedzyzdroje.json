@@ -1,0 +1,329 @@
+{
+  "incident": "Prąd wsteczny na plaży w Międzyzdrojach - pływak zniesiony w morze (scenariusz fikcyjny)",
+  "date": "2026-08-08",
+  "startClock": "13:55",
+  "subject": {
+    "name": "Igor P. (osoba fikcyjna)",
+    "age": 19,
+    "category": "swimmer",
+    "note": "Turysta z Poznania, kąpał się z kolegami poza strzeżonym kąpieliskiem, ok. 600 m na NE od mola. O 13:45 koledzy widzieli, jak prąd wsteczny (cofka) znosi go w morze przy ostrodze, ok. 300 m od brzegu, potem stracili go z oczu za falami. Ratownik WOPR z kąpieliska dzwoni na 112 o 13:55. Fala 1 m, woda 18°C. Wzdłuż brzegu płynie prąd przybrzeżny na NE.",
+    "lastContact": "13:45"
+  },
+  "bbox": {
+    "south": 53.90305,
+    "west": 14.40423,
+    "north": 53.95695,
+    "east": 14.49577
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "LKP: głowa prądu wstecznego, ok. 300 m od brzegu (koledzy, 13:45)",
+    "at": [
+      53.93674,
+      14.44924
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "B1",
+      "name": "Strefa prądu wstecznego (LKP)",
+      "seed": [
+        53.93674,
+        14.44924
+      ]
+    },
+    {
+      "id": "B2",
+      "name": "Plaża przy miejscu kąpieli",
+      "seed": [
+        53.93404,
+        14.45534
+      ]
+    },
+    {
+      "id": "B3",
+      "name": "Molo i przystań morska",
+      "seed": [
+        53.93314,
+        14.44161
+      ]
+    },
+    {
+      "id": "B4",
+      "name": "Toń na SW od mola",
+      "seed": [
+        53.92955,
+        14.42788
+      ]
+    },
+    {
+      "id": "B5",
+      "name": "Plaża na SW od mola",
+      "seed": [
+        53.92596,
+        14.43551
+      ]
+    },
+    {
+      "id": "B6",
+      "name": "Toń przybrzeżna NE (300-700 m)",
+      "seed": [
+        53.94033,
+        14.45534
+      ]
+    },
+    {
+      "id": "B7",
+      "name": "Toń przybrzeżna NE (700-1500 m)",
+      "seed": [
+        53.94482,
+        14.46449
+      ]
+    },
+    {
+      "id": "B8",
+      "name": "Plaża NE (ok. 1 km)",
+      "seed": [
+        53.94123,
+        14.46755
+      ]
+    },
+    {
+      "id": "B9",
+      "name": "Plaża NE (1.5-2.5 km)",
+      "seed": [
+        53.94842,
+        14.47822
+      ]
+    },
+    {
+      "id": "B10",
+      "name": "Toń przybrzeżna dalej NE",
+      "seed": [
+        53.95201,
+        14.4767
+      ]
+    },
+    {
+      "id": "B11",
+      "name": "Otwarte morze (ponad 1 km od brzegu)",
+      "seed": [
+        53.94752,
+        14.43551
+      ]
+    },
+    {
+      "id": "B12",
+      "name": "Klif i las (Woliński PN)",
+      "seed": [
+        53.93674,
+        14.47365
+      ]
+    },
+    {
+      "id": "B13",
+      "name": "Międzyzdroje - promenada",
+      "seed": [
+        53.92955,
+        14.45076
+      ]
+    },
+    {
+      "id": "B14",
+      "name": "Otwarte morze NW",
+      "seed": [
+        53.9547,
+        14.41262
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): w wodzie ok. 1.4 km na NE, 100 m od brzegu",
+    "at": [
+      53.94392,
+      14.46602
+    ]
+  },
+  "events": [
+    {
+      "provider": "TerrainDifficulty",
+      "at": "13:55",
+      "title": "Teren: morze / plaża / klif",
+      "detail": "Ratownicy: skuter i łódź na wodzie, patrole piesze na plaży."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "13:55",
+      "title": "Warunki: słonecznie, wiatr 7 m/s z WSW, fala 1 m, woda 18°C",
+      "detail": "Dobra widzialność, ale głowę w fali widać z brzegu tylko z bliska.",
+      "visibilityM": 10000,
+      "windMs": 7,
+      "tempC": 22,
+      "precip": "none",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "13:55",
+      "title": "Pierścienie odległości od LKP (bez kierunku)",
+      "detail": "Bazowy model bez prądu i wiatru, przybliżony (nie ISRID): 25% 0.2 km, 50% 0.5, 75% 1.0, 95% 2.0.",
+      "point": [
+        53.93674,
+        14.44924
+      ],
+      "quantilesKm": [
+        0.2,
+        0.5,
+        1.0,
+        2.0
+      ]
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "14:00",
+      "title": "Dryf: prąd przybrzeżny na NE (~0.3 m/s) + wiatr 7 m/s z WSW",
+      "detail": "Po wyjściu z prądu wstecznego człowiek płynie z prądem wzdłuż brzegu. Parametry ilustracyjne (prąd z obserwacji ratowników, leeway osoby ~1.5% wiatru wg tabel USCG).",
+      "point": [
+        53.93674,
+        14.44924
+      ],
+      "radiusM": 120,
+      "windMs": 7,
+      "windFromDeg": 250,
+      "currentMs": 0.3,
+      "currentToDeg": 53,
+      "object": "person"
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "14:15",
+      "title": "Ratownicy WOPR z kąpieliska (deska, skuter): strefa prądu wstecznego, nic",
+      "detail": "Pierwsze minuty: przeszukanie miejsca zniesienia i plaży przy nim. POD 60%.",
+      "segments": [
+        "B1",
+        "B2"
+      ],
+      "pod": 0.6
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "14:20",
+      "title": "Policja + ratownicy: plaża i molo, nic",
+      "detail": "Patrol pieszy po plaży na SW i NE, obsługa mola. POD 70%.",
+      "segments": [
+        "B3",
+        "B5",
+        "B8"
+      ],
+      "pod": 0.7
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "14:30",
+      "title": "Aktualizacja dryfu: 45 min od zniesienia",
+      "detail": "Ta sama fizyka, dłuższy czas: smuga przesuwa się dalej na NE wzdłuż brzegu.",
+      "point": [
+        53.93674,
+        14.44924
+      ],
+      "radiusM": 120,
+      "windMs": 7,
+      "windFromDeg": 250,
+      "currentMs": 0.3,
+      "currentToDeg": 53,
+      "object": "person"
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "14:35",
+      "title": "Dron WOPR: toń na SW od mola, nic",
+      "detail": "Sprawdzona hipoteza 'zniosło go w stronę mola i Świnoujścia'. POD 75%.",
+      "segments": [
+        "B4",
+        "B3"
+      ],
+      "pod": 0.75
+    },
+    {
+      "provider": "Clue",
+      "at": "14:50",
+      "title": "ZNALEZIONO: skuter WOPR - pływak w wodzie ok. 1.4 km na NE, 100 m od brzegu",
+      "detail": "Unosił się na plecach, wyczerpany, przytomny. Podjęty na skuter, przekazany ZRM. Meldunek radiowy ratownika, nie GPS.",
+      "point": [
+        53.94392,
+        14.46602
+      ],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "resources": [
+    {
+      "id": "wopr-jetski",
+      "name": "Skuter WOPR (kąpielisko Międzyzdroje)",
+      "type": "boat",
+      "base": [
+        53.93404,
+        14.44619
+      ],
+      "readyAt": "14:00"
+    },
+    {
+      "id": "wopr-boat",
+      "name": "Łódź ratownicza WOPR (przystań morska)",
+      "type": "boat",
+      "base": [
+        53.93314,
+        14.44161
+      ],
+      "readyAt": "14:10"
+    },
+    {
+      "id": "sar-boat",
+      "name": "Łódź Morskiej Służby SAR (Świnoujście)",
+      "type": "boat",
+      "base": [
+        53.92,
+        14.28
+      ],
+      "readyAt": "14:15"
+    },
+    {
+      "id": "beach-patrol",
+      "name": "Ratownicy + Policja - patrol plaży",
+      "type": "ground",
+      "base": [
+        53.93314,
+        14.44771
+      ],
+      "readyAt": "14:00"
+    },
+    {
+      "id": "drone",
+      "name": "Dron WOPR",
+      "type": "drone",
+      "base": [
+        53.93314,
+        14.44771
+      ],
+      "readyAt": "14:20"
+    },
+    {
+      "id": "heli",
+      "name": "Śmigłowiec SAR Marynarki Wojennej (Darłowo)",
+      "type": "heli",
+      "base": [
+        54.405,
+        16.353
+      ],
+      "readyAt": "14:30"
+    }
+  ]
+}
