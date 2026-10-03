@@ -1672,7 +1672,13 @@ setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
 controls.target.copy(center);
-overview(2.6);
+// ?zoom=<km>[,lat,lon]: open close to the ground (camera that far from the run's centre, or from lat,lon), oblique view;
+// for checking close-up materials and the near grass without clicking (no fly-in: the first frame is already there)
+const ZOOM = (Q.get('zoom') || '').split(',').map(Number);
+if (ZOOM[0] > 0) {
+  const t = ZOOM.length === 3 && inside([ZOOM[1], ZOOM[2]]) ? v3(ZOOM[1], ZOOM[2]) : v3(bc[0], bc[1]);
+  controls.target.copy(t); camera.position.copy(aboveGround(t.clone().add(new THREE.Vector3(0.3, 0.42, 0.86).normalize().multiplyScalar(clamp(ZOOM[0], 0.5, 30))), 0.25));
+} else overview(2.6);
 renderer.shadowMap.needsUpdate = true;
 frame();
 pollLive();

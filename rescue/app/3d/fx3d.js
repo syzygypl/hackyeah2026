@@ -260,22 +260,141 @@ export const FX = {
     }`,
   }),
 
-  // close-up detail: procedural world-space noise on the albedo, fading in near the camera (meadow speckle on flat
-  // ground, horizontal strata on cliffs, finer grain on scree), so the topo texture does not turn to mush when zoomed in
-  terrainDetail: () => ({ name: 'detail', hooks: { color: `
-    {
-      float dist = length(fxWorld - cameraPosition), near = 1.0 - smoothstep(1.2, 7.0, dist);
-      if (near > 0.0) {
-        float lod = clamp(dist / 3.0, 0.0, 1.0), slope = 1.0 - clamp(fxObjNormal.y, 0.0, 1.0);
-        float fl = fxFbm(fxWorld.xz * 160.0, lod);
-        float side = fxFbm(vec2(fxWorld.x + fxWorld.z, fxWorld.y * 9.0) * 90.0, lod); // strata: stretched along the contour
-        float strata = 0.5 + 0.5 * sin(fxWorld.y * 420.0 + side * 6.0);
-        float rock = smoothstep(0.25, 0.55, slope);
-        float d = mix(fl, mix(side, strata, 0.45), rock);
-        vec3 tint = mix(vec3(1.06, 1.04, 0.9), vec3(0.92, 1.0, 1.02), fl); // dry / lush patches on meadows
-        diffuseColor.rgb *= mix(vec3(1.0), mix(tint, vec3(1.0), rock) * (0.55 + 0.9 * d), near * 0.9);
+  // close-up ground materials, fading in near the camera so distant terrain keeps the topo / photo texture: granite on
+  // steep ground (triplanar in world space, so cliffs never stretch: layered fbm blocks, ridged crags, polygonal joints,
+  // strata ledges, lichen and wet streaks), scree / gravel on the band below, dry October meadow grass on gentle slopes. Steepness from
+  // the full-resolution normal map, nudged by the texture's saturation (grey topo rock / green meadow, or the photo).
+  // The material is a luminance-preserving tint of the texture (hillshade, contours, roads, the searched wash survive),
+  // muted on bright paint (roads, buildings, snow). Every noise is filtered by the pixel footprint (tdPx, km per pixel):
+  // a pattern fades to its mean before its period drops under ~3 px, so nothing shimmers. The relief is bump mapping
+  // from analytic noise gradients (value noise with its derivative, chain rule through the octaves), mapped back to world
+  // space per triplanar plane: smooth per pixel, no screen-space derivative blocks, no seams between materials. tdB (world
+  // normal offset) feeds the normal hook, so the low sun shows the relief. Runs before poaHeat: the heat layer is on top.
+  terrainDetail: () => ({ name: 'detail',
+    glsl: `
+    // hash without sin(): stable for the large lattice coordinates of metre-scale noise over a 20 km cut
+    float tdHash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+    float tdNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+      return mix(mix(tdHash(i), tdHash(i + vec2(1, 0)), f.x), mix(tdHash(i + vec2(0, 1)), tdHash(i + vec2(1, 1)), f.x), f.y); }
+    // value noise with its gradient: x = value, yz = d/dp
+    vec3 tdNoiseD(vec2 p) { vec2 i = floor(p), f = fract(p), u = f * f * (3.0 - 2.0 * f), du = 6.0 * f * (1.0 - f);
+      float a = tdHash(i), b = tdHash(i + vec2(1, 0)), c = tdHash(i + vec2(0, 1)), d = tdHash(i + vec2(1, 1)), k = a - b - c + d;
+      return vec3(a + (b - a) * u.x + (c - a) * u.y + k * u.x * u.y, du * (vec2(b - a, c - a) + k * u.yx)); }
+    // low-pass by footprint: q = cycles per pixel (pixel size x frequency); 1 at a 10 px period, 0 under 3 px
+    float tdLp(float q) { return 1.0 - smoothstep(0.1, 0.3, q); }
+    float tdNoiseF(vec2 p, float q) { return q < 0.3 ? mix(0.5, tdNoise(p), tdLp(q)) : 0.5; }
+    const mat2 TD_M = mat2(1.6, 1.2, -1.2, 1.6); // octave step: rotate and double
+    // 4 filtered octaves at frequency F (per km) with the gradient: x = value 0..1, yz = d/dp (per km)
+    vec3 tdFbmD(vec2 p, float F, float px) { vec3 a = vec3(0.0); float w = 0.5, q = px * F; vec2 s = p * F; mat2 J = mat2(F);
+      for (int k = 0; k < 4; k++) { float lp = tdLp(q); a.x += w * 0.5;
+        if (lp > 0.0) { vec3 n = tdNoiseD(s); a.x += w * lp * (n.x - 0.5); a.yz += w * lp * (n.yz * J); }
+        s = TD_M * s + 7.3; J = TD_M * J; q *= 2.0; w *= 0.5; }
+      return a / 0.9375; }
+    float tdFbm(vec2 p, float q) { float a = 0.0, w = 0.5;
+      for (int k = 0; k < 4; k++) { a += w * tdNoiseF(p, q); p = TD_M * p + 7.3; q *= 2.0; w *= 0.5; }
+      return a / 0.9375; }
+    // two rotated octaves: patches without the value-noise grid showing
+    float tdN2(vec2 p, float q) { return 0.65 * tdNoiseF(p, q) + 0.35 * tdNoiseF(TD_M * p + 3.1, q * 2.0); }
+    // cellular noise: x = F2 - F1 of jittered cell points (0 on the borders: granite joints, polygonal blocks), y = cell id
+    vec2 tdCell(vec2 p) {
+      vec2 i = floor(p), f = fract(p); float d1 = 8.0, d2 = 8.0, id = 0.0;
+      for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+        vec2 g = vec2(float(x), float(y)); float hx = tdHash(i + g); vec2 o = g + vec2(hx, tdHash(i + g + 19.7)) * 0.8 + 0.1 - f;
+        float d = dot(o, o); if (d < d1) { d2 = d1; d1 = d; id = hx; } else if (d < d2) d2 = d;
       }
-    }` } }),
+      return vec2(sqrt(d2) - sqrt(d1), id);
+    }
+    // granite on one projection plane (p in km, px = km per pixel): x = albedo 0..1, yz = height gradient (m per km)
+    vec3 tdRock(vec2 p, float px) {
+      vec3 fd = tdFbmD(p, 42.0, px); float f = fd.x; // 24 m blocks down to 3 m
+      vec2 wq = p * vec2(48.0, 64.0) + (vec2(tdNoise(p * 20.0), tdNoise(p * 20.0 + 5.2)) - 0.5) * 0.9; // joints ~15-20 m apart, wavy
+      float q = px * 64.0; vec2 cc = tdCell(wq); float e = cc.x;
+      // crack lines at least ~1.5 px wide, broken and only in patches (no cobblestone), gone once the blocks shrink under a few px
+      float crack = (1.0 - smoothstep(0.0, max(0.04, q * 1.5), e)) * smoothstep(0.45, 0.7, tdNoise(p * 7.0 + 3.0))
+        * smoothstep(0.35, 0.75, tdNoise(wq * 0.8 + 11.0)) * tdLp(q * 0.8);
+      float blk = mix(0.5, cc.y, tdLp(q * 0.5) * smoothstep(0.3, 0.6, tdNoise(p * 5.0 + 8.0))); // block-to-block tone (weathering)
+      // ridged octaves: sharp crests and gullies, the craggy relief the bump shows
+      float rg = 0.0, w = 0.5, qq = px * 90.0; vec2 rgD = vec2(0.0), s = p * 90.0 + 4.1; mat2 J = mat2(90.0);
+      for (int k = 0; k < 3; k++) { float lp = tdLp(qq); rg += w * 0.36;
+        if (lp > 0.0) { vec3 n = tdNoiseD(s); float sg = n.x * 2.0 - 1.0, r = 1.0 - abs(sg); rg += w * lp * (r * r - 0.36); rgD += w * lp * (-4.0 * r * sign(sg)) * (n.yz * J); }
+        s = TD_M * s + 2.7; J = TD_M * J; qq *= 2.0; w *= 0.5; }
+      rg /= 0.875; rgD /= 0.875;
+      float g = tdNoiseF(p * 600.0, px * 600.0), zone = tdNoise(p * 12.0); // mineral grain; light / dark zones of ~80 m
+      return vec3(0.5 + (f - 0.5) * 1.6 + (rg - 0.36) * 0.6 + (zone - 0.5) * 0.35 + (g - 0.5) * 0.3 + (blk - 0.5) * 0.12 - crack * 0.32,
+        fd.yz * 2.5 + rgD * 2.0);
+    }`,
+    hooks: {
+      color: `
+    vec3 tdB = vec3(0.0); float tdPx = max(length(fwidth(fxWorld)), 1e-6); // derivatives outside the branch
+    {
+      float dist = length(fxWorld - cameraPosition), near = 1.0 - smoothstep(1.6, 6.5, dist);
+      if (near > 0.0) {
+        vec3 base = diffuseColor.rgb, P = fxWorld; float px = tdPx;
+      #ifdef USE_NORMALMAP
+        vec3 N = normalize(texture2D(normalMap, vNormalMapUv).xyz * 2.0 - 1.0); // object space = world space (terrain)
+      #else
+        vec3 N = normalize(fxObjNormal);
+      #endif
+        float lb = dot(base, vec3(0.299, 0.587, 0.114)), mx = max(max(base.r, base.g), base.b);
+        float sat = (mx - min(min(base.r, base.g), base.b)) / max(mx, 1e-3);
+        float paint = 1.0 - smoothstep(0.58, 0.78, lb); // bright paint (roads, buildings, snow) keeps the texture
+        // steepness (exaggerated relief: ny 0.74 is about 30 deg real) with a ragged edge and the texture's hint
+        float st = N.y + (tdNoiseF(P.xz * 55.0, px * 55.0) - 0.5) * 0.1 + (tdNoiseF(P.xz * 260.0, px * 260.0) - 0.5) * 0.05 + (sat - 0.25) * 0.55;
+        float rockW = 1.0 - smoothstep(0.62, 0.72, st), grassW = smoothstep(0.76, 0.86, st), screeW = max(1.0 - rockW - grassW, 0.0);
+        vec3 col = vec3(0.0), gW = vec3(0.0); // gW: height gradient in world space (m per km)
+        if (rockW + screeW > 0.01) {
+          // triplanar: three planar projections blended by the normal, sharp so each face takes one projection; each
+          // plane's gradient goes back onto its two world axes
+          vec3 tw = pow(abs(N), vec3(4.0)); tw /= tw.x + tw.y + tw.z;
+          float ra = 0.0; vec3 rg = vec3(0.0), r;
+          if (tw.x > 0.05) { r = tdRock(P.zy, px); ra += tw.x * r.x; rg += tw.x * vec3(0.0, r.z, r.y); }
+          if (tw.y > 0.05) { r = tdRock(P.xz + 17.0, px); ra += tw.y * r.x; rg += tw.y * vec3(r.y, 0.0, r.z); }
+          if (tw.z > 0.05) { r = tdRock(P.xy + 31.0, px); ra += tw.z * r.x; rg += tw.z * vec3(r.y, r.z, 0.0); }
+          // strata: ledges about 7 m apart along the contour, wavy, in patches, on the steep faces only
+          float sw = tdFbm(vec2(P.x + P.z, P.y) * 22.0, px * 22.0), sph = (P.y * 85.0 + sw * 2.2) * 6.2832;
+          float led = 0.5 + 0.5 * sin(sph), sAmt = (1.0 - tw.y) * smoothstep(0.4, 0.65, tdNoise(vec2(P.x + P.z, P.y * 3.0) * 14.0)) * 0.6 * tdLp(px * 130.0);
+          rg.y += sAmt * 1.6 * 0.5 * cos(sph) * 6.2832 * 85.0;
+          float streak = tdNoiseF(vec2((P.x + P.z) * 240.0, P.y * 18.0), px * 240.0) * (1.0 - tw.y); // wet / dark streaks down the faces
+          float lichen = smoothstep(0.62, 0.8, tdNoiseF(P.xz * 380.0 + P.y * 90.0, px * 380.0));
+          vec3 granite = mix(vec3(0.33, 0.31, 0.29), vec3(0.7, 0.67, 0.61), clamp(ra + (led - 0.5) * sAmt * 0.3, 0.0, 1.0));
+          granite = mix(granite, granite * vec3(1.07, 0.98, 0.9), smoothstep(0.4, 0.7, tdNoise(P.xz * 30.0 + 2.0))); // warm feldspar patches
+          granite *= 1.0 - smoothstep(0.55, 0.85, streak) * 0.3;
+          granite = mix(granite, vec3(0.6, 0.6, 0.34), lichen * 0.45);
+          // scree: stones of 0.5 - 2 m in grey and rusty brown, dark gaps
+          vec2 sp = P.xz * 650.0 + tdNoise(P.xz * 90.0) * 1.5, sg = vec2(0.0);
+          float sn = 0.5, slp = tdLp(px * 650.0);
+          if (slp > 0.0) { vec3 n = tdNoiseD(sp); float t = clamp((n.x - 0.25) * 2.0, 0.0, 1.0); sn = mix(0.5, t * t * (3.0 - 2.0 * t), slp); sg = slp * 6.0 * t * (1.0 - t) * 2.0 * n.yz * 650.0; }
+          float sv = 0.5 + (sn - 0.5) * 0.75 + (tdNoiseF(sp * 2.7 + 9.0, px * 1755.0) - 0.5) * 0.35;
+          vec3 scree = mix(vec3(0.3, 0.29, 0.27), mix(vec3(0.62, 0.6, 0.56), vec3(0.56, 0.47, 0.38), tdN2(P.xz * 140.0, px * 140.0)), sv);
+          col += granite * rockW + scree * screeW;
+          gW += rg * rockW + (vec3(sg.x, 0.0, sg.y) * 0.5 + rg * 0.3) * screeW; // stones about 0.5 m proud
+        }
+        if (grassW > 0.01) {
+          // October meadow: dry yellow-green with green hollows, brown dead patches, rusty bilberry / heather spots, and
+          // crisp tussocks (light tips, dark gaps) when close
+          vec3 pa = tdFbmD(P.xz + 3.0, 70.0, px);
+          float cl = 0.5, clp = tdLp(px * 520.0); vec2 cg = vec2(0.0);
+          if (clp > 0.0) { vec3 n = tdNoiseD(mat2(0.8, -0.6, 0.6, 0.8) * P.xz * 520.0); float t = clamp((n.x - 0.3) * 2.5, 0.0, 1.0);
+            cl = mix(0.5, t * t * (3.0 - 2.0 * t), clp); cg = clp * 6.0 * t * (1.0 - t) * 2.5 * (n.yz * mat2(0.8, -0.6, 0.6, 0.8)) * 520.0; }
+          float bl = tdNoiseF(P.xz * 1900.0 + 5.0, px * 1900.0);
+          vec3 g = mix(vec3(0.34, 0.42, 0.19), vec3(0.62, 0.58, 0.3), smoothstep(0.35, 0.68, pa.x));
+          g = mix(g, vec3(0.52, 0.41, 0.25), smoothstep(0.58, 0.72, tdN2(P.xz * 120.0 + 11.0, px * 120.0)) * 0.6);
+          g = mix(g, vec3(0.45, 0.25, 0.19), smoothstep(0.62, 0.74, tdN2(P.xz * 260.0 + 4.0, px * 260.0)) * 0.55);
+          float tuft = cl * 0.65 + bl * 0.35;
+          g *= 0.7 + 0.6 * tuft; g = mix(g, g * vec3(1.08, 1.04, 0.8), smoothstep(0.6, 0.9, tuft)); // sun-bleached tips
+          col += g * grassW;
+          vec2 gg = cg * 0.4 + pa.yz * 0.8; gW += vec3(gg.x, 0.0, gg.y) * grassW; // tussocks 0.4 m, swells 0.8 m
+        }
+        // luminance-preserving tint: the material's colour and pattern on the texture's brightness (avg albedo ~0.45)
+        float tint = near * paint * 0.8;
+        diffuseColor.rgb = mix(base, col * (lb / 0.45), tint);
+        // m per km to scene units (x EX, a little stronger than life so the relief reads), tangential part only
+        gW *= 0.0024 * near; tdB = -(gW - N * dot(gW, N));
+      }
+    }`,
+      normal: `
+    normal = normalize(normal + (viewMatrix * vec4(tdB, 0.0)).xyz); // world-space bump offset from the color hook`,
+    } }),
 
   // POA heat: two canvas textures (previous / current step) crossfaded by uHeatT, contour edges at the 2x / 5x / 10x
   // stops of the shared scale, a slow pulse on the hotspot, and a glow at night (uEmis)
