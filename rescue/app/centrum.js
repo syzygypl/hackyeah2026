@@ -186,7 +186,8 @@ function renderCards() {
       ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw${x.top3.every((s) => s.areaPct != null) ? ` · top 3 to ${areaTxt(x.top3.reduce((a, s) => a + (+s.areaPct || 0), 0))} obszaru` : ""}</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span>${s.areaPct != null ? `<span class="mute">${areaTxt(s.areaPct)} obszaru</span>` : ""}</div>`).join("")}</div>`
         : `<div class="loading">${x.pending ? "Liczę mapę..." : "Brak mapy dla tej akcji."}</div>`}
       <div class="cteams">${x.teams ? `Zespoły z sektorem: <span class="n">${x.teams.assigned}/${x.teams.total}</span>` : ""}
-        ${mine.map((t) => `<span class="chip" title="${esc(t.name)} · ${esc(t.status)}">${esc(t.id)}</span>`).join("")}</div>
+        ${mine.map((t) => `<span class="chip" title="${esc(t.name)} · ${esc(t.status)}">${esc(t.id)}</span>`).join("")}
+        <a class="odpr" href="odprawa.html?sc=${encodeURIComponent(x.sc)}" title="Odprawa kierownika akcji na jednej stronie A4">Odprawa (druk)</a></div>
       <div class="drophint">Upuść tutaj, aby dołączyć zespół do tej akcji</div></article>`;
   };
   $("cards").innerHTML = (all.length ? `<h2 class="cgrp">Trwające <span class="cnt">${cur.length}</span></h2>${cur.map(card).join("") || `<div class="help">Brak trwających akcji.</div>`}`

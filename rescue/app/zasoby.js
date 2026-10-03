@@ -19,6 +19,7 @@ const Q = new URLSearchParams(location.search);
 const state = { sc: Q.get("sc") || "", at: Q.get("at") || "", data: null };
 async function load() {
   const q = new URLSearchParams(); if (state.sc) q.set("sc", state.sc); if (state.at) q.set("at", state.at);
+  const oq = new URLSearchParams({ sc: state.sc || "zawrat" }); if (state.at) oq.set("t", state.at.padStart(5, "0")); $("odprLink").href = "odprawa.html?" + oq;   // briefing of the chosen action / hour
   try { state.data = await api("/api/inventory?" + q); }
   catch (e) { $("onSc").innerHTML = `<div class="help">Nie udało się wczytać zasobów: ${esc(e.message)}</div>`; return; }
   render();
