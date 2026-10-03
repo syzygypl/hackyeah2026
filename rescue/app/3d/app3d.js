@@ -1635,12 +1635,27 @@ function cineShot(i) {
   CINE.shot = sh; fly = null;
   $('caption').innerHTML = `<b>${esc(s.t)}</b> ${esc(s.label)}`;
 }
+// Kino mixes in first-person shots: a unit seen at this minute (patrol, dog, helicopter...) for ~5 s, then the next shot
+function cineFpp(next) {
+  if (!TL3D?.startFpp) return false;
+  const ids = (TL3D.frame?.actors || []).map((a) => a.id).filter(Boolean);
+  for (let k = 0; k < ids.length; k++) {
+    const id = ids[(next + k) % ids.length];
+    if (TL3D.startFpp(id)) {
+      const name = document.querySelector(`.tl3d-title ~ select option[value="${CSS.escape(id)}"], select[aria-label="Jednostka dla kamery FPP"] option[value="${CSS.escape(id)}"]`)?.textContent || id;
+      CINE.fpp = { t: 5, next }; CINE.shot = null;
+      $('caption').innerHTML = `<b>${esc(R.steps[STEP]?.t || '')}</b> Oczami jednostki: ${esc(name)}`;
+      return true;
+    }
+  }
+  return false;
+}
 function cinema(on) {
   if (on) TL3D?.stopFpp();
   CINE.on = on; document.body.classList.toggle('cinema', on); $('btn-cine').classList.toggle('on', on);
   toParent({ type: 'cinema', on }); // /app hides its floating panels while Kino runs
   if (on) { CINE.prevRot = autoRot; CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null; cineShot(Q.has('step') ? STEP : 0); }
-  else { CINE.shot = null; overview(1.6); }
+  else { if (CINE.fpp) { CINE.fpp = null; TL3D?.stopFpp(); } CINE.shot = null; overview(1.6); }
 }
 $('btn-cine').addEventListener('click', () => cinema(!CINE.on));
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && CINE.on) cinema(false); });
@@ -1648,6 +1663,13 @@ function cineTick(dt) {
   // lens: ease to the longer focal length in Kino and back afterwards
   const fovTo = CINE.on ? CINE_FOV : CINE.fov0;
   if (Math.abs(camera.fov - fovTo) > 0.02) { camera.fov += (fovTo - camera.fov) * (1 - Math.exp(-dt * 1.5)); camera.updateProjectionMatrix(); }
+  // first-person insert (timeline units with a track at this minute): the timeline drives the camera meanwhile
+  if (CINE.on && CINE.fpp) {
+    CINE.fpp.t -= dt;
+    if (CINE.fpp.t > 0 && TL3D?.following) return;
+    const next = CINE.fpp.next; CINE.fpp = null; TL3D?.stopFpp(); CINE.vel.set(0, 0, 0); CINE.tvel.set(0, 0, 0); CINE.last = null;
+    if (next < R.steps.length) cineShot(next); return;
+  }
   const sh = CINE.shot; if (!CINE.on || !sh || fly) return;
   if (sh.fly) {
     const f = sh.fly; f.u = Math.min(1, f.u + dt / f.dur);
@@ -1662,6 +1684,7 @@ function cineTick(dt) {
   if (CINE.last && dt > 0) { CINE.vel.lerp(_cq.subVectors(_cp, CINE.last).divideScalar(dt), 0.3); CINE.tvel.lerp(_cq.subVectors(_ct, CINE.lastT).divideScalar(dt), 0.3); }
   CINE.last = (CINE.last || new THREE.Vector3()).copy(_cp); CINE.lastT = (CINE.lastT || new THREE.Vector3()).copy(_ct);
   if (!sh.fly && sh.tau > sh.len) {
+    if (sh.i < R.steps.length - 1 && sh.i % 2 === 1 && cineFpp(sh.i + 1)) return;
     if (sh.i < R.steps.length - 1) cineShot(sh.i + 1);
     else { CINE.shot = null; $('caption').innerHTML = ''; overview(4); setTimeout(() => CINE.on && cinema(false), 4500); }
   }
