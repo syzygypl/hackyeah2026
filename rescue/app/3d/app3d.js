@@ -666,7 +666,11 @@ for (const h of TER?.huts || []) statics.add(pin(h.at[0], h.at[1], '#7f5539', 0.
 for (const g of segs.values()) drapeRuns(ringLL(g.polygon), 0.016, { color: '#2b2f33', width: 1, opacity: 0.28 }, statics);
 statics.add(pin(R.ipp.lat, R.ipp.lon, '#b8860b', 0.3, 'IPP · ostatnio widziany', 'ipp', 0.02));
 
-// ---------- forests: instanced spruce (montane belt) and dwarf pine (subalpine belt) ----------
+// ---------- forests: instanced trees by species ----------
+// Tatras: vegetation belts by elevation (lower montane beech-fir-spruce with larch, upper montane spruce with larch and
+// rowan, dwarf pine above, shrubs scattered on the meadows). Outside the Tatras: the OSM landcover (landAt / leafAt from
+// the osm3d data) when the scenario has it, else mixed lowland woods in noise patches. October: larches gold, beeches
+// copper, birches yellow, rowans red, conifers green. One InstancedMesh per species, low-poly unit-height geometry.
 const forest = new THREE.Group(); scene.add(forest);
 {
   let seed = 1234567; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
@@ -677,9 +681,59 @@ const forest = new THREE.Group(); scene.add(forest);
     const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
     return (at(xi, yi) * (1 - u) + at(xi + 1, yi) * u) * (1 - v) + (at(xi, yi + 1) * (1 - u) + at(xi + 1, yi + 1) * u) * v;
   };
+  const pick = (table) => { let r = rnd(), acc = 0; for (const [k, p] of table) { acc += p; if (r < acc) return k; } return table[table.length - 1][0]; };
+
+  // geometry: parts with a vertex colour each (crown white so the instance colour is the foliage, trunk brown/white)
+  const part = (g, col, y, sx = 1, sy = 1, jitter = 0) => {
+    g = g.index ? g.toNonIndexed() : g.clone(); g.deleteAttribute('uv'); g.deleteAttribute('normal'); g.scale(sx, sy, sx); g.translate(0, y, 0);
+    const p = g.attributes.position;
+    if (jitter) { const key = (i) => `${p.getX(i).toFixed(3)},${p.getY(i).toFixed(3)},${p.getZ(i).toFixed(3)}`, off = new Map();
+      for (let i = 0; i < p.count; i++) { const k = key(i); if (!off.has(k)) off.set(k, [(rnd() - 0.5) * jitter, (rnd() - 0.5) * jitter, (rnd() - 0.5) * jitter]); const o = off.get(k); p.setXYZ(i, p.getX(i) + o[0], p.getY(i) + o[1], p.getZ(i) + o[2]); } }
+    const c = new THREE.Color(col), cols = new Float32Array(p.count * 3); for (let i = 0; i < p.count; i++) cols.set([c.r, c.g, c.b], i * 3);
+    g.setAttribute('color', new THREE.BufferAttribute(cols, 3)); return g;
+  };
+  const merge = (parts) => {
+    const n = parts.reduce((a, g) => a + g.attributes.position.count, 0), pos = new Float32Array(n * 3), col = new Float32Array(n * 3); let o = 0;
+    for (const g of parts) { pos.set(g.attributes.position.array, o * 3); col.set(g.attributes.color.array, o * 3); o += g.attributes.position.count; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
+  };
+  const W = '#ffffff', BARK = '#6b4c34', BIRCH = '#e8e4da';
+  // low-poly on purpose (~20-40 triangles a tree, tens of thousands of trees): no trunk caps, no cone bases, 20-face crowns
+  const trunk = (h, r = 0.045, col = BARK) => part(new THREE.CylinderGeometry(r * 0.7, r, h, 5, 1, true), col, h / 2);
+  const cone = (r, h) => new THREE.ConeGeometry(r, h, 7, 1, true), blob = (r) => new THREE.IcosahedronGeometry(r, 0);
+  const GEO = {
+    spruce: merge([trunk(0.14), part(cone(0.44, 0.48), W, 0.32), part(cone(0.37, 0.48), W, 0.56), part(cone(0.27, 0.46), W, 0.78)]),
+    fir: merge([trunk(0.12), part(new THREE.CylinderGeometry(0.1, 0.4, 0.55, 7, 1, true), W, 0.38), part(cone(0.3, 0.45), W, 0.76)]),
+    larch: merge([trunk(0.16, 0.04), part(cone(0.27, 0.86), W, 0.57)]),
+    pine: merge([trunk(0.62, 0.04), part(blob(0.34), W, 0.8, 1, 0.5, 0.06)]),
+    mugo: merge([part(blob(0.5), W, 0.18, 1, 0.45), part(blob(0.34), W, 0.14, 1, 0.5).translate(0.32, 0, 0.12)]),
+    broad: merge([trunk(0.42, 0.05), part(blob(0.4), W, 0.68, 1, 0.82, 0.1), part(blob(0.28), W, 0.6, 1, 0.8, 0.08).translate(0.2, 0, -0.12)]),
+    birch: merge([trunk(0.5, 0.03, BIRCH), part(blob(0.25), W, 0.74, 0.85, 1.35, 0.05)]),
+    shrub: merge([part(blob(0.5), W, 0.26, 1, 0.6, 0.12)]),
+  };
+  // species: geometry, height range (km), palette (October)
+  const SP = {
+    spruce: { geo: GEO.spruce, h: [0.026, 0.046], cols: ['#22492b', '#2f5d34', '#3b6a3e', '#28503a'] },
+    fir: { geo: GEO.fir, h: [0.024, 0.04], cols: ['#24503f', '#335f4c', '#2b5844'] },
+    larch: { geo: GEO.larch, h: [0.024, 0.04], cols: ['#d9a521', '#e8b93a', '#c98f1c', '#b8a23a', '#9aa53a'] },
+    pine: { geo: GEO.pine, h: [0.02, 0.034], cols: ['#3d6638', '#4f7240', '#466a3a'] },
+    mugo: { geo: GEO.mugo, h: [0.01, 0.02], cols: ['#4c7639', '#5e8541', '#6d9346'] },
+    beech: { geo: GEO.broad, h: [0.02, 0.036], cols: ['#c8641e', '#d98a2b', '#b5501a', '#e0a33a', '#8f8a2e'] },
+    oak: { geo: GEO.broad, h: [0.018, 0.032], cols: ['#a07a2c', '#8b6a2a', '#7a7a2e', '#b58f3a', '#6f7a34'] },
+    birch: { geo: GEO.birch, h: [0.016, 0.028], cols: ['#e8c93a', '#f0d75a', '#c9b23a', '#d8c04a'] },
+    rowan: { geo: GEO.broad, h: [0.008, 0.014], cols: ['#c0392b', '#d35400', '#a93226', '#c8551e'] },
+    fruit: { geo: GEO.broad, h: [0.008, 0.012], cols: ['#7d8f34', '#a39a36', '#c9a33a'] },
+    shrub: { geo: GEO.shrub, h: [0.006, 0.012], cols: ['#7a8a3a', '#8e7a3a', '#6a7a40', '#a0682a', '#5f7a3f'] },
+  };
+  const list = Object.fromEntries(Object.keys(SP).map((k) => [k, []]));
+
   const lakes = (TER?.lakes || []).map((l) => ({ la: l.center[0], lo: l.center[1], r: (l.radiusM + 25) / 1000 }));
   const inLake = (la, lo) => lakes.some((l) => Math.hypot((la - l.la) * KM, (lo - l.lo) * KM * KX) < l.r);
-  const spruce = [], pine = [];
+  // OSM landcover (other session's osm3d data): used when the helper exists and knows this area
+  const LC = typeof landAt === 'function' ? landAt : null, LEAF = typeof leafAt === 'function' ? leafAt : () => null;
+  let useLC = false;
+  if (LC) for (let k = 0; k < 400 && !useLC; k++) useLC = !!LC(latS + rnd() * (latN - latS), lonW + rnd() * (lonE - lonW));
+  const DENS = { forest: 0.9, wood: 0.9, scrub: 0.55, heath: 0.25, park: 0.22, cemetery: 0.3, orchard: 0.4 };
   const tries = FLAT ? 0 : Q.has('trees') ? +Q.get('trees') : Math.round(clamp(WKM * HKM * 2000, 40000, 140000)); // no forest guessed on flat fallback ground
   for (let n = 0; n < tries; n++) {
     const la = latS + rnd() * (latN - latS), lo = lonW + rnd() * (lonE - lonW), e = elevM(la, lo);
@@ -687,32 +741,38 @@ const forest = new THREE.Group(); scene.add(forest);
     const slope = (Math.atan(dz) * 180) / Math.PI;
     if (slope > 38 || inLake(la, lo) || isWater(la, lo)) continue;
     const nz = noise(toX(lo) * 2.2 + 50, toZ(la) * 2.2 + 50);
-    if (LOW) { if (nz > 0.6 && rnd() < 0.8) spruce.push([la, lo, e]); continue; } // lowland: woods in patches, not a Tatra belt
-    if (e < 1520 && nz > 0.32 - (1520 - e) / 2500 && rnd() < 0.9) spruce.push([la, lo, e]);
-    else if (e >= 1450 && e < 1850 && nz > 0.45 && rnd() < 0.55) pine.push([la, lo, e]);
+    let sp = null;
+    if (useLC) {
+      const lc = LC(la, lo), d = DENS[lc]; if (!d || rnd() > d) continue;
+      if (lc === 'scrub' || lc === 'heath') sp = pick([['shrub', 0.75], ['birch', 0.15], ['pine', 0.1]]);
+      else if (lc === 'orchard') sp = 'fruit';
+      else if (lc === 'park' || lc === 'cemetery') sp = pick([['oak', 0.35], ['beech', 0.25], ['birch', 0.2], ['spruce', 0.1], ['pine', 0.1]]);
+      else { const leaf = LEAF(la, lo);
+        sp = leaf === 'needle' ? pick([['pine', 0.7], ['spruce', 0.2], ['larch', 0.1]]) : leaf === 'broad' ? pick([['beech', 0.4], ['oak', 0.35], ['birch', 0.25]])
+          : pick([['pine', 0.4], ['oak', 0.2], ['beech', 0.15], ['birch', 0.15], ['spruce', 0.1]]); }
+    } else if (LOW) { // lowland without landcover data: mixed woods in patches
+      if (nz > 0.6 && rnd() < 0.8) sp = pick([['pine', 0.45], ['oak', 0.15], ['beech', 0.15], ['birch', 0.15], ['spruce', 0.1]]);
+      else if (nz > 0.5 && rnd() < 0.05) sp = 'shrub';
+    } else if (e < 1520 && nz > 0.32 - (1520 - e) / 2500 && rnd() < 0.9) {
+      sp = e < 1250 ? pick([['spruce', 0.42], ['fir', 0.18], ['beech', 0.25], ['larch', 0.08], ['rowan', 0.04], ['birch', 0.03]]) : pick([['spruce', 0.82], ['larch', 0.1], ['rowan', 0.05], ['fir', 0.03]]);
+    } else if (e >= 1450 && e < 1850 && nz > 0.45 && rnd() < 0.55) sp = 'mugo';
+    else if (e < 1750 && slope < 30 && nz > 0.4 && rnd() < 0.035) sp = pick([['shrub', 0.7], ['rowan', 0.3]]); // scattered on the meadows
+    if (sp) list[sp].push([la, lo]);
   }
-  const place = (list, geo, mat, hMin, hMax, colA, colB) => {
-    const m = new THREE.InstancedMesh(geo, mat, list.length), o = new THREE.Object3D(), c = new THREE.Color(), A = new THREE.Color(colA), Bc = new THREE.Color(colB);
-    list.forEach(([la, lo], i) => {
-      const h = hMin + rnd() * (hMax - hMin);
-      o.position.copy(v3(la, lo, -0.002)); o.rotation.set(0, rnd() * 6.28, 0); o.scale.set(h * (0.85 + rnd() * 0.3), h, h * (0.85 + rnd() * 0.3)); o.updateMatrix();
-      m.setMatrixAt(i, o.matrix); m.setColorAt(i, c.copy(A).lerp(Bc, rnd()).multiplyScalar(0.55 + 0.45 * sunAt(la, lo))); // darker in the baked terrain shadow
-    });
-    m.receiveShadow = true; m.castShadow = false; forest.add(m);
-  };
-  const cone = new THREE.ConeGeometry(0.28, 1, 6, 1); cone.translate(0, 0.5, 0);
-  const cone2 = new THREE.ConeGeometry(0.36, 0.7, 6, 1); cone2.translate(0, 0.32, 0);
-  const sprGeo = new THREE.BufferGeometry().copy(cone); // two-tier spruce silhouette
-  {
-    const a = cone.toNonIndexed(), b = cone2.toNonIndexed(), pa = a.attributes.position.array, pb = b.attributes.position.array;
-    const pos = new Float32Array(pa.length + pb.length); pos.set(pa); pos.set(pb, pa.length);
-    sprGeo.setIndex(null); sprGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); sprGeo.deleteAttribute('uv'); sprGeo.deleteAttribute('normal'); sprGeo.computeVertexNormals();
-  }
-  const pineGeo = new THREE.IcosahedronGeometry(0.5, 0); pineGeo.scale(1, 0.45, 1); pineGeo.translate(0, 0.18, 0);
-  const treeMat = new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true });
+  const treeMat = new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true, vertexColors: true });
   applyFx(treeMat, [FX.treeWind(heatU)]); // fx3d: crowns sway with the step's wind
-  place(spruce, sprGeo, treeMat, 0.026, 0.044, '#2f5d34', '#4f7d40');
-  place(pine, pineGeo, treeMat, 0.012, 0.02, '#4c7639', '#6d9346');
+  const o = new THREE.Object3D(), c = new THREE.Color();
+  for (const [k, sp] of Object.entries(SP)) {
+    const pts = list[k]; if (!pts.length) continue;
+    const m = new THREE.InstancedMesh(sp.geo, treeMat, pts.length), pal = sp.cols.map((x) => new THREE.Color(x));
+    pts.forEach(([la, lo], i) => {
+      const h = sp.h[0] + rnd() * (sp.h[1] - sp.h[0]), w = 0.82 + rnd() * 0.36;
+      o.position.copy(v3(la, lo, -0.002)); o.rotation.set((rnd() - 0.5) * 0.08, rnd() * 6.28, (rnd() - 0.5) * 0.08); o.scale.set(h * w, h, h * w * (0.9 + rnd() * 0.2)); o.updateMatrix();
+      m.setMatrixAt(i, o.matrix);
+      m.setColorAt(i, c.copy(pal[Math.floor(rnd() * pal.length)]).multiplyScalar((0.9 + rnd() * 0.2) * (0.55 + 0.45 * sunAt(la, lo)))); // darker in the baked terrain shadow
+    });
+    m.name = k; m.receiveShadow = true; m.castShadow = false; forest.add(m);
+  }
 }
 const foundPin = foundAt ? pin(foundAt[0], foundAt[1], '#2d6a4f', 0.42, 'ZNALEZIONO · ' + esc(foundEv?.at || ''), 'found', 0.026) : null;
 if (foundPin) { foundPin.visible = false; scene.add(foundPin); }
