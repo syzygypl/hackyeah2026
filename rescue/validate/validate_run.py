@@ -153,7 +153,7 @@ def validate_run(doc, errors):
         fail(errors, f"value.truthSeg={value.get('truthSeg')!r} not present in segOf")
 
 
-def validate_terrain(doc, bbox, errors):
+def validate_terrain(doc, bbox, errors, rows=None, cols=None, cellM=None):
     for key in ("trails", "streams", "ridges"):
         for i, item in enumerate(doc.get(key) or []):
             pts = item.get("points") or []
@@ -177,6 +177,29 @@ def validate_terrain(doc, bbox, errors):
         if not at or len(at) != 2:
             fail(errors, f"terrain.huts[{i}].at missing/invalid: {at}")
 
+    # slopeDeg/slopeGrid are optional extensions (not in the base README contract,
+    # added by AI Marcina's osm_terrain.py/DEM pipeline) - validate shape when present.
+    if "slopeDeg" in doc:
+        sd = doc["slopeDeg"]
+        if isinstance(rows, int) and isinstance(cols, int) and len(sd) != rows * cols:
+            fail(errors, f"terrain.slopeDeg len={len(sd)} != rows*cols={rows * cols}")
+        bad = [v for v in sd if not isinstance(v, (int, float)) or not (0 <= v <= 90)]
+        if bad:
+            fail(errors, f"terrain.slopeDeg has {len(bad)} value(s) outside [0,90] degrees")
+    if "slopeGrid" in doc:
+        sg = doc["slopeGrid"]
+        for k in ("rows", "cols", "cellM", "stat"):
+            if k not in sg:
+                fail(errors, f"terrain.slopeGrid missing '{k}'")
+        if isinstance(rows, int) and sg.get("rows") != rows:
+            fail(errors, f"terrain.slopeGrid.rows={sg.get('rows')} != run rows={rows}")
+        if isinstance(cols, int) and sg.get("cols") != cols:
+            fail(errors, f"terrain.slopeGrid.cols={sg.get('cols')} != run cols={cols}")
+        if isinstance(cellM, int) and sg.get("cellM") != cellM:
+            fail(errors, f"terrain.slopeGrid.cellM={sg.get('cellM')} != run cellM={cellM}")
+        if not sg.get("stat"):
+            fail(errors, "terrain.slopeGrid.stat is empty (should attribute the DEM source)")
+
 
 def main(argv):
     run_path = argv[1] if len(argv) > 1 else "rescue/out/run.json"
@@ -192,7 +215,8 @@ def main(argv):
     if terrain_path:
         with open(terrain_path, encoding="utf-8") as f:
             terrain_doc = json.load(f)
-        validate_terrain(terrain_doc, run_doc.get("bbox"), errors)
+        validate_terrain(terrain_doc, run_doc.get("bbox"), errors,
+                          rows=run_doc.get("rows"), cols=run_doc.get("cols"), cellM=run_doc.get("cellM"))
         print(f"{terrain_path}: {len(errors) - run_errs} error(s)")
 
     for e in errors:
