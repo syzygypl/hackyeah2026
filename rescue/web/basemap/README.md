@@ -27,12 +27,13 @@ The whole archive is loaded into memory, so a plain `python3 -m http.server` wor
 
 ## Other regions
 
-One file per region, cut with `--bbox` (no scenario needed): `bieszczady.pmtiles` (6.7 MB), `karkonosze.pmtiles` (4.3 MB),
+One file per region, cut with `--bbox` (no scenario needed): `bieszczady.pmtiles` (incl. Tarnica), `solina.pmtiles` (Solina - Lesko, zapora-*), `karkonosze.pmtiles` (4.3 MB),
 `sniardwy.pmtiles` (3.6 MB), `mamry.pmtiles`, `moryn.pmtiles`. `basemap.js` exports `REGIONS` (file, bounds, label) and
 `regionFor(bbox)` to pick the file for a scenario. Demo: `basemap/index.html?region=bieszczady`.
 
 ```sh
-python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.40,49.03,22.72,49.20 --pad 0 --out rescue/web/basemap/bieszczady.pmtiles
+python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.40,49.03,22.80,49.20 --pad 0 --out rescue/web/basemap/bieszczady.pmtiles
+python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.24,49.40,22.50,49.56 --pad 0 --out rescue/web/basemap/solina.pmtiles
 ```
 
 ## What is here

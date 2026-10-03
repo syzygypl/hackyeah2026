@@ -20,7 +20,8 @@ export const TATRY_BOUNDS = [[19.92015, 49.1516], [20.12845, 49.2795]];
 //   await loadBasemap(maplibregl, REGIONS.mamry.file); style: offlineStyle({ file: REGIONS.mamry.file }), bounds: REGIONS.mamry.bounds
 export const REGIONS = {
   tatry:      { file: "tatry.pmtiles",      bounds: [[19.92015, 49.1516], [20.12845, 49.2795]], label: "Tatry (Zawrat, Morskie Oko, Kasprowy)" },
-  bieszczady: { file: "bieszczady.pmtiles", bounds: [[22.40, 49.03], [22.72, 49.20]], label: "Bieszczady (połoniny)" },
+  bieszczady: { file: "bieszczady.pmtiles", bounds: [[22.40, 49.03], [22.80, 49.20]], label: "Bieszczady (połoniny, Tarnica)" },
+  solina:     { file: "solina.pmtiles",     bounds: [[22.24, 49.40], [22.50, 49.56]], label: "Solina - Myczkowce - Lesko (San)" },
   karkonosze: { file: "karkonosze.pmtiles", bounds: [[15.62, 50.69], [15.82, 50.79]], label: "Karkonosze (Śnieżka)" },
   sniardwy:   { file: "sniardwy.pmtiles",   bounds: [[21.55, 53.68], [21.88, 53.84]], label: "Mazury - Śniardwy" },
   mamry:      { file: "mamry.pmtiles",      bounds: [[21.70, 54.03], [21.98, 54.20]], label: "Mazury - Mamry" },
