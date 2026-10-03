@@ -172,12 +172,12 @@ Rescuers type (or paste dictated) short Polish radio-style reports; a **local** 
 ```sh
 swift run rescue-field "Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"   # parse one, print JSON + path used
 swift run rescue-field serve          # http://127.0.0.1:8770 : GET / (field page), POST /report, GET /live-events, GET /health
-swift run rescue-field serve 8770 --host 0.0.0.0   # demo LAN / hotspot: a phone can reach it, LAN URLs printed
+swift run rescue-field serve 8770 --host 0.0.0.0 --pin 4821   # phone on OUR hotspot can reach it; PIN required (see Demo-day network)
 swift run rescue-field replay         # scenario + live-events.json through the grid, top 3 after each field hint
 open out/field.html                   # also works as file://, talks to 127.0.0.1:8770
 ```
 
-`--host 0.0.0.0` exposes the server to the local network so a real phone (e.g. `web/patrol/`) can post reports. There is **no authentication**: anyone on that network can read and post. Use it only on the demo hotspot / LAN, never on venue-wide or public Wi-Fi without a hotspot. Default stays `127.0.0.1`. CORS stays open (`*`).
+`--host` beyond loopback always requires a PIN, see [Demo-day network](#demo-day-network).
 
 - Parser: `Sources/RescueKit/FieldReports/FieldReportParser.swift`. Ollama `/api/chat` with a JSON-schema `format` (segment ids as an enum), temperature 0, few-shot prompt with the scenario's segment names. Env: `RESCUE_LLM_MODEL` (default `qwen3:4b-instruct-2507-q4_K_M`, `gemma3:4b` also works), `RESCUE_LLM_URL` (default `http://localhost:11434`), `RESCUE_LLM_TIMEOUT` (s, default 30), `RESCUE_LLM_OFF=1`.
 - Fallback when Ollama is unreachable or returns bad JSON: keyword/regex rules (segment names + aliases, "nic"/"pusto" -> searched, "widoczność N m", "N m/s", "nie poleci"/"bateria" -> resource down). `parsedBy` says which path: `llm-local:<model>` or `rules`. If the local server itself is down, `field.html` parses with the same rules in the browser (marked "reguły awaryjne (przeglądarka)", kept in localStorage only).
@@ -218,3 +218,22 @@ Append-only JSON array written by `rescue-field serve` (POST /report), read by `
 ]
 ```
 <!-- END field-reports -->
+
+## Demo-day network
+
+The hall Wi-Fi at Tauron Arena carries thousands of hackers, CTF players among them. Treat it as hostile.
+
+- **Run the phone demo only over our own phone hotspot**, never the hall Wi-Fi. Laptop and phone both join the hotspot; nothing else should be on it.
+- Default bind is `127.0.0.1` (only this laptop). Exposing beyond loopback is opt-in with `--host`, and **any non-loopback `--host` requires a PIN**:
+  ```sh
+  swift run rescue-field serve 8770 --host 0.0.0.0 --pin 4821   # or omit --pin: a random 6-digit PIN is generated and printed
+  ```
+  The server prints the LAN URLs, the PIN and a warning.
+- **How clients send the PIN:** HTTP header `X-Rescue-Pin: 4821` (preferred, allowed by CORS), or a JSON body field `"pin": "4821"`. Compared in constant time. Loopback clients (pages opened on the laptop itself) need no PIN.
+  The patrol view (`web/patrol/`) and `out/field.html` must add the header to their `fetch` calls when talking to a LAN address, e.g. `headers: { "Content-Type": "application/json", "X-Rescue-Pin": pin }`, with the PIN typed once on the phone (or passed as `?pin=` in the URL the presenter opens and kept in `sessionStorage`).
+- What a wrong or missing PIN gets: `401`, logged to stderr as `[guard] <time> 401 <ip> <method> <path>`. Nothing is written to `out/live-events.json`. Without a PIN only `GET /`, `GET /field.html`, `GET /health` and CORS preflight answer.
+- `POST /report` limits (`rescue-field`): body over 4 KB -> `413`; text over 500 characters -> `413`; content type other than `application/json` / `text/plain` -> `415`; more than 10 reports per minute from one LAN IP -> `429`. Loopback is not rate limited.
+- The same guard (`Sources/RescueKit/ServerGuard.swift`) is used by every local server we add; mutating endpoints always need the PIN on LAN.
+- Testing the PIN rules on one machine: `RESCUE_GUARD_STRICT=1` makes loopback clients behave like LAN clients.
+- After the demo: stop the server (Ctrl-C). Never leave it bound to `0.0.0.0`.
+

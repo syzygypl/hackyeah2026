@@ -4,7 +4,7 @@ import RescueKit
 
 // Usage:
 //   swift run rescue-field "<meldunek>"     parse one report, print JSON + path used (does not write live-events.json)
-//   swift run rescue-field serve [port] [--host 0.0.0.0]   HTTP server, default 127.0.0.1:8770 (--host for the demo LAN)
+//   swift run rescue-field serve [port] [--host 0.0.0.0 [--pin NNNN]]   default 127.0.0.1:8770; non-loopback host requires a PIN
 // Env: RESCUE_LLM_MODEL, RESCUE_LLM_URL (default http://localhost:11434), RESCUE_LLM_TIMEOUT (s), RESCUE_LLM_OFF=1
 let pkgDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 let scenario = try Scenario.load(pkgDir.appendingPathComponent("scenarios/zawrat.json").path)
@@ -70,13 +70,27 @@ let store = LiveStore(path: livePath)
 
 func response(_ status: String, _ type: String, _ body: Data) -> Data {
     var h = "HTTP/1.1 \(status)\r\nContent-Type: \(type)\r\nContent-Length: \(body.count)\r\n"
-    h += "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\n"
+    h += "Access-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type, X-Rescue-Pin\r\n"
     h += "Cache-Control: no-store\r\nConnection: close\r\n\r\n"
     return Data(h.utf8) + body
 }
+func jsonErr(_ status: String, _ msg: String) -> Data { response(status, "application/json", Data(#"{"error":"\#(msg)"}"#.utf8)) }
 
-func handle(method: String, path: String, body: Data) async -> Data {
-    switch (method, path) {
+let guardian = ServerGuard(args: args, defaultPort: 8770)
+let reportLimiter = RateLimiter(max: 10, perSeconds: 60)
+let maxBody = 4096          // POST /report body limit (bytes)
+let maxText = 500           // report text limit (characters)
+
+struct Req { let method: String; let path: String; let headers: [String: String]; let body: Data; let peer: String }
+
+func handle(_ q: Req) async -> Data {
+    // PIN for everything except the page itself, health and CORS preflight (loopback never needs it)
+    let open = q.method == "OPTIONS" || (q.method == "GET" && ["/", "/field.html", "/health"].contains(q.path))
+    if !open && !guardian.authorized(peer: q.peer, headers: q.headers, body: q.body) {
+        ServerGuard.logReject(401, peer: q.peer, method: q.method, path: q.path)
+        return jsonErr("401 Unauthorized", "PIN required (X-Rescue-Pin header or JSON pin)")
+    }
+    switch (q.method, q.path) {
     case ("OPTIONS", _):
         return response("204 No Content", "text/plain", Data())
     case ("GET", "/"), ("GET", "/field.html"):
@@ -85,101 +99,100 @@ func handle(method: String, path: String, body: Data) async -> Data {
     case ("GET", "/live-events"):
         return response("200 OK", "application/json", await store.raw())
     case ("GET", "/health"):
-        let s = #"{"model":"\#(parser.model)","llmUrl":"\#(parser.ollamaURL)","scenario":"\#(scenario.incident)"}"#
+        let s = #"{"model":"\#(parser.model)","llmUrl":"\#(parser.ollamaURL)","scenario":"\#(scenario.incident)","pinRequired":\#(guardian.lan)}"#
         return response("200 OK", "application/json", Data(s.utf8))
     case ("POST", "/report"):
-        var text = String(data: body, encoding: .utf8) ?? ""
+        if !ServerGuard.isLoopbackPeer(q.peer) && !reportLimiter.allow(q.peer) {
+            ServerGuard.logReject(429, peer: q.peer, method: q.method, path: q.path)
+            return jsonErr("429 Too Many Requests", "rate limit 10/min")
+        }
+        let ct = (q.headers["content-type"] ?? "").lowercased()
+        guard ct.hasPrefix("application/json") || ct.hasPrefix("text/plain") else {
+            ServerGuard.logReject(415, peer: q.peer, method: q.method, path: q.path)
+            return jsonErr("415 Unsupported Media Type", "use application/json or text/plain")
+        }
+        var text = ct.hasPrefix("text/plain") ? (String(data: q.body, encoding: .utf8) ?? "") : ""
         var at: String? = nil
-        if let o = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
+        if ct.hasPrefix("application/json") {
+            guard let o = try? JSONSerialization.jsonObject(with: q.body) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
             text = o["text"] as? String ?? ""
-            at = o["at"] as? String
+            at = (o["at"] as? String).flatMap { $0.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil ? $0 : nil }
         }
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return response("400 Bad Request", "application/json", Data(#"{"error":"empty text"}"#.utf8)) }
+        guard !text.isEmpty else { return jsonErr("400 Bad Request", "empty text") }
+        guard text.count <= maxText else { return jsonErr("413 Payload Too Large", "text over \(maxText) chars") }
         let r = await parser.parse(text, at: at)
         do { _ = try await store.append(r) } catch {
-            return response("500 Internal Server Error", "application/json", Data(#"{"error":"write failed"}"#.utf8))
+            return jsonErr("500 Internal Server Error", "write failed")
         }
-        print("[\(r.parsedBy) \(r.latencyMs) ms] \(text) -> \(r.hints.map(\.type))")
+        print("[\(r.parsedBy) \(r.latencyMs) ms] \(q.peer) \(text) -> \(r.hints.map(\.type))")
         return response("200 OK", "application/json", Data(jsonString(r).utf8))
     default:
         return response("404 Not Found", "text/plain", Data("not found".utf8))
     }
 }
 
-/// Reads one full HTTP request (headers + Content-Length body), answers, closes.
+/// Reads one full HTTP request (headers + Content-Length body), answers, closes. Bodies over maxBody -> 413.
 final class Conn: @unchecked Sendable {
     let c: NWConnection
     var buf = Data()
     init(_ c: NWConnection) { self.c = c }
+    var peer: String {
+        if case let .hostPort(h, _) = c.endpoint {
+            let s = "\(h)"
+            return s.split(separator: "%").first.map(String.init) ?? s
+        }
+        return "?"
+    }
     func start() {
         c.start(queue: .global())
         read()
     }
+    func finish(_ out: Data) { c.send(content: out, completion: .contentProcessed { _ in self.c.cancel() }) }
     func read() {
         c.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, done, err in
             if let data { self.buf.append(data) }
-            if let req = self.complete() {
-                Task {
-                    let out = await handle(method: req.0, path: req.1, body: req.2)
-                    self.c.send(content: out, completion: .contentProcessed { _ in self.c.cancel() })
-                }
-            } else if done || err != nil {
-                self.c.cancel()
-            } else {
-                self.read()
+            switch self.complete() {
+            case .some(.tooBig(let m, let p)):
+                ServerGuard.logReject(413, peer: self.peer, method: m, path: p)
+                self.finish(jsonErr("413 Payload Too Large", "body over \(maxBody) bytes"))
+            case .some(.ready(let req)):
+                Task { self.finish(await handle(req)) }
+            case .none:
+                if done || err != nil || self.buf.count > maxBody + 16_384 { self.c.cancel() } else { self.read() }
             }
         }
     }
-    func complete() -> (String, String, Data)? {
+    enum Parsed { case ready(Req), tooBig(String, String) }
+    func complete() -> Parsed? {
         guard let sep = buf.range(of: Data("\r\n\r\n".utf8)) else { return nil }
         let head = String(decoding: buf[..<sep.lowerBound], as: UTF8.self)
         let lines = head.components(separatedBy: "\r\n")
         let first = lines[0].split(separator: " ")
-        guard first.count >= 2 else { return ("GET", "/bad", Data()) }
-        var len = 0
-        for l in lines.dropFirst() where l.lowercased().hasPrefix("content-length:") {
-            len = Int(l.dropFirst("content-length:".count).trimmingCharacters(in: .whitespaces)) ?? 0
+        guard first.count >= 2 else { return .ready(Req(method: "GET", path: "/bad", headers: [:], body: Data(), peer: peer)) }
+        var headers: [String: String] = [:]
+        for l in lines.dropFirst() {
+            guard let colon = l.firstIndex(of: ":") else { continue }
+            headers[l[..<colon].lowercased()] = l[l.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         }
+        let len = Int(headers["content-length"] ?? "0") ?? 0
+        let method = String(first[0])
+        let path = String(first[1]).split(separator: "?").first.map(String.init) ?? "/"
+        if len > maxBody || len < 0 { return .tooBig(method, path) }
         let body = buf[sep.upperBound...]
         guard body.count >= len else { return nil }
-        let path = String(first[1]).split(separator: "?").first.map(String.init) ?? "/"
-        return (String(first[0]), path, Data(body.prefix(len)))
+        return .ready(Req(method: method, path: path, headers: headers, body: Data(body.prefix(len)), peer: peer))
     }
 }
 
-let hostIdx = args.firstIndex(of: "--host")
-let host = hostIdx.flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } ?? "127.0.0.1"
-let positional = args.enumerated().filter { i, a in !a.hasPrefix("--") && (hostIdx == nil || i != hostIdx! + 1) }.map(\.element)
-let port = UInt16(positional.dropFirst().first ?? "") ?? 8770
 let params = NWParameters.tcp
-params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!)
-
-/// IPv4 addresses of this machine (for printing LAN URLs when bound beyond localhost).
-func lanAddresses() -> [String] {
-    var out: [String] = []
-    var ifa: UnsafeMutablePointer<ifaddrs>?
-    guard getifaddrs(&ifa) == 0, let first = ifa else { return out }
-    defer { freeifaddrs(ifa) }
-    for p in sequence(first: first, next: { $0.pointee.ifa_next }) {
-        guard let sa = p.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) else { continue }
-        var buf = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-        if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &buf, socklen_t(buf.count), nil, 0, NI_NUMERICHOST) == 0 {
-            let a = String(cString: buf)
-            if !a.hasPrefix("127.") { out.append(a) }
-        }
-    }
-    return out
-}
+params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(guardian.host), port: NWEndpoint.Port(rawValue: guardian.port ?? 8770)!)
 let listener = try NWListener(using: params)
 listener.newConnectionHandler = { Conn($0).start() }
 listener.stateUpdateHandler = { st in
     if case .ready = st {
-        print("rescue-field serving on http://\(host):\(port)  (POST /report, GET /live-events, GET / = field.html)")
-        if host != "127.0.0.1" && host != "localhost" {
-            for a in (host == "0.0.0.0" ? lanAddresses() : [host]) { print("  LAN: http://\(a):\(port)/") }
-            print("  WARNING: no authentication. Anyone on this network can read and post reports. Use only on the demo hotspot/LAN.")
-        }
+        print("rescue-field serving on http://\(guardian.host):\(guardian.port ?? 8770)  (POST /report, GET /live-events, GET / = field.html)")
+        for l in guardian.banner(name: "rescue-field", lanAddresses: localIPv4Addresses()) { print(l) }
         print("LLM: \(parser.model) at \(parser.ollamaURL) (local only), fallback: rules. Live file: \(livePath)")
     }
     if case let .failed(e) = st { print("listener failed: \(e)"); exit(1) }
