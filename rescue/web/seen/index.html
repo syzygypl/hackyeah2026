@@ -124,8 +124,9 @@
 </main>
 
 <script type="module">
-  import * as maplibregl from "../vendor/maplibre-gl.mjs";
-  import { offlineStyle, loadBasemap, regionFor } from "../basemap/basemap.js";
+  // maplibre (300 KB) loads in the background: the missing-person card renders without waiting for it, the map needs it only after "Widziałem"
+  const libP = Promise.all([import("../vendor/maplibre-gl.mjs"), import("../basemap/basemap.js")]);
+  let maplibregl = null;
 
   const qs = new URLSearchParams(location.search);
   const SCEN = qs.get("scenario") || "../../scenarios/krakow-nowa-huta.json";
@@ -167,6 +168,8 @@
   }
 
   async function initMap() {
+    if (map) return;
+    const [ml, { offlineStyle, loadBasemap, regionFor }] = await libP; maplibregl = ml;
     if (map) return;
     const bb = sc?.bbox || { south: 50.045, west: 19.995, north: 50.092, east: 20.075 };
     const region = regionFor(bb);
