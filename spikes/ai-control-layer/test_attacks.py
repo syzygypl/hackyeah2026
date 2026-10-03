@@ -747,6 +747,37 @@ class WarmSet(unittest.TestCase):
         self.assertIn(LLAMA, layer.semantic._warming)  # background re-warm in flight
 
 
+class OllamaUnreachable(unittest.TestCase):
+    """F1: Ollama down / slow inventory must not look like 'not installed'; fail modes apply even with backend auto."""
+
+    def _env(self, url, **kw):
+        def edit(p):
+            semantic_env(url, **kw)(p)
+            p["controls"]["semantic"]["backend"] = "auto"
+        return fresh(approve=False, edit=edit)
+
+    def test_auto_with_ollama_down_applies_fail_modes(self):
+        layer, s, _ = self._env("http://127.0.0.1:9")
+        r = layer.check_prompt(s, "Summarize complaints")  # prefilter fail_mode open: allowed, but flagged
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertIn("ollama_unreachable", r["event"]["semantic"]["flags"])
+        self.assertTrue(any(f.startswith("semantic=unavailable") for f in r["event"]["semantic"]["flags"]))
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})  # judge fail_mode closed: never a silent pass
+        self.assertEqual(r["decision"], DENY)
+        self.assertIn("semantic_unavailable", r["event"]["guardrails"])
+
+    def test_inventory_failure_keeps_last_good_inventory(self):
+        fake = FakeOllama({QWEN: "q", GRANITE: "g"}, reply={QWEN: "Safety: Safe\nCategories: None", GRANITE: "<score> no </score>"})
+        layer, s, _ = self._env(fake.url)
+        self.assertEqual(layer.check_prompt(s, "hello")["decision"], ALLOW)
+        fake.stop()  # Ollama goes down
+        layer.semantic._checked_at = 0
+        r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})
+        self.assertIsNotNone(layer.semantic.installed)  # stale inventory kept, not wiped to "nothing installed"
+        self.assertEqual(r["decision"], DENY)  # the judge call fails -> fail-closed
+        self.assertIn("semantic_unavailable", r["event"]["guardrails"])
+
+
 class SemanticCache(unittest.TestCase):
     def tearDown(self):
         self.fake.stop()
@@ -1270,7 +1301,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization", "InjectionNotHiddenByPii": "injection not hidden behind PII",
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "Performance": "performance"}
 
 

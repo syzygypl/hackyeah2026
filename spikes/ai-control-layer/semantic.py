@@ -126,7 +126,8 @@ class StageUnavailable(Exception):
 class SemanticGuard:
     def __init__(self):
         self.heuristic = HeuristicClassifier()
-        self.installed, self._checked_at, self._url = {}, 0, None
+        self.installed, self._checked_at, self._url = None, 0, None  # None = never reached Ollama
+        self.ollama_ok = None
         self.cache = {}
         self.warm, self.cooldown, self._warming = set(), {}, set()
         self._ps_checked_at = 0  # models loaded once; circuit breaker: model -> retry-after timestamp
@@ -139,8 +140,13 @@ class SemanticGuard:
             try:
                 with urllib.request.urlopen(url.rstrip("/") + "/api/tags", timeout=0.5) as r:
                     self.installed = {m["name"]: m.get("digest", "") for m in json.load(r).get("models", [])}
-            except Exception:
-                self.installed = {}
+                self.ollama_ok = True
+            except Exception as e:
+                # F1: down / slow is NOT "not installed". Keep the last good inventory (calls will then fail and
+                # fail modes apply); with no inventory ever, installed stays None = unreachable. Retry in 5 s.
+                self.ollama_ok = False
+                self.stats["last_error"] = f"ollama inventory unavailable: {type(e).__name__}"
+                self._checked_at = time.time() - 25
         if time.time() - self._ps_checked_at > 10:  # F5: the warm set must follow what Ollama actually has loaded
             self._ps_checked_at = time.time()
             try:
@@ -159,6 +165,9 @@ class SemanticGuard:
     def _candidates(self, stage, cfg, allowed, flags):
         """Models for this tier in fallback order that are installed, allowlisted, digest-pinned OK, not in cooldown."""
         out = []
+        if self.installed is None:  # F1: unreachable, not "not installed" -> caller applies fail modes
+            flags.append("ollama_unreachable")
+            return out
         for model in [stage.get("model")] + list(stage.get("fallback_models", [])):
             if not model:
                 continue
@@ -437,6 +446,8 @@ class SemanticGuard:
         if cfg.get("backend", "auto") == "heuristic":
             return []
         self._refresh(cfg.get("ollama_url", "http://localhost:11434"))
+        if self.installed is None:
+            return [("all", "ollama", "unreachable", 0)]
         done = []
         for name in ("prefilter", "judge"):
             stage = cfg.get(name) or {}
