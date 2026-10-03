@@ -58,7 +58,8 @@ SIGNALS = [
 
 
 def _norm(text):
-    return ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text))
+    # F11: collapse every whitespace run (newlines, tabs, NBSP after NFKC) so ".{0,N}" spans lines
+    return re.sub(r"\s+", " ", ZERO_WIDTH.sub("", unicodedata.normalize("NFKC", text)))
 
 
 class HeuristicClassifier:
