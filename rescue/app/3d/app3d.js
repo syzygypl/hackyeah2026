@@ -287,7 +287,7 @@ labels.setSize(innerWidth, innerHeight);
 Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
 host.appendChild(labels.domElement);
 
-const ATMO = installHeightFog(); // fx3d: aerial perspective, before any material compiles
+const ATMO = installHeightFog(); // fx3d: aerial perspective, alpenglow, before any material compiles
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -316,11 +316,52 @@ function applyInsets() {
 }
 applyInsets();
 
+// ---------- sun and moon from the step's clock ----------
+// NOAA approximation at the scenario's centre, Polish civil time (CEST in summer). The date is early October unless the
+// scenario's dark / light steps fit another day better (winter dusk at 16:05, a light summer evening at 18:40): the day
+// of year with the fewest contradictions, nearest to 3 October. Weather "Pogoda" off = a fixed afternoon sun.
+const DEG = Math.PI / 180;
+const clockH = (t) => { const m = /(?:\+(\d+)\s*)?(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1] || 0) * 24 + +m[2] + +m[3] / 60 : null; };
+function solar(doy, h) {
+  const ut = h - (doy >= 87 && doy < 299 ? 2 : 1), g = (2 * Math.PI / 365) * (doy - 1 + (ut - 12) / 24);
+  const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const ha = ((ut * 60 + eqt + 4 * lonC) / 4 - 180) * DEG, la = latC * DEG;
+  const el = Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(ha));
+  return { el: el / DEG, az: (Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(dec) * Math.cos(la)) / DEG + 540) % 360 };
+}
+const DOY = (() => {
+  const obs = R.steps.map((s) => [clockH(s.t), s.weather?.dark]).filter(([h, d]) => h != null && typeof d === 'boolean'); // replays: no weather yet = unknown
+  let best = 276, bs = Infinity;
+  if (obs.length) for (let d = 172; d <= 355; d++) {
+    let bad = Math.abs(d - 276) * 0.002;
+    for (const [h, dark] of obs) { const e = solar(d, h).el; bad += dark ? Math.max(0, e + 1.5) : Math.max(0, 0.5 - e); }
+    if (bad < bs) { bs = bad; best = d; }
+  }
+  return best;
+})();
+let weatherOn = true;
+const sunOfStep = (i) => {
+  const s = R.steps[clamp(i, 0, R.steps.length - 1)], h = clockH(s?.t);
+  if (!weatherOn || h == null) return { el: 28, az: 215 };
+  const p = solar(DOY, h);
+  const dark = s.weather?.dark;
+  if (typeof dark === 'boolean') p.el = dark ? Math.min(p.el, -2.5) : Math.max(p.el, -1); // the step's own dark flag wins
+  return p;
+};
+// key light: the sun down to 4.5 deg below the horizon (its light kept at >= 3 deg so the shadow map does not streak; the
+// baked shadow uses >= 0.8 deg, so after sunset only the peaks stay lit = alpenglow), then the moon in the south-east
+const MOON = { el: 32, az: 128 }, KEY_SWITCH = -4.5;
+const dirOf = (el, az, v = new THREE.Vector3()) => v.set(Math.cos(el * DEG) * Math.sin(az * DEG), Math.sin(el * DEG), -Math.cos(el * DEG) * Math.cos(az * DEG));
+const keyDir = (p, v, minEl = 3) => (p.el > KEY_SWITCH ? dirOf(Math.max(p.el, minEl), p.az, v) : dirOf(MOON.el, MOON.az, v));
+const STEP0 = Q.has('step') ? clamp(+Q.get('step') || 0, 0, R.steps.length - 1) : R.value?.beforePing ?? 0;
+const SUN_DIR = keyDir(sunOfStep(STEP0)); // key light direction (sun or moon), shared by the shaders
+const SKY_SUN = dirOf(sunOfStep(STEP0).el, sunOfStep(STEP0).az); // the sun itself, also below the horizon (twilight glow)
+
 // ---------- sky, lights ----------
-const SUN_DIR = new THREE.Vector3(-0.72, 0.32, -0.38).normalize(); // low evening sun from the west
-const skyMat = FX.sky(SUN_DIR);
+const skyMat = FX.sky(SKY_SUN);
+skyMat.uniforms.uMoonDir.value.copy(dirOf(MOON.el, MOON.az));
 scene.add(new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16), skyMat));
-ATMO.uAtmoSun.value = SUN_DIR; // haze glows towards the sun
 const starGeo = new THREE.BufferGeometry();
 {
   const n = 900, pos = new Float32Array(n * 3);
@@ -455,7 +496,7 @@ terrainGeo.rotateX(-Math.PI / 2);
   terrainGeo.computeVertexNormals();
 }
 // object-space normal map from the full-resolution DEM: the mesh is averaged 2x2 for the wide cut, the shading keeps every ridge
-let terrainAO = null, sunMask = null, sunAt = () => 1;
+let terrainAO = null, sunMask = null, sunAt = () => 1, sunBake = null;
 const normalTex = (() => {
   const k = DEM_FULL.cols / DEM.cols >= 1.5 ? 2 : 1, C = DEM.cols * k, Rr = DEM.rows * k, Z = DEM_FULL.z;
   const sx = 2 * (DEM_FULL.step * KX * KM), sz = 2 * ((DEM_FULL.stepLat || DEM_FULL.step) * KM), f = EX / 1000;
@@ -486,33 +527,38 @@ const normalTex = (() => {
   const a = new THREE.DataTexture(ao, C, Rr, THREE.RGBAFormat);
   a.magFilter = THREE.LinearFilter; a.minFilter = THREE.LinearMipmapLinearFilter; a.generateMipmaps = true; a.needsUpdate = true;
   terrainAO = a;
-  // baked terrain self-shadow (far cascade) on a half-resolution grid: march from every cell towards the low sun, soft penumbra
-  const C2 = C >> 1, R2 = Rr >> 1, px2 = px * 2, pz2 = pz * 2;
-  const hd = Math.hypot(SUN_DIR.x, SUN_DIR.z), stepKm = Math.min(px2, pz2), rise = (SUN_DIR.y / hd) * stepKm;
-  const dcs = (SUN_DIR.x / hd) * stepKm / px2, drs = (SUN_DIR.z / hd) * stepKm / pz2;
+  // baked terrain self-shadow (far cascade) on a half-resolution grid: march from every cell towards the sun (or moon),
+  // soft penumbra. Rows r0..r1, so a re-bake when the light moves can be spread over a few frames (sunBake).
+  const C2 = C >> 1, R2 = Rr >> 1, px2 = px * 2, pz2 = pz * 2, stepKm = Math.min(px2, pz2);
   const H2 = new Float32Array(C2 * R2); let hMax = -Infinity;
   for (let r = 0; r < R2; r++) for (let c = 0; c < C2; c++) { const v = H[2 * r * C + 2 * c]; H2[r * C2 + c] = v; if (v > hMax) hMax = v; }
-  const sm = new Float32Array(C2 * R2), smData = new Uint8Array(C2 * R2 * 4);
-  for (let r = 0; r < R2; r++) for (let c = 0; c < C2; c++) {
-    let ray = H2[r * C2 + c], lit = 1, cc = c, rr = r;
-    for (let k = 1; k < 400; k++) {
-      cc += dcs; rr += drs; ray += rise;
-      if (ray > hMax || cc < 0 || rr < 0 || cc > C2 - 1 || rr > R2 - 1) break;
-      const d = (ray - H2[Math.round(rr) * C2 + Math.round(cc)]) / (k * stepKm * 0.035); // ~2 deg penumbra
-      if (d < lit) { lit = d; if (lit <= -1) break; }
+  const bakeRows = (dir, sm, smData, r0, r1) => {
+    const hd = Math.max(Math.hypot(dir.x, dir.z), 1e-3), rise = (dir.y / hd) * stepKm, dcs = (dir.x / hd) * stepKm / px2, drs = (dir.z / hd) * stepKm / pz2;
+    for (let r = r0; r < r1; r++) for (let c = 0; c < C2; c++) {
+      let ray = H2[r * C2 + c], lit = 1, cc = c, rr = r;
+      for (let k = 1; k < 400; k++) {
+        cc += dcs; rr += drs; ray += rise;
+        if (ray > hMax || cc < 0 || rr < 0 || cc > C2 - 1 || rr > R2 - 1) break;
+        const d = (ray - H2[Math.round(rr) * C2 + Math.round(cc)]) / (k * stepKm * 0.035); // ~2 deg penumbra
+        if (d < lit) { lit = d; if (lit <= -1) break; }
+      }
+      const v = clamp(0.5 + 0.5 * lit, 0, 1), o = ((R2 - 1 - r) * C2 + c) * 4;
+      if (sm) sm[r * C2 + c] = v;
+      smData[o] = smData[o + 1] = smData[o + 2] = v * 255; smData[o + 3] = 255;
     }
-    const v = clamp(0.5 + 0.5 * lit, 0, 1), o = ((R2 - 1 - r) * C2 + c) * 4;
-    sm[r * C2 + c] = v; smData[o] = smData[o + 1] = smData[o + 2] = v * 255; smData[o + 3] = 255;
-  }
-  sunMask = new THREE.DataTexture(smData, C2, R2, THREE.RGBAFormat);
-  sunMask.magFilter = THREE.LinearFilter; sunMask.minFilter = THREE.LinearMipmapLinearFilter; sunMask.generateMipmaps = true; sunMask.needsUpdate = true;
+  };
+  const maskTex = (data) => { const t = new THREE.DataTexture(data, C2, R2, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.needsUpdate = true; return t; };
+  const sm = new Float32Array(C2 * R2), smData = new Uint8Array(C2 * R2 * 4);
+  bakeRows(keyDir(sunOfStep(STEP0), new THREE.Vector3(), 0.8), sm, smData, 0, R2);
+  sunMask = maskTex(smData);
+  sunBake = { rows: R2, run: (dir, tex, r0, r1) => bakeRows(dir, null, tex.image.data, r0, r1), tex: () => maskTex(new Uint8Array(C2 * R2 * 4)) };
   const sLat = 2 * (DEM_FULL.stepLat || DEM_FULL.step), sLon = 2 * DEM_FULL.step;
   sunAt = (lat, lon) => sm[clamp(Math.round((DEM_FULL.lat0 - lat) / sLat - 0.5), 0, R2 - 1) * C2 + clamp(Math.round((lon - DEM_FULL.lon0) / sLon - 0.5), 0, C2 - 1)];
   return t;
 })();
 const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x000000, roughness: 0.96, metalness: 0,
   normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 });
-heatU.uSunMask = { value: sunMask };
+heatU.uSunMask = { value: sunMask }; heatU.uSunMask2 = { value: sunBake.tex() }; heatU.uSunMaskT = { value: 0 }; // crossfaded on a re-bake
 // fx3d: close-up detail, POA heat layer, baked + near sun shadow, drifting cloud shadows, snow glints
 heatU.uSnowCover = heatU.uSnowCover || { value: 0 };
 applyFx(terrainMat, [FX.terrainDetail(), FX.snowCover(heatU), FX.poaHeat(heatU), FX.bakedSun(heatU), FX.cloudShadows(heatU), FX.snowGlints(heatU)]);
@@ -899,66 +945,137 @@ const dyn = { top: new THREE.Group(), searched: new THREE.Group(), teams: new TH
 Object.values(dyn).forEach((g) => scene.add(g));
 const movers = [];
 
-// ---------- mood: daylight, fog, dusk ----------
-const MOODS = {
-  day: { top: '#3f78b8', bottom: '#f1e6d4', fog: '#c9d8e6', sun: '#fff0d6', sunI: 3.0, hs: '#cfe0f5', hg: '#6a5a3e', hI: 0.9, stars: 0, emis: 0, exp: 1.15 },
-  fog: { top: '#7f9bb8', bottom: '#ece5d8', fog: '#cdd6df', sun: '#fff5e8', sunI: 2.3, hs: '#dbe6f2', hg: '#6f6656', hI: 1.0, stars: 0, emis: 0, exp: 1.12 },
-  night: { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#e3eaff', sunI: 2.9, hs: '#cad7f0', hg: '#5c5c68', hI: 1.65, stars: 0.6, emis: 0.25, exp: 1.2 },
-};
-const cur = { cloud: 0.35, rain: 0, snow: 0, top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60, wind: 0.02, cover: 0 };
-let tgt = { ...cur }, weatherOn = true;
-const C_HAZE = new THREE.Color(0.86, 0.94, 1.06), C_WHITE = new THREE.Color(1, 1, 1);
-function setMood(w) {
-  const vis = w?.visibilityM ?? 10000, dark = !!w?.dark && weatherOn;
-  const m = dark ? MOODS.night : weatherOn && vis < 500 ? MOODS.fog : MOODS.day;
-  tgt = {
-    top: new THREE.Color(m.top), bottom: new THREE.Color(m.bottom), fog: new THREE.Color(m.fog), sun: new THREE.Color(m.sun), hs: new THREE.Color(m.hs), hg: new THREE.Color(m.hg),
-    sunI: m.sunI, hI: m.hI, stars: m.stars * (vis >= 500 ? 1 : 0.1), emis: m.emis, exp: m.exp,
-    near: !weatherOn ? 9 : vis <= 100 ? 5 : vis < 500 ? 6 : 9, far: !weatherOn ? 40 : vis <= 100 ? 22 : vis < 500 ? 28 : 40,
-    wind: clamp((weatherOn ? w?.windMs ?? 4 : 4) / 14, 0.15, 1.5) * 0.07,
-    // cloud cover and precipitation from the step's weather (off with "Pogoda")
-    cloud: !weatherOn ? 0.3 : w?.precip && w.precip !== 'none' ? 0.85 : vis < 500 ? 0.7 : 0.35,
-    rain: weatherOn && w?.precip === 'rain' ? 1 : 0, snow: weatherOn && w?.precip === 'snow' ? 1 : 0,
-    // snow cover: full while it snows, a dusting in hard frost (accumulates slowly in stepMood)
-    cover: !weatherOn ? 0 : w?.precip === 'snow' ? 1 : (w?.tempC ?? 5) <= -3 ? 0.5 : (w?.tempC ?? 5) <= 0 ? 0.25 : 0,
-  };
-  if (weatherOn && w?.precip === 'snow' && !dark) { // whiteout: white fog, closer, flat light
-    tgt.fog = new THREE.Color('#e7ecf1'); tgt.bottom = new THREE.Color('#eef1f4'); tgt.near *= 0.8; tgt.far *= 0.75; tgt.sunI *= 0.7;
-  }
+// ---------- mood: time of day, weather ----------
+// The sky palette follows the sun's elevation (deg): day, golden hour, sunset, alpenglow, blue hour and the moonlit night
+// (the old night mood, with a cooler ambient). The weather is layered on top every frame: fog greys and flattens the
+// light, a building cloud deck darkens the sky and hides the sun, snow turns it white. The sun moves in ~3 s, clouds
+// build in ~5 s, rain / snow start only once the deck is there, and the step before rain already builds it.
+const SKY_KEYS = [
+  [-18, { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#d6e2ff', glow: '#000000', hs: '#b4c6ea', hg: '#4e5466', sunI: 2.9, hI: 1.65, exp: 1.2 }],
+  [-11, { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#d6e2ff', glow: '#000000', hs: '#b4c6ea', hg: '#4e5466', sunI: 2.9, hI: 1.65, exp: 1.2 }],
+  [-7, { top: '#25407a', bottom: '#8c9cc8', fog: '#7484ad', sun: '#c8d6ff', glow: '#5a4a8a', hs: '#a5b7e2', hg: '#4a4f63', sunI: 1.5, hI: 1.5, exp: 1.22 }],
+  [-4.5, { top: '#2f4a80', bottom: '#a796b4', fog: '#8a8cad', sun: '#ff94a8', glow: '#c05878', hs: '#aab2d6', hg: '#4d4858', sunI: 0, hI: 1.25, exp: 1.22 }],
+  [-3, { top: '#3a5689', bottom: '#d9958c', fog: '#9e9ab4', sun: '#ff8c96', glow: '#ff6a5a', hs: '#b4b6d6', hg: '#544a50', sunI: 1.1, hI: 1.1, exp: 1.2 }],
+  [0.5, { top: '#4a6ca0', bottom: '#f2a26c', fog: '#bcb4c0', sun: '#ff9a5c', glow: '#ff8a4a', hs: '#c8c4d8', hg: '#5e4a3a', sunI: 2.1, hI: 0.9, exp: 1.18 }],
+  [5, { top: '#4776af', bottom: '#f3d0a0', fog: '#c3cad6', sun: '#ffc888', glow: '#ffbf80', hs: '#d2d6e6', hg: '#6a573c', sunI: 2.7, hI: 0.88, exp: 1.16 }],
+  [14, { top: '#3f78b8', bottom: '#f1e2cc', fog: '#c8d5e2', sun: '#ffe8c8', glow: '#ffe2b8', hs: '#cfdcf0', hg: '#6a5a3e', sunI: 2.9, hI: 0.9, exp: 1.15 }],
+  [30, { top: '#3f78b8', bottom: '#f1e6d4', fog: '#c9d8e6', sun: '#fff0d6', glow: '#fff0d6', hs: '#cfe0f5', hg: '#6a5a3e', sunI: 3.0, hI: 0.9, exp: 1.15 }],
+].map(([el, k]) => [el, Object.fromEntries(Object.entries(k).map(([n, v]) => [n, typeof v === 'string' ? new THREE.Color(v) : v]))]);
+const PAL_C = ['top', 'bottom', 'fog', 'sun', 'glow', 'hs', 'hg'], PAL_N = ['sunI', 'hI', 'exp'];
+const pal = Object.fromEntries(PAL_C.map((n) => [n, new THREE.Color()]));
+function palette(el) {
+  const e = clamp(el, -18, 30); let i = 1;
+  while (i < SKY_KEYS.length - 1 && SKY_KEYS[i][0] < e) i++;
+  const [e0, a] = SKY_KEYS[i - 1], [e1, b] = SKY_KEYS[i], t = clamp((e - e0) / (e1 - e0), 0, 1);
+  for (const n of PAL_C) pal[n].copy(a[n]).lerp(b[n], t);
+  for (const n of PAL_N) pal[n] = a[n] + (b[n] - a[n]) * t;
+  return pal;
 }
-function stepMood(dt) {
-  const k = 1 - Math.exp(-dt * 1.8);
-  for (const c of ['top', 'bottom', 'fog', 'sun', 'hs', 'hg']) cur[c].lerp(tgt[c], k);
-  for (const n of ['sunI', 'hI', 'stars', 'emis', 'exp', 'near', 'far', 'wind', 'cloud', 'rain', 'snow']) cur[n] += (tgt[n] - cur[n]) * k;
-  heatU.uWind.value = cur.wind; heatU.uCloud.value = cur.cloud; heatU.uDay.value = clamp(1 - cur.stars * 1.6, 0.15, 1);
+const C_HAZE = new THREE.Color(0.86, 0.94, 1.06), C_WHITE = new THREE.Color(1, 1, 1), C_MOONLIT = new THREE.Color('#7d8bab'), C_ALPEN = new THREE.Color('#ff5f7e');
+const C_SNOWFOG = new THREE.Color('#e7ecf1'), C_SNOWSKY = new THREE.Color('#eef1f4'), tmpC = new THREE.Color();
+const greyOf = (c, k) => { const l = (c.r * 0.3 + c.g * 0.59 + c.b * 0.11) * k; return tmpC.setRGB(l, l, l); };
+ATMO.uAtmoSun.value = SKY_SUN; // haze glows towards the sun, also below the horizon
+ATMO.uAlpenY.value.set(0.45, 0.85).multiplyScalar(((zMax - zMin) * EX) / 1000); // alpenglow on the upper part of the relief
+const ALPEN = smooth(500, 1200, zMax - zMin) * 0.26; // mountains only
+const s0 = sunOfStep(STEP0);
+const cur = { el: s0.el, az: s0.az, cloud: 0.35, rain: 0, snow: 0, fogW: 0, white: 0, near: 12, far: 60, wind: 0.02, cover: 0 };
+let tgt = { ...cur, storm: false };
+// far shadow re-bake when the key light moves: rows spread over frames (~4 ms each) into the hidden mask, then crossfade
+const bake = { want: keyDir(s0, new THREE.Vector3(), 0.8), dir: keyDir(s0, new THREE.Vector3(), 0.8), job: null, side: 0, fade: false };
+function tickBake(dt) {
+  const u = heatU.uSunMaskT;
+  if (bake.fade) { u.value = clamp(u.value + (bake.side ? dt : -dt) / 1.4, 0, 1); if (u.value === bake.side) bake.fade = false; return; }
+  if (!bake.job && bake.want.angleTo(bake.dir) > 0.008) bake.job = { dir: bake.want.clone(), r: 0, tex: bake.side ? heatU.uSunMask.value : heatU.uSunMask2.value };
+  const j = bake.job; if (!j) return;
+  const t0 = performance.now();
+  while (j.r < sunBake.rows && performance.now() - t0 < 4) { const r1 = Math.min(sunBake.rows, j.r + 6); sunBake.run(j.dir, j.tex, j.r, r1); j.r = r1; }
+  if (j.r >= sunBake.rows) { j.tex.needsUpdate = true; bake.dir.copy(j.dir); bake.side = 1 - bake.side; bake.fade = true; bake.job = null; }
+}
+function setMood(w, i = STEP) {
+  const on = weatherOn, vis = on ? w?.visibilityM ?? 10000 : 10000, sp = sunOfStep(i), tC = w?.tempC ?? 8;
+  const pr = on && w?.precip && w.precip !== 'none' ? w.precip : null, next = on ? R.steps[i + 1]?.weather?.precip : null;
+  tgt = {
+    el: sp.el, az: sp.az, storm: pr === 'rain',
+    fogW: vis <= 100 ? 1 : vis < 500 ? 0.8 : vis < 2000 ? 0.25 : 0,
+    near: !on ? 9 : vis <= 100 ? 5.5 : vis < 500 ? 6.5 : 9, far: !on ? 40 : vis <= 100 ? 26 : vis < 500 ? 30 : 40,
+    wind: clamp((on ? w?.windMs ?? 4 : 4) / 14, 0.15, 1.5) * 0.07,
+    // cloud cover and precipitation from the step's weather (off with "Pogoda"); rain at the next step builds the deck now
+    cloud: !on ? 0.3 : pr ? 0.88 : vis < 500 ? 0.7 : next && next !== 'none' ? 0.62 : 0.35,
+    rain: pr === 'rain' ? 1 : pr === 'drizzle' ? 0.35 : 0, snow: pr === 'snow' ? 1 : 0,
+    white: pr === 'snow' ? smooth(-8, -2, sp.el) : 0, // whiteout by day: white fog, closer, flat light
+    // snow cover: full while it snows, a dusting in hard frost (accumulates slowly in stepMood)
+    cover: !on ? 0 : pr === 'snow' ? 1 : tC <= -3 ? 0.5 : tC <= 0 ? 0.25 : 0,
+  };
+  if (pr === 'snow') { tgt.near *= 1 - 0.2 * tgt.white; tgt.far *= 1 - 0.25 * tgt.white; }
+  keyDir(sp, bake.want, 0.8);
+}
+let flash = 0, flashIn = 3, flick = 0, envAt = -1, shadowAt = 0, shadowDirty = false;
+const lastKey = new THREE.Vector3(), envSig = new Float32Array(9);
+function stepMood(dt, snap = false) {
+  const now = performance.now(), kk = (r) => (snap ? 1 : 1 - Math.exp(-dt * r));
+  const kS = kk(1.1);
+  cur.el += (tgt.el - cur.el) * kS; cur.az += ((((tgt.az - cur.az) % 360) + 540) % 360 - 180) * kS;
+  for (const n of ['near', 'far', 'wind', 'fogW', 'white']) cur[n] += (tgt[n] - cur[n]) * kk(0.9);
+  cur.cloud += (tgt.cloud - cur.cloud) * kk(tgt.cloud > cur.cloud ? 0.45 : 0.35);
+  const gate = smooth(0.55, 0.8, cur.cloud); // rain and snow fall once the deck has built, and stop first
+  for (const n of ['rain', 'snow']) { const g = tgt[n] * gate; cur[n] += (g - cur[n]) * kk(g > cur[n] ? 0.8 : 1.6); }
+  cur.cover += (tgt.cover - cur.cover) * kk(0.35); heatU.uSnowCover.value = cur.cover; // snow builds up over a few seconds
+  heatU.uWind.value = cur.wind; heatU.uCloud.value = cur.cloud;
   heatU.uCloudOff.value.add(new THREE.Vector2(0.8, 0.6).multiplyScalar(dt * (0.004 + cur.wind * 0.12))); // clouds drift with the wind
-  skyMat.uniforms.uCloud.value = cur.cloud; skyMat.uniforms.uCloudOff.value.copy(heatU.uCloudOff.value);
+  const su = skyMat.uniforms;
+  su.uCloud.value = cur.cloud; su.uCloudOff.value.copy(heatU.uCloudOff.value);
   const pk = cur.snow > cur.rain ? 1 : 0, pa = Math.max(cur.rain, cur.snow);
   precip.visible = pa > 0.01; precipMat.uniforms.uKind.value = pk; precipMat.uniforms.uAmt.value = pa;
   snowNear.visible = cur.snow > 0.01; snowNearMat.uniforms.uAmt.value = cur.snow;
-  cur.cover += ((tgt.cover ?? 0) - cur.cover) * (1 - Math.exp(-dt * 0.35)); heatU.uSnowCover.value = cur.cover; // snow builds up over a few seconds
-  skyMat.uniforms.top.value.copy(cur.top); skyMat.uniforms.bottom.value.copy(cur.bottom);
-  scene.fog.color.copy(cur.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
-  sun.color.copy(cur.sun); sun.intensity = cur.sunI; hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hI;
-  starMat.opacity = cur.stars; heatU.uEmis.value = cur.emis; renderer.toneMappingExposure = cur.exp;
-  skyMat.uniforms.sunCol.value.copy(cur.sun); skyMat.uniforms.sunAmt.value = clamp(1.4 - cur.stars * 1.6, 0.15, 1.2) * (cur.near < 7 ? 0.45 : 1);
-  hemi.intensity = cur.hI * 0.45; // the sky environment map carries the rest of the ambient light
-  // the sky's horizon melts into the terrain haze; clouds: sun-lit tops, bases lit by the sky; haze warm towards the sun
-  skyMat.uniforms.uHaze.value.copy(cur.fog).multiply(C_HAZE);
-  skyMat.uniforms.uCloudLit.value.copy(C_WHITE).multiplyScalar(0.95).lerp(cur.sun, 0.25).multiplyScalar(clamp(1 - cur.stars * 1.2, 0.25, 1));
-  skyMat.uniforms.uCloudDark.value.copy(cur.bottom).lerp(cur.top, 0.35).multiplyScalar(0.92);
-  ATMO.uAtmoSunCol.value.copy(cur.sun).multiplyScalar(clamp(1 - cur.stars * 1.6, 0, 1) * (cur.near < 7 ? 0.5 : 1));
-  if ((Math.abs(cur.top.r - tgt.top.r) + Math.abs(cur.bottom.g - tgt.bottom.g) + Math.abs(cur.fog.b - tgt.fog.b) > 0.004 && performance.now() - envAt > 250) || envAt < 0) updateEnv();
+  // colours: the palette at the current sun height, then fog (f), cloud deck (st) and whiteout on top
+  const el = cur.el, p = palette(el), f = cur.fogW, st = smooth(0.6, 0.92, cur.cloud), night = smooth(-4, -10, el), tw = smooth(14, 1, el) * smooth(-7, -2, el) * (1 - st) * (1 - cur.white);
+  p.top.lerp(greyOf(p.top, 1.15), 0.55 * f); p.top.lerp(greyOf(p.top, 0.7), 0.75 * st);
+  p.bottom.lerp(p.fog, 0.6 * f); p.bottom.lerp(greyOf(p.bottom, 0.8), 0.6 * st);
+  p.fog.lerp(greyOf(p.fog, 1.04), 0.4 * f); p.fog.lerp(greyOf(p.fog, 0.85), 0.5 * st);
+  if (cur.white > 0.001) { p.fog.lerp(C_SNOWFOG, cur.white); p.bottom.lerp(C_SNOWSKY, cur.white); }
+  const sunAmt = (1 - 0.55 * f) * (1 - 0.8 * st);
+  su.top.value.copy(p.top); su.bottom.value.copy(p.bottom); su.uHaze.value.copy(p.fog).multiply(tmpC.copy(C_HAZE).lerp(C_WHITE, Math.max(cur.white, 0.5 * f)));
+  su.sunCol.value.copy(p.glow); su.sunAmt.value = sunAmt; dirOf(el, cur.az, SKY_SUN);
+  su.uMoon.value = night * (1 - 0.85 * cur.cloud) * (1 - 0.7 * f);
+  su.uCloudLit.value.copy(C_WHITE).multiplyScalar(0.95).lerp(p.glow, 0.7 * tw).multiplyScalar(0.1 + 0.9 * smooth(-9, 0, el)).lerp(C_MOONLIT, night * 0.8).multiplyScalar(1 - 0.35 * st);
+  su.uCloudDark.value.copy(p.bottom).lerp(p.top, 0.35).multiplyScalar(0.92); // bases: sky light from below
+  scene.fog.color.copy(p.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
+  ATMO.uAtmoSunCol.value.copy(p.glow).multiplyScalar(smooth(-7, -1, el) * (1 - 0.7 * st) * (1 - 0.5 * f));
+  ATMO.uAlpen.value.copy(C_ALPEN).multiplyScalar(ALPEN * smooth(2.5, -0.5, el) * smooth(-5.5, -2.5, el) * (1 - 0.8 * st) * (1 - 0.3 * f));
+  // lights: sun or moon (key), sky ambient, lightning in rain
+  if (tgt.storm && cur.rain > 0.6 && !snap) {
+    if ((flashIn -= dt) <= 0) { flash = 1; flick = 0.1 + Math.random() * 0.15; flashIn = 6 + Math.random() * 12; }
+    if (flick > 0 && (flick -= dt) <= 0) flash = Math.max(flash, 0.8);
+  }
+  flash *= Math.exp(-dt * 10); su.uFlash.value = flash;
+  keyDir({ el, az: cur.az }, SUN_DIR);
+  sun.color.copy(p.sun); sun.intensity = p.sunI * (1 - 0.25 * f) * (1 - 0.6 * st) * (1 - 0.3 * cur.white);
+  hemi.color.copy(p.hs); hemi.groundColor.copy(p.hg);
+  hemi.intensity = p.hI * 0.45 * (1 + 0.12 * f) + flash * 2.5; // the sky environment map carries the rest of the ambient light
+  starMat.opacity = 0.6 * smooth(-5, -11, el) * (1 - 0.9 * f) * (1 - st);
+  heatU.uDay.value = 0.15 + 0.85 * smooth(-9, -2, el); heatU.uEmis.value = 0.25 * smooth(-3, -9, el);
+  renderer.toneMappingExposure = p.exp + 0.05 * st;
+  // the key light moved: shadow map and the far (baked) shadow follow
+  if (SUN_DIR.distanceToSquared(lastKey) > 1e-7) { lastKey.copy(SUN_DIR); shadowDirty = true; }
+  if (shadowDirty && (snap || now - shadowAt > 150)) {
+    shadowDirty = false; shadowAt = now;
+    sun.position.set(shFit.x, 0, shFit.z).addScaledVector(SUN_DIR, 30); sun.target.position.set(shFit.x, 0, shFit.z); sun.target.updateMatrixWorld();
+    renderer.shadowMap.needsUpdate = true;
+  }
+  if (!snap) tickBake(dt);
+  // sky light (PMREM) re-baked while the sky changes, at most every 250 ms
+  const sig = [p.top.r, p.top.g, p.top.b, p.bottom.r, p.bottom.g, p.bottom.b, cur.cloud, sunAmt * 0.3, el * 0.01];
+  let d = 0; for (let k = 0; k < sig.length; k++) d = Math.max(d, Math.abs(sig[k] - envSig[k]));
+  if (!snap && d > 0.004 && now - envAt > 250) { envSig.set(sig); updateEnv(); }
 }
-// image-based light from the sky dome: prefiltered with PMREM, re-baked only while the mood (day/fog/night) is changing
+// image-based light from the sky dome: prefiltered with PMREM, re-baked only while the mood (time, weather) is changing
 const pmrem = new THREE.PMREMGenerator(renderer), envScene = new THREE.Scene(), envSkyMat = skyMat.clone();
 envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), envSkyMat));
-let envRT = null, envAt = -1;
+let envRT = null;
 function updateEnv() {
-  const u = envSkyMat.uniforms;
-  const s = skyMat.uniforms;
+  const u = envSkyMat.uniforms, s = skyMat.uniforms;
   for (const k in s) { const v = s[k].value; if (v?.copy) u[k].value.copy(v); else u[k].value = v; }
-  u.bottom.value.lerp(cur.hg, 0.55); u.sunAmt.value = s.sunAmt.value * 0.15; u.uFlash.value = 0;
+  u.bottom.value.lerp(hemi.groundColor, 0.55); u.sunAmt.value = s.sunAmt.value * 0.15; u.uMoon.value *= 0.3; u.uFlash.value = 0;
   const rt = pmrem.fromScene(envScene, 0, 0.1, 50);
   scene.environment = rt.texture; envRT?.dispose(); envRT = rt; envAt = performance.now();
 }
@@ -1038,7 +1155,7 @@ function setStep(i, animate = true) {
   labelsDirty = true; wake();
   // blind-01 replay: the hider's story appears with the reveal pin (the shell's step card does not know it)
   if (REV) { const at = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1); if (at) gamePanel(`<h3>Odsłonięcie (${esc(REV.round || '')})</h3><p>${esc(REV.story || '')}${REV.state ? ` <i>(${esc(REV.state)})</i>` : ''}</p>`); else $('game').hidden = true; }
-  setMood(s.weather);
+  setMood(s.weather, i);
   renderOffBanner(i);
   if (prev !== i && !fromParent) toParent({ type: 'step', i, t: s.t });
 }
@@ -1119,7 +1236,7 @@ $('btn-top').addEventListener('click', () => {
 });
 let autoRot = false, idleAt = performance.now();
 $('btn-rot').addEventListener('click', () => { autoRot = !autoRot; $('btn-rot').classList.toggle('on', autoRot); });
-$('btn-fog').addEventListener('click', () => { weatherOn = !weatherOn; $('btn-fog').classList.toggle('on', weatherOn); setMood(R.steps[Math.max(0, STEP)].weather); });
+$('btn-fog').addEventListener('click', () => { weatherOn = !weatherOn; $('btn-fog').classList.toggle('on', weatherOn); setMood(R.steps[Math.max(0, STEP)].weather, Math.max(0, STEP)); });
 controls.addEventListener('start', () => { idleAt = Infinity; fly = null; if (CINE.on) cinema(false); });
 controls.addEventListener('end', () => { idleAt = performance.now(); });
 
@@ -1522,7 +1639,7 @@ function frame() {
 // ---------- start ----------
 if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
-for (let k = 0; k < 60; k++) stepMood(0.1);
+stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
 controls.target.copy(center);
 overview(2.6);

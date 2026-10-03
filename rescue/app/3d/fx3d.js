@@ -85,15 +85,16 @@ export function fxShader({ uniforms = {}, vertex, fragment, ...opts }) {
   return new THREE.ShaderMaterial({ uniforms, vertexShader: head + vertex, fragmentShader: head + fragment, ...opts });
 }
 
-// ---------- global: aerial perspective ----------
+// ---------- global: aerial perspective, alpenglow ----------
 // three's fog chunks, replaced once before any material compiles. Every fogged material gets aerial perspective: clear-air
 // haze with an exponential height profile integrated along the view ray (thin up high, thick in the valleys), blue
 // scattered out first, denser in bad weather (read from fogNear: 9 clear, 6 fog, 5 thick); then the weather fog
 // (near / far). applyFx materials (terrain, trees, buildings, water) also get the atmosphere effect returned here: a warm
-// Mie lobe in the haze towards the sun. World position comes from the view matrix's rotation rows (the camera is rigid),
-// not a per-vertex inverse(viewMatrix).
+// Mie lobe in the haze towards the sun and alpenglow on the high peaks. World position comes from the view matrix's
+// rotation rows (the camera is rigid), not a per-vertex inverse(viewMatrix).
 export function installHeightFog() {
-  const U = { uAtmoSun: { value: new THREE.Vector3(0, 1, 0) }, uAtmoSunCol: { value: new THREE.Color(0, 0, 0) } };
+  const U = { uAtmoSun: { value: new THREE.Vector3(0, 1, 0) }, uAtmoSunCol: { value: new THREE.Color(0, 0, 0) },
+    uAlpen: { value: new THREE.Color(0, 0, 0) }, uAlpenY: { value: new THREE.Vector2(1, 2) } };
   FX_GLOBAL.push({ name: 'atmo', uniforms: U, glsl: '#define FX_ATMO 1' });
   THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float vFogDepth; varying float vFogY; varying vec3 vFogW;\n#endif';
   THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -108,6 +109,8 @@ export function installHeightFog() {
   vec3 fogV = vFogW / max( fogDist, 1e-5 );
   #ifdef FX_ATMO
     vec3 fogSunD = uAtmoSun, fogSunC = uAtmoSunCol;
+    // alpenglow: the last light of the day on the high peaks (pink, more on bright rock and snow)
+    gl_FragColor.rgb += uAlpen * smoothstep( uAlpenY.x, uAlpenY.y, vFogY ) * ( 0.3 + dot( gl_FragColor.rgb, vec3( 0.3, 0.5, 0.2 ) ) );
   #else
     vec3 fogSunD = vec3( 0.0, 1.0, 0.0 ), fogSunC = vec3( 0.0 );
   #endif
@@ -282,10 +285,10 @@ export const FX = {
       emissive: 'totalEmissiveRadiance += heatEmit * uEmis;',
     } }),
 
-  // the sun's shadow is the darker of the baked far cascade (uSunMask, ray-marched from the DEM at load) and the
-  // near shadow map (which is 1 outside its box)
-  bakedSun: (U) => ({ name: 'sun', uniforms: { uSunMask: U.uSunMask },
-    hooks: { color: 'float bakedSun = texture2D(uSunMask, vMapUv).r;' },
+  // the sun's shadow is the darker of the baked far cascade (ray-marched from the DEM, re-baked when the sun or moon
+  // moves; two masks crossfaded by uSunMaskT) and the near shadow map (which is 1 outside its box)
+  bakedSun: (U) => ({ name: 'sun', uniforms: { uSunMask: U.uSunMask, uSunMask2: U.uSunMask2, uSunMaskT: U.uSunMaskT },
+    hooks: { color: 'float bakedSun = mix(texture2D(uSunMask, vMapUv).r, texture2D(uSunMask2, vMapUv).r, uSunMaskT);' },
     chunks: { lights_fragment_begin: (src) => src
       .replace('? getShadow( directionalShadowMap[ i ],', '? min( bakedSun, getShadow( directionalShadowMap[ i ],')
       .replace('vDirectionalShadowCoord[ i ] ) : 1.0;', 'vDirectionalShadowCoord[ i ] ) ) : bakedSun;') } }),
