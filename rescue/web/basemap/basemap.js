@@ -58,11 +58,12 @@ export function registerPmtiles(maplibregl) {
 // Call before creating the map. When the server answers HTTP Range (Vercel, rescue-server) only the tiles in view are
 // fetched (Kraków is 14 MB - too much for a citizen's phone); otherwise, or with {full: true} (the patrol phone, which
 // must work offline), the whole archive is loaded into memory under the same URL offlineStyle() uses.
-const loaded = new Set();
+// A {full: true} call after a Range load upgrades it: the map paints from Range requests first, the archive follows.
+const loaded = new Set(), inMemory = new Set();
 export async function loadBasemap(maplibregl, file = "tatry.pmtiles", { full = false } = {}) {
   const p = registerPmtiles(maplibregl);
   const url = BASE + file;
-  if (loaded.has(url)) return;
+  if (inMemory.has(url) || (!full && loaded.has(url))) return;
   if (!full) {
     try {
       const r = await fetch(url, { headers: { Range: "bytes=0-511" } });
@@ -70,7 +71,7 @@ export async function loadBasemap(maplibregl, file = "tatry.pmtiles", { full = f
     } catch (e) {}
   }
   const buf = await (await fetch(url)).arrayBuffer();
-  loaded.add(url);
+  loaded.add(url); inMemory.add(url);
   p.add(new globalThis.pmtiles.PMTiles(new MemorySource(url, buf)));
 }
 

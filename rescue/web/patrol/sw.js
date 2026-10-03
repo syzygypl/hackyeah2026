@@ -45,6 +45,17 @@ self.addEventListener("fetch", e => {
     return;
   }
   if (u.origin !== location.origin) return;
+  const range = req.headers.get("range");
+  if (range) {   // pmtiles reads byte ranges: slice the cached whole file (offline), else the network (a 206 is never cached)
+    e.respondWith(caches.match(req).then(async hit => {
+      const m = hit && hit.status === 200 && /^bytes=(\d+)-(\d*)$/.exec(range);
+      if (!m) return fetch(req);
+      const buf = await hit.arrayBuffer(), a = +m[1], b = Math.min(m[2] ? +m[2] : Infinity, buf.byteLength - 1);
+      return new Response(buf.slice(a, b + 1), { status: 206, headers: { "Content-Type": hit.headers.get("Content-Type") || "application/octet-stream",
+        "Content-Range": `bytes ${a}-${b}/${buf.byteLength}`, "Content-Length": String(b - a + 1) } });
+    }));
+    return;
+  }
   const nav = req.mode === "navigate";
   const key = nav ? u.origin + u.pathname : req;   // the page is cached once, whatever ?team=&api= it was opened with
   e.respondWith(caches.match(key).then(hit => {

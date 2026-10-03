@@ -165,9 +165,10 @@
   // LAN server with --pin: the run (/api/run/<sc>, /story) needs X-Rescue-Pin too. The app stores it raw, this page JSON-quoted - accept both.
   const pinRaw = () => { try { return String(localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch { return ""; } };
   const pinH = () => pinRaw() ? { "X-Rescue-Pin": pinRaw() } : {};
-  // the run takes 4-8 s on Vercel: download the offline basemap (5 MB for Tatry) meanwhile, region from the small scenario file
+  // the run takes a while on a weak link: open the basemap meanwhile (Range requests, only the tiles in view), region from the small
+  // scenario file. The whole archive (5 MB for Tatry, for offline use) downloads after the map has painted (offlineBasemap below).
   const earlyBase = SCN ? fetch(`../../scenarios/${SCN}.json`).then(r => r.ok ? r.json() : null)
-    .then(s => { const f = s?.bbox && regionFor(s.bbox)?.file; return f ? loadBasemap(maplibregl, f, { full: true }).then(() => f) : null; }).catch(() => null) : Promise.resolve(null);
+    .then(s => { const f = s?.bbox && regionFor(s.bbox)?.file; return f ? loadBasemap(maplibregl, f).then(() => f) : null; }).catch(() => null) : Promise.resolve(null);
   let rr = await fetch(RUN, { headers: pinH() }).catch(() => null);
   if (rr && (rr.status === 401 || rr.status === 403) && !EMBED) { const p = prompt("Podaj klucz akcji:"); if (p) { store.set("rescue-pin", p.trim()); rr = await fetch(RUN, { headers: pinH() }).catch(() => null); } }
   if (!rr || !rr.ok) { document.body.innerHTML = `<p>${rr && (rr.status === 401 || rr.status === 403) ? "Podaj klucz akcji (zapytaj kierownika akcji) i odśwież stronę." : "Brak danych akcji - sprawdź połączenie i odśwież."}</p>`; await new Promise(() => {}); }
@@ -304,10 +305,13 @@
   // ---------- map ----------
   // Regional offline basemap from the run's bbox (Tatry, Bieszczady, Karkonosze, Śniardwy, Mamry, Morzycko, Międzyzdroje).
   const bb = run.bbox, file = regionFor(bb)?.file || "tatry.pmtiles";
-  if (await earlyBase !== file) await loadBasemap(maplibregl, file, { full: true });   // whole region in memory + service worker cache: works without coverage
+  if (await earlyBase !== file) await loadBasemap(maplibregl, file);
   const hs = await hillshadeFor(bb);
   map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: THEME === "dark" ? "dark" : "paper", file, hillshade: hs }),
     bounds: [[bb.west, bb.south], [bb.east, bb.north]], attributionControl: { compact: true } });
+  // Whole region in memory + service worker cache, so the map works without coverage: after the first paint, not before it.
+  map.once("idle", () => loadBasemap(maplibregl, file, { full: true }).then(() => navigator.serviceWorker?.ready)
+    .then(r => r?.active?.postMessage({ cache: [new URL("../basemap/" + file, location.href).href] })).catch(() => {}));
   map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }), "top-right");
   map.on("load", () => {
     const fc = { type: "FeatureCollection", features: step.segments.map(s => ({ type: "Feature", properties: { id: s.id, name: s.name, poa: s.poa },
@@ -520,7 +524,7 @@
 <script>
   // Offline after the first open (sw.js). Then hand it what this first, uncontrolled load already fetched (map tiles, run, fonts).
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js", { scope: "./" }).then(() => navigator.serviceWorker.ready)
-    .then(r => setTimeout(() => r.active?.postMessage({ cache: [location.href, ...performance.getEntriesByType("resource").map(e => e.name)] }), 3000)).catch(() => {});
+    .then(r => setTimeout(() => r.active?.postMessage({ cache: [location.href, ...performance.getEntriesByType("resource").map(e => e.name).filter(u => !/\.pmtiles$/.test(u))] }), 3000)).catch(() => {});   // the basemap is sent once fully downloaded
 </script>
 </body>
 </html>
