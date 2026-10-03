@@ -7,15 +7,27 @@
 (function () {
   const $ = (s) => document.querySelector(s);
   const Q = new URLSearchParams(location.search);
+  // ?pin= is NOT supported (it would land in browser history): PIN is typed into the page, kept in localStorage.
+  if (Q.has('pin')) { Q.delete('pin'); try { history.replaceState(null, '', location.pathname + (Q.toString() ? '?' + Q : '') + location.hash); } catch (e) { /* ignore */ } }
+  // Scenarios the screen can switch between (header). run.json files are produced by
+  // `cd rescue && swift run rescue-demo --fast scenarios/<name>.json`; missing ones are greyed out.
+  // The offline basemap (basemap/) only covers the Zawrat bbox; other scenarios use the DEM relief.
+  const SCENARIOS = [
+    { id: 'zawrat', label: 'Zawrat', run: '../out/run.json', scenario: '../scenarios/zawrat.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
+    { id: 'morskie-oko', label: 'Morskie Oko', run: '../out/morskie-oko.run.json', scenario: '../scenarios/morskie-oko.json', dem: '../tools/terrain/data/morskie-oko-dem.json', basemap: false },
+    { id: 'kasprowy', label: 'Kasprowy', run: '../out/kasprowy.run.json', scenario: '../scenarios/kasprowy.json', dem: '../tools/terrain/data/kasprowy-dem.json', basemap: false },
+  ];
+  const SC = SCENARIOS.find((x) => x.id === Q.get('sc')) || SCENARIOS[0];
+  const CUSTOM_RUN = Q.has('run'); // ?run= override wins over the switcher
   const CFG = {
-    run: Q.get('run') || '../out/run.json',
-    scenario: Q.get('scenario') || '../scenarios/zawrat.json',
+    sc: CUSTOM_RUN ? 'custom' : SC.id,
+    run: Q.get('run') || SC.run,
+    scenario: Q.get('scenario') || SC.scenario,
     terrain: Q.get('terrain') || '',
-    dem: Q.get('dem') || '../tools/terrain/data/zawrat-dem.json',
+    dem: Q.get('dem') || SC.dem,
     live: Q.get('live') || '../out/live-events.json',
     field: Q.get('field') || 'http://127.0.0.1:8770',
-    pin: Q.get('pin') || '', // only for rescue-field bound to the LAN (--host 0.0.0.0 --pin NNNN); loopback needs none
-    basemap: Q.get('basemap') || 'basemap/', // folder with basemap.js (module API) or style.json; "none" = skip
+    basemap: Q.get('basemap') || (SC.basemap || CUSTOM_RUN ? 'basemap/' : 'none'), // folder with basemap.js or style.json; "none" = skip
     flavor: Q.get('flavor') || 'light',
     tiles: Q.get('tiles') === 'online',
     renderer: Q.get('renderer') || 'auto', // auto | canvas
@@ -24,6 +36,15 @@
     livePollMs: Math.max(1000, +Q.get('livePollMs') || 4000),
     runPollMs: 5000,
   };
+
+  /* ---------- field server PIN (same behaviour as rescue/out/field.html) ---------- */
+  // Needed only when rescue-field listens on the LAN (serve --host 0.0.0.0 --pin NNNN); loopback needs none.
+  const FIELD = (() => { try { return new URL(CFG.field, location.href); } catch (e) { return null; } })();
+  const FIELD_LOOPBACK = !FIELD || ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(FIELD.hostname);
+  let PIN = '';
+  try { PIN = localStorage.getItem('rescue-pin') || ''; } catch (e) { /* storage blocked */ }
+  const toField = (url) => { try { return !!FIELD && new URL(url, location.href).origin === FIELD.origin; } catch (e) { return false; } };
+  const pinHeaders = (url, extra) => Object.assign({}, extra || {}, !FIELD_LOOPBACK && PIN && toField(url) ? { 'X-Rescue-Pin': PIN } : {});
 
   /* ---------- diagnostics (read by the headless check) ---------- */
   const DIAG = { errors: [], warnings: [], info: {} };
@@ -681,9 +702,15 @@
       <details class="ff"><summary>Nowy meldunek z terenu</summary><form id="fieldform" class="fieldform" autocomplete="off">
         <textarea id="fieldtext" rows="2" placeholder="Meldunek, np. Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"></textarea>
         <div class="ff-row"><input id="fieldat" placeholder="hh:mm" size="5" maxlength="5" title="Opcjonalnie: czas scenariusza"><button class="primary sm" type="submit">Wyślij meldunek</button></div>
+        <label class="ff-pin" id="pinbox" hidden>PIN serwera <input id="pin" inputmode="numeric" autocomplete="off" size="8" title="PIN z terminala rescue-field (tryb LAN). Zapamiętany w tej przeglądarce, nie trafia do adresu."></label>
         <div class="ff-msg" id="fieldmsg"></div>
         <div class="live-note">Idzie do lokalnego <code>rescue-field</code> (${esc(CFG.field.replace(/^https?:\/\//, ''))}, offline). Na mapie jako znaczniki; do POA wlicza je silnik przy kolejnym przebiegu.</div>
       </form></details></section>`;
+    if (!FIELD_LOOPBACK) {
+      $('#pinbox').hidden = false;
+      $('#pin').value = PIN;
+      $('#pin').addEventListener('change', () => { PIN = $('#pin').value.trim(); try { localStorage.setItem('rescue-pin', PIN); } catch (e) { /* ignore */ } pollLive(false); });
+    }
     $('#fieldform').addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = $('#fieldtext').value.trim(), at = $('#fieldat').value.trim(), msg = $('#fieldmsg');
@@ -691,10 +718,9 @@
       msg.textContent = 'Wysyłam...';
       try {
         const body = at ? { text, at } : { text };
-        const headers = { 'Content-Type': 'application/json' };
-        if (CFG.pin) headers['X-Rescue-Pin'] = CFG.pin;
-        const r = await fetch(CFG.field.replace(/\/$/, '') + '/report', { method: 'POST', headers, body: JSON.stringify(body) });
-        if (r.status === 401) { msg.textContent = 'Serwer wymaga PIN-u (tryb LAN): dodaj ?pin=NNNN do adresu strony.'; return; }
+        const url = CFG.field.replace(/\/$/, '') + '/report';
+        const r = await fetch(url, { method: 'POST', headers: pinHeaders(url, { 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+        if (r.status === 401) { msg.textContent = PIN ? 'Zły PIN - wpisz PIN wyświetlony w terminalu rescue-field.' : 'Serwer wymaga PIN-u (tryb LAN): wpisz PIN wyświetlony w terminalu rescue-field.'; return; }
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const ev = await r.json().catch(() => null);
         msg.textContent = ev && ev.parsedBy ? `Przyjęty (${ev.parsedBy}${ev.latencyMs != null ? ', ' + ev.latencyMs + ' ms' : ''}).` : 'Przyjęty.';
@@ -935,9 +961,10 @@
   }
   async function pollLive(first) {
     try {
-      const r = await fetch(CFG.live, { cache: 'no-store' });
+      const r = await fetch(CFG.live, { cache: 'no-store', headers: pinHeaders(CFG.live) });
       const now = new Date().toTimeString().slice(0, 8);
-      if (!r.ok) { S.liveStatus = `Brak pliku ${CFG.live.split('/').pop()} - czekam (${now})`; }
+      if (r.status === 401) { S.liveStatus = 'Serwer meldunków wymaga PIN-u: wpisz PIN wyświetlony w terminalu rescue-field (pole PIN niżej).'; }
+      else if (!r.ok) { S.liveStatus = `Brak pliku ${CFG.live.split('/').pop()} - czekam (${now})`; }
       else {
         const items = normLive(await r.json());
         items.forEach((x) => { x.fresh = !first && !S.liveSeen.has(x.id); S.liveSeen.add(x.id); });
@@ -1017,8 +1044,36 @@
     try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; }
   }
 
+  /* ---------- scenario switcher (header) ---------- */
+  function initScenarioSwitcher() {
+    const sel = $('#scensel'); if (!sel) return;
+    sel.innerHTML = SCENARIOS.map((x) => `<option value="${x.id}">${esc(x.label)}</option>`).join('') +
+      (CUSTOM_RUN ? `<option value="custom">Własny (?run=)</option>` : '');
+    sel.value = CFG.sc;
+    sel.addEventListener('change', () => {
+      if (sel.value === 'custom') return;
+      const q = new URLSearchParams(location.search);
+      ['run', 'scenario', 'terrain', 'dem', 'step', 'sc', 'pin'].forEach((k) => q.delete(k));
+      if (sel.value !== SCENARIOS[0].id) q.set('sc', sel.value);
+      location.search = q.toString(); // reload: the map is built for one scenario bbox at boot
+    });
+    // discover which run.json files exist; missing ones are greyed out
+    SCENARIOS.forEach(async (x) => {
+      let ok = false;
+      try { ok = (await fetch(x.run, { method: 'HEAD', cache: 'no-store' })).ok; } catch (e) { ok = false; }
+      const o = sel.querySelector(`option[value="${x.id}"]`);
+      if (o && !ok) { o.disabled = true; o.textContent = `${x.label} (brak run.json)`; o.title = `Wygeneruj: cd rescue && swift run rescue-demo --fast scenarios/${x.id}.json`; }
+    });
+    if (!CUSTOM_RUN && !SC.basemap && !Q.get('basemap')) {
+      const b = $('#basebadge'); b.hidden = false;
+      b.textContent = 'Podkład mapy tylko dla Zawratu - tu relief z DEM';
+      b.title = 'Offline basemap (basemap/) obejmuje bbox Zawratu. Dla tego scenariusza tło to cieniowanie z DEM albo nachylenie terenu.';
+    }
+  }
+
   async function boot() {
     wire();
+    initScenarioSwitcher();
     initLive();
     let R;
     try { R = await fetchJSON(CFG.run); } catch (e) { return fatal(`${CFG.run}: ${e.message}`); }

@@ -16,17 +16,33 @@ The server must be started in `rescue/`, because the page reads `../out/run.json
 
 Keyboard: left / right = step, space = play / pause, Home / End = first / last step.
 
+### Scenario switcher
+
+The header has a **Scenariusz** select: Zawrat (`../out/run.json`), Morskie Oko (`../out/morskie-oko.run.json`) and Kasprowy (`../out/kasprowy.run.json`).
+- **Generating runs:** `cd rescue && swift run rescue-demo --fast scenarios/<name>.json`.
+- **Missing runs:** the page probes each file with `HEAD`, and scenarios without one are greyed out ("brak run.json").
+- **Switching:** reloads the page with `?sc=<id>`, and the map fits that scenario's bbox.
+- **Basemap:** the offline basemap (`basemap/`) only covers the Zawrat bbox, so the other scenarios use the DEM relief (`tools/terrain/data/<name>-dem.json`) or the slope fallback. A small header badge says so. `?basemap=` still forces a choice.
+
+### Field server PIN
+
+When `rescue-field` runs on the LAN (`serve --host 0.0.0.0 --pin NNNN`), its endpoints need the PIN:
+- **Input:** the "Nowy meldunek" form shows a **PIN serwera** field only when `field` is not a loopback host (127.0.0.1 / localhost / ::1).
+- **Storage:** the PIN is kept in `localStorage` (`rescue-pin`, shared with `out/field.html`).
+- **Use:** it's sent as `X-Rescue-Pin` on `POST /report` and on `GET /live-events` when `?live=` points at the field server. A 401 shows a Polish hint.
+- **`?pin=`:** **not supported** (it would land in browser history). The page ignores it and removes it from the address bar.
+
 ### URL parameters
 
 | Param | Default | What |
 |---|---|---|
-| `run` | `../out/run.json` | engine output to show, e.g. `?run=../out/zawrat.run.json` |
+| `sc` | `zawrat` | scenario from the header switcher: `zawrat`, `morskie-oko`, `kasprowy` (sets run, scenario and DEM) |
+| `run` | per `sc` | engine output to show; overrides the switcher (shown as "Własny"), e.g. `?run=../out/zawrat.run.json` |
 | `scenario` | `../scenarios/zawrat.json` | scenario for overlay geometry (route, BTS sector, rings, find spot); skipped when its bbox differs from run.json |
 | `terrain` | `<scenario>-terrain.json` | trails, streams, lakes, huts, steep ground, `slopeDeg` |
 | `dem` | `../tools/terrain/data/zawrat-dem.json` | Copernicus DEM crop for the offline relief (hillshade + elevation tint) |
 | `live` | `../out/live-events.json` | field reports, polled every 4 s (`livePollMs`) |
 | `field` | `http://127.0.0.1:8770` | local `rescue-field serve` for the "Wyślij meldunek" box |
-| `pin` | none | PIN sent as `X-Rescue-Pin` when `rescue-field` runs on the LAN (`--host 0.0.0.0 --pin NNNN`); loopback needs none |
 | `basemap` | `basemap/` | offline basemap folder; `none` = skip |
 | `flavor` | `light` | basemap flavour passed to `offlineStyle()` (`light`, `white`, `grayscale`) |
 | `base` | first available | start background: `map`, `relief`, `topo`, `osm`, `none` |
