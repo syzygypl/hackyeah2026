@@ -140,6 +140,9 @@ pub async fn warm_up() {
     tokio::time::sleep(Duration::from_millis(300)).await;
     SHARED.pull().await;
     let t0 = Instant::now();
+    // the default Doradca answer (GET /api/advisor), cached per feed sequence: a cold instance's first visit hits it
+    let q = Req { method: "GET".into(), path: "/api/advisor".into(), query: HashMap::new(), headers: HashMap::new(), body: Bytes::new(), peer: "127.0.0.1".into() };
+    let _ = advisor_data(&q).await;
     let n_live = STORE.report_count(None).await;
     let names = scenario_names();
     let hs: Vec<_> = names.iter().map(|sc| {
