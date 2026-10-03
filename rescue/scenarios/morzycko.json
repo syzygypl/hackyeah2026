@@ -1,0 +1,330 @@
+{
+  "incident": "Kajakarz po burzy na Jeziorze Morzycko, Moryń (scenariusz fikcyjny)",
+  "date": "2026-07-04",
+  "startClock": "21:45",
+  "subject": {
+    "name": "Marek S. (osoba fikcyjna)",
+    "age": 52,
+    "category": "boater",
+    "note": "Mieszkaniec Gryfina na działce w Moryniu. O 19:30 wypłynął sam kajakiem (sit-on-top) z Plaży Miejskiej, bez kamizelki, z telefonem w wodoszczelnym etui. O 20:25 wędkarz z pomostu widział go na środku jeziora, chwilę przed burzą z południowego zachodu (porywy 14 m/s). Żona dzwoni na 112 o 21:45. Woda 22°C, po zmroku 16°C.",
+    "lastContact": "20:25"
+  },
+  "bbox": {
+    "south": 52.83305,
+    "west": 14.36036,
+    "north": 52.88695,
+    "east": 14.44964
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "LKP: kajak na środku jeziora, widziany z pomostu o 20:25",
+    "at": [
+      52.86314,
+      14.40872
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [
+      {
+        "name": "Jezioro Morzycko",
+        "center": [
+          52.86343,
+          14.406253
+        ],
+        "radiusM": 1022
+      }
+    ],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "M1",
+      "name": "Plaża Miejska i pomosty (Moryń)",
+      "seed": [
+        52.86314,
+        14.39533
+      ]
+    },
+    {
+      "id": "M2",
+      "name": "Toń środkowa (LKP)",
+      "seed": [
+        52.86314,
+        14.41021
+      ]
+    },
+    {
+      "id": "M3",
+      "name": "Toń północna",
+      "seed": [
+        52.86943,
+        14.40574
+      ]
+    },
+    {
+      "id": "M4",
+      "name": "Brzeg NE - trzciny (kajak)",
+      "seed": [
+        52.86943,
+        14.41914
+      ]
+    },
+    {
+      "id": "M5",
+      "name": "Brzeg wschodni - trzciny",
+      "seed": [
+        52.86494,
+        14.42509
+      ]
+    },
+    {
+      "id": "M6",
+      "name": "Toń południowa",
+      "seed": [
+        52.85686,
+        14.41021
+      ]
+    },
+    {
+      "id": "M7",
+      "name": "Brzeg SE",
+      "seed": [
+        52.85865,
+        14.4236
+      ]
+    },
+    {
+      "id": "M8",
+      "name": "Brzeg południowy",
+      "seed": [
+        52.85057,
+        14.40128
+      ]
+    },
+    {
+      "id": "M9",
+      "name": "Brzeg zachodni - Moryń",
+      "seed": [
+        52.85686,
+        14.39979
+      ]
+    },
+    {
+      "id": "M10",
+      "name": "Plaża północna",
+      "seed": [
+        52.87303,
+        14.40723
+      ]
+    },
+    {
+      "id": "M11",
+      "name": "Brzeg NW",
+      "seed": [
+        52.87033,
+        14.39086
+      ]
+    },
+    {
+      "id": "M12",
+      "name": "Las na wschód od jeziora",
+      "seed": [
+        52.86674,
+        14.4355
+      ]
+    },
+    {
+      "id": "M13",
+      "name": "Pola na północ od jeziora",
+      "seed": [
+        52.87931,
+        14.41318
+      ]
+    },
+    {
+      "id": "M14",
+      "name": "Moryń - zabudowa",
+      "seed": [
+        52.85416,
+        14.38342
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): trzciny przy brzegu NE",
+    "at": [
+      52.86674,
+      14.42062
+    ]
+  },
+  "events": [
+    {
+      "provider": "TerrainDifficulty",
+      "at": "21:45",
+      "title": "Teren: toń / trzcinowiska / brzeg",
+      "detail": "Ratownicy: łodzie na wodzie, patrole z brzegu, w trzcinach wolno."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "21:45",
+      "title": "Warunki: po burzy, noc, wiatr 6 m/s z SW, 16°C",
+      "detail": "Burza 20:30-21:05, porywy 14 m/s z 225°. Zmrok 21:30.",
+      "visibilityM": 3000,
+      "windMs": 6,
+      "tempC": 16,
+      "precip": "none",
+      "dark": true
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "21:45",
+      "title": "Pierścienie odległości od LKP (bez kierunku)",
+      "detail": "Bazowy model bez wiatru, przybliżony (nie ISRID): 25% 0.3 km, 50% 0.6, 75% 1.0, 95% 2.0.",
+      "point": [
+        52.86314,
+        14.40872
+      ],
+      "quantilesKm": [
+        0.3,
+        0.6,
+        1.0,
+        2.0
+      ]
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "21:50",
+      "title": "Dryf: osoba lub kajak z wiatrem z SW (burza 14 m/s, potem 6 m/s)",
+      "detail": "Średnio ~9 m/s z 225° przez 1.4 h: smuga na NE od LKP, brzeg NE łapie to, co dopłynie. Parametry ilustracyjne (tabele leeway USCG).",
+      "point": [
+        52.86314,
+        14.40872
+      ],
+      "radiusM": 150,
+      "windMs": 9,
+      "windFromDeg": 225,
+      "object": "person"
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "21:55",
+      "title": "CPR Szczecin: telefon aktywny, BTS Moryń",
+      "detail": "Telefon w etui loguje się do sieci, ale nie odbiera. Sektor obejmuje całe jezioro, promień 1.2 km.",
+      "point": [
+        52.862,
+        14.4
+      ],
+      "radiusM": 1200
+    },
+    {
+      "provider": "Clue",
+      "at": "22:20",
+      "title": "Ślad: kajak przewrócony w trzcinach przy brzegu NE, pusty",
+      "detail": "Łódź OSP Moryń znalazła kajak wyrzucony w trzciny. Wiosła brak.",
+      "point": [
+        52.86943,
+        14.41765
+      ],
+      "radiusM": 400
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "22:35",
+      "title": "Łódź WOPR (Szczecin): toń środkowa i północna, nic",
+      "detail": "Szperacz i tor równoległy 80 m. POD 70%.",
+      "segments": [
+        "M2",
+        "M3"
+      ],
+      "pod": 0.7
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "22:50",
+      "title": "Dron termowizyjny PSP: brzeg północny i NW, nic",
+      "detail": "Noc: termowizja dobrze widzi człowieka na brzegu. POD 75%.",
+      "segments": [
+        "M10",
+        "M11"
+      ],
+      "pod": 0.75
+    },
+    {
+      "provider": "Clue",
+      "at": "23:10",
+      "title": "ZNALEZIONO: patrol Policji i OSP z kamerą termowizyjną w trzcinach przy brzegu NE",
+      "detail": "Leżał wychłodzony w trzcinach ok. 300 m na południe od kajaka, dopłynął do brzegu. Meldunek patrolu, nie GPS.",
+      "point": [
+        52.86674,
+        14.42062
+      ],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "resources": [
+    {
+      "id": "osp-boat",
+      "name": "Łódź OSP Moryń",
+      "type": "boat",
+      "base": [
+        52.86314,
+        14.39533
+      ],
+      "readyAt": "22:00"
+    },
+    {
+      "id": "wopr-boat",
+      "name": "Łódź WOPR Zachodniopomorskie",
+      "type": "boat",
+      "base": [
+        52.86314,
+        14.39533
+      ],
+      "readyAt": "22:20"
+    },
+    {
+      "id": "police-shore",
+      "name": "Policja Gryfino + OSP - patrol brzegowy (termowizja ręczna)",
+      "type": "ground",
+      "base": [
+        52.86314,
+        14.39533
+      ],
+      "readyAt": "22:05"
+    },
+    {
+      "id": "drone",
+      "name": "Dron termowizyjny PSP Gryfino",
+      "type": "drone",
+      "base": [
+        52.86314,
+        14.39533
+      ],
+      "readyAt": "22:30"
+    },
+    {
+      "id": "divers",
+      "name": "Nurkowie PSP (SGRW Szczecin)",
+      "type": "diver",
+      "base": [
+        52.86314,
+        14.39533
+      ],
+      "readyAt": "23:00"
+    },
+    {
+      "id": "heli",
+      "name": "Śmigłowiec Policji (Szczecin)",
+      "type": "heli",
+      "base": [
+        53.43,
+        14.55
+      ],
+      "readyAt": "22:40"
+    }
+  ]
+}
