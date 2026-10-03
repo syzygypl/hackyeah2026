@@ -699,7 +699,15 @@ function syncFrame(k, why) {
 function warmOther(k) {
   if (store.mode !== "akcja" || store.role === "ratownik") return;
   for (const o in FRAMES) { const F = FRAMES[o]; if (o === k || F.warm) continue; F.warm = true;
-    (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() => syncFrame(o, "load"), { timeout: 3000 }); }
+    afterUse(() => (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() => syncFrame(o, "load"), { timeout: 3000 })); }
+}
+// the background boot waits for the operator (first mouse move / touch / key; hover over 2D/3D starts it at once):
+// a cold visit that never touches the page does not pay the other view's ~2 MB
+function afterUse(f) {
+  const EV = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"];
+  const wins = [window, ...Object.values(FRAMES).map((F) => { try { return F.el.contentWindow && F.el.contentWindow.document && F.el.contentWindow; } catch (e) { return null; } }).filter(Boolean)];   // the scene frames cover the screen
+  let done = false; const go = () => { if (done) return; done = true; wins.forEach((w) => EV.forEach((t) => { try { w.removeEventListener(t, go, true); } catch (e) {} })); $("views").removeEventListener("pointerenter", go); f(); };
+  wins.forEach((w) => EV.forEach((t) => w.addEventListener(t, go, { capture: true, passive: true }))); $("views").addEventListener("pointerenter", go);
 }
 function postTo2(F, msg) { F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
 function sync3d(why) { for (const k in FRAMES) syncFrame(k, why); }
