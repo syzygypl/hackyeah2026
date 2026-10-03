@@ -126,22 +126,31 @@ const loadRun = async () => {
     throw e;
   }
 };
-let R, SCN, TER, DEM, REV, DEM_FULL;
+let R, SCN, TER, DEM, REV, DEM_FULL, FLAT = false;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
   [R, SCN, TER, DEM, REV] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
-    (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => d || getJSON(P.dem)), P.reveal ? getJSON(P.reveal, true) : null]);
+    (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => d || getJSON(P.dem, true)), P.reveal ? getJSON(P.reveal, true) : null]);
+  if (!R && SCN) R = synthRun(SCN);
+  // no elevation model for this scenario (e.g. a new one from the Studio): flat ground at 1000 m over the run's bbox, so
+  // the probability map, signals, teams and the blind test still work; a note says the relief is missing
+  if (!DEM && R?.bbox) {
+    const b = R.bbox, cols = 240, rows = Math.max(2, Math.round(cols * ((b.north - b.south) / ((b.east - b.west) * Math.cos((((b.north + b.south) / 2) * Math.PI) / 180)))));
+    DEM = { lat0: b.north, lon0: b.west, step: (b.east - b.west) / cols, stepLat: (b.north - b.south) / rows, rows, cols, z: Array.from({ length: rows }, () => new Array(cols).fill(1000)) };
+    FLAT = true;
+  }
+  if (!DEM) throw new Error('brak modelu terenu (DEM) dla scenariusza ' + SC);
   DEM_FULL = DEM; // full-resolution DEM, kept for the terrain normal map
   if (DEM.cols > 600) DEM = decimate(DEM, 2); // wide backdrop: 2x2 average keeps the mesh ~100k vertices
-  if (!R && SCN) R = synthRun(SCN); // replay without engine output: signals and patrols only, no POA map
+  // R from synthRun when there is no engine output: replay with signals and patrols only, no POA map
   if (R.schema !== 'rescue-run/1') throw new Error('run.json: schema ' + R.schema);
 } catch (e) {
   // a clear message instead of an endless spinner (e.g. a scenario whose run.json is not in the repo)
   const missingRun = /^404 /.test(e.message) && e.message.includes('.run.json');
   document.body.dataset.state = 'error';
   $('loadmsg').innerHTML = missingRun
-    ? `Brak wyniku silnika dla scenariusza <b>${esc(SC)}</b> (<code>${esc(P.run)}</code>, ani <code>${esc(API_RUN)}</code> na tym serwerze).<br>Uruchom <code>cd rescue && swift run rescue-server</code> i otwórz :8780/app/, albo wygeneruj plik: <code>cd rescue && swift run rescue-demo --fast scenarios/${esc(SC)}.json</code><br><a href="?sc=zawrat">Otwórz Zawrat</a>`
-    : `Nie udało się wczytać danych: ${esc(e.message)}.<br>Uruchom serwer w katalogu rescue/ (<code>python3 -m http.server 8000</code>) i otwórz /app/. <a href="?sc=zawrat">Otwórz Zawrat</a>`;
+    ? `Brak wyniku silnika dla scenariusza <b>${esc(SC)}</b> na tym serwerze. Widok 2D pokazuje to, co jest dostępne.`
+    : `Widok 3D nie wczytał danych dla scenariusza <b>${esc(SC)}</b> (${esc(e.message)}). Widok 2D działa bez nich.`;
   throw e;
 }
 
@@ -632,7 +641,7 @@ const forest = new THREE.Group(); scene.add(forest);
   const lakes = (TER?.lakes || []).map((l) => ({ la: l.center[0], lo: l.center[1], r: (l.radiusM + 25) / 1000 }));
   const inLake = (la, lo) => lakes.some((l) => Math.hypot((la - l.la) * KM, (lo - l.lo) * KM * KX) < l.r);
   const spruce = [], pine = [];
-  const tries = Q.has('trees') ? +Q.get('trees') : Math.round(clamp(WKM * HKM * 2000, 40000, 140000));
+  const tries = FLAT ? 0 : Q.has('trees') ? +Q.get('trees') : Math.round(clamp(WKM * HKM * 2000, 40000, 140000)); // no forest guessed on flat fallback ground
   for (let n = 0; n < tries; n++) {
     const la = latS + rnd() * (latN - latS), lo = lonW + rnd() * (lonE - lonW), e = elevM(la, lo);
     const dz = Math.hypot(elevM(la, lo + 0.0004) - elevM(la, lo - 0.0004), elevM(la + 0.0003, lo) - elevM(la - 0.0003, lo)) / 2 / 33;
@@ -1289,4 +1298,5 @@ renderer.shadowMap.needsUpdate = true;
 frame();
 pollLive();
 document.body.dataset.state = 'ready';
+if (FLAT) { const n = document.createElement('div'); n.className = 'toast'; n.textContent = 'Brak modelu terenu dla tego scenariusza: teren pokazany płasko. Mapa prawdopodobieństwa, sygnały i zespoły bez zmian.'; $('feed').prepend(n); }
 toParent({ type: 'ready', scenario: SC, steps: R.steps.length, step: STEP });
