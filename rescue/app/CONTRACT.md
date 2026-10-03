@@ -130,3 +130,42 @@ When `results.json` is missing, the shell lists `rescue/eval/sim/out/<run>/` fol
 
 - **Ratownik** (phone): team picker, "Moje zadanie" (operator assignment for the current scenario wins over the planner; vibrates and toasts when it changes), "dlaczego", ETA, safety flags, hypothermia; the 2D map with own GPS dot and the task segment selected; reports through the embedded patrol view (`POST /report`, offline queue there). No editing, no validation.
 - **Operator**: all modes. Dropping a team chip on a segment in Edycja persists the assignment (above). Teren / Przegląd zespołów shows per-team last report age (CISZA past `silent_threshold_seconds`) and the live field reports (`GET /live-events`), each with "Dodaj do historii" (Studio `FieldReport`).
+
+## Live mode (rescue-server; ad-hoc clues, dispatch, live feed)
+
+During an ongoing search the operator (app, Akcja) and the rescuers (phone: `web/patrol/`, `/app/?role=ratownik`) add clues and dispatch teams ad hoc; every change re-runs the engine on the next `GET /api/run/<sc>` and both sides see it by polling. All routes are additive and PIN-guarded on LAN like the rest of `/api/*`. Feed and seq are in memory (restart clears them); clues go to the live file like `/report` (survive restart, folded into every run).
+
+### `POST /api/clue` - add a clue at a point
+
+```jsonc
+{ "type": "odziez",          // odziez | slad | swiadek | telefon | znalezisko  (unknown -> slad)
+  "lat": 49.2185, "lon": 20.0102,   // required, unless segmentId is given (then the segment seed point is used)
+  "segmentId": "S7",         // optional
+  "note": "czerwona czapka przy szlaku",   // optional, max 200 chars
+  "by": "operator",          // operator | ratownik (default operator)
+  "team": "gopr-a",          // optional, who found it (rescuer's team)
+  "at": "11:05",             // optional scenario/wall clock HH:MM (outside the scenario window -> the live moment, as /report)
+  "id": "c-1696-abc" }       // optional client id; a resend with the same id is stored once (answer has "duplicate": true)
+```
+
+-> `{ "ok": true, "seq": 12, "event": <feed event> }`. 400 if no point and no known segment.
+Stored as a field report (`source: "live-clue"`, `parsedBy: "manual"`, one `clue` hint with `lat/lon`, `description` = "<Typ>: <note>", `resource` = team). Strength by type: odziez/znalezisko strong (300 m), slad/telefon medium (500 m), swiadek weak (800 m). Type labels (PL): odziez = Odzież, slad = Ślad, swiadek = Świadek, telefon = Sygnał telefonu, znalezisko = Znalezisko (an item, NOT "person found" - that stays the ZNALEZIONO report).
+
+### Dispatch = existing `POST /api/assignments {team, segmentId, why?, by?}` / `POST /story/assign`
+
+Unchanged; every successful write now also appends a `dispatch` event to the feed (`segmentId: null` -> "odwołany").
+
+### `GET /api/live?since=<seq>` - live feed (poll every 3-5 s)
+
+```jsonc
+{ "seq": 13,                          // latest seq; 0 = nothing happened since server start
+  "now": "2026-10-04T09:12:03Z",
+  "events": [                         // seq > since, oldest first, at most 50 (since omitted -> last 50)
+    { "seq": 11, "kind": "dispatch", "t": "2026-10-04T09:11:40Z", "by": "operator", "team": "gopr-a", "segmentId": "S7", "note": "...", "title": "gopr-a -> S7" },
+    { "seq": 12, "kind": "clue", "t": "...", "by": "ratownik", "team": "gopr-b", "type": "odziez", "lat": 49.21, "lon": 20.01, "note": "...", "title": "Odzież: czerwona czapka" },
+    { "seq": 13, "kind": "report", "t": "...", "by": "ratownik", "team": "gopr-b", "note": "<report text>", "title": "Meldunek: ..." } ],
+  "assignments": { "gopr-a": { "segmentId": "S7", "by": "operator", "at": "..." } }   // same as GET /api/assignments
+}
+```
+
+Feed sources: `POST /api/clue`, `POST /api/assignments`, `POST /story/assign`, `POST /report` (non-duplicate; team from `X-Rescue-Team`). Client rule: when `seq` grows, refetch `GET /api/run/<sc>` (map, ranking) and use `assignments` for "Moje zadanie" / team plan. Show a "LIVE" indicator while polling succeeds and the last ~8 events (who, what, when) as a feed.
