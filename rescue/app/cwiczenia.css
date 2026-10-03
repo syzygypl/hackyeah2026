@@ -97,3 +97,6 @@ ul.feed,ul.teamlist,ul.seglist,ul.declist{list-style:none;margin:0;padding:0}
 .verdict.słaba{background:var(--rl-card);color:var(--rl-danger);border-color:var(--rl-danger)}
 .declist .why{color:var(--rl-ink-2)}
 .howto ol{margin:0;padding-left:20px}
+
+/* score: a part that does not apply (safety with no dispatched team) (AI Marcina) */
+.part.na .n,.part.na span:first-child{color:var(--rl-mute)}

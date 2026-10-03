@@ -211,9 +211,13 @@ async function showScore() {
   $("sTotal").textContent = sc.total;
   const f = $("sFound"); f.className = "foundline" + (sc.found ? " yes" : "");
   f.textContent = sc.found ? `ZNALEZIONO o ${sc.foundAt} (${esc(short((s.teams.find((t) => t.id === sc.foundBy) || {}).name || sc.foundBy))}), ${sc.timeToFind} min od przejęcia` : `Nie znaleziono do ${sc.clock}`;
-  $("sParts").innerHTML = Object.entries(PARTS).map(([k, [l, max]]) => { const v = (sc.parts || {})[k] || 0;
-    return `<div class="part"><span>${l}</span><span class="bar"><i style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%"></i></span><span class="n">${v}/${max}</span></div>`; }).join("") +
-    `<p class="mute small">Pokrycie mapy ${Math.round((sc.coverage || 0) * 100)}% (waga przeszukanych miejsc), przeszukano ${sc.areaSearchedPct}% powierzchni, ${sc.searches} przeszukań, ${sc.unsafeDecisions} decyzji z uwagą bezpieczeństwa.</p>`;
+  // D: safety is scored only for dispatched teams; with no dispatch say so instead of an empty bar next to "0 decisions with a safety note"
+  const nDisp = (sc.decisions || []).filter((d) => d.action !== "wait").length;
+  $("sParts").innerHTML = Object.entries(PARTS).map(([k, [l, max]]) => { const v = (sc.parts || {})[k] || 0, na = k === "safety" && !nDisp;
+    return `<div class="part${na ? " na" : ""}"><span>${l}</span><span class="bar"><i style="width:${Math.max(0, Math.min(100, (v / max) * 100))}%"></i></span><span class="n">${na ? "-" : v}/${max}</span></div>`; }).join("") +
+    `<p class="mute small">${!(sc.decisions || []).length ? "<b>Brak decyzji</b>: nikt nie został wysłany i zegar nie ruszył, dlatego 0 pkt. " : !nDisp ? "Żaden zespół nie został wysłany: bezpieczeństwo (0/10) liczymy tylko dla wysłanych zespołów. " : ""}` +
+    `Pokrycie mapy ${Math.round((sc.coverage || 0) * 100)}% (waga przeszukanych miejsc), przeszukano ${sc.areaSearchedPct}% powierzchni, ${sc.searches} przeszukań` +
+    `${nDisp ? `, ${sc.unsafeDecisions} z ${nDisp} wysłań z uwagą bezpieczeństwa` : ""}.</p>`;
   $("sDec").innerHTML = (sc.decisions || []).map((d) => `<li><span class="t">${esc(d.t)}</span><span class="verdict ${esc(d.verdict)}">${esc(d.verdict)}</span>
     <span><b>${d.action === "wait" ? "Czekaj" : `${esc(tName(d.team))} → ${esc(d.segment)}`}</b> ${d.action === "wait" ? "" : esc(d.segmentName)}<div class="why">${esc(named(d.why))}</div></span></li>`).join("") ||
     `<li class="mute">Brak decyzji: żaden zespół nie został wysłany.</li>`;

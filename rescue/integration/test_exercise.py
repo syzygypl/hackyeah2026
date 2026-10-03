@@ -77,6 +77,10 @@ def play(EX, G, P):
         st, e, _ = P(f"/api/exercise/{sid}/act", {"team": "nope", "segmentId": "W1"})
         check("act_unknown_team_409", st == 409, f"{st} {e}")
         busy = next((t for t in s["teams"] if t["status"] == "szuka"), None)
+        # D: ending at once (no decision) scores 0 with every part 0; total is always the rounded sum of the parts
+        st, s0, _ = P("/api/exercise/start", {"id": EX})
+        st, z, _ = G(f"/api/exercise/{s0['sid']}/score")
+        check("no_decision_scores_0", st == 200 and z.get("total") == 0 and not any((z.get("parts") or {}).values()), f"{z.get('total')} {z.get('parts')}")
         if busy:
             st, e, _ = P(f"/api/exercise/{sid}/act", {"team": busy["id"], "segmentId": s["segments"][0]["id"]})
             check("act_busy_team_409", st == 409, f"{st} {e.get('error') if isinstance(e, dict) else e}")
@@ -109,6 +113,7 @@ def play(EX, G, P):
             time.sleep(3)
         check("score_200", st == 200)
         check("score_total_0_100", isinstance(sc.get("total"), int) and 0 <= sc["total"] <= 100, str(sc.get("total")))
+        check("score_total_is_sum_of_parts", abs(sc.get("total", -9) - sum((sc.get("parts") or {}).values())) <= 1, f"{sc.get('total')} vs {sc.get('parts')}")
         for k in ("found", "timeToFind", "areaSearchedPct", "decisions", "parts", "truth", "vs"):
             check("score_field_" + k, k in sc)
         d = (sc.get("decisions") or [{}])[0]
