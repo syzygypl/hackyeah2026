@@ -75,7 +75,7 @@ Lista scenariuszy (`/api/scenarios`, 18): **duplikat** `morzycko` i `tragedia-w-
 
 | Problem | Commit |
 |---|---|
-| Ślad: zdjęcie - kandydaci miejsca z "p=13,7%" (procent czytany jako szansa) -> kierunek patrzenia | f6f4614 |
+| Ślad: zdjęcie - kandydaci miejsca z "p=13,7%" (procent czytany jako szansa) -> kierunek patrzenia | a4ac6bb |
 
 ### Do poprawy
 
