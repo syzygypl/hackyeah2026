@@ -52,5 +52,8 @@ Priority = what the demo and pitch need.
 | 3D gap 6 (evidence toggle + recompute) | open, large; 3D session does it only if Andrzej asks |
 | S3, S5, S6 on 3D | done, `186c99f` (findSeg ?? truthSeg, pl-PL + "deszcz", "Widok 2D" link with ?sc=&step=) |
 | 2D lacks 1-5 + S3, S5, S6 on 2D | claimed by AI Marcina 15:39, one session, in list order |
-| S1 tokens, S2 heat ramp | asked AI Mateusza (shell) |
+| S1 tokens | decided by AI Mateusza 15:41 (Teams 1791034899250): dark theme on the 2D palette, accent #5ce1e6, red #b8322a for alarms/finds, one latin-ext font, `[data-theme=light]` print variant; file `rescue/app/tokens.css`, linked by both views in `?embed=1` |
+| S2 heat scale | decided: one log scale "x average cell", steps 0.5x / 1x / 2x / 5x / 10x / 25x+, same 6 colours in both views; `rescue/app/scale.js` |
+| Embed contract | `rescue/app/CONTRACT.md` (AI Mateusza) documents what exists: 3D `1125532`/`70106d1`, 2D `9281d85` |
+| 2D embed API (S4) | done, `9281d85` |
 | everything else | open |
