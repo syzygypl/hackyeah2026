@@ -45,9 +45,6 @@ figcaption{font-size:var(--rl-fs-s);color:var(--rl-mute);margin-top:8px}
 .list-h{font-size:var(--rl-fs-l);margin:26px 0 10px}
 a.card.sit{display:block;text-decoration:none;color:var(--rl-ink)}a.card.sit:hover{border-color:var(--rl-accent)}a.card.sit .go{display:inline-block;margin-top:8px;color:var(--rl-accent);font-weight:600;font-size:var(--rl-fs-s)}
 .tag{display:inline-block;font:600 var(--rl-fs-xs)/1 var(--rl-mono);text-transform:uppercase;letter-spacing:.04em;color:var(--rl-accent);margin-bottom:8px}
-.proof{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
-.num{font:700 clamp(34px,6vw,52px)/1 var(--rl-font-num);color:var(--rl-ink)}
-.num.win{color:var(--rl-ok)}
 .honest{border-left:4px solid var(--rl-warn);background:var(--rl-card);padding:12px 16px;border-radius:0 var(--rl-radius) var(--rl-radius) 0;color:var(--rl-ink-2)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:clamp(18px,4vw,40px);align-items:start}
 ol.steps,ul.list{margin:0;padding-left:1.2em}
@@ -68,7 +65,7 @@ footer p{margin-bottom:8px}
 [hidden]{display:none!important}
 @media (max-width:820px){
   .hero,.two{grid-template-columns:1fr}
-  .grid,.proof{grid-template-columns:1fr}
+  .grid{grid-template-columns:1fr}
   .call{grid-template-columns:1fr}
   .switch a{padding:8px 12px}
   .brand span{display:none}
@@ -140,23 +137,6 @@ footer p{margin-bottom:8px}
         <a class="card sit" href="../?role=operator&amp;time=hist&amp;sc=sniardwy"><h3>Zaginiony na wodzie</h3><p>Żeglarz na Śniardwach, pływak przy Międzyzdrojach.</p><span class="go">Otwórz w aplikacji</span></a>
       </div>
       <figure style="margin-top:22px"><img class="shot" src="img/12-os-czasu.jpg" alt="Oś czasu w 3D: ślady GPS zespołów, okręgi dokładności i narastający przeszukany obszar w minucie 100 akcji" width="1400" height="787" loading="lazy"><figcaption>Oś czasu: trasy zespołów z GPS, dokładność pozycji i przeszukany obszar w danej minucie akcji (scenariusz fikcyjny).</figcaption></figure>
-    </div>
-  </section>
-
-  <section style="padding-top:0">
-    <div class="wrap two">
-      <div>
-        <h2>Uczciwy dowód</h2>
-        <p>Na 1000 symulowanych przypadkach w górach: jak często prawdziwy sektor jest w pierwszej trójce podpowiedzi.</p>
-        <div class="proof">
-          <div class="card"><div class="num win">66%</div><div class="small">Rescue Locator</div></div>
-          <div class="card"><div class="num">56%</div><div class="small">heurystyka eksperta</div></div>
-          <div class="card"><div class="num">43%</div><div class="small">najbliżej punktu wyjścia</div></div>
-        </div>
-        <p>Na wodzie (600 przypadków): 91% wobec 81%. Mediana obszaru do przeszukania do znalezienia: 5,5% wobec 22,6% przy szukaniu od punktu wyjścia.</p>
-        <p class="honest"><b>To symulacja, nie prawdziwe akcje.</b> Symulator i silnik powstały w tym samym zespole, więc to test spójności, a nie walidacja w terenie. Procenty na mapie to waga, nie szansa - są zawyżone, dlatego pokazujemy kolejność i obszar. Są miejsca, gdzie nie pomaga (np. Bieszczady, pływak na jeziorze) - piszemy o nich w aplikacji, zakładka Walidacja.</p>
-      </div>
-      <figure><img class="shot" src="img/05-walidacja.jpg" alt="Karta walidacji: 66 procent wobec 43 procent w górach i 91 wobec 81 procent na wodzie, z wykresem i listą miejsc, gdzie nie pomaga" width="1400" height="787" loading="lazy"><figcaption>Zakładka Walidacja w aplikacji.</figcaption></figure>
     </div>
   </section>
 

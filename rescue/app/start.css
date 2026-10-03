@@ -34,7 +34,7 @@ a{color:var(--rl-accent)}
 .st-role span:last-child{color:var(--rl-ink-2);font-size:var(--rl-fs-s)}
 .st-ico svg{width:30px;height:30px;fill:none;stroke:var(--rl-accent);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 
-/* below the buttons: what you will see (real screenshots, deep links), how it works, one proof line, footer */
+/* below the buttons: what you will see (real screenshots, deep links), how it works, footer */
 .st-h{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rl-mute);margin:0 0 10px}
 .st-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
 .st-card{display:flex;flex-direction:column;gap:4px;background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);overflow:hidden;color:var(--rl-ink);text-decoration:none;padding-bottom:14px;transition:border-color .15s,transform .15s}
@@ -52,12 +52,6 @@ a{color:var(--rl-accent)}
 .st-steps .st-ico{grid-row:1/3;padding-top:2px}
 .st-steps b::before{content:counter(st) ". ";color:var(--rl-accent)}
 .st-steps span:last-child{color:var(--rl-ink-2);font-size:var(--rl-fs-s);line-height:1.35}
-
-.st-proof{margin:0;padding:14px 0 0;border-top:1px solid var(--rl-line-strong);color:var(--rl-ink-2)}
-.st-proof b{font:700 26px/1 var(--rl-font-num);color:var(--rl-ink);margin-right:4px}
-.st-proof .st-note{color:var(--rl-mute);font-size:var(--rl-fs-s)}
-.st-proof a{font-weight:600;white-space:nowrap}
-.st-proof a::after{content:" \2192"}
 
 .st-foot{font-size:var(--rl-fs-xs);color:var(--rl-mute);border-top:1px solid var(--rl-line);padding-top:12px}
 .st-foot p{margin:0 0 4px}
