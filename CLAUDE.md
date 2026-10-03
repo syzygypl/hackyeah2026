@@ -223,7 +223,7 @@ Boring and known to everyone on the team.
 - Parallel agents work on separate areas (separate worktrees); a human integrates.
 - Review agent output against the demo script, not for elegance.
 - Agents: write the quickest working code, not the cleanest. Don't refactor, don't add abstractions, don't add tests unless asked. Hardcoding and duplication are fine.
-- Rescue Locator: 3D terrain is always generated. Every scenario added to `rescue/scenarios/` ships in the same push with its `<sc>-terrain.json` (incl. `waterMask`) and `rescue/tools/terrain/data/<sc>-dem.json`, built with `python3 rescue/tools/terrain/osm_terrain.py --scenario rescue/scenarios/<sc>.json`. The 3D view never falls back to flat ground for a real scenario (Andrzej, 2026-10-03).
+- Rescue Locator: 3D terrain is always generated. Every scenario added to `rescue/scenarios/` ships in the same push with its `<sc>-terrain.json` (incl. `waterMask`) and `rescue/tools/terrain/data/<sc>-dem.json`, built with `python3 rescue/tools/terrain/osm_terrain.py --scenario rescue/scenarios/<sc>.json`. The 3D assets go with it: `python3 rescue/app/3d/data/make_wide.py <sc>`, then `make_ortho.py rescue/app/3d/data/<sc>-dem-wide.json rescue/app/3d/data/<sc>-ortho.jpg` and `make_osm3d.py <sc>` (buildings, roads, land cover). The 3D view never falls back to flat ground for a real scenario (Andrzej, 2026-10-03).
 
 ## Legal and hygiene
 
