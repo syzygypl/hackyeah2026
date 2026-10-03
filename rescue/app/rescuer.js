@@ -4,11 +4,12 @@
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (p) => Math.round((p || 0) * 100) + "%";
 const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
-let C, team = ls.get("rescue-team", null), gps = null, gpsMarker = null, lastTaskKey = "";
+let C, team = new URLSearchParams(location.search).get("team") || ls.get("rescue-team", null), gps   // ?team=topr-a (QR code per phone) wins = null, gpsMarker = null, lastTaskKey = "";
 const $ = (id) => document.getElementById(id);
 
 export function initRescuer(ctx) {
   C = ctx;
+  if (team) ls.set("rescue-team", team);
   $("rTeam").onchange = () => { team = $("rTeam").value; ls.set("rescue-team", team); lastTaskKey = ""; render(); C.onTeam(team); };
   $("rCenter").onclick = () => { if (gps) C.map.flyTo({ center: [gps[1], gps[0]], zoom: 14.5, duration: 400 }); else C.toast("Brak pozycji GPS"); };
   if (navigator.geolocation) navigator.geolocation.watchPosition((p) => { gps = [p.coords.latitude, p.coords.longitude, p.coords.accuracy]; drawGps(); }, () => {}, { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
