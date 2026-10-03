@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rescue Locator - Ćwiczenia</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="cwiczenia.css">
+</head>
+<body>
+<header>
+  <h1><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator <span class="sub">Ćwiczenia</span></h1>
+  <span id="hdrInfo" class="mute"></span>
+  <span style="flex:1"></span>
+  <label id="pinbox" hidden>PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
+  <a href="index.html" class="back">Wróć do akcji</a>
+</header>
+
+<!-- 1. lista ćwiczeń -->
+<section id="scrList" class="page">
+  <div class="wrap">
+    <h2 class="lead">Przejmij akcję w trakcie</h2>
+    <p class="mute">Poszukiwania już trwają. Dostajesz to, co wie kierownik akcji w chwili przejęcia, i dostępne zespoły. Wysyłasz zespoły do sektorów, czekasz na meldunki i reagujesz na nowe informacje. Na końcu dostajesz ocenę i porównanie z planem silnika i prostszymi strategiami na tych samych danych.</p>
+    <p class="mute small">Wszystkie osoby i zdarzenia są fikcyjne (symulator zaginięć na prawdziwym terenie). To trening decyzji, nie procedura TOPR/GOPR/WOPR.</p>
+    <div id="exList" class="cards"><p class="mute">Wczytywanie...</p></div>
+  </div>
+</section>
+
+<!-- 2. odprawa -->
+<section id="scrBrief" class="page" hidden>
+  <div class="wrap">
+    <p><button id="briefBack" class="link">&larr; Lista ćwiczeń</button></p>
+    <h2 class="lead" id="bTitle"></h2>
+    <p class="mute" id="bPlace"></p>
+    <div class="grid2">
+      <div class="panel">
+        <h3>Kto zaginął</h3>
+        <p id="bWho"></p>
+        <h3>Przejmujesz o</h3>
+        <p><span class="clock" id="bClock"></span> <span class="mute" id="bBudget"></span></p>
+      </div>
+      <div class="panel">
+        <h3>Co wiadomo do tej chwili</h3>
+        <ul id="bKnown" class="feed"></ul>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Zespoły</h3>
+      <ul id="bTeams" class="teamlist"></ul>
+    </div>
+    <div class="panel howto">
+      <h3>Jak grać</h3>
+      <ol>
+        <li>Wybierz wolny zespół, potem kliknij sektor na mapie albo na liście (dojście i przeszukanie liczy silnik).</li>
+        <li>„Czekaj 30 min” przesuwa zegar: przychodzą meldunki „nic” albo ZNALEZIONO i nowe informacje.</li>
+        <li>Mapa przelicza się po każdym meldunku. Ocena liczy: znalezienie i czas, pokrycie mapy, jakość decyzji, bezpieczeństwo.</li>
+      </ol>
+    </div>
+    <p><button id="briefGo" class="primary big">Przejmij akcję</button></p>
+  </div>
+</section>
+
+<!-- 3. gra -->
+<section id="scrPlay" hidden>
+  <iframe id="map" title="Mapa ćwiczenia"></iframe>
+  <aside id="ctl" class="float">
+    <div class="clockrow">
+      <div><div class="clock big" id="pClock">--:--</div><div class="mute small" id="pLeft"></div></div>
+      <div class="right"><div id="pCond" class="small"></div></div>
+    </div>
+    <div id="pMsg" class="msg" hidden></div>
+    <h3>Zespoły <span class="mute small">wybierz, potem sektor</span></h3>
+    <ul id="pTeams" class="teamlist pick"></ul>
+    <h3>Sektory (waga mapy)</h3>
+    <ul id="pSegs" class="seglist"></ul>
+    <div class="row">
+      <button id="pWait" class="primary">Czekaj 30 min</button>
+      <button id="pWait60">Czekaj 60 min</button>
+      <span style="flex:1"></span>
+      <button id="pEnd" class="link">Zakończ i oceń</button>
+    </div>
+    <h3>Meldunki i zdarzenia</h3>
+    <ul id="pFeed" class="feed"></ul>
+    <p class="mute small">Ćwiczenie fikcyjne. Wyniki przeszukań losuje serwer z prawdopodobieństwem wykrycia liczonym przez silnik.</p>
+  </aside>
+</section>
+
+<!-- 4. ocena -->
+<section id="scrScore" class="page" hidden>
+  <div class="wrap">
+    <p><button id="scoreBack" class="link">&larr; Lista ćwiczeń</button></p>
+    <h2 class="lead" id="sTitle"></h2>
+    <div class="grid2">
+      <div class="panel hero">
+        <div class="total" id="sTotal">-</div>
+        <div class="mute">punktów na 100</div>
+        <div id="sFound" class="foundline"></div>
+      </div>
+      <div class="panel">
+        <h3>Z czego wynik</h3>
+        <div id="sParts"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Ten sam przypadek, te same zespoły i ten sam czas</h3>
+      <div id="sVs"><p class="mute">Liczę plan silnika i strategie porównawcze...</p></div>
+      <p class="mute small" id="sVsNote"></p>
+    </div>
+    <div class="panel">
+      <h3>Twoje decyzje</h3>
+      <ul id="sDec" class="declist"></ul>
+    </div>
+    <div class="panel">
+      <h3>Gdzie była osoba</h3>
+      <p id="sTruth"></p>
+    </div>
+    <p class="mute small">Ocena to pomoc treningowa na fikcyjnym scenariuszu, nie ocena kwalifikacji ani procedura TOPR/GOPR/WOPR. Werdykty decyzji porównują Twój wybór z liczbami silnika (waga mapy, skuteczność, czas dojścia), a silnik też się myli.</p>
+    <p><button id="sAgain" class="primary">Zagraj jeszcze raz</button></p>
+  </div>
+</section>
+<script type="module" src="cwiczenia.js"></script>
+</body>
+</html>

@@ -205,7 +205,7 @@ help.innerHTML = `<div class="hp-head"><h2>Instrukcja</h2><span style="flex:1"><
   </ul>
   <h3>Uczciwie</h3>
   <p>Scenariusze są fikcyjne. Liczby z Walidacji pochodzą z symulacji, nie z prawdziwych akcji. Plan zespołów to podpowiedź (czas dojścia, bezpieczeństwo); decyzja zawsze należy do człowieka.</p>
-  <p class="hp-foot"><a href="start.html">Strona startowa</a></p>
+  <p class="hp-foot"><a href="start.html">Strona startowa</a> · <a href="cwiczenia.html">Ćwiczenia: przejmij fikcyjną akcję i dostań ocenę decyzji</a></p>
 </div>`;
 document.body.append(help);
 function openHelp() { if (tour.on) stop(); help.hidden = false; help.querySelector(".hp-x").focus(); }
