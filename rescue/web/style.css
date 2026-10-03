@@ -287,3 +287,5 @@ body.embed-bare #app { grid-template-rows: minmax(0, 1fr); grid-template-areas: 
 .progress .pg-leg i { width: 10px; height: 3px; display: inline-block; border-radius: 2px; margin-left: 6px; }
 .modelink { color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 9px; font-size: 12px; text-decoration: none; margin-left: 6px; white-space: nowrap; }
 .modelink:hover { background: var(--accent); color: #062126; }
+/* version stamp (web/version.js) sits in the bottom-right corner: keep the timeline labels clear of it */
+body.has-version #timeline { padding-bottom: 14px; }
