@@ -1275,8 +1275,7 @@ function tlNext() {
   const want = (m) => m >= lo && m <= hi && !TLF.byMin.has(m) && !TLF.busy.has(m);
   for (let d = 0; d <= 20; d++) if (want(c + d)) return c + d;   // ahead of the playhead first
   for (let d = 1; d <= 5; d++) if (want(c - d)) return c - d;
-  for (let m = lo; m <= hi; m++) if (want(m)) return m;          // then the rest, in the background
-  return null;
+  return null;   // only a window around the playhead (-5..+20 min); it moves with setMinute, the run's own frames cover the rest (wydajnosc.md Runda 3: ~150 requests / 2.9 MB per opening before)
 }
 function tlPump() {
   while (TLF.busy.size < 3) {
