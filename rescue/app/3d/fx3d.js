@@ -349,24 +349,31 @@ export const FX = {
       }
       return vec2(sqrt(d2) - sqrt(d1), id);
     }
-    // granite on one projection plane (p in km, px = km per pixel): x = albedo 0..1, yz = height gradient (m per km)
-    vec3 tdRock(vec2 p, float px) {
+    // granite on one projection plane (p in km, px = km per pixel): x = albedo 0..1, yz = height gradient (m per km).
+    // full = false: the gradient only (scree takes the rock's relief, not its colour). cf (0..1, from the distance fade)
+    // scales the joints and cracks; at 0 the 9-tap cellular noise, the costliest part, is skipped. Footprint gates first:
+    // nothing that tdLp has already faded to its mean is evaluated.
+    vec3 tdRock(vec2 p, float px, bool full, float cf) {
       vec3 fd = tdFbmD(p, 42.0, px); float f = fd.x; // 24 m blocks down to 3 m
-      vec2 wq = p * vec2(48.0, 64.0) + (vec2(tdNoise(p * 20.0), tdNoise(p * 20.0 + 5.2)) - 0.5) * 0.9; // joints ~15-20 m apart, wavy
-      float q = px * 64.0; vec2 cc = tdCell(wq); float e = cc.x;
-      // crack lines at least ~1.5 px wide, broken and only in patches (no cobblestone), gone once the blocks shrink under a few px
-      float crack = (1.0 - smoothstep(0.0, max(0.04, q * 1.5), e)) * smoothstep(0.45, 0.7, tdNoise(p * 7.0 + 3.0))
-        * smoothstep(0.35, 0.75, tdNoise(wq * 0.8 + 11.0)) * tdLp(q * 0.8);
-      float blk = mix(0.5, cc.y, tdLp(q * 0.5) * smoothstep(0.3, 0.6, tdNoise(p * 5.0 + 8.0))); // block-to-block tone (weathering)
       // ridged octaves: sharp crests and gullies, the craggy relief the bump shows
       float rg = 0.0, w = 0.5, qq = px * 90.0; vec2 rgD = vec2(0.0), s = p * 90.0 + 4.1; mat2 J = mat2(90.0);
       for (int k = 0; k < 3; k++) { float lp = tdLp(qq); rg += w * 0.36;
         if (lp > 0.0) { vec3 n = tdNoiseD(s); float sg = n.x * 2.0 - 1.0, r = 1.0 - abs(sg); rg += w * lp * (r * r - 0.36); rgD += w * lp * (-4.0 * r * sign(sg)) * (n.yz * J); }
         s = TD_M * s + 2.7; J = TD_M * J; qq *= 2.0; w *= 0.5; }
       rg /= 0.875; rgD /= 0.875;
+      vec2 grad = fd.yz * 2.5 + rgD * 2.0;
+      if (!full) return vec3(0.5, grad);
+      float q = px * 64.0, crack = 0.0, blk = 0.5, lb = tdLp(q * 0.5) * cf;
+      if (lb > 0.0) {
+        vec2 wq = p * vec2(48.0, 64.0) + (vec2(tdNoise(p * 20.0), tdNoise(p * 20.0 + 5.2)) - 0.5) * 0.9; // joints ~15-20 m apart, wavy
+        vec2 cc = tdCell(wq); float lc = tdLp(q * 0.8);
+        // crack lines at least ~1.5 px wide, broken and only in patches (no cobblestone), gone once the blocks shrink under a few px
+        if (lc > 0.0) crack = (1.0 - smoothstep(0.0, max(0.04, q * 1.5), cc.x)) * smoothstep(0.45, 0.7, tdNoise(p * 7.0 + 3.0))
+          * smoothstep(0.35, 0.75, tdNoise(wq * 0.8 + 11.0)) * lc * cf;
+        blk = mix(0.5, cc.y, lb * smoothstep(0.3, 0.6, tdNoise(p * 5.0 + 8.0))); // block-to-block tone (weathering)
+      }
       float g = tdNoiseF(p * 600.0, px * 600.0), zone = tdNoise(p * 12.0); // mineral grain; light / dark zones of ~80 m
-      return vec3(0.5 + (f - 0.5) * 1.6 + (rg - 0.36) * 0.6 + (zone - 0.5) * 0.35 + (g - 0.5) * 0.3 + (blk - 0.5) * 0.12 - crack * 0.32,
-        fd.yz * 2.5 + rgD * 2.0);
+      return vec3(0.5 + (f - 0.5) * 1.6 + (rg - 0.36) * 0.6 + (zone - 0.5) * 0.35 + (g - 0.5) * 0.3 + (blk - 0.5) * 0.12 - crack * 0.32, grad);
     }`,
     hooks: {
       color: `
@@ -387,32 +394,44 @@ export const FX = {
         float st = N.y + (tdNoiseF(P.xz * 55.0, px * 55.0) - 0.5) * 0.1 + (tdNoiseF(P.xz * 260.0, px * 260.0) - 0.5) * 0.05 + (sat - 0.25) * 0.55;
         float rockW = 1.0 - smoothstep(0.62, 0.72, st), grassW = smoothstep(0.76, 0.86, st), screeW = max(1.0 - rockW - grassW, 0.0);
         vec3 col = vec3(0.0), gW = vec3(0.0); // gW: height gradient in world space (m per km)
-        if (rockW + screeW > 0.01) {
+        bool doRock = rockW > 0.01, doScree = screeW > 0.01;
+        if (doRock || doScree) {
           // triplanar: three planar projections blended by the normal, sharp so each face takes one projection; each
-          // plane's gradient goes back onto its two world axes
-          vec3 tw = pow(abs(N), vec3(4.0)); tw /= tw.x + tw.y + tw.z;
-          float ra = 0.0; vec3 rg = vec3(0.0), r;
-          if (tw.x > 0.05) { r = tdRock(P.zy, px); ra += tw.x * r.x; rg += tw.x * vec3(0.0, r.z, r.y); }
-          if (tw.y > 0.05) { r = tdRock(P.xz + 17.0, px); ra += tw.y * r.x; rg += tw.y * vec3(r.y, 0.0, r.z); }
-          if (tw.z > 0.05) { r = tdRock(P.xy + 31.0, px); ra += tw.z * r.x; rg += tw.z * vec3(r.y, r.z, 0.0); }
+          // plane's gradient goes back onto its two world axes. A plane under 10% of the blend is dropped (faded out
+          // from 20%, renormalised, so no seam): most faces take one or two projections, never three noise stacks.
+          // Scree only needs the rock's relief (full = false), not its colour.
+          vec3 tw = pow(abs(N), vec3(4.0)); tw /= tw.x + tw.y + tw.z; tw *= smoothstep(0.1, 0.2, tw); tw /= tw.x + tw.y + tw.z;
+          float ra = 0.0, cf = smoothstep(0.1, 0.3, near); vec3 rg = vec3(0.0), r;
+          if (tw.x > 0.0) { r = tdRock(P.zy, px, doRock, cf); ra += tw.x * r.x; rg += tw.x * vec3(0.0, r.z, r.y); }
+          if (tw.y > 0.0) { r = tdRock(P.xz + 17.0, px, doRock, cf); ra += tw.y * r.x; rg += tw.y * vec3(r.y, 0.0, r.z); }
+          if (tw.z > 0.0) { r = tdRock(P.xy + 31.0, px, doRock, cf); ra += tw.z * r.x; rg += tw.z * vec3(r.y, r.z, 0.0); }
           // strata: ledges about 7 m apart along the contour, wavy, in patches, on the steep faces only
-          float sw = tdFbm(vec2(P.x + P.z, P.y) * 22.0, px * 22.0), sph = (P.y * 85.0 + sw * 2.2) * 6.2832;
-          float led = 0.5 + 0.5 * sin(sph), sAmt = (1.0 - tw.y) * smoothstep(0.4, 0.65, tdNoise(vec2(P.x + P.z, P.y * 3.0) * 14.0)) * 0.6 * tdLp(px * 130.0);
-          rg.y += sAmt * 1.6 * 0.5 * cos(sph) * 6.2832 * 85.0;
-          float streak = tdNoiseF(vec2((P.x + P.z) * 240.0, P.y * 18.0), px * 240.0) * (1.0 - tw.y); // wet / dark streaks down the faces
-          float lichen = smoothstep(0.62, 0.8, tdNoiseF(P.xz * 380.0 + P.y * 90.0, px * 380.0));
-          vec3 granite = mix(vec3(0.33, 0.31, 0.29), vec3(0.7, 0.67, 0.61), clamp(ra + (led - 0.5) * sAmt * 0.3, 0.0, 1.0));
-          granite = mix(granite, granite * vec3(1.07, 0.98, 0.9), smoothstep(0.4, 0.7, tdNoise(P.xz * 30.0 + 2.0))); // warm feldspar patches
-          granite *= 1.0 - smoothstep(0.55, 0.85, streak) * 0.3;
-          granite = mix(granite, vec3(0.6, 0.6, 0.34), lichen * 0.45);
-          // scree: stones of 0.5 - 2 m in grey and rusty brown, dark gaps
-          vec2 sp = P.xz * 650.0 + tdNoise(P.xz * 90.0) * 1.5, sg = vec2(0.0);
-          float sn = 0.5, slp = tdLp(px * 650.0);
-          if (slp > 0.0) { vec3 n = tdNoiseD(sp); float t = clamp((n.x - 0.25) * 2.0, 0.0, 1.0); sn = mix(0.5, t * t * (3.0 - 2.0 * t), slp); sg = slp * 6.0 * t * (1.0 - t) * 2.0 * n.yz * 650.0; }
-          float sv = 0.5 + (sn - 0.5) * 0.75 + (tdNoiseF(sp * 2.7 + 9.0, px * 1755.0) - 0.5) * 0.35;
-          vec3 scree = mix(vec3(0.3, 0.29, 0.27), mix(vec3(0.62, 0.6, 0.56), vec3(0.56, 0.47, 0.38), tdN2(P.xz * 140.0, px * 140.0)), sv);
-          col += granite * rockW + scree * screeW;
-          gW += rg * rockW + (vec3(sg.x, 0.0, sg.y) * 0.5 + rg * 0.3) * screeW; // stones about 0.5 m proud
+          float led = 0.5, sAmt = 0.0, sL = tdLp(px * 130.0) * (1.0 - tw.y);
+          if (sL > 0.0) {
+            sAmt = sL * smoothstep(0.4, 0.65, tdNoise(vec2(P.x + P.z, P.y * 3.0) * 14.0)) * 0.6;
+            if (sAmt > 0.0) { float sw = tdFbm(vec2(P.x + P.z, P.y) * 22.0, px * 22.0), sph = (P.y * 85.0 + sw * 2.2) * 6.2832;
+              led = 0.5 + 0.5 * sin(sph); rg.y += sAmt * 1.6 * 0.5 * cos(sph) * 6.2832 * 85.0; }
+          }
+          if (doRock) {
+            float streak = tdNoiseF(vec2((P.x + P.z) * 240.0, P.y * 18.0), px * 240.0) * (1.0 - tw.y); // wet / dark streaks down the faces
+            float lichen = smoothstep(0.62, 0.8, tdNoiseF(P.xz * 380.0 + P.y * 90.0, px * 380.0));
+            vec3 granite = mix(vec3(0.33, 0.31, 0.29), vec3(0.7, 0.67, 0.61), clamp(ra + (led - 0.5) * sAmt * 0.3, 0.0, 1.0));
+            granite = mix(granite, granite * vec3(1.07, 0.98, 0.9), smoothstep(0.4, 0.7, tdNoise(P.xz * 30.0 + 2.0))); // warm feldspar patches
+            granite *= 1.0 - smoothstep(0.55, 0.85, streak) * 0.3;
+            granite = mix(granite, vec3(0.6, 0.6, 0.34), lichen * 0.45);
+            col += granite * rockW; gW += rg * rockW;
+          }
+          if (doScree) {
+            // scree: stones of 0.5 - 2 m in grey and rusty brown, dark gaps
+            vec2 sp = P.xz * 650.0, sg = vec2(0.0);
+            float sn = 0.5, slp = tdLp(px * 650.0), sv2 = 0.5;
+            if (slp > 0.0) { sp += tdNoise(P.xz * 90.0) * 1.5; vec3 n = tdNoiseD(sp); float t = clamp((n.x - 0.25) * 2.0, 0.0, 1.0);
+              sn = mix(0.5, t * t * (3.0 - 2.0 * t), slp); sg = slp * 6.0 * t * (1.0 - t) * 2.0 * n.yz * 650.0; sv2 = tdNoiseF(sp * 2.7 + 9.0, px * 1755.0); }
+            float sv = 0.5 + (sn - 0.5) * 0.75 + (sv2 - 0.5) * 0.35;
+            vec3 scree = mix(vec3(0.3, 0.29, 0.27), mix(vec3(0.62, 0.6, 0.56), vec3(0.56, 0.47, 0.38), tdN2(P.xz * 140.0, px * 140.0)), sv);
+            col += scree * screeW;
+            gW += (vec3(sg.x, 0.0, sg.y) * 0.5 + rg * 0.3) * screeW; // stones about 0.5 m proud
+          }
         }
         if (grassW > 0.01) {
           // October meadow: dry yellow-green with green hollows, brown dead patches, rusty bilberry / heather spots, and
