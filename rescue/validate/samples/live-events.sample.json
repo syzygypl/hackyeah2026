@@ -1,0 +1,27 @@
+[
+  {
+    "t": "2026-10-03T11:58:14Z",
+    "at": "20:10",
+    "source": "field",
+    "text": "Pies zaznaczyl przy Czarnym Stawie",
+    "parsedBy": "llm-local:qwen3:4b-instruct-2507-q4_K_M",
+    "latencyMs": 1350,
+    "hints": [
+      { "type": "clue", "segmentId": "S5", "lat": null, "lon": null, "description": "pies zaznaczyl", "strength": "strong", "resource": "pies" }
+    ]
+  },
+  {
+    "t": "2026-10-03T12:01:00Z",
+    "at": "20:13",
+    "source": "field",
+    "text": "Patrol 2: przeszukalismy zleb, nic, widocznosc 20 m",
+    "parsedBy": "rules",
+    "latencyMs": 15,
+    "note": "Ollama unreachable, used keyword fallback",
+    "hints": [
+      { "type": "segmentSearched", "segmentId": "S7", "pod": 0.4, "resource": "Patrol 2" },
+      { "type": "weatherObs", "visibilityM": 20, "windMs": 12, "precip": "snow" },
+      { "type": "resourceStatus", "resource": "smiglowiec", "available": false, "reason": "wiatr na grani 20 m/s" }
+    ]
+  }
+]

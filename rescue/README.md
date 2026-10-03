@@ -158,6 +158,12 @@ python3 rescue/validate/validate_run.py rescue/out/run.json
 python3 rescue/validate/validate_run.py rescue/out/run.json rescue/scenarios/zawrat-terrain.json
 ```
 
+`validate/validate_live_events.py` checks `out/live-events.json` against the field-reports contract: ISO 8601 timestamps, `parsedBy` shape (`rules` fallback must carry a `note`), and per-hint-type fields (`segmentSearched`/`clue` segment ids cross-checked against an optional `run.json`'s `segOf`, `weatherObs` ranges/enum, `resourceStatus` shape). Sample fixture: `validate/samples/live-events.sample.json`.
+
+```sh
+python3 rescue/validate/validate_live_events.py rescue/validate/samples/live-events.sample.json rescue/out/run.json
+```
+
 <!-- BEGIN field-reports (offline, local LLM) -->
 ## Field reports and offline mode
 
