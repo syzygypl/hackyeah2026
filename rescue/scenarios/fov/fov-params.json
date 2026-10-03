@@ -1,0 +1,21 @@
+{
+  "schema": "rescue-fov/1",
+  "about": "Field of view per actor kind for Timeline mode (CONTRACT.md 'Timeline mode'). radiusM = W / (pmax x sqrt(pi)), so a Gaussian detection profile pmax x exp(-(d/r)^2) integrates to the published effective sweep width W in open terrain. forestRadius x forestPmax = W_forest / W_open. Research, sources and per-terrain W: fov-research.json and docs/rescue-locator/pole-widzenia.md. Owner: AI Michala.",
+  "kinds": {
+    "pieszy":     { "type": "eye",       "radiusM": 50,  "pmax": 0.9,  "eyeM": 1.7, "forestRadius": 0.62, "forestPmax": 0.7,  "darkRadius": 0.34, "los": true,  "water": true,  "land": true,  "speedKmh": 3.0, "halfAngleDeg": null, "upwindRadius": null },
+    "pies":       { "type": "scent",     "radiusM": 63,  "pmax": 0.85, "eyeM": 0.5, "forestRadius": 0.9,  "forestPmax": 0.93, "darkRadius": 1.0,  "los": false, "water": false, "land": true,  "speedKmh": 3.5, "halfAngleDeg": 25,   "upwindRadius": 2.4 },
+    "dron":       { "type": "thermal",   "radiusM": 42,  "pmax": 0.8,  "eyeM": 80,  "forestRadius": 0.8,  "forestPmax": 0.25, "darkRadius": 1.0,  "los": true,  "water": true,  "land": true,  "speedKmh": 25,  "halfAngleDeg": null, "upwindRadius": null },
+    "smiglowiec": { "type": "eye-air",   "radiusM": 280, "pmax": 0.6,  "eyeM": 150, "forestRadius": 0.67, "forestPmax": 0.15, "darkRadius": 0.5,  "los": true,  "water": true,  "land": true,  "speedKmh": 120, "halfAngleDeg": null, "upwindRadius": null },
+    "lodz":       { "type": "eye-water", "radiusM": 240, "pmax": 0.7,  "eyeM": 2.0, "forestRadius": 1.0,  "forestPmax": 1.0,  "darkRadius": 0.3,  "los": true,  "water": true,  "land": false, "speedKmh": 15,  "halfAngleDeg": null, "upwindRadius": null },
+    "nurek":      { "type": "eye-water", "radiusM": 2,   "pmax": 0.9,  "eyeM": 0,   "forestRadius": 1.0,  "forestPmax": 1.0,  "darkRadius": 1.0,  "los": false, "water": true,  "land": false, "speedKmh": 1.0, "halfAngleDeg": null, "upwindRadius": null },
+    "osoba":      { "type": "none",      "speedKmh": 2.0 }
+  },
+  "notes": {
+    "pieszy": "W open 80 m, meadow 60, forest 35 (Koester). Night with headlamp x0.34.",
+    "pies": "Scent W 95 m open, 80 forest. Upwind cone half-angle 25 deg, range up to 150 m at 2-5 m/s wind (2.4 x radius); calm wind = circle 40 m.",
+    "dron": "Thermal 640x512 at 80 m AGL: footprint 74 x 59 m, W 60 m open, 12 m under canopy. Thermal works at night (no dark penalty).",
+    "smiglowiec": "W 300 m open from 150 m AGL, 30 m over forest. Night without NVG drops sharply (x0.5 assumed with searchlight).",
+    "lodz": "W 300 m on water in calm conditions; waves 15-25 kt x0.5, >25 kt x0.25 (not modelled here). Night with searchlight x0.3.",
+    "nurek": "Underwater W = min(2 x visibility, 6 m); typical lowland lake visibility 2 m, so W about 3 m."
+  }
+}

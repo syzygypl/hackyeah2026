@@ -1,6 +1,6 @@
 # Pole widzenia i model wykrycia (tryb timeline)
 
-Parametry dla każdego typu jednostki: jak szeroki pas terenu "naprawdę przeszukuje" w ciągu minuty. Wartości maszynowe: [`rescue/scenarios/fov-params.json`](../../rescue/scenarios/fov-params.json). Wszystkie liczby są ostrożne (raczej za małe niż za duże). Oznaczenie **szac.** = szacunek bez bezpośredniego źródła. To nie są procedury TOPR/GOPR/WOPR.
+Parametry dla każdego typu jednostki: jak szeroki pas terenu "naprawdę przeszukuje" w ciągu minuty. Wartości dla silnika (kontrakt Timeline, `rescue-fov/1`): [`rescue/scenarios/fov/fov-params.json`](../../rescue/scenarios/fov/fov-params.json), promień liczony jako radiusM = W / (pmax x sqrt(pi)). Pełne dane z badań (W dla każdego typu terenu, wiatr, fale, źródła): [`rescue/scenarios/fov/fov-research.json`](../../rescue/scenarios/fov/fov-research.json). Wszystkie liczby są ostrożne (raczej za małe niż za duże). Oznaczenie **szac.** = szacunek bez bezpośredniego źródła. To nie są procedury TOPR/GOPR/WOPR.
 
 ## Podstawa: efektywna szerokość przeszukania (W, ESW)
 
