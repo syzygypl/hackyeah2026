@@ -219,6 +219,44 @@ Append-only JSON array written by `rescue-field serve` (POST /report), read by `
 ```
 <!-- END field-reports -->
 
+## Story Studio (compose a new incident live)
+
+```sh
+cd rescue
+swift run rescue-studio                       # http://127.0.0.1:8771/  (offline page out/studio.html, MapLibre + local PMTiles from web/)
+swift run rescue-studio 8771 --host 0.0.0.0 --pin 4821   # LAN: PIN required, see Demo-day network
+```
+
+The Studio builds a story from the same modules as the demo instead of hand-editing `zawrat.json`. Every change re-runs the full pipeline (grid, Bayes, team planner) and returns a `rescue-run/1` document.
+
+- **Module palette (left):** generated from `GET /modules`. Each provider declares its event schema in its own file (`extension XProvider: StudioModule { static let schema = ... }`, registry in `Sources/RescueKit/ModuleRegistry.swift`). Pick a module, fill the form, click "Dodaj". A map click fills lat/lon.
+- **"Opowiedz historię":** a Polish narrative goes to the local qwen3 (Ollama, localhost only), which returns event types, times and **place names, never coordinates**. Places resolve through a Tatra gazetteer, and a name not present in the text is dropped. Keyword/regex rules then fill numbers the small model dropped (POD %, m/s, °C, km) and add events it missed (`parsedBy: llm-local+rules`). With Ollama off, it falls back to rules only. TripPlan text in the Zawrat area goes through `tools/interview/interview.py` (trail routing), otherwise as a gazetteer polyline from the IPP.
+- **FieldReport module:** the text goes through `FieldReportParser` (local LLM + rules) and becomes `SegmentSearched` / `Clue` / `WeatherConditions` events.
+- **New story:** "Nowa historia: Zawrat" (real OSM + DEM terrain, Zawrat segments and teams), or "wskaż IPP na mapie". Outside the Zawrat box this gives a 6 x 6 km box around the IPP, 5 x 5 grid segments (A1..E5), generic teams and **flat terrain**. The page then shows the command to fetch terrain (`python3 rescue/tools/terrain/osm_terrain.py --scenario rescue/scenarios/<name>.json`). Nothing is downloaded automatically. The offline basemap covers the Zawrat area only.
+- **Event list (bottom):** reorder (swaps scenario times, since the stream is time-ordered), delete, and a timeline slider over the steps. The right panel shows the top 3 segments, team assignment and the hypothermia clock for the selected step.
+- **Save:** `POST /story/save {name}` writes `rescue/scenarios/<name>.json` (terrain inlined, `"studio": true`). It then runs with `swift run rescue-demo scenarios/<name>.json` (-> `out/<name>.html`). The name is sanitised to `[a-z0-9-]`, max 60 characters, and written only under `rescue/scenarios/`. `zawrat` and `*-terrain` are refused, as is overwriting a scenario that did not come from the Studio.
+- Event times before `startClock` are clamped to `startClock`. "Last seen at 12:10" sets `subject.lastContact` (hypothermia clock) and puts the IPP at the story start.
+
+### Contracts: `/modules` and `/story`
+
+All bodies are JSON (`Content-Type: application/json`, else 415). Max body 64 KB (413). On LAN every `/modules` and `/story*` call needs the PIN.
+
+| Call | Body | Returns |
+|---|---|---|
+| `GET /modules` | - | `{ modules: [{ name, label, help, fields: [{ key, label, type, default, options }] }], categories: [...] }`. `type`: `time` / `number` / `text` / `textarea` / `latlon` (sent as `lat`, `lon`) / `segments` (array of ids or "S1, S2") / `select` / `bool` |
+| `POST /story/new` | `{ template?: "zawrat", ipp?: [lat, lon], category?, startClock? }` | run document (below) |
+| `POST /story` | `{ base?: { ...scenario fields without events } \| { ipp: { at: [lat, lon] }, startClock }, events: [module inputs] }` | run document, story replaced |
+| `POST /story/event` | `{ event: { provider, at?, lat?, lon?, radiusM?, segments?, pod?, text?, category?, ... } }` | run document + `added` (the item) + `step` (last step) |
+| `POST /story/edit` | `{ id, op: "delete" \| "up" \| "down" }` | run document |
+| `POST /story/narrate` | `{ text }` | run document + `narrative: { parsedBy, note, items }` |
+| `GET /story` | - | the current run document |
+| `POST /story/save` | `{ name }` | `{ saved, run, terrainCommand? }` or `{ error }` |
+
+Run document = `out/run.json` schema `rescue-run/1` (validates with `validate/validate_run.py`) plus:
+- `story: { base, items: [{ id, input, events, parsedBy?, note? }] }`
+- `terrain: { source, flat, command? }`
+- `hints` (per step: `source`, `kind`, geometry for the map)
+
 ## Demo-day network
 
 The hall Wi-Fi at Tauron Arena carries thousands of hackers, CTF players among them. Treat it as hostile.

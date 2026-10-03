@@ -3,6 +3,16 @@ import Foundation
 /// Same pipeline as rescue-demo, as a function: scenario -> run.json document (schema rescue-run/1).
 /// Used by rescue-studio. Copy of the demo logic on purpose (speed over structure).
 public enum StoryPipeline {
+    /// JSON bytes of the run document (Sendable, for servers / actors).
+    public static func runData(_ scenario: Scenario) async -> Data {
+        let doc = await run(scenario)
+        return (try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])) ?? Data("{}".utf8)
+    }
+    public static func modulesData() -> Data {
+        (try? JSONSerialization.data(withJSONObject: ["modules": allModuleSchemas().map(\.json),
+                                                      "categories": koesterCategories.keys.sorted()])) ?? Data("{}".utf8)
+    }
+
     public static func run(_ scenario: Scenario) async -> [String: Any] {
         let providers = allProviders(scenario)
         var arrived: [LocationHint] = []

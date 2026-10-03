@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Studio</title>
+<link rel="stylesheet" href="../web/vendor/maplibre-gl.css">
+<style>
+:root{--bg:#0e1317;--panel:#151c22;--panel2:#1b242c;--line:#2b3741;--ink:#eef2f5;--ink2:#b7c3cd;--mute:#8797a4;--accent:#5ce1e6;--ok:#3ee08f;--warn:#f2b134;--bad:#ff6b5a;--heat:#ef6548;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+#app{display:grid;grid-template-columns:320px 1fr 340px;grid-template-rows:auto 1fr 190px;height:100vh}
+header{grid-column:1/4;display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:17px;margin:0 8px 0 0}
+#left,#right{overflow:auto;padding:10px 12px;background:var(--panel)}
+#left{border-right:1px solid var(--line)}#right{border-left:1px solid var(--line)}
+#map{position:relative;min-height:240px}
+#bottom{grid-column:1/4;border-top:1px solid var(--line);background:var(--panel);overflow:auto;padding:8px 14px}
+h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:10px 0 6px}
+button{font:inherit;cursor:pointer;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--ink);padding:5px 10px}
+button.primary{background:var(--accent);color:#062126;border-color:var(--accent);font-weight:700}
+button:disabled{opacity:.4;cursor:default}
+input,select,textarea{font:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+textarea{width:100%;min-height:70px;resize:vertical}
+label.f{display:block;margin:6px 0 2px;color:var(--ink2);font-size:12px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.help{color:var(--mute);font-size:12px;margin:4px 0}
+.box{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin-bottom:8px;background:var(--panel2)}
+.big{font-size:22px;font-weight:800;color:var(--ok)}
+.seg .p{font-size:20px;font-weight:700}
+.rank{display:inline-block;width:20px;height:20px;border-radius:50%;background:var(--heat);color:#fff;text-align:center;font-weight:700;font-size:12px;line-height:20px;margin-right:6px}
+.team.off{opacity:.6;border-style:dashed}.flag{color:#ff8a65;font-size:12px;font-weight:600}
+.pill{font-size:11px;padding:1px 6px;border-radius:9px;background:var(--ok);color:#000}.pill.off{background:var(--bad);color:#fff}
+#events{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.ev{min-width:200px;max-width:240px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--panel2);font-size:12px;cursor:pointer}
+.ev.cur{border-color:var(--warn)}.ev .t{font-weight:600;font-size:13px}.ev .src{font-family:ui-monospace,Menlo,monospace;color:var(--mute);font-size:11px}
+.ev .ops{display:flex;gap:4px;margin-top:4px}.ev .ops button{padding:1px 7px;font-size:12px}
+.note{color:var(--warn);font-size:12px}
+#toast{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:5;background:var(--warn);color:#000;padding:6px 12px;border-radius:8px;font-weight:700;display:none;max-width:80%}
+#terrain{position:absolute;left:10px;bottom:10px;z-index:5;background:rgba(14,19,23,.92);border:1px solid var(--warn);border-radius:8px;padding:8px 10px;font-size:12px;max-width:70%;display:none}
+#terrain code{display:block;margin-top:4px;color:var(--ink2);white-space:pre-wrap;word-break:break-all}
+#pick{position:absolute;right:10px;top:10px;z-index:5;background:var(--accent);color:#062126;font-weight:700;padding:5px 10px;border-radius:8px;display:none}
+.mute{color:var(--mute)}
+#slider{width:100%}
+@media (max-width:900px){#app{grid-template-columns:1fr;grid-template-rows:auto 50vh auto auto auto;height:auto}header,#bottom{grid-column:1}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <h1>Story Studio</h1>
+  <span class="mute">Kategoria</span><select id="ncat"></select>
+  <button id="newZ">Nowa historia: Zawrat</button>
+  <button id="newPick">Nowa historia: wskaż IPP na mapie</button>
+  <span style="flex:1"></span>
+  <input id="sname" placeholder="nazwa-historii" size="16"><button id="save">Zapisz scenariusz</button>
+  <label id="pinbox" style="display:none">PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
+  <span id="status" class="mute"></span>
+</header>
+<div id="left">
+  <h2>Opowiedz historię</h2>
+  <textarea id="narr" placeholder="np. Ostatnio widziany o 12:10 w schronisku w Dolinie Pięciu Stawów. Planował wejść na Zawrat. O 18:05 operator: logowanie w rejonie Koziego Wierchu, promień 1,2 km. O 19:20 patrol przeszukał S6, nic."></textarea>
+  <div class="row"><button class="primary" id="narrBtn">Zamień na zdarzenia</button><span id="narrInfo" class="help"></span></div>
+  <h2>Moduły</h2>
+  <select id="mod" style="width:100%"></select>
+  <div id="help" class="help"></div>
+  <form id="form"></form>
+  <div class="row" style="margin-top:8px"><button class="primary" id="add">Dodaj</button><span id="addInfo" class="note"></span></div>
+</div>
+<div id="map"><div id="toast"></div><div id="pick">Kliknij mapę: IPP nowej historii</div><div id="terrain"></div></div>
+<div id="right">
+  <h2>Gdzie szukać najpierw</h2>
+  <div class="box"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
+  <div id="segs"></div>
+  <h2>Przydział zespołów</h2><div id="surv" class="help"></div><div id="teams"></div>
+</div>
+<div id="bottom">
+  <div class="row"><b>Historia</b><span class="mute" id="clock"></span><input type="range" id="slider" min="1" value="1" style="flex:1"></div>
+  <div id="events"></div>
+</div>
+</div>
+<script type="module">
+import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
+import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "../web/basemap/basemap.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
+let PIN = ""; try { PIN = localStorage.getItem("rescue-pin") || ""; } catch (e) {}
+if (!LOOPBACK) { $("pinbox").style.display = ""; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} load(); }; }
+async function api(path, body) {
+  const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
+  const r = await fetch(path, body === undefined ? { headers: h } : { method: "POST", headers: h, body: JSON.stringify(body) });
+  if (r.status === 401) throw new Error("podaj PIN serwera (z terminala)");
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+function toast(t, ms = 2600) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = "none", ms); }
+
+let MODS = [], D = null, step = 1, picking = false, curMod = null;
+
+// ---------- map
+await loadBasemap(maplibregl);
+const map = new maplibregl.Map({ container: "map", style: offlineStyle({ flavor: "grayscale" }), bounds: ZAWRAT_BOUNDS, attributionControl: { compact: true } });
+window.map = map;   // debugging / screenshots
+map.addControl(new maplibregl.NavigationControl(), "top-left");
+map.addControl(new maplibregl.ScaleControl({ unit: "metric" }));
+const FC = (f) => ({ type: "FeatureCollection", features: f });
+let mapReady = false;
+map.on("load", () => {
+const blank = document.createElement("canvas"); blank.width = blank.height = 2;
+map.addSource("heat", { type: "image", url: blank.toDataURL(), coordinates: [[20.005, 49.249], [20.0875, 49.249], [20.0875, 49.195], [20.005, 49.195]] });
+map.addLayer({ id: "heat", type: "raster", source: "heat", paint: { "raster-opacity": 0.78, "raster-resampling": "linear", "raster-fade-duration": 0 } });
+map.addSource("segs", { type: "geojson", data: FC([]) });
+map.addLayer({ id: "seg-line", type: "line", source: "segs", paint: { "line-color": ["case", ["get", "top"], "#ffffff", "rgba(255,255,255,.35)"], "line-width": ["case", ["get", "top"], 2.5, 1] } });
+map.addLayer({ id: "seg-lbl", type: "symbol", source: "segs", filter: ["get", "show"], layout: { "text-field": ["get", "label"], "text-font": ["Noto Sans Medium"], "text-size": 12, "text-allow-overlap": true },
+  paint: { "text-color": "#fff", "text-halo-color": "#000", "text-halo-width": 1.6 } });
+map.addSource("ev", { type: "geojson", data: FC([]) });
+map.addLayer({ id: "ev-fill", type: "fill", source: "ev", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["get", "color"], "fill-opacity": 0.08 } });
+map.addLayer({ id: "ev-line", type: "line", source: "ev", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": ["get", "color"], "line-width": ["coalesce", ["get", "w"], 2], "line-dasharray": [2, 1.5] } });
+map.addLayer({ id: "ev-pt", type: "circle", source: "ev", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 6, "circle-color": ["get", "color"], "circle-stroke-color": "#000", "circle-stroke-width": 1.5 } });
+map.addLayer({ id: "ev-lbl", type: "symbol", source: "ev", filter: ["==", ["geometry-type"], "Point"], layout: { "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.2], "text-anchor": "top" },
+  paint: { "text-color": "#fff", "text-halo-color": "#000", "text-halo-width": 1.4 } });
+
+  mapReady = true; render();
+});
+function circle(c, rM, n = 48) {
+  const k = 111320, ring = [];
+  for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; ring.push([c[1] + rM * Math.sin(a) / (k * Math.cos(c[0] * Math.PI / 180)), c[0] + rM * Math.cos(a) / k]); }
+  return { type: "Polygon", coordinates: [ring] };
+}
+const COL = { rings: "#ffffff", sector: "#b07cff", point: "#3ee08f", route: "#f2b134", containment: "#8797a4", searched: "#8797a4" };
+
+map.on("click", async (e) => {
+  const ll = [+e.lngLat.lat.toFixed(5), +e.lngLat.lng.toFixed(5)];
+  if (picking) {
+    picking = false; $("pick").style.display = "none";
+    await run(() => api("/story/new", { ipp: ll, category: $("ncat").value, startClock: "17:40" }), "Nowa historia od IPP " + ll.join(", "));
+    return;
+  }
+  const la = document.querySelector("#form [name=lat]"), lo = document.querySelector("#form [name=lon]");
+  if (la && lo) { la.value = ll[0]; lo.value = ll[1]; toast("Pozycja wpisana do formularza"); }
+});
+
+// ---------- palette
+function fieldHTML(f) {
+  const d = esc(f.default);
+  if (f.type === "latlon") return `<label class="f">${esc(f.label)}</label><div class="row"><input name="lat" placeholder="lat" size="9" value=""><input name="lon" placeholder="lon" size="9" value=""></div>`;
+  if (f.type === "textarea") return `<label class="f">${esc(f.label)}</label><textarea name="${f.key}">${d}</textarea>`;
+  if (f.type === "select") return `<label class="f">${esc(f.label)}</label><select name="${f.key}">${f.options.map((o) => `<option ${o === f.default ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  if (f.type === "bool") return `<label class="f"><input type="checkbox" name="${f.key}" ${f.default === "true" ? "checked" : ""}> ${esc(f.label)}</label>`;
+  if (f.type === "segments") {
+    const ids = D ? D.segments.map((s) => s.id) : [];
+    return `<label class="f">${esc(f.label)}</label><div class="row">${ids.map((id) => `<label style="font-size:12px"><input type="checkbox" name="seg" value="${id}">${id}</label>`).join("")}</div>`;
+  }
+  if (f.type === "time") return `<label class="f">${esc(f.label)} <span class="mute">(puste = +5 min)</span></label><input type="time" name="at">`;
+  return `<label class="f">${esc(f.label)}</label><input name="${f.key}" value="${d}" ${f.type === "number" ? 'inputmode="decimal" size="8"' : 'style="width:100%"'}>`;
+}
+function renderForm() {
+  curMod = MODS.find((m) => m.name === $("mod").value);
+  $("help").textContent = curMod.help;
+  $("form").innerHTML = curMod.fields.map(fieldHTML).join("");
+}
+function formValues() {
+  const o = { provider: curMod.name };
+  for (const el of $("form").querySelectorAll("input,select,textarea")) {
+    if (el.name === "seg") { if (el.checked) (o.segments = o.segments || []).push(el.value); continue; }
+    if (el.type === "checkbox") { o[el.name] = el.checked; continue; }
+    if (el.value !== "") o[el.name] = el.value;
+  }
+  return o;
+}
+
+// ---------- render
+function render() {
+  if (!D || !D.steps) { $("status").textContent = D && D.error ? "błąd: " + D.error : ""; return; }
+  const S = D.steps[step - 1], b = D.bbox;
+  if (mapReady) renderMap(S, b);
+  renderPanels(S);
+}
+function renderMap(S, b) {
+  // heat
+  const cv = document.createElement("canvas"); cv.width = D.cols; cv.height = D.rows;
+  const cx = cv.getContext("2d"), im = cx.createImageData(D.cols, D.rows);
+  let mx = 0; for (const p of S.poaGrid) mx = Math.max(mx, p);
+  S.poaGrid.forEach((p, i) => { const t = Math.sqrt(p / mx); im.data.set([255, Math.round(230 * (1 - Math.min(1, t * 1.2)) + 25), Math.round(60 * (1 - t)), Math.round(Math.min(1, t * 1.6) * 225)], i * 4); });
+  cx.putImageData(im, 0, 0);
+  map.getSource("heat").updateImage({ url: cv.toDataURL(), coordinates: [[b.west, b.north], [b.east, b.north], [b.east, b.south], [b.west, b.south]] });
+  // segments
+  const top = S.segments.slice(0, 3).map((s) => s.id);
+  const searched = {}; D.hints.slice(0, step).forEach((h) => { if (h.kind === "searched") h.segments.forEach((s) => searched[s] = h.pod); });
+  map.getSource("segs").setData(FC(S.segments.map((s) => ({ type: "Feature", geometry: { type: "Polygon", coordinates: [s.polygon] },
+    properties: { top: top.includes(s.id), show: top.includes(s.id) || searched[s.id] !== undefined,
+      label: top.includes(s.id) ? `#${top.indexOf(s.id) + 1} ${s.id} ${Math.round(s.poa * 100)}%` : `${s.id} pusty, POD ${Math.round((searched[s.id] || 0) * 100)}%` } }))));
+  // evidence
+  const F = [];
+  D.hints.slice(0, step).forEach((h) => {
+    const c = COL[h.kind] || "#5ce1e6";
+    if (h.kind === "rings") (h.quantilesKm || []).forEach((q) => F.push({ type: "Feature", geometry: { type: "LineString", coordinates: circle(h.center, q * 1000).coordinates[0] }, properties: { color: c, w: 1 } }));
+    if (h.kind === "rings") F.push({ type: "Feature", geometry: { type: "Point", coordinates: [h.center[1], h.center[0]] }, properties: { color: "#fff", label: "IPP" } });
+    if ((h.kind === "sector" || h.kind === "point") && h.center) {
+      F.push({ type: "Feature", geometry: circle(h.center, Math.max(h.radiusM, 30)), properties: { color: c } });
+      F.push({ type: "Feature", geometry: { type: "Point", coordinates: [h.center[1], h.center[0]] }, properties: { color: c, label: h.source === "RatunekPing" ? "Ratunek" : h.source === "Clue" ? "Ślad" : "112" } });
+    }
+    if ((h.kind === "route" || h.kind === "containment") && h.points && h.points.length > 1) F.push({ type: "Feature", geometry: { type: "LineString", coordinates: h.points.map((p) => [p[1], p[0]]) }, properties: { color: c, w: h.kind === "route" ? 3 : 6 } });
+    if (h.marker && h.source === "TrailheadCar") F.push({ type: "Feature", geometry: { type: "Point", coordinates: [h.marker[1], h.marker[0]] }, properties: { color: "#ccc", label: "Auto" } });
+  });
+  map.getSource("ev").setData(FC(F));
+}
+function renderPanels(S) {
+  // right panel
+  const t3 = S.segments.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
+  $("vbig").textContent = `${Math.round(tp * 100)}% prawdopodobieństwa w ${Math.round(ta)}% obszaru`;
+  $("vsub").textContent = `Top 3 z ${S.segments.length} segmentów · krok ${step}/${D.steps.length} (${S.t})`;
+  $("segs").innerHTML = t3.map((s, k) => `<div class="box seg"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p">${Math.round(s.poa * 100)}% <span class="mute" style="font-size:13px">w ${s.areaPct.toFixed(1)}% obszaru</span></div></div>`).join("");
+  const W = S.weather || {}; $("surv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
+  const by = {}; (S.assignments || []).forEach((a) => by[a.resourceId] = a);
+  $("teams").innerHTML = (S.resources || []).map((r) => { const a = by[r.id];
+    return `<div class="box team ${r.available ? "" : "off"}"><div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b><span class="pill ${r.available ? "" : "off"}">${r.available ? (a ? "przydział" : "wolny") : "niedostępny"}</span></div>
+      ${r.available ? "" : `<div class="help">${esc(r.reason)}</div>`}
+      ${a ? `<div>-> <b>${esc(a.segmentId)} ${esc(a.segmentName)}</b>, ETA ${Math.round(a.travelMin)} min, szansa ${Math.round(a.expectedFind * 100)}%</div>${a.safety.map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}` : ""}</div>`; }).join("") || `<div class="help">Brak zespołów w scenariuszu.</div>`;
+  // terrain notice
+  const T = D.terrain || {};
+  $("terrain").style.display = T.flat ? "block" : "none";
+  if (T.flat) $("terrain").innerHTML = `<b>Teren płaski</b> - brak danych OSM/DEM dla tego obszaru (nic nie jest pobierane automatycznie). Po zapisaniu historii uruchom ręcznie:<code>${esc(T.command)}</code>`;
+  // events
+  const items = (D.story && D.story.items) || [];
+  const curIds = new Set([D.hints[step - 1] && D.hints[step - 1].id]);
+  $("events").innerHTML = items.map((it, k) => { const ev = it.events[0] || {};
+    return `<div class="ev" data-id="${esc(it.id)}"><div class="src">${esc(ev.at)} · ${esc(it.input.provider)}${it.parsedBy ? " · " + esc(it.parsedBy) : ""}</div>
+      <div class="t">${esc(ev.title || it.input.provider)}${it.events.length > 1 ? ` <span class="mute">(+${it.events.length - 1})</span>` : ""}</div>
+      ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
+      <div class="ops"><button data-op="up" ${k === 0 ? "disabled" : ""}>&lt;</button><button data-op="down" ${k === items.length - 1 ? "disabled" : ""}>&gt;</button><button data-op="delete">usuń</button></div></div>`; }).join("");
+  $("clock").textContent = S.t + " · " + S.label;
+  $("slider").max = D.steps.length; $("slider").value = step;
+  $("status").textContent = `${D.incident} · teren: ${T.source || "?"}`;
+}
+$("slider").oninput = () => { step = +$("slider").value; render(); };
+$("events").onclick = async (e) => {
+  const b = e.target.closest("button"), card = e.target.closest(".ev"); if (!card) return;
+  if (b) { await run(() => api("/story/edit", { id: card.dataset.id, op: b.dataset.op }), b.dataset.op === "delete" ? "Usunięto zdarzenie" : "Zamieniono kolejność (czas)"); return; }
+};
+
+async function run(fn, msg, keepStep) {
+  try {
+    $("status").textContent = "liczę...";
+    const d = await fn();
+    if (d.error && !d.steps) { toast("Błąd: " + d.error); $("status").textContent = ""; return d; }
+    const fit = !D || JSON.stringify(D.bbox) !== JSON.stringify(d.bbox);
+    D = d; step = D.steps ? D.steps.length : 1;
+    if (fit && D.bbox) map.fitBounds([[D.bbox.west, D.bbox.south], [D.bbox.east, D.bbox.north]], { padding: 20, duration: 0 });
+    render(); renderForm();
+    if (msg) toast(msg);
+    return d;
+  } catch (e) { toast(String(e.message || e), 4000); $("status").textContent = ""; }
+}
+async function load() { await run(() => api("/story")); }
+
+$("add").onclick = async () => {
+  const d = await run(() => api("/story/event", { event: formValues() }));
+  if (d && d.added) { $("addInfo").textContent = d.added.note || (d.added.parsedBy ? "parsowanie: " + d.added.parsedBy : ""); if (!d.added.events.length) toast("Nie dodano: " + (d.added.note || "brak danych")); else toast("Dodano: " + d.added.events.map((e) => e.title).join("; ")); }
+};
+$("narrBtn").onclick = async () => {
+  const text = $("narr").value.trim(); if (!text) return;
+  $("narrBtn").disabled = true; $("narrInfo").textContent = "lokalny model czyta historię...";
+  const d = await run(() => api("/story/narrate", { text }));
+  $("narrBtn").disabled = false;
+  if (d && d.narrative) { const n = d.narrative; $("narrInfo").textContent = `${n.items.length} zdarzeń · ${n.parsedBy}${n.note ? " · " + n.note : ""}`; }
+};
+$("newZ").onclick = () => run(() => api("/story/new", { template: "zawrat", category: $("ncat").value, startClock: "17:40" }), "Nowa historia: Zawrat");
+$("newPick").onclick = () => { picking = true; $("pick").style.display = "block"; toast("Kliknij mapę, żeby wskazać IPP (poza rejonem Zawratu: teren płaski)"); };
+$("save").onclick = async () => {
+  try { const r = await api("/story/save", { name: $("sname").value || "studio-story" });
+    if (r.error) return toast("Błąd: " + r.error, 4000);
+    toast(`Zapisano ${r.saved}. Uruchom: ${r.run}`, 7000); if (r.terrainCommand) setTimeout(() => toast("Teren: " + r.terrainCommand, 8000), 7200);
+  } catch (e) { toast(String(e.message || e), 4000); }
+};
+
+// boot
+try {
+  const m = await api("/modules"); MODS = m.modules;
+  $("mod").innerHTML = MODS.map((x) => `<option value="${x.name}">${esc(x.label)}</option>`).join("");
+  $("ncat").innerHTML = m.categories.map((c) => `<option ${c === "hiker" ? "selected" : ""}>${c}</option>`).join("");
+  $("mod").onchange = renderForm;
+  $("mod").value = "Cell112Fix";
+  renderForm();
+  await load();
+} catch (e) { toast("Serwer studio niedostępny: swift run rescue-studio (" + (e.message || e) + ")", 8000); }
+</script>
+</body>
+</html>

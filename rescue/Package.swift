@@ -8,10 +8,12 @@ let package = Package(
         .library(name: "RescueKit", targets: ["RescueKit"]),
         .executable(name: "rescue-demo", targets: ["rescue-demo"]),
         .executable(name: "rescue-field", targets: ["rescue-field"]),
+        .executable(name: "rescue-studio", targets: ["rescue-studio"]),
     ],
     targets: [
         .target(name: "RescueKit"),
         .executableTarget(name: "rescue-demo", dependencies: ["RescueKit"]),
         .executableTarget(name: "rescue-field", dependencies: ["RescueKit"]),
+        .executableTarget(name: "rescue-studio", dependencies: ["RescueKit"]),
     ]
 )
