@@ -1,15 +1,40 @@
 {
-  "_doc": "Central policy for the AI Control Layer. Single source of truth, hot-reloaded on every request (edit and save, no restart). Invalid edits are rejected and the last good policy stays active. Removing a control or setting enabled=false turns it off. action: block | redact | flag (log only) | approve (human). mode: enforce | monitor (shadow mode: nothing is blocked, everything that would be is logged).",
+  "_doc": "EXAMPLE ONLY, not loaded by default: shows paid-model allowlisting + USD pricing. Run with ControlLayer(policy_path='policy.paid-example.json'). The committed policy.json is local-only.",
   "mode": "enforce",
-
   "models": {
     "_doc": "Allowed LLMs (llm_complete tool, Ollama proxy). roles: agent = the model the agent talks to (qwen3:4b-instruct via the proxy), guard = used only by the semantic layer. Digests for local models are pinned in controls.semantic.pinned_digests (the proxy refuses a model whose digest changed). Local-only: no paid or remote model is allowed in this committed demo policy (privacy claim). Paid-model support (USD budgets) stays in code; see policy.paid-example.json. Local models are budgeted in compute time.",
-    "allowed": ["qwen3:4b-instruct-2507-q4_K_M", "sileader/qwen3guard:0.6b", "ibm/granite3.3-guardian:8b", "llama-guard3:1b", "llama3.2:3b", "qwen2.5:7b"],
-    "roles": {"qwen3:4b-instruct-2507-q4_K_M": "agent", "sileader/qwen3guard:0.6b": "guard", "ibm/granite3.3-guardian:8b": "guard", "llama-guard3:1b": "guard"},
-    "pricing_usd_per_1k_tokens": {"qwen3:4b-instruct-2507-q4_K_M": 0, "llama-guard3:1b": 0, "llama3.2:3b": 0, "qwen2.5:7b": 0},
-    "local": ["qwen3:4b-instruct-2507-q4_K_M", "sileader/qwen3guard:0.6b", "ibm/granite3.3-guardian:8b", "llama-guard3:1b", "llama3.2:3b", "qwen2.5:7b"]
+    "allowed": [
+      "qwen3:4b-instruct-2507-q4_K_M",
+      "sileader/qwen3guard:0.6b",
+      "ibm/granite3.3-guardian:8b",
+      "llama-guard3:1b",
+      "llama3.2:3b",
+      "qwen2.5:7b",
+      "claude-sonnet-5-5"
+    ],
+    "roles": {
+      "qwen3:4b-instruct-2507-q4_K_M": "agent",
+      "sileader/qwen3guard:0.6b": "guard",
+      "ibm/granite3.3-guardian:8b": "guard",
+      "llama-guard3:1b": "guard",
+      "claude-sonnet-5-5": "agent"
+    },
+    "pricing_usd_per_1k_tokens": {
+      "qwen3:4b-instruct-2507-q4_K_M": 0,
+      "llama-guard3:1b": 0,
+      "llama3.2:3b": 0,
+      "qwen2.5:7b": 0,
+      "claude-sonnet-5-5": 0.009
+    },
+    "local": [
+      "qwen3:4b-instruct-2507-q4_K_M",
+      "sileader/qwen3guard:0.6b",
+      "ibm/granite3.3-guardian:8b",
+      "llama-guard3:1b",
+      "llama3.2:3b",
+      "qwen2.5:7b"
+    ]
   },
-
   "budgets": {
     "_doc": "Per session (one agent run). Any limit hit = DENY with guardrail 'budget'.",
     "enabled": true,
@@ -19,71 +44,123 @@
     "max_compute_ms": 30000,
     "usd_per_1k_tokens_default": 0.01
   },
-
   "controls": {
     "obfuscation": {
       "_doc": "Deterministic. Hidden/non-ASCII characters in tool names (zero-width, homoglyphs).",
-      "enabled": true, "action": "block"
+      "enabled": true,
+      "action": "block"
     },
     "tool_authz": {
       "_doc": "Deterministic. Tool allowlist with risk levels; unknown tools are denied (fail-closed). action=block on a tool forbids it for agents.",
       "enabled": true,
       "tools": {
-        "read_invoice": {"risk": "low"},
-        "query_customers": {"risk": "low", "redact_output": true},
-        "read_file": {"risk": "low", "redact_output": true},
-        "web_fetch": {"risk": "low", "egress": true},
-        "search_kb": {"risk": "low"},
-        "summarize": {"risk": "low"},
-        "llm_complete": {"risk": "low"},
-        "load_model": {"risk": "high"},
-        "run_python": {"risk": "high"},
-        "run_sql": {"risk": "high"},
-        "send_email": {"risk": "high", "egress": true},
-        "transfer_funds": {"risk": "critical"},
-        "delete_records": {"risk": "critical", "action": "block"},
-        "change_permissions": {"risk": "critical", "action": "block"}
+        "read_invoice": {
+          "risk": "low"
+        },
+        "query_customers": {
+          "risk": "low",
+          "redact_output": true
+        },
+        "read_file": {
+          "risk": "low",
+          "redact_output": true
+        },
+        "web_fetch": {
+          "risk": "low",
+          "egress": true
+        },
+        "search_kb": {
+          "risk": "low"
+        },
+        "summarize": {
+          "risk": "low"
+        },
+        "llm_complete": {
+          "risk": "low"
+        },
+        "load_model": {
+          "risk": "high"
+        },
+        "run_python": {
+          "risk": "high"
+        },
+        "run_sql": {
+          "risk": "high"
+        },
+        "send_email": {
+          "risk": "high",
+          "egress": true
+        },
+        "transfer_funds": {
+          "risk": "critical"
+        },
+        "delete_records": {
+          "risk": "critical",
+          "action": "block"
+        },
+        "change_permissions": {
+          "risk": "critical",
+          "action": "block"
+        }
       }
     },
     "loop_detection": {
       "_doc": "Deterministic. Same tool+args repeated more than N times = runaway agent.",
-      "enabled": true, "max_identical_calls": 3
+      "enabled": true,
+      "max_identical_calls": 3
     },
     "payments": {
       "_doc": "Deterministic business rules for transfer_funds. approval_over = four-eyes threshold.",
       "enabled": true,
-      "beneficiaries": ["DE89370400440532013000"],
+      "beneficiaries": [
+        "DE89370400440532013000"
+      ],
       "approval_over": 10000,
       "session_cap": 20000
     },
     "sql_guard": {
       "_doc": "Deterministic. Blocks destructive and stacked SQL (comments stripped first).",
-      "enabled": true, "action": "block"
+      "enabled": true,
+      "action": "block"
     },
     "egress": {
       "_doc": "Deterministic. Destinations (email domain / URL host) data may leave to.",
-      "enabled": true, "action": "block",
-      "allowed_domains": ["bank.example", "acme-supplies.example"]
+      "enabled": true,
+      "action": "block",
+      "allowed_domains": [
+        "bank.example",
+        "acme-supplies.example"
+      ]
     },
     "secrets": {
       "_doc": "Deterministic. API keys, AWS keys, private keys, password= in inputs (block or redact before the tool sees them) and outputs (always redacted).",
-      "enabled": true, "action": "block"
+      "enabled": true,
+      "action": "block"
     },
     "pii": {
       "_doc": "Deterministic. email, card_number (Luhn), pesel (checksum), iban. Inputs checked on egress tools only; outputs redacted for redact_output tools, or all tools if output_scope=all.",
-      "enabled": true, "action": "block",
-      "types": ["email", "card_number", "pesel", "iban"],
+      "enabled": true,
+      "action": "block",
+      "types": [
+        "email",
+        "card_number",
+        "pesel",
+        "iban"
+      ],
       "iban": {
         "_doc": "prompt_action: redact = IBANs in user prompts become a token {{IBAN_n}} plus a masked hint (PL** **** ... 1234); the full value stays in the session vault and is put back only inside resolve_tools, after which the normal payment checks run (beneficiary allowlist, four-eyes, judge). The model never sees the full IBAN. deny = block prompts containing an IBAN.",
         "prompt_action": "redact",
-        "resolve_tools": ["transfer_funds"]
+        "resolve_tools": [
+          "transfer_funds"
+        ]
       },
       "output_scope": "flagged_tools",
       "document_action": "redact"
     },
     "attack_signatures": {
       "_doc": "Deterministic, externally managed feed of historical AI-infrastructure exploits (file path or http(s) URL, reloaded on change). Calls matching a signature at or above min_severity are blocked.",
-      "enabled": true, "action": "block",
+      "enabled": true,
+      "action": "block",
       "feed": "feeds/attack_signatures.json",
       "min_severity": "medium"
     },
@@ -101,31 +178,90 @@
       "on_detect": "taint",
       "prompt_on_detect": "block",
       "prompt_risk": "medium",
-      "taint_escalates": ["high", "critical"],
+      "taint_escalates": [
+        "high",
+        "critical"
+      ],
       "scan_tool_args": true,
       "mode": "tiered",
       "consensus": {
         "_doc": "mode=consensus: every guard below votes IN PARALLEL (Ollama runs different models concurrently: 2 small guards 0.16 s wall, + granite 1.35 s wall = the slowest guard, not the sum). Each vote is normalized to safe / unsafe / unknown (timeout, error, not installed, digest mismatch = unknown, does not vote). Outcome: voters < min_votes -> no quorum (on_no_quorum: heuristic | require_approval | deny); unsafe share >= agreement_threshold -> unsafe (prompts blocked, tool calls per on_flag, outputs taint); safe share >= agreement_threshold -> pass; anything else = disagreement, resolved per tool risk tier (tools.<name>.risk; prompts = prompt_risk, default medium) by on_disagreement (Andrzej, policy owner): arbiter_then_X = ask the arbiter (granite, criterion by phase) and use its verdict; otherwise / if the arbiter is unavailable, a weighted vote with w = log(p/(1-p)) from each guard's measured accuracy (docs/research/swarm-math.md section 5) decides when |sum| >= weighted_margin; still unresolved -> X: allow_flag (ALLOW + guard_disagreement flag in audit/report) or deny (fail-closed). require_approval is available only as an explicit choice, never the default. Accuracy defaults are measured on our small labelled sets (n ~ 10-20): granite 0.9 (w 2.2), qwen3guard 0.85 (w 1.73), llama-guard 0.6 (w 0.41). agreement_threshold 1.0 = unanimity; 0.66 lets 2 of 3 decide. min_confidence per guard: an unsafe verdict below it abstains (unknown) instead of voting - llama-guard3:1b gives false positives at P(unsafe) 0.73-0.82 on legit tool calls (S1) vs 0.977 on real money laundering, so it needs 0.9. Guards are deliberately from different model families (Qwen, Llama, Granite): correlated errors shrink the effective number of independent judges, N_eff = N / (1 + (N - 1) * rho).",
         "guards": [
-          {"model": "sileader/qwen3guard:0.6b", "timeout_ms": 1500, "accuracy": 0.85},
-          {"model": "llama-guard3:1b", "timeout_ms": 1500, "min_confidence": 0.9, "accuracy": 0.6}
+          {
+            "model": "sileader/qwen3guard:0.6b",
+            "timeout_ms": 1500,
+            "accuracy": 0.85
+          },
+          {
+            "model": "llama-guard3:1b",
+            "timeout_ms": 1500,
+            "min_confidence": 0.9,
+            "accuracy": 0.6
+          }
         ],
         "high_risk_guards": [
-          {"model": "ibm/granite3.3-guardian:8b", "criteria": ["unethical_behavior"], "timeout_ms": 2500, "accuracy": 0.9}
+          {
+            "model": "ibm/granite3.3-guardian:8b",
+            "criteria": [
+              "unethical_behavior"
+            ],
+            "timeout_ms": 2500,
+            "accuracy": 0.9
+          }
         ],
-        "on_disagreement": {"low": "allow_flag", "medium": "allow_flag", "high": "arbiter_then_deny", "critical": "arbiter_then_deny"},
-        "arbiter": {"model": "ibm/granite3.3-guardian:8b", "timeout_ms": 2500, "accuracy": 0.9,
-                    "criteria_by_phase": {"tool_args": ["unethical_behavior"], "prompt": ["jailbreak"], "document": ["jailbreak"], "tool_output": ["jailbreak"]}},
+        "on_disagreement": {
+          "low": "allow_flag",
+          "medium": "allow_flag",
+          "high": "arbiter_then_deny",
+          "critical": "arbiter_then_deny"
+        },
+        "arbiter": {
+          "model": "ibm/granite3.3-guardian:8b",
+          "timeout_ms": 2500,
+          "accuracy": 0.9,
+          "criteria_by_phase": {
+            "tool_args": [
+              "unethical_behavior"
+            ],
+            "prompt": [
+              "jailbreak"
+            ],
+            "document": [
+              "jailbreak"
+            ],
+            "tool_output": [
+              "jailbreak"
+            ]
+          }
+        },
         "weighted_margin": 0.5,
         "min_votes": 1,
         "agreement_threshold": 1.0,
         "on_no_quorum": "heuristic"
       },
-      "blocked_categories": ["S1", "S2", "S3", "S4", "S5", "S9", "S10", "S11", "S12", "S14"],
-      "pinned_digests": {"llama-guard3:1b": "494147e06bf9", "sileader/qwen3guard:0.6b": "6e7ffdf64920", "ibm/granite3.3-guardian:8b": "90a8aabc98eb", "qwen3:4b-instruct-2507-q4_K_M": "0edcdef34593"},
+      "blocked_categories": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S9",
+        "S10",
+        "S11",
+        "S12",
+        "S14"
+      ],
+      "pinned_digests": {
+        "llama-guard3:1b": "494147e06bf9",
+        "sileader/qwen3guard:0.6b": "6e7ffdf64920",
+        "ibm/granite3.3-guardian:8b": "90a8aabc98eb",
+        "qwen3:4b-instruct-2507-q4_K_M": "0edcdef34593"
+      },
       "prefilter": {
         "model": "sileader/qwen3guard:0.6b",
-        "fallback_models": ["llama-guard3:1b"],
+        "fallback_models": [
+          "llama-guard3:1b"
+        ],
         "timeout_ms": 500,
         "fail_mode": "open"
       },
@@ -133,10 +269,18 @@
         "enabled": true,
         "model": "ibm/granite3.3-guardian:8b",
         "_doc": "granite3.3-guardian criteria are template ids (harm, jailbreak, unethical_behavior, function_call = call/tool-schema hallucination, ...) or free text. Measured on 10 treasury tool calls: unethical_behavior flags the 95k hijack, exfil email, audit-log delete, os.system and an out-of-task 9k payment with 0 false positives on legit calls; harm/jailbreak miss the delete; a custom free-text criterion flagged everything. Ollama serializes calls per model, so each extra criterion adds ~1.3 s warm.",
-        "criteria": ["unethical_behavior"],
+        "criteria": [
+          "unethical_behavior"
+        ],
         "timeout_ms": 2500,
         "fail_mode": "closed",
-        "high_risk_tools": ["transfer_funds", "send_email", "delete_records", "run_python", "load_model"]
+        "high_risk_tools": [
+          "transfer_funds",
+          "send_email",
+          "delete_records",
+          "run_python",
+          "load_model"
+        ]
       }
     }
   }

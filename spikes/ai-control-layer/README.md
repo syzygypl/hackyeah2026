@@ -17,7 +17,7 @@ python3 server.py                    # HTTP gateway on 127.0.0.1:8787 for ad-hoc
    - Deterministic: tool allowlist (fail-closed), forbidden actions, obfuscation, payments rules + four-eyes, SQL guard, egress allowlist, secrets/PII with Luhn/PESEL checks and base64 decoding, loop detection.
    - IBANs in user prompts are tokenized (`{{IBAN_1}} (PL** **** ... 2874)`). The full value stays in the session vault and is resolved only inside `transfer_funds`, after which beneficiary allowlist, four-eyes and judge run on the real value. The model and the audit never see the full IBAN (`pii.iban.prompt_action: redact|deny`).
    - Semantic: local guard models via Ollama (qwen3guard pre-filter, granite-guardian judge, llama-guard fallback) plus a heuristic injection scorer, on prompts, tool calls and tool outputs. An unsafe tool output taints the session, so later high-risk calls need a human.
-3. **Budgets**: calls, tokens, USD for paid models and compute ms for local models, per session, plus a model allowlist.
+3. **Budgets**: calls, tokens, USD for paid models and compute ms for local models, per session, plus a model allowlist. The committed `policy.json` is **local-only** (every allowed model runs in Ollama on the machine). Paid-model support is shown in `policy.paid-example.json`.
 4. **Historical attacks**: an external signature feed (`feeds/attack_signatures.json`, a file or an http URL, hot-reloaded), with 16 signatures:
    - pickle/torch/YAML deserialization, trust_remote_code, typosquatted model orgs, untrusted weights
    - code exec, curl|sh, ShadowRay, Log4Shell, MCP tool poisoning, path traversal

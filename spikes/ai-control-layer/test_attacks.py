@@ -447,11 +447,21 @@ class Budgets(unittest.TestCase):
         self.assertEqual(layer.call(s, "search_kb", {"query": "one more"})["decision"], DENY)
 
     def test_paid_model_usd_budget(self):
-        layer, s, _ = fresh(edit=lambda p: p["models"]["pricing_usd_per_1k_tokens"].update({"claude-sonnet-5-5": 1.0}))
+        def edit(p):  # paid models are not in the committed (local-only) policy; this test opts one in
+            p["models"]["allowed"].append("claude-sonnet-5-5")
+            p["models"]["pricing_usd_per_1k_tokens"]["claude-sonnet-5-5"] = 1.0
+        layer, s, _ = fresh(edit=edit)
         d = [layer.call(s, "llm_complete", {"model": "claude-sonnet-5-5", "prompt": f"summarize batch {i}"})["decision"] for i in range(3)]
         self.assertEqual(d[0], ALLOW)
         self.assertIn(DENY, d)
         self.assertGreater(s.usd, 0)
+
+    def test_committed_policy_is_local_only(self):
+        m = BASE_POLICY["models"]
+        self.assertEqual(sorted(m["allowed"]), sorted(m["local"]))
+        self.assertTrue(all(v == 0 for v in m["pricing_usd_per_1k_tokens"].values()))
+        layer, s, _ = fresh()
+        self.assertEqual(layer.call(s, "llm_complete", {"model": "claude-sonnet-5-5", "prompt": "hi"})["decision"], DENY)
 
     def test_local_model_compute_budget(self):
         layer, s, _ = fresh(edit=lambda p: p["budgets"].update(max_compute_ms=30))
