@@ -271,6 +271,54 @@ Planner caveat (plan backtest, from the clues moment): in zawrat the "smart" pla
 
 New run.json fields (all additive, `validate_run.py` passes): `steps[].dayOffset`, `steps[].resources[].busyUntil/arriveAt/position/currentSegment`, `steps[].segmentHistory`, `steps[].assignments[].why/whyLayers`, `value.coverage`, `value.find*`, `value.truthPlanned[Clues]/truthNaive[Clues]` (`firstSweepMin`, `p2h`, `p4h`, `sweeps`). New scenario fields: `events[].seenAt`, `events[].epilogue`, `resources[].vehicleFrom`, `terrain.roads`, `fixedBbox`, `lostTrail`, `ipp.seenAt`. New providers: `Found`, `LostTrail` (opt-in); corridor and last-known-point layers come from `Cell112Fix` / `Clue`.
 
+## Backend (one command)
+
+```sh
+cd rescue
+swift run rescue-server                                  # http://127.0.0.1:8780/  - everything below on one port
+swift run rescue-server 8780 --host 0.0.0.0 --pin 4821   # LAN / hotspot only, PIN required (see Demo-day network)
+```
+
+One process serves every frontend as static files and the live API. The engine runs on request, so no pre-generated `out/*.json` files are needed. The old `rescue-field serve` (8770) and `rescue-studio` (8771) still work. Their code is shared: Studio state lives in `Sources/RescueStudioKit`, and both servers import it.
+
+| Path | What |
+|---|---|
+| `GET /` | landing page with links to all screens |
+| `GET /app/`, `/out/*.html`, `/web/**` | frontends: combined app, demo page, Studio, field reports, ops, MapLibre screen, 3D, patrol |
+| `GET /api/scenarios` | scenario list (`name`, `incident`, `startClock`, `realTerrain`, `run`, `assessment` URLs) |
+| `GET /api/run/<scenario>[?live=0]` | runs the engine now and returns `rescue-run/1` (validates with `validate_run.py`). Live field reports from `/report` that carry a scenario time (`at`) are folded in as SegmentSearched / Clue / WeatherConditions events (`liveEventsFolded`) |
+| `POST /api/run` | scenario JSON (shape of `scenarios/*.json`, terrain inline) -> `rescue-run/1` |
+| `GET /api/assessment/<scenario>?step=N[&wait=0][&llm=0][&live=0]` | "Ocena sytuacji" for step N (1-based, default last). `wait=0`: rules immediately with `pending: true`, the local model in the background, poll again. `llm=0`: rules only |
+| `POST /story/assessment {step}` | the same for the current Studio story |
+| `POST /report`, `GET /live-events`, `POST /client-event`, `GET /health`, `GET /metrics` | field reports and monitoring (as `rescue-field`) |
+| `GET /modules`, `GET/POST /story`, `GET /story/scenario`, `POST /story/new|event|edit|narrate|save` | Story Studio (as `rescue-studio`) |
+| `GET /scenarios/*.json`, `/tools/terrain/data/*.json` | read-only JSON for the 3D view (never blind-test files) |
+
+Screens on the live engine: `http://127.0.0.1:8780/web/?run=/api/run/zawrat` and `http://127.0.0.1:8780/web/3d/?run=/api/run/zawrat`. Both already read `?run=<url>`, so no change to their code was needed.
+
+Guard: as before, loopback needs no PIN. With `--host` beyond loopback, every API call needs `X-Rescue-Pin` (or JSON `pin`); pages and static assets stay open, and `/metrics` from real loopback is open for Prometheus. Limits: `/report` 4 KB, 500 characters, 10/min per LAN IP; other bodies 64 KB; `POST /api/run` up to 4 MB.
+
+## Ocena sytuacji (lokalny model)
+
+`Sources/RescueKit/Assessment/Assessment.swift` reads one step of a run and writes a Polish operational assessment:
+- **sytuacja:** 2-3 sentences.
+- **hipotezy:** ranked, each tied to a segment and evidence ids E1, E2, ...
+- **rekomendacje na następną godzinę:** per team; either "zgodnie z planerem" or an explicit deviation with a reason.
+- **ryzyka:** hypothermia, darkness, weather gates, safety flags.
+- **czego brakuje:** the information that would change the map most.
+
+- **Input:** top segments with POA/area and combined POD of searches, the evidence list (every non-terrain hint up to the step, numbered E1..), the planner's assignments with their "dlaczego" text and safety flags, team availability, weather and hypothermia, evidence coverage.
+- **Model:** local Ollama only (`RESCUE_LLM_URL`, must be localhost; `RESCUE_LLM_MODEL`, default `qwen3:4b-instruct-2507-q4_K_M`), temperature 0, JSON-schema output, timeout `RESCUE_LLM_TIMEOUT` (default 120 s).
+- **Grounding:** the JSON is validated against the run, and the `dropped` list says what was removed or corrected.
+  - Hypotheses and recommendations must name existing segment and team ids. "S2 Siklawa..." is resolved to S2; unknown ids are dropped.
+  - Evidence ids must exist, and at most the 4 most recent are kept per hypothesis.
+  - Free text that mentions a segment id not in the run is dropped.
+  - A recommendation claiming "zgodnie z planem" while the planner says otherwise is re-flagged as a deviation. A deviation without a reason is dropped.
+  - A recommendation for a team that is unavailable at that moment gets a warning.
+- **Fallback:** if Ollama is unreachable, times out or nothing survives grounding, a deterministic template from the same data is returned with `source: "reguły"` and a `note` explaining why. The UI always shows the source (LLM lokalny / reguły) and the latency.
+- **UI:** a "Ocena sytuacji" panel in `studio.html` (selected step) and in the demo page `out/index.html` (current slider step; only when the page is served by `rescue-server`, polls with `wait=0`).
+- **Measured on the demo Mac** (qwen3 4B q4, Ollama shared with other agents' models): 17-40 s per assessment when Ollama is free; with 4 models loaded by other workloads it hit the 120 s timeout and the rules answered (under 1 ms after the engine run, about 3 s). Use `wait=0` in UIs.
+
 ## Story Studio (compose a new incident live)
 
 ```sh
