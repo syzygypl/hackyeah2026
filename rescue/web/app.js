@@ -860,7 +860,7 @@
       lg.hidden = false;
       // area share (cells with POD >= 0.1, like coverageFinal.areaPct), not a probability: no POA / POS % on screen
       const covPct = fr ? ` · przeszukano ${nf((fr.cov || []).filter((c) => c[1] >= 0.1).length / S.M.N * 100, 1)}% obszaru` : '';
-      lg.innerHTML = `<b>${esc(T.start ? tlClock(T, mf) : '')}</b>${covPct}<div><i class="sw solid"></i>ślad GPS <i class="sw dash"></i>ślad szacowany</div><div><i class="sw fov"></i>pole widzenia <i class="sw cov"></i>pokrycie (POD) <i class="sw acc"></i>dokładność ±N m</div>`;
+      lg.innerHTML = `<b>${esc(T.start ? tlClock(T, mf) : '')}</b>${covPct}<div><i class="sw solid"></i>ślad GPS <i class="sw dash"></i>ślad szacowany</div><div><i class="sw fov"></i>pole widzenia <i class="sw cov"></i>pokrycie (POD) <i class="sw acc"></i>dokładność pozycji</div>`;
     }
   }
   function tlClock(T, mf) {
@@ -1080,7 +1080,7 @@
       return;
     }
     $('#legend').title = `Waga mapy w komórce 100 x 100 m względem średniej: 1× = średnio ${pct(1 / S.M.N, 3)} na komórkę; poniżej 0,5× bez koloru`;
-    $('#legend').innerHTML = `<div class="lg-title">Waga mapy <span class="lg-sub">× średnia</span></div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
+    $('#legend').innerHTML = `<div class="lg-title">Waga mapy <span class="lg-sub">względem średniej</span></div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
       <div class="lg-stops">${SCALE.STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
       <div class="lg-keys"><span><i class="k ln-seg"></i>top 3</span><span><i class="k ln-srch"></i>przeszukany</span></div>`;
   }

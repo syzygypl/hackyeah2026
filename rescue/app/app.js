@@ -215,7 +215,7 @@ function renderPanels() {
   const t3 = SEGS.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
   // no POA % on screen (najmocniejsze-funkcje.md "Czego NIE pokazywać"): a juror reads "45%" as a chance, it holds ~19%; show rank and area
   $("vbig").innerHTML = `<b>${Math.round(ta)}%</b><span>obszaru to top 3<br><em>tu szukać najpierw</em></span>`;
-  $("vsub").textContent = tlDoc() && store.minute != null && SEGS !== S.segments ? `Top 3 z ${SEGS.length} segmentów · ${tlClock(tlDoc(), store.minute)} (z pokryciem)` : `Top 3 z ${S.segments.length} segmentów · krok ${store.step}/${R.steps.length} (${S.t})`;
+  $("vsub").textContent = tlDoc() && store.minute != null && SEGS !== S.segments ? `Top 3 z ${SEGS.length} sektorów · ${tlClock(tlDoc(), store.minute)} (z pokryciem)` : `Top 3 z ${S.segments.length} sektorów · krok ${store.step}/${R.steps.length} (${S.t})`;
   const segRows = [...t3]; const sel = SEGS.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
   $("segs").innerHTML = segRows.map((s) => { const k = SEGS.indexOf(s);
     const a = segTeam(S, s.id);
