@@ -79,3 +79,9 @@ a{color:var(--rl-accent)}
 .st-casual:hover span{color:var(--rl-accent)}
 /* phone: the fixed version stamp sat on top of the role cards; put it after the footer instead */
 @media (max-width:760px){#rl-version{position:static!important;text-align:right;padding:0 16px 12px;text-shadow:none!important}.st-srv{margin-left:0}}
+/* two audiences: rescuers and families (each a heading + one sentence + entry cards) */
+.st-aud{display:flex;flex-direction:column;gap:10px}
+.st-audh{font-size:var(--rl-fs-xl);line-height:1.2;margin:4px 0 0}
+.st-auds{margin:0;color:var(--rl-ink-2)}
+.st-aud-fam{padding:16px;border-radius:var(--rl-radius-l);background:color-mix(in srgb,var(--rl-danger) 6%,var(--rl-panel-solid));border:1px solid color-mix(in srgb,var(--rl-danger) 25%,transparent)}
+.st-fam{border-color:var(--rl-danger)}.st-fam .st-ico svg{stroke:var(--rl-danger)}
