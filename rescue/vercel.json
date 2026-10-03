@@ -108,5 +108,11 @@
         "service": "web"
       }
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/incidents",
+      "schedule": "*/4 * * * *"
+    }
   ]
 }
