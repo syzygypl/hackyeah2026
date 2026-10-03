@@ -1,0 +1,383 @@
+<meta charset="utf-8">
+<title>Airlock Submission Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&subset=latin-ext&display=swap">
+<style>
+/* Layout: a vertical stack of 16:9 slide plates, like pressure-door panels; each prints as one landscape page. */
+:root {
+  --page: #e6e9ec;        /* steel ground */
+  --plate: #fbfcfd;       /* slide surface */
+  --ink: #0f151c;
+  --muted: #56626e;
+  --rule: #cfd5db;
+  --accent: #b45a00;      /* hazard amber: the "decides" colour */
+  --accent-soft: #fbe9d4;
+  --deny: #b42318;
+  --deny-soft: #fde8e6;
+  --allow: #1d7a46;
+  --allow-soft: #e2f3e8;
+  --chip: #eef1f4;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0b0f13; --plate: #141a20; --ink: #e8edf2; --muted: #98a4b0; --rule: #2a333c;
+    --accent: #f59e3b; --accent-soft: #3a2710; --deny: #f2766b; --deny-soft: #3b1714;
+    --allow: #5cc98a; --allow-soft: #10301e; --chip: #1d252d; color-scheme: dark;
+  }
+}
+@media screen {
+  :root[data-theme="dark"] {
+    --page: #0b0f13; --plate: #141a20; --ink: #e8edf2; --muted: #98a4b0; --rule: #2a333c;
+    --accent: #f59e3b; --accent-soft: #3a2710; --deny: #f2766b; --deny-soft: #3b1714;
+    --allow: #5cc98a; --allow-soft: #10301e; --chip: #1d252d; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font-family: var(--body); margin: 0; padding-inline: 16px; padding-block: 24px 48px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.topnote { max-width: 1120px; margin: 0 auto 18px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; color: var(--muted); font-size: 13px; }
+.topnote strong { color: var(--ink); font-family: var(--display); font-size: 15px; font-stretch: 112%; letter-spacing: 0.02em; }
+.topnote code { font-family: var(--mono); font-size: 12px; }
+.deck { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+
+.slide { --u: 1cqw; container-type: inline-size; position: relative; background: var(--plate); border: 1px solid var(--rule); border-radius: 6px; aspect-ratio: 16 / 9; display: flex; flex-direction: column; overflow: visible; }
+.inner { padding: calc(var(--u) * 4.2) calc(var(--u) * 5.2) calc(var(--u) * 3.4); display: flex; flex-direction: column; gap: calc(var(--u) * 1.8); flex: 1; min-height: 0; }
+.bar { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-family: var(--mono); font-size: calc(var(--u) * 1.05); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.bar .no { color: var(--accent); font-weight: 600; }
+h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-size: calc(var(--u) * 3.3); font-weight: 750; font-stretch: 88%; line-height: 1.05; max-width: 30ch; }
+p, li { font-size: calc(var(--u) * 1.5); line-height: 1.42; margin: 0; }
+ul { margin: 0; padding-left: 1.1em; display: grid; gap: calc(var(--u) * 0.7); }
+li::marker { color: var(--accent); }
+code, .mono { font-family: var(--mono); font-size: 0.9em; }
+.src { margin-top: auto; font-family: var(--mono); font-size: calc(var(--u) * 1.0); color: var(--muted); letter-spacing: 0.01em; line-height: 1.4; }
+.src::before { content: "Source  "; color: var(--accent); font-weight: 600; }
+.cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: calc(var(--u) * 3.5); align-items: start; }
+.cols > * { min-width: 0; }
+strong { font-weight: 700; }
+
+/* title slide */
+.title .inner { justify-content: space-between; }
+.title h1 { font-size: calc(var(--u) * 9.5); font-weight: 800; font-stretch: 118%; line-height: 0.9; letter-spacing: -0.02em; }
+.title .wn { font-family: var(--mono); font-size: calc(var(--u) * 1.2); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: calc(var(--u) * 1.2); }
+.title .tag { font-family: var(--display); font-size: calc(var(--u) * 3.4); font-weight: 600; font-stretch: 92%; line-height: 1.1; margin-top: calc(var(--u) * 2.2); }
+.title .tag em { font-style: normal; color: var(--accent); }
+.title .lead { font-size: calc(var(--u) * 1.7); max-width: 52ch; color: var(--muted); margin-top: calc(var(--u) * 1.6); }
+.doorline { display: flex; gap: calc(var(--u) * 0.6); align-items: center; }
+.doorline span { height: calc(var(--u) * 0.6); flex: 1; background: repeating-linear-gradient(135deg, var(--accent) 0 calc(var(--u) * 0.8), transparent calc(var(--u) * 0.8) calc(var(--u) * 1.6)); opacity: 0.85; }
+.meta { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 0.8) calc(var(--u) * 3); font-family: var(--mono); font-size: calc(var(--u) * 1.15); color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 600; }
+
+/* call card (slide 2, 6) */
+.call { font-family: var(--mono); font-size: calc(var(--u) * 1.25); background: var(--chip); border-radius: 4px; padding: calc(var(--u) * 1.6); line-height: 1.55; border-left: calc(var(--u) * 0.35) solid var(--deny); overflow-wrap: anywhere; }
+.call .k { color: var(--muted); }
+.verdict { display: inline-block; font-family: var(--mono); font-weight: 600; font-size: calc(var(--u) * 1.1); padding: calc(var(--u) * 0.25) calc(var(--u) * 0.8); border-radius: 3px; letter-spacing: 0.06em; }
+.v-deny { background: var(--deny-soft); color: var(--deny); }
+.v-allow { background: var(--allow-soft); color: var(--allow); }
+.v-flag { background: var(--accent-soft); color: var(--accent); }
+.checks { display: grid; gap: calc(var(--u) * 0.55); margin-top: calc(var(--u) * 1.2); }
+.checks div { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: calc(var(--u) * 1.15); border-bottom: 1px dashed var(--rule); padding-bottom: calc(var(--u) * 0.45); }
+
+/* tables */
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: calc(var(--u) * 1.35); font-variant-numeric: tabular-nums; }
+th { text-align: left; font-family: var(--mono); font-weight: 600; font-size: calc(var(--u) * 1.0); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-bottom: 1.5px solid var(--ink); padding: calc(var(--u) * 0.6) calc(var(--u) * 1) calc(var(--u) * 0.6) 0; }
+td { border-bottom: 1px solid var(--rule); padding: calc(var(--u) * 0.8) calc(var(--u) * 1) calc(var(--u) * 0.8) 0; vertical-align: top; line-height: 1.35; }
+td:first-child { font-weight: 650; }
+
+/* pipeline (slide 5) */
+.pipe { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 0.55); align-items: center; }
+.st { font-family: var(--mono); font-size: calc(var(--u) * 1.1); padding: calc(var(--u) * 0.5) calc(var(--u) * 0.9); border-radius: 3px; background: var(--chip); border: 1px solid var(--rule); white-space: nowrap; }
+.st.det { border-color: var(--rule); }
+.st.sem { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+.st.ex { background: var(--ink); color: var(--plate); font-weight: 600; }
+.ar { color: var(--muted); font-family: var(--mono); font-size: calc(var(--u) * 1.1); }
+.legend { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 2); font-family: var(--mono); font-size: calc(var(--u) * 1.0); color: var(--muted); }
+.legend i { display: inline-block; width: calc(var(--u) * 1.1); height: calc(var(--u) * 1.1); border-radius: 2px; vertical-align: middle; margin-right: calc(var(--u) * 0.5); background: var(--chip); border: 1px solid var(--rule); }
+.legend i.s { background: var(--accent-soft); border-color: transparent; }
+.tiers { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(var(--u) * 1.2); }
+.tier { border-top: 2px solid var(--ink); padding-top: calc(var(--u) * 0.8); min-width: 0; }
+.tier .n { font-family: var(--display); font-weight: 750; font-stretch: 90%; font-size: calc(var(--u) * 2.6); line-height: 1; font-variant-numeric: tabular-nums; }
+.tier .l { font-size: calc(var(--u) * 1.2); color: var(--muted); margin-top: calc(var(--u) * 0.5); line-height: 1.35; }
+
+/* big numbers (slide 9) */
+.hero-n { font-family: var(--display); font-weight: 800; font-stretch: 85%; font-size: calc(var(--u) * 6); line-height: 0.95; color: var(--accent); font-variant-numeric: tabular-nums; }
+.limits { background: var(--chip); border-radius: 4px; padding: calc(var(--u) * 1.4) calc(var(--u) * 1.8); }
+.limits h3 { margin: 0 0 calc(var(--u) * 0.7); font-family: var(--mono); font-size: calc(var(--u) * 1.05); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.limits li { font-size: calc(var(--u) * 1.3); }
+
+pre.cmd { font-family: var(--mono); font-size: calc(var(--u) * 1.25); background: var(--ink); color: var(--plate); padding: calc(var(--u) * 1.4) calc(var(--u) * 1.8); border-radius: 4px; margin: 0; overflow-x: auto; line-height: 1.6; }
+.links { display: grid; gap: calc(var(--u) * 0.6); font-size: calc(var(--u) * 1.4); }
+.links a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.links span.k { display: inline-block; min-width: 9ch; font-family: var(--mono); font-size: 0.8em; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.fill { background: var(--accent-soft); color: var(--accent); font-family: var(--mono); font-size: 0.85em; padding: 0 0.35em; border-radius: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 719px) {
+  .slide { --u: 9px; aspect-ratio: auto; }
+  .cols, .tiers { grid-template-columns: 1fr; }
+  .title h1 { font-size: 54px; }
+}
+@page { size: 1280px 720px; margin: 0; }
+@media print {
+  body { background: var(--plate); padding: 0; }
+  .topnote { display: none; }
+  .deck { max-width: none; gap: 0; }
+  .slide { --u: 12.8px; width: 1280px; height: 720px; aspect-ratio: auto; border: 0; border-radius: 0; break-after: page; page-break-after: always; overflow: hidden; }
+  .cols { grid-template-columns: 1.15fr 1fr; }
+  .tiers { grid-template-columns: repeat(4, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="topnote">
+  <strong>AIRLOCK SUBMISSION DECK v3</strong>
+  <span>10 slides, English, for the AI Control Layer task (Goldman Sachs). Built from main <code>4e48798</code>, 2026-10-03 20:45. Status: active; every re-test finding is closed.</span>
+  <span>PDF: open <code>docs/submission/hackathon/airlock/v3/deck.html</code> in Chrome, print to PDF, landscape, no margins: one slide per page.</span>
+</div>
+
+<main class="deck">
+
+<!-- 1 -->
+<section class="slide title" aria-label="Slide 1, title">
+  <div class="inner">
+    <div class="bar"><span><span class="no">01</span> / 10</span><span>HackYeah 2026 · AI Control Layer</span></div>
+    <div>
+      <h1>Airlock</h1>
+      <div class="wn">Working name, final name pending</div>
+      <div class="tag">Your agents act. <em>Airlock decides.</em></div>
+      <p class="lead">An AI control layer between agents and everything they can touch: tools, services and models. It runs on one laptop with no paid APIs.</p>
+    </div>
+    <div style="display:grid; gap: calc(var(--u) * 1.4)">
+      <div class="doorline" aria-hidden="true"><span></span></div>
+      <div class="meta"><span>Task <b>AI Control Layer (Goldman Sachs)</b></span><span>Team <b class="fill">[FILL: name / ID]</b></span><span>Repo <b>github.com/syzygypl/hackyeah2026</b></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="slide" aria-label="Slide 2, problem">
+  <div class="inner">
+    <div class="bar"><span><span class="no">02</span> / 10</span><span>Problem</span></div>
+    <h2>One invoice turns a helpful agent into an insider</h2>
+    <div class="cols">
+      <ul>
+        <li>A treasury agent reads invoice INV-2041. Hidden text tells it to wire <strong>95,000 EUR</strong> to a new account and email the customer list outside the bank.</li>
+        <li>To classic security tools each call looks valid: an authenticated service calling an allowed API.</li>
+        <li>The risks from the brief all show up in this one story: prompt injection, data exposure, unauthorized and irreversible actions, and runaway cost.</li>
+      </ul>
+      <div class="call" role="img" aria-label="The tool call a hijacked agent would emit">
+        <div class="k">// what the hijacked agent emits</div>
+        transfer_funds(<br>
+        &nbsp;&nbsp;to = "new account from the invoice",<br>
+        &nbsp;&nbsp;amount = 95000 EUR )<br>
+        send_email(to = "outside domain",<br>
+        &nbsp;&nbsp;body = customer list)
+      </div>
+    </div>
+    <div class="src">spikes/ai-control-layer/mock_tools.py (demo story) · official brief, section 1</div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide" aria-label="Slide 3, who it is for">
+  <div class="inner">
+    <div class="bar"><span><span class="no">03</span> / 10</span><span>Who it is for</span></div>
+    <h2>Control for the security team, speed for developers</h2>
+    <div class="tiers">
+      <div class="tier"><div class="n">Platform</div><div class="l">Teams at a bank that let agents touch payments, email and SQL. They need one control point and no new infrastructure.</div></div>
+      <div class="tier"><div class="n">Developers</div><div class="l">Keep their agent stack. They add 2 SDK calls or change one URL.</div></div>
+      <div class="tier"><div class="n">Security</div><div class="l">An exportable, tamper-evident audit trail and the reason for every decision.</div></div>
+      <div class="tier"><div class="n">Management</div><div class="l">Posture, blocked threats and budget use on one dashboard and in one report.</div></div>
+    </div>
+    <div class="src">official brief, sections 1-3 (control without slowing developers down)</div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide" aria-label="Slide 4, solution">
+  <div class="inner">
+    <div class="bar"><span><span class="no">04</span> / 10</span><span>Solution</span></div>
+    <h2>One control point, three ways in</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Integration</th><th>How</th><th>Effort for a developer</th></tr></thead>
+        <tbody>
+          <tr><td>SDK wrapper</td><td><code>layer.call()</code>, <code>layer.check_prompt()</code></td><td>2 calls</td></tr>
+          <tr><td>HTTP gateway</td><td><code>POST /v1/tool</code>, <code>/v1/prompt</code> on :8787</td><td>1 client file (<code>acl_client.py</code>)</td></tr>
+          <tr><td>Ollama-compatible proxy</td><td>change <code>:11434</code> to <code>:11500</code></td><td>1 URL, no code change</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Every prompt, tool call and tool output is checked. Deterministic rules run first, in microseconds. Local guard models from three model families handle what rules can't see. Nothing leaves the machine.</p>
+    <div class="src">spikes/ai-control-layer/README.md · spikes/acl-ollama-proxy/README.md</div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide" aria-label="Slide 5, how it works">
+  <div class="inner">
+    <div class="bar"><span><span class="no">05</span> / 10</span><span>How it works</span></div>
+    <h2>Rules first, models only where they add something</h2>
+    <div class="pipe" role="img" aria-label="Pipeline per tool call, in order">
+      <span class="st">policy</span><span class="ar">→</span>
+      <span class="st">tool authz</span><span class="ar">→</span>
+      <span class="st">budget</span><span class="ar">→</span>
+      <span class="st">loop</span><span class="ar">→</span>
+      <span class="st">16 signatures</span><span class="ar">→</span>
+      <span class="st">payments · SQL · egress</span><span class="ar">→</span>
+      <span class="st">secrets · PII</span><span class="ar">→</span>
+      <span class="st sem">semantic scan</span><span class="ar">→</span>
+      <span class="st">taint</span><span class="ar">→</span>
+      <span class="st">approval</span><span class="ar">→</span>
+      <span class="st ex">execute</span><span class="ar">→</span>
+      <span class="st sem">output scan</span><span class="ar">→</span>
+      <span class="st">hash-chained audit</span>
+    </div>
+    <div class="legend"><span><i></i>deterministic, microseconds</span><span><i class="s"></i>local guard models, milliseconds</span></div>
+    <div class="tiers">
+      <div class="tier"><div class="n">79 µs</div><div class="l">deterministic p50 per call, 10,837 checks/s on 1 core</div></div>
+      <div class="tier"><div class="n">always</div><div class="l">heuristic injection scorer, English and Polish phrasing</div></div>
+      <div class="tier"><div class="n">134 ms</div><div class="l">pre-filter qwen3guard 0.6b, p50 warm, on every call</div></div>
+      <div class="tier"><div class="n">0.5-1.9 s</div><div class="l">granite3.3-guardian 8b judge, high-risk tools only</div></div>
+    </div>
+    <div class="src">docs/architecture/README.md §1 · demo run at 4e48798 (out/security_report.md) · docs/research/demo-mac-test.md (M4 Pro)</div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide" aria-label="Slide 6, guardrails">
+  <div class="inner">
+    <div class="bar"><span><span class="no">06</span> / 10</span><span>Guardrails</span></div>
+    <h2>The call every rule says yes to</h2>
+    <div class="cols">
+      <div>
+        <div class="call" style="border-left-color: var(--accent)">
+          <div class="k">// "INV-2041 part 2"</div>
+          transfer_funds(to = approved vendor,<br>&nbsp;&nbsp;amount = 9000 EUR)
+        </div>
+        <div class="checks">
+          <div><span>beneficiary allowlist</span><span class="verdict v-allow">PASS</span></div>
+          <div><span>four-eyes limit</span><span class="verdict v-allow">PASS</span></div>
+          <div><span>signatures · PII · egress</span><span class="verdict v-allow">PASS</span></div>
+          <div><span>granite judge vs the task</span><span class="verdict v-deny">DENY</span></div>
+        </div>
+      </div>
+      <ul>
+        <li>The judge reads the call against the agent's real task. This payment is outside the task, so it is <strong>denied</strong> with no human involved.</li>
+        <li>16 attack signatures come from an external, hot-reloaded feed: ShadowRay, Log4Shell, pickle, SSRF, MCP tool poisoning, typosquatted packages.</li>
+        <li>Matching runs on decoded layers: base64, hex, URL, entities.</li>
+        <li>IBANs are tokenized in prompts, and each session gets a system-prompt canary.</li>
+      </ul>
+    </div>
+    <div class="src">spikes/ai-control-layer/README.md (semantic layer, "Demo moment"; signature feed)</div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" aria-label="Slide 7, central policy">
+  <div class="inner">
+    <div class="bar"><span><span class="no">07</span> / 10</span><span>Central policy</span></div>
+    <h2>One policy file, edited live</h2>
+    <div class="cols">
+      <ul>
+        <li><code>policy.json</code> is the single source: controls on or off, block / redact / flag / approve, thresholds, allowed models with pinned digests, and budgets (calls, tokens, USD, compute ms).</li>
+        <li>It reloads on the next request. A broken edit is rejected and the last good policy stays active.</li>
+        <li>Judges edit it on disk or in the dashboard (admin token, <code>PUT /v1/policy</code>). Every change is an audit event with a key-level diff.</li>
+      </ul>
+      <div>
+        <div class="call" style="border-left-color: var(--accent)">
+          <div class="k">// live edit, no restart</div>
+          controls.pii.action:<br>&nbsp;&nbsp;"block" → "redact"
+        </div>
+        <div class="checks">
+          <div><span>card number in email, before</span><span class="verdict v-deny">BLOCK</span></div>
+          <div><span>same call, after the edit</span><span class="verdict v-flag">REDACT</span></div>
+          <div><span>weaken a control</span><span class="verdict v-deny">TESTS FAIL</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="src">spikes/ai-control-layer/README.md ("Try it live", "Policy editing over the API")</div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" aria-label="Slide 8, reporting">
+  <div class="inner">
+    <div class="bar"><span><span class="no">08</span> / 10</span><span>Security reporting</span></div>
+    <h2>One run, two readers</h2>
+    <div class="tiers">
+      <div class="tier"><div class="n">29</div><div class="l">decisions in the demo run</div></div>
+      <div class="tier"><div class="n">18</div><div class="l">blocked</div></div>
+      <div class="tier"><div class="n">12</div><div class="l">sensitive values redacted</div></div>
+      <div class="tier"><div class="n">VERIFIED</div><div class="l">hash chain over all 29 records</div></div>
+    </div>
+    <div class="cols">
+      <ul>
+        <li><strong>Dashboard</strong> (:8790): posture, blocked threats by guardrail, budget meters, per-check latency, a filterable audit log, an attack console and a policy editor.</li>
+      </ul>
+      <ul>
+        <li><strong>Audit:</strong> hash-chained JSONL with HMAC-keyed tokens; raw PII is never stored (no card digits in the v3 demo audit). Export as JSONL or CSV. The <strong>report</strong> has a management summary and a security-team event table.</li>
+      </ul>
+    </div>
+    <div class="src">spikes/ai-control-layer/sample-security-report.md · spikes/acl-dashboard/README.md</div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide" aria-label="Slide 9, proof">
+  <div class="inner">
+    <div class="bar"><span><span class="no">09</span> / 10</span><span>Proof against the criteria</span></div>
+    <div class="cols" style="grid-template-columns: 1.5fr 1fr">
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Criterion</th><th>Evidence</th></tr></thead>
+          <tbody>
+            <tr><td>Guardrails 30%</td><td>19/20 attacks caught, 1/16 benign blocked (36 labelled items x 5 runs; a small sample)</td></tr>
+            <tr><td>Architecture 20%</td><td>79 µs deterministic p50; models only where needed; p50/p95/p99 per check</td></tr>
+            <tr><td>Reporting 20%</td><td>dashboard, verified hash chain, report for management and security</td></tr>
+            <tr><td>Self-tests 15%</td><td>138 tests and a 193-case demo self-test, positive and negative: budgets, exploits, live policy edits, model fail modes</td></tr>
+            <tr><td>Implementability 15%</td><td>Python stdlib only, 3 commands, 1 URL for Ollama clients</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:grid; gap: calc(var(--u) * 1.6)">
+        <div><div class="hero-n">138</div><p>tests pass in 42 s, plus a 193/193 demo self-test, 10 proxy tests and 3 client tests</p></div>
+        <div class="limits"><h3>Honest limits</h3><ul>
+          <li>The 95k hijack is a scripted agent against the real gateway. The real qwen3:4b agent resisted the injection in 3 runs.</li>
+          <li>The tools are mocks. Everything was measured on one MacBook.</li><li>All re-test findings closed (NEW-7, NEW-6, F13, F15, F16).</li></ul></div>
+      </div>
+    </div>
+    <div class="src">test run at 4e48798, 2026-10-03 20:40 · docs/research/airlock-retest-2026-10-03.md · docs/research/demo-mac-test.md</div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide" aria-label="Slide 10, run it and links">
+  <div class="inner">
+    <div class="bar"><span><span class="no">10</span> / 10</span><span>Run it · next · links</span></div>
+    <div class="cols">
+      <div style="display:grid; gap: calc(var(--u) * 1.6)">
+        <pre class="cmd"># one script: Ollama, gateway, proxy, dashboard
+bash docs/submission/hackathon/airlock/v3/start.sh
+# the self-testing suites
+bash docs/submission/hackathon/airlock/v3/start.sh test</pre>
+        <ul>
+          <li><strong>Next:</strong> MCP proxy mode, a shared audit store, per-user and role authorization, a model server pool, and guard weights recalibrated on a larger labelled set.</li>
+        </ul>
+      </div>
+      <div class="links">
+        <div><span class="k">Repo</span> <a href="https://github.com/syzygypl/hackyeah2026">github.com/syzygypl/hackyeah2026</a></div>
+        <div><span class="k">Demo</span> <span class="fill">[FILL: video URL]</span></div>
+        <div><span class="k">Team</span> <span class="fill">[FILL: names]</span></div>
+        <div style="margin-top: calc(var(--u) * 1); font-size: calc(var(--u) * 1.2); color: var(--muted); line-height: 1.45">Built during HackYeah 2026 (first commit at 11:33). AI tools used: Claude Code. Local models via Ollama: Qwen3Guard, Granite Guardian, Llama Guard, Qwen3. Python standard library only.</div>
+      </div>
+    </div>
+    <div class="src">docs/submission/hackathon/airlock/v3/submission.md §6, §9 · start.sh in the same folder</div>
+  </div>
+</section>
+
+</main>
