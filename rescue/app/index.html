@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rescue Locator</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../web/vendor/maplibre-gl.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="view-2d">
+<div id="app">
+<header>
+  <h1>Rescue Locator</h1>
+  <label class="mute">Scenariusz <select id="scen"></select></label>
+  <span class="views" role="tablist" aria-label="Widok">
+    <button data-view="2d" class="on" role="tab">2D</button><button data-view="3d" role="tab">3D</button><button data-view="split" role="tab">Podział</button>
+  </span>
+  <span class="edit-only"><button id="newZ" title="Nowa historia na terenie Zawratu">Nowa historia</button>
+  <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button></span>
+  <span style="flex:1"></span>
+  <span class="edit-only"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
+  <label id="pinbox" style="display:none">PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
+  <span id="status" class="mute"></span>
+</header>
+<aside id="left">
+  <div class="edit-only">
+    <h2>Dowody - przeciągnij na mapę</h2>
+    <div id="palette" class="grid2"></div>
+    <h2>Zespoły - przeciągnij na sektor</h2>
+    <div id="tokens" class="grid2"></div>
+  </div>
+  <div id="readonly" class="note" style="display:none">Podgląd scenariusza (tylko odczyt). Edycja: wybierz „Studio (edycja na żywo)”.</div>
+  <h2>Ocena sytuacji</h2>
+  <div id="assess" class="box"></div>
+  <h2>Alerty</h2>
+  <div id="alerts"></div>
+</aside>
+<main id="center">
+  <div id="map"><div id="toast"></div><div id="hint"></div></div>
+  <div id="pane3d"><iframe id="frame3d" title="Widok 3D" loading="lazy"></iframe><div id="note3d" class="note3d"></div></div>
+</main>
+<aside id="right">
+  <h2>Gdzie szukać najpierw</h2>
+  <div class="box"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
+  <div id="segs"></div>
+  <h2>Plan zespołów</h2><div id="surv" class="help"></div><div id="teams"></div>
+  <h2>Postęp akcji</h2><div id="progress" class="box"></div>
+</aside>
+<footer id="bottom">
+  <div class="row"><button id="play" title="Odtwórz historię">▶</button><b>Historia</b><span class="mute" id="clock"></span><input type="range" id="slider" min="1" value="1"></div>
+  <div id="events"></div>
+</footer>
+</div>
+<div id="ghost"></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
