@@ -748,6 +748,9 @@
     // embedded in /app: the shell's top 3 (its panel) when it sent one, else this step's own ranking
     const sTop = S.shellTop && !S.disabled.size ? S.shellTop.map((id) => st.find((x) => x.id === id)).filter(Boolean) : [];
     const top3 = sTop.length === 3 ? sTop : st.slice(0, 3);
+    // a signal switched off: this view's own ranking is the one in force - tell the shell's panel (null = back to its own)
+    const t3key = S.disabled.size ? top3.map((x) => x.id).join(',') : '';
+    if (t3key !== (S.top3Sent || '')) { S.top3Sent = t3key; toParent({ type: 'top3', ids: t3key ? t3key.split(',') : null }); }
     const searched = searchedState(step);
     const ov = overlays(step, top3);
     // timeline mode: the minute's frame heat stays (tlDraw); the step heat only without a frame or with a signal switched off
@@ -1144,6 +1147,10 @@
       else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
       else if (m.type === 'time' && Number.isFinite(m.minute)) { tlTop(m.top); tlTime(m.minute, m.frame, m.frameMinute); }
       else if (m.type === 'highlight') highlightActor(m);   // actor drawer (CONTRACT "Zasoby i dziennik" 6)
+      else if (m.type === 'evidence' && typeof m.id === 'string') {   // the shell's signal checkboxes (demo step 2): recompute here, the panel follows via {type:'top3'}
+        if (m.id === '*') S.disabled.clear(); else if (m.on === false) S.disabled.add(m.id); else S.disabled.delete(m.id);
+        S.tlHeatAt = null; render(); if (S.tlMf != null) tlDraw(S.tlMf);
+      }
       else if (m.type === 'focusArea') focusArea(m);        // an event click: zoom onto the area the event changed (dock.js focusTarget)
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
       // team overlay only (Ćwiczenia: a dispatch without new events): swap each step's assignments and redraw, no reload
