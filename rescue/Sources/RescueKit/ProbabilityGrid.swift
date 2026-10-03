@@ -130,6 +130,11 @@ public final class ProbabilityGrid {
                 let d = Geo.toLine(p, points)
                 return 0.25 + exp(-d * d / (2 * sigma * sigma))
             }
+        case let .corridor(points, sigma, fl):
+            return centers.map { p in
+                let d = Geo.toLine(p, points)
+                return fl + (1 - fl) * exp(-d * d / (2 * sigma * sigma))
+            }
         case let .sector(center, r):
             let s = r * 0.6
             return centers.map { p in

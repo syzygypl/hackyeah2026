@@ -16,6 +16,7 @@ func hintJSON(_ h: LocationHint, _ f: [Double]) -> [String: Any] {
     case let .rings(c, q): g = ["center": ll(c), "q": q]
     case let .lastKnownPoint(_, l, _, q, _): g = ["center": ll(l), "q": q]
     case let .route(p, s): g = ["points": p.map(ll), "sigma": s]
+    case let .corridor(p, s, _): g = ["points": p.map(ll), "sigma": s]
     case let .sector(c, r): g = ["center": ll(c), "radius": r]
     case let .point(c, a), let .found(c, a): g = ["center": ll(c), "radius": a]
     case let .searched(ids, pod): g = ["segments": ids, "pod": pod]
@@ -194,6 +195,7 @@ function drawEvidence(h){
   const g=h.geo;
   if (h.kind==='lkp') g.q.slice(0,2).forEach((q,i)=>L.circle(g.center,{radius:q*1000,color:'#5ce1e6',weight:1.5,dashArray:'4 6',fill:false}).bindTooltip(`Koester od ostatniego znanego punktu ${[25,50][i]}%: ${q} km`).addTo(ev));
   if (h.kind==='rings') g.q.forEach((q,i)=>L.circle(g.center,{radius:q*1000,color:'#fff',weight:1,dashArray:'6 6',fill:false,opacity:.6}).bindTooltip(`Koester ${[25,50,75,95][i]}%: ${q} km`).addTo(ev));
+  if (h.kind==='corridor') L.polyline(g.points,{color:'#5ce1e6',weight:4,opacity:.8,dashArray:'2 6'}).bindTooltip(h.title).addTo(ev);
   if (h.kind==='route') L.polyline(g.points,{color:'#f2b134',weight:4,opacity:.9}).bindTooltip(h.title).addTo(ev);
   if (h.kind==='sector') L.circle(g.center,{radius:g.radius,color:'#9b59b6',weight:2,fillOpacity:.05}).bindTooltip(h.title).addTo(ev);
   if (h.kind==='point'||h.kind==='found'){L.circle(g.center,{radius:Math.max(g.radius,40),color:'#3ec28f',weight:3,fillOpacity:.3}).addTo(ev);

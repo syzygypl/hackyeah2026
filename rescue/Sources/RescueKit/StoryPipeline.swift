@@ -113,7 +113,7 @@ public enum StoryPipeline {
             case let .sector(c, r): d["center"] = [c.lat, c.lon]; d["radiusM"] = r
             case let .point(c, a), let .found(c, a): d["center"] = [c.lat, c.lon]; d["radiusM"] = a
             case let .rings(c, q), let .lastKnownPoint(_, c, _, q, _): d["center"] = [c.lat, c.lon]; d["quantilesKm"] = q
-            case let .route(p, _): d["points"] = p.map { [$0.lat, $0.lon] }
+            case let .route(p, _), let .corridor(p, _, _): d["points"] = p.map { [$0.lat, $0.lon] }
             case let .containment(p, _, _): d["points"] = p.map { [$0.lat, $0.lon] }
             case let .searched(ids, pod): d["segments"] = ids; d["pod"] = pod
             default: break
