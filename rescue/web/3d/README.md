@@ -27,3 +27,6 @@ You hide the person by clicking the terrain (or "Losuj"). The map keeps the engi
 - **Forests:** about 20k instanced spruce below ~1500 m and dwarf pine at 1450-1850 m, placed by elevation, slope and a noise mask (not from survey data). Button "Las" hides them; `?trees=` sets the sampling budget.
 - **Probability colour:** "times the average cell" on a log scale (average or less = no tint, 10x = full colour), the same scale at every step.
 - **Kino (cinematic mode):** letterbox, subtitles and one scripted shot per timeline step (flies to the step's signal or the leading segment, slow orbit, stays above the ridges), then pulls back to the overview. Esc or a mouse drag ends it.
+
+## Wide terrain backdrop
+`data/zawrat-dem-wide.json` is a wider Copernicus DEM GLO-30 cut (scenario bbox + 5 km, about 16 x 16 km of the High Tatras) used by `?sc=zawrat` and `?sc=blind-01` as a backdrop, so the search area sits inside the surrounding massif. Generated with `python3 rescue/tools/terrain/osm_terrain.py --scenario <bbox-only json> --data <tmp cache> --dem-only --dem-margin-km 5`. The page averages it 2x2 (cuts over 600 px wide) to keep the mesh around 100k vertices; `?wide=0` uses the scenario's own DEM. Copernicus DEM (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA.

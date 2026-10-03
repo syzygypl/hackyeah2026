@@ -13,11 +13,11 @@ import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
 const SCENS = {
-  zawrat: { name: 'Zawrat', run: '../../out/run.json' },
+  zawrat: { name: 'Zawrat', run: '../../out/run.json', demWide: 'data/zawrat-dem-wide.json' },
   'morskie-oko': { name: 'Morskie Oko', run: '../../out/morskie-oko.run.json' },
   kasprowy: { name: 'Kasprowy', run: '../../out/kasprowy.run.json' },
   'blind-01': { name: 'Test na ślepo: runda 1 (replay)', run: '../../out/blind-01-replay.run.json', scenario: '../../scenarios/blind-01-replay.json',
-    terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', reveal: '../../blindtest/blind-01.reveal.json' },
+    terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', demWide: 'data/zawrat-dem-wide.json', reveal: '../../blindtest/blind-01.reveal.json' },
 };
 const SC = SCENS[Q.get('sc')] ? Q.get('sc') : 'zawrat';
 const P = {
@@ -84,10 +84,19 @@ function synthRun(sc) {
   return { schema: 'rescue-run/1', synthetic: true, incident: sc.incident, bbox: bb, cellM: cell, rows, cols, ipp: { lat: sc.ipp.at[0], lon: sc.ipp.at[1], name: sc.ipp.name }, segOf, steps, value: {} };
 }
 
+function decimate(D, k) {
+  const rows = Math.floor(D.rows / k), cols = Math.floor(D.cols / k), z = [];
+  for (let r = 0; r < rows; r++) { const row = new Array(cols); for (let c = 0; c < cols; c++) { let a = 0; for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) a += D.z[r * k + i][c * k + j]; row[c] = a / (k * k); } z.push(row); }
+  return { ...D, rows, cols, step: D.step * k, stepLat: (D.stepLat || D.step) * k, z };
+}
+
 // ---------- load ----------
 let R, SCN, TER, DEM, REV;
 try {
-  [R, SCN, TER, DEM, REV] = await Promise.all([getJSON(P.run, !!P.reveal), getJSON(P.scenario, true), getJSON(P.terrain, true), getJSON(P.dem), P.reveal ? getJSON(P.reveal, true) : null]);
+  const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
+  [R, SCN, TER, DEM, REV] = await Promise.all([getJSON(P.run, !!P.reveal), getJSON(P.scenario, true), getJSON(P.terrain, true),
+    (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => d || getJSON(P.dem)), P.reveal ? getJSON(P.reveal, true) : null]);
+  if (DEM.cols > 600) DEM = decimate(DEM, 2); // wide backdrop: 2x2 average keeps the mesh ~100k vertices
   if (!R && SCN) R = synthRun(SCN); // replay without engine output: signals and patrols only, no POA map
   if (R.schema !== 'rescue-run/1') throw new Error('run.json: schema ' + R.schema);
 } catch (e) {
@@ -167,10 +176,11 @@ const PROG = (() => {
 // ---------- renderer / scene ----------
 const host = $('scene');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false; // sun and terrain are static: render the shadow map once
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 host.appendChild(renderer.domElement);
@@ -223,13 +233,13 @@ scene.add(new THREE.Points(starGeo, starMat));
 const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
 scene.add(hemi, sun, sun.target);
 scene.fog = new THREE.Fog(0xffffff, 12, 60);
 
 // ---------- terrain texture ----------
-const TS = 4; // texture pixels per DEM pixel
+const TS = clamp(Math.floor(1500 / DEM.cols), 2, 4); // texture pixels per DEM pixel (capped for large DEM cuts)
 const TW = DEM.cols * TS, TH = DEM.rows * TS;
 // vegetation by elevation (Tatra belts: spruce forest, dwarf pine, alpine meadow), rock by slope, snow high up
 const VEG = [[900, [62, 112, 52]], [1200, [48, 98, 44]], [1450, [70, 118, 52]], [1600, [104, 138, 64]], [1800, [150, 160, 88]], [2000, [168, 166, 120]], [2300, [184, 180, 168]]];
@@ -440,7 +450,7 @@ const forest = new THREE.Group(); scene.add(forest);
   const lakes = (TER?.lakes || []).map((l) => ({ la: l.center[0], lo: l.center[1], r: (l.radiusM + 25) / 1000 }));
   const inLake = (la, lo) => lakes.some((l) => Math.hypot((la - l.la) * KM, (lo - l.lo) * KM * KX) < l.r);
   const spruce = [], pine = [];
-  const tries = Q.has('trees') ? +Q.get('trees') : 140000;
+  const tries = Q.has('trees') ? +Q.get('trees') : Math.round(clamp(WKM * HKM * 2000, 40000, 140000));
   for (let n = 0; n < tries; n++) {
     const la = latS + rnd() * (latN - latS), lo = lonW + rnd() * (lonE - lonW), e = elevM(la, lo);
     const dz = Math.hypot(elevM(la, lo + 0.0004) - elevM(la, lo - 0.0004), elevM(la + 0.0003, lo) - elevM(la - 0.0003, lo)) / 2 / 33;
@@ -457,7 +467,7 @@ const forest = new THREE.Group(); scene.add(forest);
       o.position.copy(v3(la, lo, -0.002)); o.rotation.set(0, rnd() * 6.28, 0); o.scale.set(h * (0.85 + rnd() * 0.3), h, h * (0.85 + rnd() * 0.3)); o.updateMatrix();
       m.setMatrixAt(i, o.matrix); m.setColorAt(i, c.copy(A).lerp(Bc, rnd()));
     });
-    m.receiveShadow = true; m.castShadow = list.length < 60000; forest.add(m);
+    m.receiveShadow = true; m.castShadow = false; forest.add(m);
   };
   const cone = new THREE.ConeGeometry(0.28, 1, 6, 1); cone.translate(0, 0.5, 0);
   const cone2 = new THREE.ConeGeometry(0.36, 0.7, 6, 1); cone2.translate(0, 0.32, 0);
@@ -604,8 +614,9 @@ function drawTeams(s) {
   for (const a of s.assignments || []) {
     const res = resources.get(a.resourceId), g = segs.get(a.segmentId); if (!res?.base || !g) continue;
     const type = resInfo.get(a.resourceId)?.type || res.type, col = TEAM_COL[type] || '#555';
-    const p0 = v3(res.base[0], res.base[1], 0.03), p2 = v3(g.center[0], g.center[1], 0.05);
-    const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + (type === 'heli' || type === 'drone' ? 0.45 : 0.22) + p0.distanceTo(p2) * 0.12;
+    const bIn = [clamp(res.base[0], latS + 0.001, latN - 0.001), clamp(res.base[1], lonW + 0.001, lonE - 0.001)]; // base off the map: start at its edge
+    const p0 = v3(bIn[0], bIn[1], 0.03), p2 = v3(g.center[0], g.center[1], 0.05);
+    const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + (type === 'heli' || type === 'drone' ? 0.45 : 0.22) + Math.min(p0.distanceTo(p2), 6) * 0.12;
     const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2), pts = curve.getPoints(64);
     const line = makeLine(pts, { color: col, width: 1.8, opacity: 0.9, dashed: true, dash: 0.05, gap: 0.04 });
     const dot = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: col })); dot.scale.setScalar(0.014);
@@ -726,8 +737,9 @@ function flyTo(target, dist = 3, dur = 1.6) {
   fly = { t: 0, dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: target.clone().add(dir.multiplyScalar(dist)), t1: target.clone() };
 }
 const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-const center = new THREE.Vector3(0, ((zMax - zMin) * EX) / 2400, 0);
-const SPAN = Math.max(WKM, HKM);
+const bc = [(B.north + B.south) / 2, (B.east + B.west) / 2];
+const center = new THREE.Vector3(toX(bc[1]), hAt(bc[0], bc[1]) * 0.6, toZ(bc[0]));
+const SPAN = Math.max((B.east - B.west) * KX * KM, (B.north - B.south) * KM) * 1.15;
 function overview(dur = 1.8) {
   // oblique view from the south-east, the whole massif in frame
   fly = { t: 0, dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: center.clone().add(new THREE.Vector3(SPAN * 0.42, SPAN * 0.62, SPAN * 0.92)), t1: center.clone() };
@@ -1010,6 +1022,7 @@ for (let k = 0; k < 60; k++) stepMood(0.1);
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
 controls.target.copy(center);
 overview(2.6);
+renderer.shadowMap.needsUpdate = true;
 frame();
 pollLive();
 document.body.dataset.state = 'ready';
