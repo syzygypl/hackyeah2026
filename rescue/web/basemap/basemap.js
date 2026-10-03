@@ -23,8 +23,8 @@ export const REGIONS = {
   bieszczady: { file: "bieszczady.pmtiles", bounds: [[22.40, 49.03], [22.72, 49.20]], label: "Bieszczady (połoniny)" },
   karkonosze: { file: "karkonosze.pmtiles", bounds: [[15.62, 50.69], [15.82, 50.79]], label: "Karkonosze (Śnieżka)" },
   sniardwy:   { file: "sniardwy.pmtiles",   bounds: [[21.55, 53.68], [21.88, 53.84]], label: "Mazury - Śniardwy" },
-  // mamry (extract pending):      { file: "mamry.pmtiles",      bounds: [[21.70, 54.03], [21.98, 54.20]], label: "Mazury - Mamry" },
-  // moryn (extract pending):      { file: "moryn.pmtiles",      bounds: [[14.33, 52.82], [14.46, 52.90]], label: "Moryń - Jezioro Morzycko" },
+  mamry:      { file: "mamry.pmtiles",      bounds: [[21.70, 54.03], [21.98, 54.20]], label: "Mazury - Mamry" },
+  moryn:      { file: "moryn.pmtiles",      bounds: [[14.33, 52.82], [14.46, 52.90]], label: "Moryń - Jezioro Morzycko" },
 };
 // Pick the region whose bounds contain a scenario bbox ({west,south,east,north}); null if none.
 export function regionFor(bb) {
