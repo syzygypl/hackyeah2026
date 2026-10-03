@@ -113,6 +113,8 @@ def main():
             if i == 1:
                 check("H1 shell shows the what-if run", c.js("String(window.rescueStore.runUrl||'').startsWith('blob:')"))
                 check("H1 mini map drawn", c.js("!!document.querySelector('.ch-card svg.ch-mini path')"))
+            time.sleep(2.5)   # the 2D view reloads with the what-if run: shoot once it is ready again
+            c.until("(()=>{try{const w=document.getElementById('frame2d').contentWindow;return w.location.href.includes(encodeURIComponent(window.rescueStore.runUrl))&&w.document.body.dataset.state==='ready'}catch(e){return false}})()", 60)
             time.sleep(1.5)
             shot(c, shots, f"czat-{i}.jpg")
         c.js("[...document.querySelectorAll('[data-undo]')].pop().click()")
@@ -145,7 +147,9 @@ def main():
         check("C top 3", "obszaru" in res, res.replace("\n", " | ")[:200])
         card, res = send(c, "Dron przeleciał nad Zmarzłym Stawem i Kozią Dolinką, nic")
         check("C drone search", "obszaru" in res, res.replace("\n", " | ")[:200])
-        time.sleep(2)
+        time.sleep(3)
+        c.until("(()=>{try{const w=document.getElementById('czMap').contentWindow;return w.location.href.includes('blob')&&w.document.body.dataset.state==='ready'}catch(e){return false}})()", 60)
+        time.sleep(1.5)
         shot(c, shots, "czat-casual.jpg")
         check("no uncaught page errors", not c.errors, "; ".join(map(str, c.errors))[:300])
     finally:
