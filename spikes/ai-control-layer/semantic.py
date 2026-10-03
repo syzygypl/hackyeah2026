@@ -255,7 +255,10 @@ class SemanticGuard:
 
         def run():
             try:
-                self._call(cfg, model, "warm-up", cfg.get("warmup_timeout_ms", 20000) / 1000)
+                try:
+                    self._call(cfg, model, "warm-up", cfg.get("warmup_timeout_ms", 20000) / 1000)
+                except ValueError:
+                    pass  # answered = loaded
                 self.warm.add(model)
                 self.cooldown.pop(model, None)
             except Exception:
@@ -510,7 +513,10 @@ class SemanticGuard:
         def warm(i, role, model, digest):
             t = time.perf_counter_ns()
             try:
-                self._call(cfg, model, "warm-up", cfg.get("warmup_timeout_ms", 20000) / 1000)
+                try:
+                    self._call(cfg, model, "warm-up", cfg.get("warmup_timeout_ms", 20000) / 1000)
+                except ValueError:
+                    pass  # model answered (unparseable verdict for "warm-up" text) = it is loaded
                 self.warm.add(model)
                 done[i] = (role, model, digest[:12], round((time.perf_counter_ns() - t) / 1e6))
             except Exception as e:
