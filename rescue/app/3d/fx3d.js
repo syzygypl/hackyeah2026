@@ -85,16 +85,20 @@ export function fxShader({ uniforms = {}, vertex, fragment, ...opts }) {
   return new THREE.ShaderMaterial({ uniforms, vertexShader: head + vertex, fragmentShader: head + fragment, ...opts });
 }
 
-// ---------- global: aerial perspective, alpenglow ----------
+// ---------- global: aerial perspective, valley fog, alpenglow ----------
 // three's fog chunks, replaced once before any material compiles. Every fogged material gets aerial perspective: clear-air
 // haze with an exponential height profile integrated along the view ray (thin up high, thick in the valleys), blue
 // scattered out first, denser in bad weather (read from fogNear: 9 clear, 6 fog, 5 thick); then the weather fog
 // (near / far). applyFx materials (terrain, trees, buildings, water) also get the atmosphere effect returned here: a warm
-// Mie lobe in the haze towards the sun and alpenglow on the high peaks. World position comes from the view matrix's
-// rotation rows (the camera is rigid), not a per-vertex inverse(viewMatrix).
+// Mie lobe in the haze towards the sun, alpenglow on the high peaks and valley fog banks (fog fills everything below
+// local valley floor + thickness, uValley = floor height field, patchy and drifting). World position comes from the
+// view matrix's rotation rows (the camera is rigid), not a per-vertex inverse(viewMatrix).
 export function installHeightFog() {
   const U = { uAtmoSun: { value: new THREE.Vector3(0, 1, 0) }, uAtmoSunCol: { value: new THREE.Color(0, 0, 0) },
+    uValley: { value: new THREE.DataTexture(new Uint8Array(4), 1, 1) }, uValleyRect: { value: new THREE.Vector4(0, 0, 1, 1) },
+    uValleyP: { value: new THREE.Vector4() }, uValleyCol: { value: new THREE.Color(1, 1, 1) }, // P: amount, thickness, time, floor scale
     uAlpen: { value: new THREE.Color(0, 0, 0) }, uAlpenY: { value: new THREE.Vector2(1, 2) } };
+  U.uValley.value.needsUpdate = true;
   FX_GLOBAL.push({ name: 'atmo', uniforms: U, glsl: '#define FX_ATMO 1' });
   THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float vFogDepth; varying float vFogY; varying vec3 vFogW;\n#endif';
   THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
@@ -109,8 +113,23 @@ export function installHeightFog() {
   vec3 fogV = vFogW / max( fogDist, 1e-5 );
   #ifdef FX_ATMO
     vec3 fogSunD = uAtmoSun, fogSunC = uAtmoSunCol;
+    vec2 fogXZ = cameraPosition.xz + vFogW.xz;
     // alpenglow: the last light of the day on the high peaks (pink, more on bright rock and snow)
     gl_FragColor.rgb += uAlpen * smoothstep( uAlpenY.x, uAlpenY.y, vFogY ) * ( 0.3 + dot( gl_FragColor.rgb, vec3( 0.3, 0.5, 0.2 ) ) );
+    // valley fog: the fog top is the local floor plus a patchy, slowly drifting thickness; a pixel under it is seen
+    // through the fog between it and the point where the view ray leaves the layer
+    if ( uValleyP.x > 0.001 ) {
+      float vfFloor = texture2D( uValley, ( fogXZ - uValleyRect.xy ) / uValleyRect.zw ).r * uValleyP.w;
+      if ( vFogY < vfFloor + uValleyP.y * 1.7 ) {
+        vec2 vfq = fogXZ * 1.7 + vec2( uValleyP.z * 0.012, - uValleyP.z * 0.008 );
+        float vfTop = vfFloor + uValleyP.y * ( 0.3 + 1.4 * fxFbm( vfq + vec2( 0.6 * fxNoise( vfq * 0.45 - uValleyP.z * 0.02 ), 0.0 ), 0.4 ) );
+        float vfIn = vfTop - vFogY;
+        if ( vfIn > 0.0 ) {
+          float vfLen = min( fogDist, vfIn / max( - fogV.y, 0.025 ) );
+          gl_FragColor.rgb = mix( gl_FragColor.rgb, uValleyCol, ( 1.0 - exp( - uValleyP.x * 10.0 * vfLen ) ) * smoothstep( 0.0, uValleyP.y * 0.6, vfIn ) );
+        }
+      }
+    }
   #else
     vec3 fogSunD = vec3( 0.0, 1.0, 0.0 ), fogSunC = vec3( 0.0 );
   #endif

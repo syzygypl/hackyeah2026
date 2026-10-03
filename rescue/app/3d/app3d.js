@@ -287,7 +287,7 @@ labels.setSize(innerWidth, innerHeight);
 Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
 host.appendChild(labels.domElement);
 
-const ATMO = installHeightFog(); // fx3d: aerial perspective, alpenglow, before any material compiles
+const ATMO = installHeightFog(); // fx3d: aerial perspective, valley fog, alpenglow, before any material compiles
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -945,7 +945,7 @@ const dyn = { top: new THREE.Group(), searched: new THREE.Group(), teams: new TH
 Object.values(dyn).forEach((g) => scene.add(g));
 const movers = [];
 
-// ---------- mood: time of day, weather ----------
+// ---------- mood: time of day, weather, valley fog ----------
 // The sky palette follows the sun's elevation (deg): day, golden hour, sunset, alpenglow, blue hour and the moonlit night
 // (the old night mood, with a cooler ambient). The weather is layered on top every frame: fog greys and flattens the
 // light, a building cloud deck darkens the sky and hides the sun, snow turns it white. The sun moves in ~3 s, clouds
@@ -974,11 +974,37 @@ function palette(el) {
 const C_HAZE = new THREE.Color(0.86, 0.94, 1.06), C_WHITE = new THREE.Color(1, 1, 1), C_MOONLIT = new THREE.Color('#7d8bab'), C_ALPEN = new THREE.Color('#ff5f7e');
 const C_SNOWFOG = new THREE.Color('#e7ecf1'), C_SNOWSKY = new THREE.Color('#eef1f4'), tmpC = new THREE.Color();
 const greyOf = (c, k) => { const l = (c.r * 0.3 + c.g * 0.59 + c.b * 0.11) * k; return tmpC.setRGB(l, l, l); };
+// valley fog field (fx3d atmosphere): the local valley floor = a 0.6 km minimum filter of the mesh heights, smoothed;
+// fog fills what lies below it plus the current thickness (cirques, valley bottoms, lakes, flat lowland)
+{
+  const C = DEM.cols, Rr = DEM.rows, cell = WKM / Math.max(C - 1, 1), H = new Float32Array(C * Rr);
+  for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) H[r * C + c] = ((DEM.z[r][c] - zMin) * EX) / 1000;
+  const pass = (src, dx, dy, rad, isMin) => {
+    const out = new Float32Array(src.length);
+    for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) {
+      let a = isMin ? Infinity : 0, n = 0;
+      for (let t = -rad; t <= rad; t++) {
+        const rr = r + t * dy, cc = c + t * dx; if (rr < 0 || cc < 0 || rr >= Rr || cc >= C) continue;
+        const v = src[rr * C + cc]; if (isMin) { if (v < a) a = v; } else { a += v; n++; }
+      }
+      out[r * C + c] = isMin ? a : a / n;
+    }
+    return out;
+  };
+  const mr = Math.max(2, Math.round(0.6 / cell)), br = Math.max(1, Math.round(0.3 / cell));
+  let F = pass(pass(H, 1, 0, mr, true), 0, 1, mr, true);
+  for (let k = 0; k < 2; k++) F = pass(pass(F, 1, 0, br, false), 0, 1, br, false);
+  let fMax = 1e-6; for (const v of F) if (v > fMax) fMax = v;
+  const data = new Uint8Array(C * Rr * 4); // row 0 = north = v 0, as z grows southwards
+  for (let i = 0; i < C * Rr; i++) { data[i * 4] = Math.round((F[i] / fMax) * 255); data[i * 4 + 3] = 255; }
+  const t = new THREE.DataTexture(data, C, Rr, THREE.RGBAFormat); t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter; t.needsUpdate = true;
+  ATMO.uValley.value = t; ATMO.uValleyRect.value.set(-WKM / 2, -HKM / 2, WKM, HKM); ATMO.uValleyP.value.w = fMax;
+}
 ATMO.uAtmoSun.value = SKY_SUN; // haze glows towards the sun, also below the horizon
 ATMO.uAlpenY.value.set(0.45, 0.85).multiplyScalar(((zMax - zMin) * EX) / 1000); // alpenglow on the upper part of the relief
 const ALPEN = smooth(500, 1200, zMax - zMin) * 0.26; // mountains only
 const s0 = sunOfStep(STEP0);
-const cur = { el: s0.el, az: s0.az, cloud: 0.35, rain: 0, snow: 0, fogW: 0, white: 0, near: 12, far: 60, wind: 0.02, cover: 0 };
+const cur = { el: s0.el, az: s0.az, cloud: 0.35, rain: 0, snow: 0, fogW: 0, white: 0, near: 12, far: 60, wind: 0.02, cover: 0, valley: 0, vthick: 0.07 };
 let tgt = { ...cur, storm: false };
 // far shadow re-bake when the key light moves: rows spread over frames (~4 ms each) into the hidden mask, then crossfade
 const bake = { want: keyDir(s0, new THREE.Vector3(), 0.8), dir: keyDir(s0, new THREE.Vector3(), 0.8), job: null, side: 0, fade: false };
@@ -1005,6 +1031,9 @@ function setMood(w, i = STEP) {
     white: pr === 'snow' ? smooth(-8, -2, sp.el) : 0, // whiteout by day: white fog, closer, flat light
     // snow cover: full while it snows, a dusting in hard frost (accumulates slowly in stepMood)
     cover: !on ? 0 : pr === 'snow' ? 1 : tC <= -3 ? 0.5 : tC <= 0 ? 0.25 : 0,
+    // valley fog: thick in low visibility, a thin layer in cool air around dusk, dawn and at night, none in heat
+    valley: !on ? 0 : Math.max(vis < 500 ? 1 : 0, smooth(16, 3, sp.el) * smooth(20, 8, tC) * (pr ? 0.3 : 0.6)),
+    vthick: vis < 500 ? 0.2 : 0.07 + 0.04 * smooth(10, -6, sp.el),
   };
   if (pr === 'snow') { tgt.near *= 1 - 0.2 * tgt.white; tgt.far *= 1 - 0.25 * tgt.white; }
   keyDir(sp, bake.want, 0.8);
@@ -1015,7 +1044,7 @@ function stepMood(dt, snap = false) {
   const now = performance.now(), kk = (r) => (snap ? 1 : 1 - Math.exp(-dt * r));
   const kS = kk(1.1);
   cur.el += (tgt.el - cur.el) * kS; cur.az += ((((tgt.az - cur.az) % 360) + 540) % 360 - 180) * kS;
-  for (const n of ['near', 'far', 'wind', 'fogW', 'white']) cur[n] += (tgt[n] - cur[n]) * kk(0.9);
+  for (const n of ['near', 'far', 'wind', 'fogW', 'white', 'valley', 'vthick']) cur[n] += (tgt[n] - cur[n]) * kk(0.9);
   cur.cloud += (tgt.cloud - cur.cloud) * kk(tgt.cloud > cur.cloud ? 0.45 : 0.35);
   const gate = smooth(0.55, 0.8, cur.cloud); // rain and snow fall once the deck has built, and stop first
   for (const n of ['rain', 'snow']) { const g = tgt[n] * gate; cur[n] += (g - cur[n]) * kk(g > cur[n] ? 0.8 : 1.6); }
@@ -1041,6 +1070,8 @@ function stepMood(dt, snap = false) {
   su.uCloudDark.value.copy(p.bottom).lerp(p.top, 0.35).multiplyScalar(0.92); // bases: sky light from below
   scene.fog.color.copy(p.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
   ATMO.uAtmoSunCol.value.copy(p.glow).multiplyScalar(smooth(-7, -1, el) * (1 - 0.7 * st) * (1 - 0.5 * f));
+  ATMO.uValleyP.value.set(cur.valley, cur.vthick, heatU.uTime.value, ATMO.uValleyP.value.w);
+  ATMO.uValleyCol.value.copy(p.fog).lerp(p.hs, 0.35).lerp(p.glow, 0.2 * tw);
   ATMO.uAlpen.value.copy(C_ALPEN).multiplyScalar(ALPEN * smooth(2.5, -0.5, el) * smooth(-5.5, -2.5, el) * (1 - 0.8 * st) * (1 - 0.3 * f));
   // lights: sun or moon (key), sky ambient, lightning in rain
   if (tgt.storm && cur.rain > 0.6 && !snap) {
