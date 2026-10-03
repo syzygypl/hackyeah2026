@@ -41,9 +41,11 @@ async function showMain(el) {
     }
   }
   if (!loaded.missing) {
-    el.innerHTML = renderSummary(loaded) +
-      `<p class="row"><button id="val-details-toggle">${detailsOpen ? "Ukryj szczegóły" : "Szczegóły"}</button></p>` +
-      (detailsOpen ? (ablation && ablation.length ? renderAblation(ablation) : "") + renderResults(loaded) : "");
+    // Default card is #validation-summary (AI Marcina, land+water side by side). This module's own
+    // summary card + histogram (renderSummary) moves under "Szczegóły" per ASSIGN Mateusza 17:04,
+    // so only one card shows by default.
+    el.innerHTML = `<p class="row"><button id="val-details-toggle">${detailsOpen ? "Ukryj szczegóły" : "Szczegóły"}</button></p>` +
+      (detailsOpen ? renderSummary(loaded) + (ablation && ablation.length ? renderAblation(ablation) : "") + renderResults(loaded) : "");
     return;
   }
   // no calibration yet: show the simulator runs (manifest + run.json)
