@@ -1024,7 +1024,7 @@ function renderValue() {
   const at = R.steps[v.beforePing] || R.steps[R.steps.length - 1], seg = v.truthSeg ?? v.findSeg;
   el.hidden = false;
   el.innerHTML = `<h2>Wartość <span class="mode">silnik, ${esc(at.t)}</span></h2>
-    <div class="v-big">${pct(v.top3poa, 0)} <span>prawdopodobieństwa w <b>${pct(v.top3area, 0)}</b> obszaru (top 3)</span></div>
+    <div class="v-big">${pct(v.top3poa, 0)} <span>wagi mapy w <b>${pct(v.top3area, 0)}</b> obszaru (top 3)</span></div>
     ${v.rankFused != null ? `<div class="v-row"><b class="ok">#${v.rankFused}</b> vs <b>#${v.rankRings}</b> <span>miejsce odnalezienia (${esc(seg)}): po fuzji vs same pierścienie Koestera</span></div>` : ''}
     ${v.areaFused != null ? `<div class="v-row"><b class="ok">${pct(v.areaFused, 1)}</b> vs <b>${pct(v.areaRings, 1)}</b> <span>obszaru do przeszukania, zanim zespół trafi</span></div>` : ''}
     ${v.pos2hPlanned != null && v.pos2hNaive != null ? `<div class="v-row"><b class="ok">${pct(v.pos2hPlanned, 0)}</b> vs <b>${pct(v.pos2hNaive, 0)}</b> <span>szansa znalezienia w 2 h: przydział silnika vs „największe POA najpierw”</span></div>` : ''}

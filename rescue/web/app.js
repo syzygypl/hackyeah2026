@@ -881,7 +881,7 @@
     const next = M.hints[v.beforePing + 1];
     const when = next && next.kind === 'point' ? `${esc(at.t)}, przed ${/ratunek/i.test(next.source) ? 'pingiem Ratunek' : 'punktem GPS'}` : esc(at.t);
     $('#value').innerHTML = `<h2>Wartość <span class="mode">silnik, ${when}</span></h2>
-      <div class="v-big">${pct(v.top3poa)} <span>prawdopodobieństwa</span></div>
+      <div class="v-big">${pct(v.top3poa)} <span>wagi mapy</span></div>
       <div class="v-sub">w <b>${pct(v.top3area)}</b> obszaru - top 3 segmenty z ${M.segList.length}</div>
       <div class="v-row"><span class="v-num ok">#${v.rankFused}</span><span class="v-vs">vs</span><span class="v-num">#${v.rankRings}</span>
         <span class="v-txt">miejsce odnalezienia (${esc(findSegOf(v))}): po fuzji wskazówek vs same pierścienie Koestera</span></div>

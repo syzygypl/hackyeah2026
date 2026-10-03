@@ -190,7 +190,7 @@ function setStep(n, from) {
 function renderPanels() {
   const R = D(), S = curStep(); if (!R || !S) return;
   const t3 = S.segments.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
-  $("vbig").textContent = `${pct(tp)} prawdopodobieństwa w ${Math.round(ta)}% obszaru`;
+  $("vbig").textContent = `${pct(tp)} wagi mapy w ${Math.round(ta)}% obszaru`;
   $("vsub").textContent = `Top 3 z ${S.segments.length} segmentów · krok ${store.step}/${R.steps.length} (${S.t})`;
   const segRows = [...t3]; const sel = S.segments.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
   $("segs").innerHTML = segRows.map((s) => { const k = S.segments.indexOf(s);
