@@ -2,7 +2,7 @@
 //! Live fixes: local file <live dir>/fixes-<sc>.json, shared store doc "fixes:<sc>".
 use super::adapt::*;
 use super::common::*;
-use super::live::{live_scenario, scenario_stamp, timeline_input, RESET_GEN};
+use super::live::{file_stamps, live_scenario, timeline_input, RESET_GEN};
 use super::state::*;
 use axum::body::Bytes;
 use once_cell::sync::Lazy;
@@ -133,15 +133,17 @@ impl TimelineCache {
             (0, 0, String::new(), -1)
         };
         format!(
-            "{name}|{live}|{}|{}|{}|{reports}|{fixes}|{cur}|{ros}|{}",
+            "{name}|{live}|{}|{reports}|{fixes}|{cur}|{ros}|{}#{}",
             features.unwrap_or(""),
-            scenario_stamp(name),
-            swift_interp(mtime(&tracks_path(name))),
-            RESET_GEN.load(Ordering::SeqCst)
+            RESET_GEN.load(Ordering::SeqCst),
+            file_stamps(name)
         )
     }
     pub async fn engine(&self, name: &str, live: bool, features: Option<&str>) -> Option<(String, Arc<TimelineEngine>)> {
         let k = self.key(name, live, features).await;
+        self.engine_for(k, name, live, features).await
+    }
+    async fn engine_for(&self, k: String, name: &str, live: bool, features: Option<&str>) -> Option<(String, Arc<TimelineEngine>)> {
         if let Some(e) = self.engines.lock().get(&k) {
             return Some((k, e.clone()));
         }
@@ -179,7 +181,12 @@ impl TimelineCache {
     }
     /// GET /api/run/<sc>?t=HH:MM -> rescue-frame/1
     pub async fn frame(&self, name: &str, live: bool, features: Option<&str>, t: &str) -> Option<Bytes> {
-        let (k, e) = self.engine(name, live, features).await?;
+        let k0 = self.key(name, live, features).await;
+        let ok = format!("frame|{k0}|{t}");
+        if let Some(d) = self.out.peek(&ok).or_else(|| super::bake::baked(&ok)) {
+            return Some(d);
+        }
+        let (k, e) = self.engine_for(k0, name, live, features).await?;
         let (n, t) = (name.to_string(), t.to_string());
         self.out
             .get(format!("frame|{k}|{t}"), || async move {
@@ -198,7 +205,13 @@ impl TimelineCache {
     }
     /// GET /api/tracks/<sc>?at=HH:MM (default: the live moment, else the timeline end) -> rescue-tracks-est/1
     pub async fn tracks(&self, name: &str, live: bool, at: Option<&str>) -> Option<Bytes> {
-        let (k, e) = self.engine(name, live, None).await?;
+        // a rendered (or baked) answer needs no engine
+        let k0 = self.key(name, live, None).await;
+        let ok = format!("tracks|{k0}|{}", at.unwrap_or(""));
+        if let Some(d) = self.out.peek(&ok).or_else(|| super::bake::baked(&ok)) {
+            return Some(d);
+        }
+        let (k, e) = self.engine_for(k0, name, live, None).await?;
         let la = self.live_at.lock().get(&k).cloned();
         let (n, at) = (name.to_string(), at.map(String::from));
         self.out

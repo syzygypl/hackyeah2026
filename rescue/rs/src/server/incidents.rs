@@ -77,14 +77,21 @@ fn incident_base_of(run: &[u8], sc: &str, advanced: bool) -> Value {
 
 /// Its cache key holds exactly what runScenario(live:) reads - live reports without sc and for sc, the advance cursor, the
 /// roster teams on a touched incident, the scenario files - so a clue, dispatch or ACK on another incident does not recompute this one.
-pub async fn incident_base(sc: &str, n_live: i64) -> Option<Bytes> {
+pub async fn incident_base_key(sc: &str, n_live: i64) -> String {
     let teams_key = ROSTER.resources(sc).map(|v| v.iter().map(|r| swift_json(r)).collect::<Vec<_>>().join(";")).unwrap_or_else(|| "-".into());
-    let key = format!(
+    format!(
         "{sc}|{n_live}|{}|{}|{teams_key}|{}",
         STORE.report_count(Some(sc)).await,
         CURSORS.get(sc).unwrap_or_else(|| "-".into()),
         scenario_hash(sc)
-    );
+    )
+}
+pub async fn incident_base(sc: &str, n_live: i64) -> Option<Bytes> {
+    let key = incident_base_key(sc, n_live).await;
+    if let Some(d) = super::bake::baked(&key) {
+        INCIDENT_LAST.lock().insert(sc.to_string(), d.clone());
+        return Some(d);
+    }
     let (s, k) = (sc.to_string(), key.clone());
     let d = INCIDENT_CACHE
         .get(key, || async move {

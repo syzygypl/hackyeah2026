@@ -476,6 +476,9 @@ pub async fn run() {
             std::process::exit(1);
         }
     }
+    if let Ok(p) = std::env::var("RESCUE_BAKED") {
+        super::bake::load(&p);
+    }
     m_set("live_events_total", &[], STORE.report_count(None).await as f64);
     if llm_openai() {
         m_set("llm_up", &[], 1.0);

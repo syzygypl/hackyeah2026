@@ -262,24 +262,36 @@ fn teams_key(sc: &str) -> String {
     ROSTER.resources(sc).map(|v| v.iter().map(|r| swift_json(r)).collect::<Vec<_>>().join(";")).unwrap_or_else(|| "-".into())
 }
 
-/// Loads scenarios/<name>.json + <name>-terrain.json, folds live reports in, runs the engine.
-/// frameMin / frames: timeline mode (`?frameMin=`, `?frames=0`), ignored without tracks.
-pub async fn run_scenario(name: &str, live: bool, features: Option<&str>, frame_min: i64, frames: bool) -> Option<Bytes> {
+/// File stamps of a scenario in cache keys: size+mtime of <name>.json + terrain, mtime of its tracks file. Cache keys are
+/// `<state part>#<file_stamps>`, so a baked entry (bake.rs) is re-keyed at startup with this instance's file stamps.
+pub fn file_stamps(name: &str) -> String { format!("{}|{}", scenario_stamp(name), swift_interp(mtime(&tracks_path(name)))) }
+
+/// RUN_CACHE key: everything runScenario reads (live state version incl. reports count, cursor, roster teams, clue weights,
+/// live fixes, query) + the file stamps
+pub async fn run_key(name: &str, live: bool, features: Option<&str>, frame_min: i64, frames: bool) -> String {
     let (reports, cw, fixes) = if live {
         let (a, b, w, f) = tokio::join!(STORE.report_count(None), STORE.report_count(Some(name)), clue_weights(name), LIVE_FIXES.all(name));
         (format!("{a}+{b}"), swift_json(&Value::Object(w)), f.len())
     } else {
         ("-".into(), "-".into(), 0)
     };
-    let key = format!(
-        "{name}|{live}|{}|{frame_min}|{frames}|{}|{}|{}|{reports}|{}|{}|{cw}|{fixes}",
+    format!(
+        "{name}|{live}|{}|{frame_min}|{frames}|{}|{reports}|{}|{}|{cw}|{fixes}#{}",
         features.unwrap_or(""),
-        scenario_stamp(name),
-        swift_interp(mtime(&tracks_path(name))),
         RESET_GEN.load(Ordering::SeqCst),
         if live { CURSORS.get(name).unwrap_or_default() } else { String::new() },
-        teams_key(name)
-    );
+        teams_key(name),
+        file_stamps(name)
+    )
+}
+
+/// Loads scenarios/<name>.json + <name>-terrain.json, folds live reports in, runs the engine.
+/// frameMin / frames: timeline mode (`?frameMin=`, `?frames=0`), ignored without tracks.
+pub async fn run_scenario(name: &str, live: bool, features: Option<&str>, frame_min: i64, frames: bool) -> Option<Bytes> {
+    let key = run_key(name, live, features, frame_min, frames).await;
+    if let Some(b) = super::bake::baked(&key) {
+        return Some(b);
+    }
     let (n, f) = (name.to_string(), features.map(String::from));
     RUN_CACHE
         .get(key, || async move {
