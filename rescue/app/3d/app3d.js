@@ -430,6 +430,18 @@ function lerpStops(stops, v) {
   return stops[stops.length - 1][1];
 }
 const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+// lerpStops into a reusable buffer (Float64Array keeps the exact doubles), for the per-pixel base bake
+const VC = new Float64Array(3), RC = new Float64Array(3);
+function lerpTo(stops, v, o) {
+  let a = stops[stops.length - 1][1];
+  if (v <= stops[0][0]) a = stops[0][1];
+  else for (let i = 1; i < stops.length; i++) if (v <= stops[i][0]) {
+    const e0 = stops[i - 1][0], p = stops[i - 1][1], q = stops[i][1], t = (v - e0) / (stops[i][0] - e0);
+    o[0] = p[0] + (q[0] - p[0]) * t; o[1] = p[1] + (q[1] - p[1]) * t; o[2] = p[2] + (q[2] - p[2]) * t; return;
+  }
+  o[0] = a[0]; o[1] = a[1]; o[2] = a[2];
+}
+const contour = (e, right, down, st) => Math.floor(e / st) !== Math.floor(right / st) || Math.floor(e / st) !== Math.floor(down / st);
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; baseCanvas.height = TH;
 {
@@ -446,15 +458,17 @@ const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; base
     const len = Math.hypot(gx, gy, 1), shade = clamp((0.62 * gx - 0.62 * gy + 0.5) / len / 0.78, 0, 1.4);
     const wla = DEM.lat0 - ((y + 0.5) / TS) * stLat, wlo = DEM.lon0 + ((x + 0.5) / TS) * stLon;
     if ((LOW || WM) && isWater(wla, wlo)) { const k = 0.9 + 0.1 * Math.sin(x * 0.07 + y * 0.05); d[i * 4] = 92 * k; d[i * 4 + 1] = 142 * k; d[i * 4 + 2] = 166 * k; d[i * 4 + 3] = 255; continue; }
-    let c = LOW ? mix3([168, 178, 132], [150, 142, 120], smooth(14, 30, slope)) : mix3(lerpStops(VEG, e), lerpStops(ROCK, e), smooth(26, 42, slope));
-    c = mix3(c, [236, 238, 242], smooth(2350, 2550, e) * 0.8);
-    c = c.map((v) => v * (0.62 + 0.42 * shade));
-    if (shade < 0.75) c = mix3(c, [58, 74, 112], (0.75 - shade) * 0.45);
-    else if (shade > 1) c = mix3(c, [255, 236, 204], (shade - 1) * 0.3);
-    const f = (st) => Math.floor(e / st) !== Math.floor(right / st) || Math.floor(e / st) !== Math.floor(down / st);
-    const w = f(250) ? 0.3 : f(50) ? 0.12 : 0;
-    if (w) c = mix3(c, [110, 76, 44], w);
-    d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
+    // same arithmetic as mix3 / lerpStops, on scalars: no arrays per pixel (this loop runs ~6M times, it was ~0.8 s of the load)
+    let r, gr, b, t;
+    if (LOW) { t = smooth(14, 30, slope); r = 168 + (150 - 168) * t; gr = 178 + (142 - 178) * t; b = 132 + (120 - 132) * t; }
+    else { lerpTo(VEG, e, VC); lerpTo(ROCK, e, RC); t = smooth(26, 42, slope); r = VC[0] + (RC[0] - VC[0]) * t; gr = VC[1] + (RC[1] - VC[1]) * t; b = VC[2] + (RC[2] - VC[2]) * t; }
+    t = smooth(2350, 2550, e) * 0.8; r = r + (236 - r) * t; gr = gr + (238 - gr) * t; b = b + (242 - b) * t;
+    const m = 0.62 + 0.42 * shade; r *= m; gr *= m; b *= m;
+    if (shade < 0.75) { t = (0.75 - shade) * 0.45; r = r + (58 - r) * t; gr = gr + (74 - gr) * t; b = b + (112 - b) * t; }
+    else if (shade > 1) { t = (shade - 1) * 0.3; r = r + (255 - r) * t; gr = gr + (236 - gr) * t; b = b + (204 - b) * t; }
+    const w = contour(e, right, down, 250) ? 0.3 : contour(e, right, down, 50) ? 0.12 : 0;
+    if (w) { r = r + (110 - r) * w; gr = gr + (76 - gr) * w; b = b + (44 - b) * w; }
+    d[i * 4] = r; d[i * 4 + 1] = gr; d[i * 4 + 2] = b; d[i * 4 + 3] = 255;
   }
   g.putImageData(img, 0, 0);
   if (OSM) paintOSM(g);
@@ -529,7 +543,7 @@ const normalTex = (() => {
     const h0 = H[r * C + c]; let occ = 0;
     for (let j = 0; j < 8; j++) {
       const dc = DIRS[j][0], dr = DIRS[j][1], dl = DL[j]; let mx = 0;
-      for (const k of STEPS) { const rr = r + dr * k, cc = c + dc * k; if (rr < 0 || cc < 0 || rr >= Rr || cc >= C) break; const tn = (H[rr * C + cc] - h0) / (dl * k); if (tn > mx) mx = tn; }
+      for (let si = 0; si < STEPS.length; si++) { const k = STEPS[si], rr = r + dr * k, cc = c + dc * k; if (rr < 0 || cc < 0 || rr >= Rr || cc >= C) break; const tn = (H[rr * C + cc] - h0) / (dl * k); if (tn > mx) mx = tn; }
       occ += mx / Math.sqrt(1 + mx * mx); // sin(horizon angle)
     }
     const v = clamp(1 - (occ / 8) * 1.35, 0.25, 1) * 255, o = ((Rr - 1 - r) * C + c) * 4;
