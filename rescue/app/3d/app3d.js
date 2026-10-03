@@ -422,62 +422,23 @@ function elevFull(lat, lon) {
   return (z[r0][c0] * (1 - fc) + z[r0][c1] * fc) * (1 - fr) + (z[r1][c0] * (1 - fc) + z[r1][c1] * fc) * fr;
 }
 const TW = DEM.cols * TS, TH = DEM.rows * TS;
-// vegetation by elevation (Tatra belts: spruce forest, dwarf pine, alpine meadow), rock by slope, snow high up
-const VEG = [[900, [62, 112, 52]], [1200, [48, 98, 44]], [1450, [70, 118, 52]], [1600, [104, 138, 64]], [1800, [150, 160, 88]], [2000, [168, 166, 120]], [2300, [184, 180, 168]]];
-const ROCK = [[1000, [138, 128, 116]], [1800, [156, 148, 138]], [2300, [186, 180, 172]]];
-function lerpStops(stops, v) {
-  if (v <= stops[0][0]) return stops[0][1];
-  for (let i = 1; i < stops.length; i++) if (v <= stops[i][0]) {
-    const [e0, a] = stops[i - 1], [e1, b] = stops[i], t = (v - e0) / (e1 - e0);
-    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-  }
-  return stops[stops.length - 1][1];
-}
-const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
-// lerpStops into a reusable buffer (Float64Array keeps the exact doubles), for the per-pixel base bake
-const VC = new Float64Array(3), RC = new Float64Array(3);
-function lerpTo(stops, v, o) {
-  let a = stops[stops.length - 1][1];
-  if (v <= stops[0][0]) a = stops[0][1];
-  else for (let i = 1; i < stops.length; i++) if (v <= stops[i][0]) {
-    const e0 = stops[i - 1][0], p = stops[i - 1][1], q = stops[i][1], t = (v - e0) / (stops[i][0] - e0);
-    o[0] = p[0] + (q[0] - p[0]) * t; o[1] = p[1] + (q[1] - p[1]) * t; o[2] = p[2] + (q[2] - p[2]) * t; return;
-  }
-  o[0] = a[0]; o[1] = a[1]; o[2] = a[2];
-}
-const contour = (e, right, down, st) => Math.floor(e / st) !== Math.floor(right / st) || Math.floor(e / st) !== Math.floor(down / st);
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+// base colours, normal map and AO are baked in a worker (bake3d.js) while the main thread builds the rest of the scene;
+// applyBake() puts the pixels in before the first frame (start). The worker code is the former inline bake: same pixels.
+const flatZ = (D) => { const z = new Float64Array(D.rows * D.cols); for (let r = 0; r < D.rows; r++) z.set(D.z[r].length > D.cols ? D.z[r].slice(0, D.cols) : D.z[r], r * D.cols); return z; };
+const demMsg = (D) => ({ lat0: D.lat0, lon0: D.lon0, step: D.step, stepLat: D.stepLat, rows: D.rows, cols: D.cols, z: flatZ(D) });
+const bakeIn = { full: demMsg(DEM_FULL), dem: DEM === DEM_FULL ? null : demMsg(DEM), TS, KX, KM, EX, LOW,
+  WM: WM && { m: Uint8Array.from(WM.m, (v) => (v ? 1 : 0)), rows: WM.rows, cols: WM.cols, b: { north: WM.b.north, south: WM.b.south, east: WM.b.east, west: WM.b.west } } };
+const bakeJob = new Promise((resolve, reject) => {
+  const local = () => import('./bake3d.js').then((m) => resolve(m.bakeTerrain(bakeIn)), reject); // no worker: same code here
+  try {
+    const w = new Worker(new URL('./bake3d.js', import.meta.url), { type: 'module' });
+    w.onmessage = (e) => { w.terminate(); if (e.data?.error) local(); else resolve(e.data); };
+    w.onerror = (e) => { e.preventDefault?.(); w.terminate(); local(); };
+    w.postMessage(bakeIn);
+  } catch { local(); }
+});
 const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; baseCanvas.height = TH;
-{
-  // printed-topo look: vegetation/rock tint, warm-lit / cool-shadow hillshade, brown contours every 50 m (bold every 250 m)
-  const g = baseCanvas.getContext('2d'), img = g.createImageData(TW, TH), d = img.data;
-  const E = new Float32Array(TW * TH);
-  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) E[y * TW + x] = elevFull(DEM.lat0 - ((y + 0.5) / TS) * stLat, DEM.lon0 + ((x + 0.5) / TS) * stLon);
-  const px = (stLon * KX * KM * 1000) / TS, py = (stLat * KM * 1000) / TS;
-  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
-    if (x === 0 && y && y % 320 === 0) await yieldMain(); // ~90 ms slices
-    const i = y * TW + x, e = E[i];
-    const right = E[y * TW + Math.min(x + 1, TW - 1)], left = E[y * TW + Math.max(x - 1, 0)];
-    const down = E[Math.min(y + 1, TH - 1) * TW + x], up = E[Math.max(y - 1, 0) * TW + x];
-    const gx = (right - left) / (2 * px), gy = (down - up) / (2 * py), slope = (Math.atan(Math.hypot(gx, gy)) * 180) / Math.PI;
-    const len = Math.hypot(gx, gy, 1), shade = clamp((0.62 * gx - 0.62 * gy + 0.5) / len / 0.78, 0, 1.4);
-    const wla = DEM.lat0 - ((y + 0.5) / TS) * stLat, wlo = DEM.lon0 + ((x + 0.5) / TS) * stLon;
-    if ((LOW || WM) && isWater(wla, wlo)) { const k = 0.9 + 0.1 * Math.sin(x * 0.07 + y * 0.05); d[i * 4] = 92 * k; d[i * 4 + 1] = 142 * k; d[i * 4 + 2] = 166 * k; d[i * 4 + 3] = 255; continue; }
-    // same arithmetic as mix3 / lerpStops, on scalars: no arrays per pixel (this loop runs ~6M times, it was ~0.8 s of the load)
-    let r, gr, b, t;
-    if (LOW) { t = smooth(14, 30, slope); r = 168 + (150 - 168) * t; gr = 178 + (142 - 178) * t; b = 132 + (120 - 132) * t; }
-    else { lerpTo(VEG, e, VC); lerpTo(ROCK, e, RC); t = smooth(26, 42, slope); r = VC[0] + (RC[0] - VC[0]) * t; gr = VC[1] + (RC[1] - VC[1]) * t; b = VC[2] + (RC[2] - VC[2]) * t; }
-    t = smooth(2350, 2550, e) * 0.8; r = r + (236 - r) * t; gr = gr + (238 - gr) * t; b = b + (242 - b) * t;
-    const m = 0.62 + 0.42 * shade; r *= m; gr *= m; b *= m;
-    if (shade < 0.75) { t = (0.75 - shade) * 0.45; r = r + (58 - r) * t; gr = gr + (74 - gr) * t; b = b + (112 - b) * t; }
-    else if (shade > 1) { t = (shade - 1) * 0.3; r = r + (255 - r) * t; gr = gr + (236 - gr) * t; b = b + (204 - b) * t; }
-    const w = contour(e, right, down, 250) ? 0.3 : contour(e, right, down, 50) ? 0.12 : 0;
-    if (w) { r = r + (110 - r) * w; gr = gr + (76 - gr) * w; b = b + (44 - b) * w; }
-    d[i * 4] = r; d[i * 4 + 1] = gr; d[i * 4 + 2] = b; d[i * 4 + 3] = 255;
-  }
-  g.putImageData(img, 0, 0);
-  if (OSM) paintOSM(g);
-}
 // land cover tints, building footprints and roads on the base texture (about 3 m per pixel, so streets read crisply)
 function paintOSM(g) {
   const P = (la, lo) => [((lo - DEM.lon0) / stLon) * TS, ((DEM.lat0 - la) / stLat) * TS];
@@ -531,30 +492,12 @@ let terrainAO = null, sunMask = null, sunAt = () => 1, sunBake = null;
 const normalTex = (() => {
   const k = DEM_FULL.cols / DEM.cols >= 1.5 ? 2 : 1, C = DEM.cols * k, Rr = DEM.rows * k, Z = DEM_FULL.z;
   const sx = 2 * (DEM_FULL.step * KX * KM), sz = 2 * ((DEM_FULL.stepLat || DEM_FULL.step) * KM), f = EX / 1000;
-  const at = (r, c) => Z[clamp(r, 0, Rr - 1)][clamp(c, 0, C - 1)];
-  const data = new Uint8Array(C * Rr * 4);
-  for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) {
-    const gx = ((at(r, c + 1) - at(r, c - 1)) * f) / sx, gz = ((at(r + 1, c) - at(r - 1, c)) * f) / sz, l = Math.hypot(gx, 1, gz);
-    const o = ((Rr - 1 - r) * C + c) * 4; // texture row 0 = south (v = 0)
-    data[o] = (-gx / l * 0.5 + 0.5) * 255; data[o + 1] = (1 / l * 0.5 + 0.5) * 255; data[o + 2] = (-gz / l * 0.5 + 0.5) * 255; data[o + 3] = 255;
-  }
+  const data = new Uint8Array(C * Rr * 4); // normal map: filled by the worker (applyBake)
   const t = new THREE.DataTexture(data, C, Rr, THREE.RGBAFormat);
   t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); t.needsUpdate = true;
-  // flat height array in scene units, for the two bakes below
+  // flat height array in scene units, for the sun bake below
   const H = new Float32Array(C * Rr); for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) H[r * C + c] = Z[r][c] * f;
-  // baked ambient occlusion: horizon angle in 8 directions out to ~1 km, so gullies and cirques sit in their own shade
-  const ao = new Uint8Array(C * Rr * 4), px = sx / 2, pz = sz / 2, DIRS = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], STEPS = [1, 2, 3, 5, 8, 12, 18, 27, 40];
-  const DL = DIRS.map(([dc, dr]) => Math.hypot(dc * px, dr * pz));
-  for (let r = 0; r < Rr; r++) for (let c = 0; c < C; c++) {
-    const h0 = H[r * C + c]; let occ = 0;
-    for (let j = 0; j < 8; j++) {
-      const dc = DIRS[j][0], dr = DIRS[j][1], dl = DL[j]; let mx = 0;
-      for (let si = 0; si < STEPS.length; si++) { const k = STEPS[si], rr = r + dr * k, cc = c + dc * k; if (rr < 0 || cc < 0 || rr >= Rr || cc >= C) break; const tn = (H[rr * C + cc] - h0) / (dl * k); if (tn > mx) mx = tn; }
-      occ += mx / Math.sqrt(1 + mx * mx); // sin(horizon angle)
-    }
-    const v = clamp(1 - (occ / 8) * 1.35, 0.25, 1) * 255, o = ((Rr - 1 - r) * C + c) * 4;
-    ao[o] = ao[o + 1] = ao[o + 2] = v; ao[o + 3] = 255;
-  }
+  const ao = new Uint8Array(C * Rr * 4), px = sx / 2, pz = sz / 2; // ambient occlusion: filled by the worker (applyBake)
   const a = new THREE.DataTexture(ao, C, Rr, THREE.RGBAFormat);
   a.magFilter = THREE.LinearFilter; a.minFilter = THREE.LinearMipmapLinearFilter; a.generateMipmaps = true; a.needsUpdate = true;
   terrainAO = a;
@@ -2302,8 +2245,14 @@ if (ZOOM[0] > 0) {
   controls.target.copy(t); camera.position.copy(aboveGround(t.clone().add(new THREE.Vector3(0.3, 0.42, 0.86).normalize().multiplyScalar(clamp(ZOOM[0], 0.5, 30))), 0.25));
 } else overview(2.6);
 renderer.shadowMap.needsUpdate = true;
-// shader programs link on the driver's threads (KHR_parallel_shader_compile) instead of inside the first frame (~0.4 s)
-try { await renderer.compileAsync(scene, camera); } catch {}
+// shader programs link on the driver's threads (KHR_parallel_shader_compile) while the terrain bake finishes in its worker
+const [baked] = await Promise.all([bakeJob, renderer.compileAsync(scene, camera).catch(() => {})]);
+{
+  const g = baseCanvas.getContext('2d'); g.putImageData(new ImageData(baked.base, baked.TW, baked.TH), 0, 0);
+  if (OSM) paintOSM(g);
+  normalTex.image.data = baked.normal; normalTex.needsUpdate = true; terrainAO.image.data = baked.ao; terrainAO.needsUpdate = true;
+  compose();
+}
 frame();
 pollLive();
 document.body.dataset.state = 'ready';
