@@ -1112,14 +1112,60 @@ const buildings = (() => {
 // rendered from the camera mirrored about it (three's Reflector: oblique near plane = water plane) into an 8-bit RGBA
 // target at half the canvas size (no MSAA, no half float: both break on the Asahi GPU), scissored to the lakes lying in
 // that plane, only when the camera moved or every 0.4 s. ?fx=-refl, or a target the GPU cannot render into: current look.
-const REFL = { ok: false, tried: false, at: 0, rt: null, cam: new THREE.PerspectiveCamera(), v: new THREE.Vector3(), f: new THREE.Vector3(), q: new THREE.Vector4(), p4: new THREE.Vector4(), pl: new THREE.Plane(), cc: new THREE.Color() };
-REFL.cam.layers.set(1); terrain.layers.enable(1); buildings?.layers.enable(1);
+// The mirrored terrain is its own copy for layer 1: the same vertices split into 8x8 index chunks, so only the chunks
+// inside the scissored mirror frustum are drawn (a lake mirrors a few of them, not the 200k+ triangles of the cut), with
+// a cheaper material - no close-up rock / grass detail, snow glints or shadow-map lookups (the baked sun shadow and cloud
+// shadows stay): the waves blur the mirror image far below that detail.
+const REFL = { ok: false, tried: false, at: 0, rt: null, cam: new THREE.PerspectiveCamera(), v: new THREE.Vector3(), f: new THREE.Vector3(), q: new THREE.Vector4(), p4: new THREE.Vector4(), pl: new THREE.Plane(), cc: new THREE.Color(),
+  chunks: [], fr: new THREE.Frustum(), cm: new THREE.Matrix4() };
+REFL.cam.layers.set(1);
 if (WATER.length && !FX_OFF.has('refl') && renderer.capabilities.isWebGL2) {
   try {
     REFL.rt = new THREE.WebGLRenderTarget(256, 256, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, samples: 0, depthBuffer: true, generateMipmaps: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
     REFL.rt.texture.colorSpace = THREE.SRGBColorSpace; // SRGB8_ALPHA8: 8 bits without banding in the dark (night) reflections
     REFL.ok = true;
   } catch (e) { console.warn('3d: water reflection off', e); }
+}
+if (REFL.ok) {
+  const mat = applyFx(new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x000000, roughness: 0.96, metalness: 0, normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 }),
+    [FX.snowCover(heatU), POD3D?.effect, FX.poaHeat(heatU), FX.bakedSun(heatU), FX.cloudShadows(heatU)]);
+  const idx = terrainGeo.index.array, P = terrainGeo.attributes.position, gx = DEM.cols - 1, gy = DEM.rows - 1, N = 8, box = new THREE.Box3(), v = new THREE.Vector3();
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+    const r0 = Math.floor((j * gy) / N), r1 = Math.floor(((j + 1) * gy) / N), c0 = Math.floor((i * gx) / N), c1 = Math.floor(((i + 1) * gx) / N);
+    if (r1 <= r0 || c1 <= c0) continue;
+    const out = new idx.constructor((r1 - r0) * (c1 - c0) * 6); // PlaneGeometry: 6 indices per cell, cells row by row
+    for (let r = r0, o = 0; r < r1; r++, o += (c1 - c0) * 6) out.set(idx.subarray((r * gx + c0) * 6, (r * gx + c1) * 6), o);
+    box.makeEmpty(); for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) box.expandByPoint(v.fromBufferAttribute(P, r * DEM.cols + c));
+    const geo = new THREE.BufferGeometry(); for (const [k, a] of Object.entries(terrainGeo.attributes)) geo.setAttribute(k, a); // shared GPU buffers
+    geo.setIndex(new THREE.BufferAttribute(out, 1)); geo.boundingBox = box.clone(); geo.boundingSphere = box.getBoundingSphere(new THREE.Sphere());
+    const m = new THREE.Mesh(geo, mat); m.layers.set(1); m.frustumCulled = false; m.matrixAutoUpdate = false; m.updateMatrixWorld(); m.name = 'reflTerrain';
+    REFL.chunks.push(m); scene.add(m);
+  }
+  // buildings likewise: their triangles regrouped by 8x8 cell (order within an opaque mesh does not matter), one
+  // layer 1 draw range per cell on the shared buffers
+  if (buildings) {
+    const g = buildings.geometry, n = g.attributes.position.count / 3, X = g.attributes.position.array, cell = new Uint8Array(n), cnt = new Uint32Array(N * N + 1);
+    for (let t = 0; t < n; t++) {
+      const o = t * 9, x = (X[o] + X[o + 3] + X[o + 6]) / 3, z = (X[o + 2] + X[o + 5] + X[o + 8]) / 3;
+      cnt[(cell[t] = clamp(Math.floor((z / HKM + 0.5) * N), 0, N - 1) * N + clamp(Math.floor((x / WKM + 0.5) * N), 0, N - 1)) + 1]++;
+    }
+    for (let k = 0; k < N * N; k++) cnt[k + 1] += cnt[k];
+    const at = cnt.slice(0, N * N), dst = new Uint32Array(n); for (let t = 0; t < n; t++) dst[t] = at[cell[t]]++;
+    for (const a of Object.values(g.attributes)) {
+      const sz = a.itemSize * 3, src = a.array.slice();
+      for (let t = 0; t < n; t++) a.array.set(src.subarray(t * sz, t * sz + sz), dst[t] * sz);
+      a.needsUpdate = true;
+    }
+    for (let k = 0; k < N * N; k++) {
+      const t0 = cnt[k], t1 = cnt[k + 1]; if (t1 <= t0) continue;
+      box.makeEmpty(); for (let i = t0 * 3; i < t1 * 3; i++) box.expandByPoint(v.fromBufferAttribute(g.attributes.position, i));
+      const geo = new THREE.BufferGeometry(); for (const [k2, a] of Object.entries(g.attributes)) geo.setAttribute(k2, a);
+      geo.setDrawRange(t0 * 3, (t1 - t0) * 3); geo.boundingBox = box.clone(); geo.boundingSphere = box.getBoundingSphere(new THREE.Sphere());
+      const m = new THREE.Mesh(geo, buildings.material); m.layers.set(1); m.frustumCulled = false; m.matrixAutoUpdate = false;
+      m.matrix.copy(buildings.matrixWorld); m.matrixWorld.copy(buildings.matrixWorld); m.name = 'reflBuildings';
+      REFL.chunks.push(m); scene.add(m);
+    }
+  }
 }
 function reflPick() {
   const t = controls.target, v = REFL.v, px = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360)); let best = null, bd = Infinity;
@@ -1133,12 +1179,13 @@ function reflPick() {
   return best;
 }
 function reflRender(moved, now) {
-  if (!REFL.ok || (!moved && now - REFL.at < 400)) return;
+  if (!REFL.ok) return;
+  const rt = REFL.rt, cv = renderer.domElement, W = clamp(Math.round(cv.width * 0.5), 64, 1024), H = clamp(Math.round((W * cv.height) / Math.max(cv.width, 1)), 64, 1024);
+  if (!moved && now - REFL.at < 400) return;
   REFL.at = now;
   const w = reflPick(); heatU.uReflOn.value = w ? 1 : 0; if (!w) return;
   const h = w.y + ((0.0012 + heatU.uWind.value * 0.02) / Math.sqrt(w.sea ? 0.27 : 1)) * 2.7; // the waves' mean lift (fx3d)
   heatU.uReflY.value = h;
-  const rt = REFL.rt, cv = renderer.domElement, W = clamp(Math.round(cv.width * 0.5), 64, 1024), H = clamp(Math.round((W * cv.height) / Math.max(cv.width, 1)), 64, 1024);
   if (rt.width !== W || rt.height !== H) rt.setSize(W, H);
   // mirrored camera: eye and look-at point reflected about y = h, up reflected
   const c = REFL.cam, e = camera.matrixWorld.elements;
@@ -1156,6 +1203,7 @@ function reflRender(moved, now) {
   c.projectionMatrixInverse.copy(c.projectionMatrix).invert();
   // scissor: the texture area the lakes in this plane sample (the sea uses all of it)
   rt.scissorTest = false;
+  let u0 = 0, v0 = 0, u1 = 1, v1 = 1; // mirror texture area drawn (uv)
   if (!w.sea) {
     let x0 = 1, y0 = 1, x1 = 0, y1 = 0, full = false;
     for (const b of WATER) if (!b.sea && Math.abs(b.y - w.y) < 0.016) for (let k = 0; k < 12; k++) {
@@ -1165,10 +1213,15 @@ function reflRender(moved, now) {
     }
     if (!full) {
       x0 = clamp(x0 - 0.05, 0, 1); y0 = clamp(y0 - 0.05, 0, 1); x1 = clamp(x1 + 0.05, 0, 1); y1 = clamp(y1 + 0.05, 0, 1);
-      if (x1 <= x0 || y1 <= y0) return; // in front of the camera but off screen in the mirror: nothing to draw
+      if (x1 <= x0 || y1 <= y0) { heatU.uReflOn.value = 0; return; } // in front of the camera but off screen in the mirror: nothing to draw
       rt.scissor.set(Math.floor(x0 * W), Math.floor(y0 * H), Math.ceil((x1 - x0) * W) + 1, Math.ceil((y1 - y0) * H) + 1); rt.scissorTest = true;
+      u0 = rt.scissor.x / W; v0 = rt.scissor.y / H; u1 = Math.min(1, (rt.scissor.x + rt.scissor.z) / W); v1 = Math.min(1, (rt.scissor.y + rt.scissor.w) / H);
     }
   }
+  // cull the terrain and building chunks to the frustum of the scissored area: crop * oblique projection * view
+  const sx = u1 - u0, sy = v1 - v0, ox = u0 + u1 - 1, oy = v0 + v1 - 1;
+  REFL.fr.setFromProjectionMatrix(REFL.cm.set(1 / sx, 0, 0, -ox / sx, 0, 1 / sy, 0, -oy / sy, 0, 0, 1, 0, 0, 0, 0, 1).multiply(c.projectionMatrix).multiply(c.matrixWorldInverse));
+  for (const m of REFL.chunks) m.visible = REFL.fr.intersectsBox(m.geometry.boundingBox);
   for (const o of scene.children) if (o.isLight) o.layers.enable(1); // lights are culled by layer too
   const shadowDue = renderer.shadowMap.needsUpdate, ca = renderer.getClearAlpha(); renderer.getClearColor(REFL.cc);
   try {
