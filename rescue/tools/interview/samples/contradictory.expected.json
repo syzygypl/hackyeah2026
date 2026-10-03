@@ -1,0 +1,46 @@
+{
+ "_note": "points = common part Wodogrzmoty - schronisko (Palenica is outside the map)",
+ "points": [
+  [
+   49.2348,
+   20.085
+  ],
+  [
+   49.23,
+   20.078
+  ],
+  [
+   49.225,
+   20.07
+  ],
+  [
+   49.22,
+   20.062
+  ],
+  [
+   49.2165,
+   20.056
+  ],
+  [
+   49.2133,
+   20.049
+  ]
+ ],
+ "returnRoute": "unknown",
+ "startTime": "08:00",
+ "expectedBack": "",
+ "lastSeen": {
+  "place": "Wielki Staw",
+  "time": "11:40"
+ },
+ "alone": "tak",
+ "alternativeDestinations": [
+  "Zawrat",
+  "Morskie Oko"
+ ],
+ "uncertain": [
+  "route",
+  "return_route",
+  "expected_back"
+ ]
+}

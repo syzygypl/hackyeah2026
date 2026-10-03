@@ -1,0 +1,23 @@
+{
+ "points": [],
+ "returnRoute": "unknown",
+ "startTime": "",
+ "expectedBack": "",
+ "lastSeen": {
+  "place": "",
+  "time": ""
+ },
+ "alone": "nieznane",
+ "alternativeDestinations": [
+  "Morskie Oko",
+  "Schronisko w Dolinie Pięciu Stawów"
+ ],
+ "uncertain": [
+  "route",
+  "return_route",
+  "start_time",
+  "expected_back",
+  "alone",
+  "last_seen"
+ ]
+}
