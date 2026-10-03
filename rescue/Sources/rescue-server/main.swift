@@ -139,7 +139,19 @@ func timelineInput(_ name: String) -> TimelineEngine.Input? {
 }
 
 /// Loads scenarios/<name>.json + <name>-terrain.json, folds live reports in, runs the engine.
-func runScenario(_ name: String, live: Bool, features: String? = nil) async -> Data? {
+/// frameMin / frames: timeline mode (`?frameMin=`, `?frames=0`), ignored without tracks.
+func runScenario(_ name: String, live: Bool, features: String? = nil, frameMin: Int = 5, frames: Bool = true) async -> Data? {
+    guard let (s, nLive, liveCursor) = await liveScenario(name, live: live, features: features) else { return nil }
+    var doc = (try? JSONSerialization.jsonObject(with: await StoryPipeline.runData(s, timeline: await timelineInputLive(name, live: live), frameMin: frameMin, frames: frames))) as? [String: Any] ?? [:]
+    doc["scenario"] = name
+    doc["liveEventsFolded"] = nLive
+    if let liveCursor { doc["liveCursor"] = liveCursor }
+    return try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])
+}
+
+/// The scenario as the engine sees it now: file + terrain, live: scripted events up to the cursor + live reports, roster teams.
+/// Returns (scenario, live events folded, liveCursor document).
+func liveScenario(_ name: String, live: Bool, features: String? = nil) async -> (Scenario, Int, [String: Any]?)? {
     let path = scenariosDir.appendingPathComponent("\(name).json")
     guard var d = (try? Data(contentsOf: path)).flatMap({ try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }) else { return nil }
     if let t = (try? Data(contentsOf: scenariosDir.appendingPathComponent("\(name)-terrain.json"))).flatMap({ try? JSONSerialization.jsonObject(with: $0) }) { d["terrain"] = t }
@@ -175,11 +187,7 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
     if let rs = await roster.resources(for: name) { d["resources"] = rs.compactMap { try? JSONSerialization.jsonObject(with: $0) } }   // live mode: touched incident plans with its roster teams only
     guard let data = try? JSONSerialization.data(withJSONObject: d), var s = try? JSONDecoder().decode(Scenario.self, from: data) else { return nil }
     s.enable(features)
-    var doc = (try? JSONSerialization.jsonObject(with: await StoryPipeline.runData(s, timeline: timelineInput(name)))) as? [String: Any] ?? [:]
-    doc["scenario"] = name
-    doc["liveEventsFolded"] = nLive
-    if let liveCursor { doc["liveCursor"] = liveCursor }
-    return try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])
+    return (s, nLive, liveCursor)
 }
 
 /// Assessments are slow (LLM 5-20 s): cache per (scenario, step, number of live reports).
@@ -275,7 +283,7 @@ func isWrite(_ q: Req) -> Bool {
 }
 /// What a rescuer's phone may do with the field key (RESCUE_FIELD_PIN): send reports and clues. Everything else
 /// (assignments, roster, Studio, reset) needs the operator key (RESCUE_PIN).
-func isFieldWrite(_ q: Req) -> Bool { q.method == "POST" && (q.path == "/report" || q.path == "/api/clue") }
+func isFieldWrite(_ q: Req) -> Bool { q.method == "POST" && (q.path == "/report" || q.path == "/api/clue" || q.path == "/api/fix") }
 func duplicateReport() -> Data {
     Metrics.shared.inc("reports_rejected_total", ["reason": "duplicate"])
     return response("200 OK", json, Data(#"{"duplicate":true,"hints":[],"parsedBy":"duplicate"}"#.utf8))
@@ -1115,6 +1123,171 @@ actor Exercises {
 }
 let exercises = Exercises()
 
+// MARK: timeline (CONTRACT.md "Timeline mode" sections 2 and 5): POST /api/fix (live GPS / position reports),
+// GET /api/tracks/<sc>?at=HH:MM (estimate + FOV, no coverage), GET /api/run/<sc>?t=HH:MM (one frame), ?frames=0, ?frameMin=N.
+// Engine = RescueKit/Timeline (TimelineEngine, AI Mateusza); this block only stores fixes, merges them with
+// scenarios/tracks/<sc>.json and calls the engine. Live fixes: local file <live dir>/fixes-<sc>.json, shared store doc "fixes:<sc>".
+
+struct LiveFix: Codable, Sendable {
+    var actor: String, t: String, lat: Double, lon: Double, accM: Double, src: String
+    var text: String?
+}
+actor LiveFixes {
+    static let maxPerScenario = 5000
+    var local: [String: [LiveFix]] = [:]
+    func file(_ sc: String) -> URL { URL(fileURLWithPath: livePath).deletingLastPathComponent().appendingPathComponent("fixes-\(sc).json") }
+    func all(_ sc: String) async -> [LiveFix] {
+        if store.shared { return (await store.doc("fixes:" + sc)?.data).flatMap { try? JSONDecoder().decode([LiveFix].self, from: $0) } ?? [] }
+        if let l = local[sc] { return l }
+        let l = (try? Data(contentsOf: file(sc))).flatMap { try? JSONDecoder().decode([LiveFix].self, from: $0) } ?? []
+        local[sc] = l
+        return l
+    }
+    /// -> fixes stored for that actor
+    func add(_ sc: String, _ f: LiveFix) async -> Int {
+        var l = await all(sc)
+        l.append(f)
+        if l.count > LiveFixes.maxPerScenario { l.removeFirst(l.count - LiveFixes.maxPerScenario) }
+        let d = (try? JSONEncoder().encode(l)) ?? Data("[]".utf8)
+        if store.shared { _ = await store.putDoc("fixes:" + sc, d) } else { local[sc] = l; try? d.write(to: file(sc)) }
+        return l.filter { $0.actor == f.actor }.count
+    }
+    func reset() async {
+        for sc in scenarioNames() {
+            if store.shared { if await store.doc("fixes:" + sc) != nil { _ = await store.putDoc("fixes:" + sc, Data("[]".utf8)) } }
+            else { try? FileManager.default.removeItem(at: file(sc)) }
+        }
+        local = [:]
+    }
+}
+let liveFixes = LiveFixes()
+
+/// timelineInput + live fixes (live mode only; Historia = the recorded tracks file only). Same actor id = union of fixes
+/// (TrackSet.parse merges duplicate ids); a live actor without a file entry gets its kind from the scenario / roster resources.
+func timelineInputLive(_ name: String, live: Bool) async -> TimelineEngine.Input? {
+    let base = timelineInput(name)
+    let fixes = live ? await liveFixes.all(name) : []
+    if fixes.isEmpty { return base }
+    var doc: [String: Any] = base.map { jsonObject($0.tracks) } ?? ["schema": "rescue-tracks/1", "scenario": name, "actors": [Any]()]
+    let key = doc["actors"] == nil && doc["units"] != nil ? "units" : "actors"
+    var list = (doc[key] as? [Any]) ?? []
+    for (actor, fs) in Dictionary(grouping: fixes, by: \.actor).sorted(by: { $0.key < $1.key }) {
+        list.append(["id": actor, "fixes": fs.map { f -> [String: Any] in
+            var o: [String: Any] = ["t": f.t, "lat": f.lat, "lon": f.lon, "accM": f.accM, "src": f.src]
+            if let t = f.text { o["text"] = t }
+            return o
+        }])
+    }
+    doc[key] = list
+    guard let d = try? JSONSerialization.data(withJSONObject: doc) else { return base }
+    let dem = base?.dem ?? (try? Data(contentsOf: scenariosDir.deletingLastPathComponent().appendingPathComponent("tools/terrain/data/\(name)-dem.json")))
+    let fov = base?.fovParams ?? (try? Data(contentsOf: scenariosDir.appendingPathComponent("fov/fov-params.json")))
+    return TimelineEngine.Input(tracks: d, dem: dem, fovParams: fov)
+}
+
+/// The engine instance per (scenario, live state): built like StoryPipeline.run builds it (same hints, same grid), kept so
+/// scrubbing (?t=, /api/tracks?at=) does not re-run the sweep. Only Data leaves the actor.
+actor TimelineCache {
+    var engines: [String: TimelineEngine] = [:]
+    var liveAt: [String: String] = [:]
+    func key(_ name: String, live: Bool, features: String?) async -> String {
+        let reports = live ? await store.reportCount(sc: nil) + (await store.reportCount(sc: name)) : 0
+        let fixes = live ? await liveFixes.all(name).count : 0
+        let cur = live ? await cursors.get(name) ?? "" : ""
+        let ros = live ? (await roster.resources(for: name))?.count ?? -1 : -1
+        let tracks = (try? FileManager.default.attributesOfItem(atPath: scenariosDir.appendingPathComponent("tracks/\(name).json").path))?[.modificationDate] as? Date
+        return "\(name)|\(live)|\(features ?? "")|\(scenarioStamp(name))|\(tracks?.timeIntervalSince1970 ?? 0)|\(reports)|\(fixes)|\(cur)|\(ros)"
+    }
+    func engine(_ name: String, live: Bool, features: String?) async -> TimelineEngine? {
+        let k = await key(name, live: live, features: features)
+        if let e = engines[k] { return e }
+        guard let input = await timelineInputLive(name, live: live), let (s0, _, cursor) = await liveScenario(name, live: live, features: features) else { return nil }
+        var s = s0
+        s.applyEpilogue()
+        _ = applyCoverage(&s)
+        let providers = allProviders(s)
+        var arrived: [LocationHint] = []
+        for await h in HintStream.merge(providers, clock: ScenarioClock(msPerMinute: 0)) { arrived.append(h) }
+        let order = providers.map(\.name)
+        arrived.sort { ($0.minute, order.firstIndex(of: $0.source) ?? 0, $0.id) < ($1.minute, order.firstIndex(of: $1.source) ?? 0, $1.id) }
+        let grid = ProbabilityGrid(s)
+        for h in arrived { grid.add(h) }
+        guard let e = TimelineEngine(scenario: s, grid: grid, hints: arrived, input: input) else { return nil }
+        if engines.count > 12 { engines.removeAll() }
+        engines[k] = e
+        if let at = cursor?["at"] as? String { liveAt[k] = at }
+        return e
+    }
+    func clear() { engines.removeAll() }
+    /// minute for HH:MM / ISO / plain minutes; nil = missing
+    func minute(_ e: TimelineEngine, _ t: String?) -> Int? {
+        guard let t, !t.isEmpty else { return nil }
+        if let m = Int(t) { return m }
+        return e.scenario.minute(t)
+    }
+    /// GET /api/run/<sc>?t=HH:MM -> rescue-frame/1
+    func frame(_ name: String, live: Bool, features: String?, t: String) async -> Data? {
+        guard let e = await engine(name, live: live, features: features), let m = minute(e, t) else { return nil }
+        var o = e.frame(m)
+        o["schema"] = "rescue-frame/1"; o["scenario"] = name
+        o["startMinute"] = e.startMinute; o["endMinute"] = e.endMinute
+        return try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])
+    }
+    /// GET /api/tracks/<sc>?at=HH:MM (default: the live moment, else the timeline end) -> rescue-tracks-est/1
+    func tracks(_ name: String, live: Bool, at: String?) async -> Data? {
+        guard let e = await engine(name, live: live, features: nil) else { return nil }
+        let k = await key(name, live: live, features: nil)
+        var m = e.endMinute
+        if let x = minute(e, at) { m = x } else if let la = liveAt[k] { m = e.scenario.minute(la) }
+        var o = e.tracksAt(min(max(m, e.startMinute), e.endMinute))
+        o["scenario"] = name; o["startMinute"] = e.startMinute; o["endMinute"] = e.endMinute
+        return try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])
+    }
+}
+let timelineCache = TimelineCache()
+
+/// POST /api/fix {sc, actor, t, lat, lon, accM, src, text?} (field key like /report; actor may come from X-Rescue-Team)
+func addFix(_ q: Req) async -> Data {
+    guard let o = (try? JSONSerialization.jsonObject(with: q.body)) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
+    guard let sc = scParam(q, o), scenarioNames().contains(sc) else { return jsonErr("400 Bad Request", "sc required (known scenario)") }
+    guard let actor = shortClean(o["actor"], 64) ?? shortClean(q.headers["x-rescue-team"], 64), validName(actor) else { return jsonErr("400 Bad Request", "actor required") }
+    guard let lat = (o["lat"] as? NSNumber)?.doubleValue, let lon = (o["lon"] as? NSNumber)?.doubleValue, abs(lat) <= 90, abs(lon) <= 180 else { return jsonErr("400 Bad Request", "lat/lon required") }
+    let src = ["gps", "report", "est"].contains(o["src"] as? String ?? "") ? o["src"] as! String : "gps"
+    let acc = min(max((o["accM"] as? NSNumber)?.doubleValue ?? (src == "gps" ? 15 : 200), 1), 5000)
+    // t: scenario clock HH:MM (or "+1 HH:MM" / ISO); omitted = now = the incident's live moment (operator cursor), else the wall clock
+    let tIn = shortClean(o["t"], 25).flatMap { $0.range(of: #"^(\+\d )?\d{1,2}:\d{2}$|^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}"#, options: .regularExpression) != nil ? $0 : nil }
+    let t: String
+    if let tIn { t = tIn } else if let c = await cursors.get(sc) { t = c } else { let f = DateFormatter(); f.dateFormat = "HH:mm"; t = f.string(from: Date()) }
+    let text = shortClean(o["text"], 300)
+    let n = await liveFixes.add(sc, LiveFix(actor: actor, t: t, lat: lat, lon: lon, accM: acc, src: src, text: text))
+    // GPS fixes are noise for the feed; a position read from a report shows up as kind "fix"
+    if src == "report" {
+        var e = LiveFeedEvent(kind: "fix", by: "ratownik", title: "Pozycja \(actor)\(text.map { ": \($0)" } ?? "")")
+        e.team = actor; e.note = text; e.lat = lat; e.lon = lon; e.sc = sc
+        _ = await liveFeed.add(e)
+    }
+    Metrics.shared.inc("fixes_received_total", ["src": src])
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["ok": true, "actor": actor, "n": n, "t": t], options: [.sortedKeys])) ?? Data())
+}
+
+/// Routes of this block; nil = not a timeline request (the caller goes on as before).
+func timelineRoute(_ q: Req) async -> Data? {
+    if q.method == "POST" && q.path == "/api/fix" { return await addFix(q) }
+    if q.method == "GET", q.path.hasPrefix("/api/tracks/") {
+        let name = String(q.path.dropFirst("/api/tracks/".count))
+        guard validName(name), FileManager.default.fileExists(atPath: scenariosDir.appendingPathComponent("\(name).json").path) else { return jsonErr("404 Not Found", "no scenario \(name)") }
+        guard let d = await timelineCache.tracks(name, live: q.query["live"] != "0", at: q.query["at"]) else { return jsonErr("404 Not Found", "no tracks for \(name)") }
+        return response("200 OK", json, d)
+    }
+    if q.method == "GET", q.path.hasPrefix("/api/run/"), let t = q.query["t"], !t.isEmpty {
+        let name = String(q.path.dropFirst("/api/run/".count))
+        guard validName(name) else { return jsonErr("400 Bad Request", "bad scenario name") }
+        guard let d = await timelineCache.frame(name, live: q.query["live"] != "0", features: q.query["features"], t: t) else { return jsonErr("404 Not Found", "no timeline for \(name) at \(t)") }
+        return response("200 OK", json, d)
+    }
+    return nil
+}
+
 // MARK: routing
 
 struct Req { let method: String; let path: String; let query: [String: String]; let headers: [String: String]; let body: Data; let peer: String }
@@ -1150,6 +1323,7 @@ func handle(_ q: Req) async -> Data {
 }
 
 func route(_ q: Req) async -> Data {
+    if let d = await timelineRoute(q) { return d }   // MARK: timeline
     switch (q.method, q.path) {
     case ("OPTIONS", _): return response("204 No Content", "text/plain", Data())
     case ("GET", "/"): return landing()
@@ -1184,7 +1358,7 @@ func route(_ q: Req) async -> Data {
         return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["fieldKey": guardian.fieldPin ?? guardian.pin ?? ""])) ?? Data("{}".utf8))
     case ("POST", "/api/reset"):
         do { try await store.reset() } catch { return jsonErr("500 Internal Server Error", "reset failed") }
-        await studio.resetAll(); await roster.importState(Data("{}".utf8)); await acks.importState(Data("[]".utf8)); await cursors.importState(Data("{}".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear()
+        await studio.resetAll(); await roster.importState(Data("{}".utf8)); await acks.importState(Data("[]".utf8)); await cursors.importState(Data("{}".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear(); await liveFixes.reset(); await timelineCache.clear()
         print("[reset] field reports, Studio story and assignments cleared")
         return response("200 OK", json, Data(#"{"reset":true}"#.utf8))
 
@@ -1283,7 +1457,8 @@ func route(_ q: Req) async -> Data {
         if q.method == "GET", q.path.hasPrefix("/api/run/") {
             let name = String(q.path.dropFirst("/api/run/".count))
             guard validName(name) else { return jsonErr("400 Bad Request", "bad scenario name") }
-            guard let d = await runScenario(name, live: q.query["live"] != "0", features: q.query["features"]) else { return jsonErr("404 Not Found", "no scenario \(name)") }
+            guard let d = await runScenario(name, live: q.query["live"] != "0", features: q.query["features"],
+                                            frameMin: min(max(Int(q.query["frameMin"] ?? "") ?? 5, 1), 60), frames: q.query["frames"] != "0") else { return jsonErr("404 Not Found", "no scenario \(name)") }
             return response("200 OK", json, d)
         }
         if q.method == "GET", q.path.hasPrefix("/api/assessment/") {

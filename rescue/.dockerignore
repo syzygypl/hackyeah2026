@@ -12,7 +12,13 @@ reference
 validate
 integration
 monitoring
-tools
+tools/*
+!tools/terrain
+tools/terrain/*
+!tools/terrain/data
+tools/terrain/data/*
+!tools/terrain/data/*-dem.json
+tools/terrain/data/blind-*
 eval/*
 !eval/sim
 eval/sim/out/*/cases
