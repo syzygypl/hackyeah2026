@@ -145,6 +145,18 @@ public final class ProbabilityGrid {
                 let d = Geo.toLine(p, points)
                 return 0.25 + exp(-d * d / (2 * sigma * sigma))
             }
+        case let .behaviour(category):
+            // Koester (Lost Person Behavior, dementia): found in drainages / near water, in brush, at the base of slopes;
+            // travels straight until a barrier rather than along trails. Illustrative multipliers, not ISRID tables.
+            guard category.lowercased().contains("dementia") || category.lowercased().contains("demenc") else { return [Double](repeating: 1, count: n) }
+            return (0..<n).map { i in
+                var v = 1.0
+                if dStream[i] < 150 { v *= 1.6 }
+                if difficulty[i] == .dwarfPine { v *= 1.3 }
+                if difficulty[i] == .meadow && dRidge[i] > 250 && dRidge[i] < 700 { v *= 1.2 }
+                v /= 1 + 1.25 * exp(-dTrail[i] / 120)   // cancels about half of the hiker trail boost (terrain features: 1 + 2.5 e^-d/120)
+                return v
+            }
         case let .lostTrail(points, strength):
             guard !points.isEmpty else { return [Double](repeating: 1, count: n) }
             let ridgeAt = points.map { p in dRidge[cellIndex(p)] }

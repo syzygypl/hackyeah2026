@@ -22,7 +22,7 @@ func hintJSON(_ h: LocationHint, _ f: [Double]) -> [String: Any] {
     case let .searched(ids, pod): g = ["segments": ids, "pod": pod]
     case let .containment(p, r, f): g = ["points": p.map(ll), "radius": r, "factor": f]
     case let .weather(b): g = ["boost": b]
-    case .terrainFeatures, .terrainCost, .difficulty, .layer: break
+    case .terrainFeatures, .terrainCost, .difficulty, .layer, .behaviour: break
     case let .lostTrail(p, st): g = ["points": p.map(ll), "strength": st]
     case let .conditions(c): g = ["visibilityM": c.visibilityM, "windMs": c.windMs]
     }

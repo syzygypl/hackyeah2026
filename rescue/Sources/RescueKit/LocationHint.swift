@@ -22,6 +22,8 @@ public struct LocationHint: Sendable {
         /// Lost the trail in fog / darkness: off-trail cells just below passes and trail forks get more weight,
         /// most where they lead downhill into gullies / scree. strength 0..1 from visibility.
         case lostTrail(points: [Coord], strength: Double)
+        /// Category behaviour (feature behaviourLayers), e.g. dementia: drainages, brush, slope bases, less trail-following.
+        case behaviour(category: String)
         /// Coarse cell-sector fix from the 112 centre.
         case sector(center: Coord, radiusM: Double)
         /// Precise point fix (Ratunek / AML) with accuracy radius.
@@ -77,6 +79,7 @@ public struct LocationHint: Sendable {
         case .route: "route"
         case .corridor: "corridor"
         case .lostTrail: "lostTrail"
+        case .behaviour: "behaviour"
         case .sector: "sector"
         case .point: "point"
         case .found: "found"
