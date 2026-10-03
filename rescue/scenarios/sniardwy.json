@@ -1,0 +1,362 @@
+{
+  "incident": "Biały szwał na Śniardwach - wywrotka Omegi, żeglarz w wodzie (scenariusz fikcyjny)",
+  "date": "2026-08-15",
+  "startClock": "16:40",
+  "subject": {
+    "name": "Kacper W. (osoba fikcyjna)",
+    "age": 24,
+    "category": "boater",
+    "note": "Żeglarz z Warszawy, sam na Omedze wypożyczonej w Mikołajkach, w kamizelce asekuracyjnej. O 15:50 nad Śniardwy wszedł szkwał z zachodu-północnego zachodu (porywy 17-20 m/s). Załoga jachtu 'Mewa' widziała wywrotkę Omegi ok. 1.5 km od brzegu północnego, potem straciła ją w deszczu. Dziewczyna z kempingu dzwoni na 112 o 16:40: nie odbiera telefonu. Osoba w wodzie dryfuje wolniej niż przewrócona łódź (mniej powierzchni nad wodą).",
+    "lastContact": "15:50"
+  },
+  "bbox": {
+    "south": 53.73805,
+    "west": 21.76941,
+    "north": 53.79195,
+    "east": 21.86059
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "LKP: wywrotka widziana z jachtu 'Mewa' o 15:50",
+    "at": [
+      53.77803,
+      21.79296
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [
+      {
+        "name": "Śniardwy",
+        "center": [
+          53.761793,
+          21.735663
+        ],
+        "radiusM": 5637
+      }
+    ],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "W1",
+      "name": "Miejsce wywrotki (LKP)",
+      "seed": [
+        53.77803,
+        21.79296
+      ]
+    },
+    {
+      "id": "W2",
+      "name": "Toń na wschód od LKP",
+      "seed": [
+        53.77533,
+        21.81272
+      ]
+    },
+    {
+      "id": "W3",
+      "name": "Toń - pas dryfu z wiatrem",
+      "seed": [
+        53.76994,
+        21.82792
+      ]
+    },
+    {
+      "id": "W4",
+      "name": "Toń - zatoka przy Nowych Gutach",
+      "seed": [
+        53.77353,
+        21.84615
+      ]
+    },
+    {
+      "id": "W5",
+      "name": "Trzciny przy brzegu SE (łódź)",
+      "seed": [
+        53.76455,
+        21.84159
+      ]
+    },
+    {
+      "id": "W6",
+      "name": "Toń przy brzegu SE",
+      "seed": [
+        53.76006,
+        21.81576
+      ]
+    },
+    {
+      "id": "W7",
+      "name": "Plaża i pomosty Nowe Guty",
+      "seed": [
+        53.77443,
+        21.85527
+      ]
+    },
+    {
+      "id": "W8",
+      "name": "Brzeg południowy (od Zdorów)",
+      "seed": [
+        53.75018,
+        21.80664
+      ]
+    },
+    {
+      "id": "W9",
+      "name": "Toń zachodnia (pod wiatr)",
+      "seed": [
+        53.76904,
+        21.77777
+      ]
+    },
+    {
+      "id": "W10",
+      "name": "Toń północna",
+      "seed": [
+        53.78791,
+        21.81576
+      ]
+    },
+    {
+      "id": "W11",
+      "name": "Brzeg północno-zachodni",
+      "seed": [
+        53.78881,
+        21.77625
+      ]
+    },
+    {
+      "id": "W12",
+      "name": "Toń południowo-zachodnia",
+      "seed": [
+        53.75108,
+        21.78233
+      ]
+    },
+    {
+      "id": "W13",
+      "name": "Ląd SE za trzcinami",
+      "seed": [
+        53.75557,
+        21.84615
+      ]
+    },
+    {
+      "id": "W14",
+      "name": "Jezioro Białoławki i przystań",
+      "seed": [
+        53.7403,
+        21.82488
+      ]
+    },
+    {
+      "id": "W15",
+      "name": "Toń środkowa południowa",
+      "seed": [
+        53.76275,
+        21.79752
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): osoba w wodzie ok. 1.8 km od LKP z wiatrem",
+    "at": [
+      53.77084,
+      21.81728
+    ]
+  },
+  "events": [
+    {
+      "provider": "TerrainDifficulty",
+      "at": "16:40",
+      "title": "Teren: toń jeziora / trzcinowiska / brzeg",
+      "detail": "Ratownicy: łodzie tylko na wodzie, patrole piesze tylko z brzegu."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "16:40",
+      "title": "Warunki: po szkwale wiatr 12 m/s z WNW, deszcz, widzialność 1500 m, woda 21°C",
+      "detail": "Szkwał 15:50-16:20, porywy do 20 m/s. Fala ok. 1 m na otwartej toni. Zachód słońca 20:10.",
+      "visibilityM": 1500,
+      "windMs": 12,
+      "tempC": 18,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "16:40",
+      "title": "Pierścienie odległości od LKP (bez kierunku)",
+      "detail": "Bazowy model bez wiatru: odległość od miejsca wywrotki, przybliżona (ISRID nie ma tabel dla osoby w wodzie). 25% 0.8 km, 50% 1.6, 75% 2.8, 95% 5.0.",
+      "point": [
+        53.77803,
+        21.79296
+      ],
+      "quantilesKm": [
+        0.8,
+        1.6,
+        2.8,
+        5.0
+      ]
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "16:45",
+      "title": "Dryf przewróconej Omegi: wiatr 17 m/s z 295°, ok. 3% wiatru",
+      "detail": "Smuga dryfu łodzi od LKP (55 min). Parametry ilustracyjne wg tabel leeway US Coast Guard (Allen i Plourde 1999). Brzeg z wiatrem (SE) łapie to, co dopłynie.",
+      "point": [
+        53.77803,
+        21.79296
+      ],
+      "radiusM": 200,
+      "windMs": 17,
+      "windFromDeg": 295,
+      "object": "dinghy"
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "16:50",
+      "title": "CPR Olsztyn: ostatnie logowanie telefonu 15:58, BTS Okartowo",
+      "detail": "Telefon w kieszeni, prawdopodobnie zalany. Sektor nad jeziorem, promień ok. 1.5 km.",
+      "point": [
+        53.772,
+        21.812
+      ],
+      "radiusM": 1500
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "17:15",
+      "title": "Wiatr słabnie do 8 m/s, przestaje padać, widzialność 6 km",
+      "detail": "Dron może startować (< 12 m/s).",
+      "windMs": 8,
+      "precip": "none",
+      "visibilityM": 6000
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "17:45",
+      "title": "PSP Pisz + Policja: Omega znaleziona w trzcinach przy brzegu SE, pusta; brzeg i trzciny wokół przeszukane, nic",
+      "detail": "Łódź wyrzucona w trzcinowisko, żeglarza przy niej nie ma. Patrol brzegowy i łódź PSP przeszli trzciny. POD 60%.",
+      "segments": [
+        "W5",
+        "W13"
+      ],
+      "pod": 0.6
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "18:10",
+      "title": "Dron WOPR: zatoka przy Nowych Gutach, nic",
+      "detail": "Przelot nad zatoką i plażą przy Nowych Gutach. POD 70% (otwarta woda, fala).",
+      "segments": [
+        "W4",
+        "W7"
+      ],
+      "pod": 0.7
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "18:25",
+      "title": "Łódź WOPR Mikołajki: toń przy LKP i pod wiatr, nic",
+      "detail": "Pierwsza łódź na miejscu zaczęła od LKP (klasyczny odruch), tor równoległy 100 m. POD 65%.",
+      "segments": [
+        "W1",
+        "W9"
+      ],
+      "pod": 0.65
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "18:30",
+      "title": "Dryf osoby w wodzie (w kamizelce), skalibrowany na dryfie łodzi",
+      "detail": "Łódź przeszła ok. 3.5 km w ok. 1.9 h, więc kierunek dryfu ok. 115° się zgadza. Osoba w kamizelce dryfuje ok. 2x wolniej niż łódź (~1.5% wiatru, średnio ~12 m/s od 15:50): jest między LKP a łodzią, na otwartej toni.",
+      "point": [
+        53.77803,
+        21.79296
+      ],
+      "radiusM": 200,
+      "windMs": 12,
+      "windFromDeg": 297,
+      "object": "person",
+      "driftHours": 2.67
+    },
+    {
+      "provider": "Clue",
+      "at": "18:50",
+      "title": "ZNALEZIONO: łódź WOPR - żeglarz w wodzie w kamizelce, ok. 1.8 km od LKP z wiatrem",
+      "detail": "Wychłodzony, przytomny, trzymał się pływającego wiosła. Meldunek radiowy z łodzi WOPR, nie GPS.",
+      "point": [
+        53.77084,
+        21.81728
+      ],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "resources": [
+    {
+      "id": "wopr-boat",
+      "name": "Łódź WOPR Mazury (Mikołajki)",
+      "type": "boat",
+      "base": [
+        53.802,
+        21.576
+      ],
+      "readyAt": "16:55"
+    },
+    {
+      "id": "psp-boat",
+      "name": "Łódź PSP JRG Pisz",
+      "type": "boat",
+      "base": [
+        53.77443,
+        21.85527
+      ],
+      "readyAt": "17:20"
+    },
+    {
+      "id": "police-shore",
+      "name": "Policja Pisz - patrol brzegowy",
+      "type": "ground",
+      "base": [
+        53.77443,
+        21.85679
+      ],
+      "readyAt": "17:10"
+    },
+    {
+      "id": "drone",
+      "name": "Dron WOPR z termowizją",
+      "type": "drone",
+      "base": [
+        53.77443,
+        21.85679
+      ],
+      "readyAt": "17:40"
+    },
+    {
+      "id": "divers",
+      "name": "Nurkowie PSP (SGRW Olsztyn)",
+      "type": "diver",
+      "base": [
+        53.77443,
+        21.85527
+      ],
+      "readyAt": "18:40"
+    },
+    {
+      "id": "heli",
+      "name": "Śmigłowiec LPR (Olsztyn)",
+      "type": "heli",
+      "base": [
+        53.781,
+        20.452
+      ],
+      "readyAt": "17:30"
+    }
+  ]
+}
