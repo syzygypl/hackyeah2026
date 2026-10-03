@@ -476,6 +476,22 @@ public actor Studio {
         return assignments()
     }
     public func assignments() -> Data { jsonData(["assignments": Array(manual.values)]) }
+    /// Patrol phones (web/patrol): GET /api/assignments -> {"<team>": {segmentId, by, at, why?}}.
+    public func assignmentsByTeam() -> Data {
+        jsonData(manual.mapValues { a -> [String: Any] in
+            var o: [String: Any] = ["segmentId": a["segmentId"] ?? "", "by": a["by"] ?? "operator", "at": a["at"] ?? a["t"] ?? ""]
+            if let n = a["note"] { o["why"] = n }
+            return o
+        })
+    }
+    /// POST /api/assignments {team, segmentId, at?, by?, why?} - same store as /story/assign.
+    public func assignTeam(_ body: Data) -> Data {
+        var o = jsonObj(body)
+        if o["resourceId"] == nil { o["resourceId"] = o["team"] }
+        if o["note"] == nil { o["note"] = o["why"] }
+        _ = assign(jsonData(o))
+        return assignmentsByTeam()
+    }
 
     public func scenarioData() async -> Data {
         if base.isEmpty { _ = await newStory(jsonData(["template": "zawrat"])) }

@@ -253,6 +253,8 @@ func handle(_ q: Req) async -> Data {
     case ("GET", "/modules"): return response("200 OK", json, StoryPipeline.modulesData())
     case ("GET", "/story"): return response("200 OK", json, await studio.get())
     case ("GET", "/story/scenario"): return response("200 OK", json, await studio.scenarioData())
+    case ("GET", "/api/assignments"): return response("200 OK", json, await studio.assignmentsByTeam())
+    case ("POST", "/api/assignments"): return response("200 OK", json, await studio.assignTeam(q.body))
     case ("GET", "/story/assign"): return response("200 OK", json, await studio.assignments())
     case ("POST", "/story/assign"): return response("200 OK", json, await studio.assign(q.body))
     case ("GET", "/eval/sim-runs"): return response("200 OK", json, EvalFiles.simRuns())

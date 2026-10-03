@@ -45,7 +45,7 @@ func handle(method: String, path: String, headers: [String: String], body: Data,
         ServerGuard.logReject(401, peer: peer, method: method, path: path)
         return response("401 Unauthorized", json, Data(#"{"error":"PIN required (X-Rescue-Pin header or JSON pin)"}"#.utf8))
     }
-    let isApi = path == "/modules" || path.hasPrefix("/story")
+    let isApi = path == "/modules" || path.hasPrefix("/story") || path.hasPrefix("/api/")
     if isApi && method != "OPTIONS" && !guardian.authorized(peer: peer, headers: headers, body: body) {
         Metrics.shared.inc("reports_rejected_total", ["reason": "pin"])
         ServerGuard.logReject(401, peer: peer, method: method, path: path)
@@ -61,6 +61,8 @@ func handle(method: String, path: String, headers: [String: String], body: Data,
     case ("GET", "/modules"): return response("200 OK", json, StoryPipeline.modulesData())
     case ("GET", "/app"), ("GET", "/app/"): return Data("HTTP/1.1 302 Found\r\nLocation: /app/index.html\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8)
     case ("GET", "/eval/sim-runs"): return response("200 OK", json, EvalFiles.simRuns())
+    case ("GET", "/api/assignments"): return response("200 OK", json, await studio.assignmentsByTeam())
+    case ("POST", "/api/assignments"): return response("200 OK", json, await studio.assignTeam(body))
     case ("GET", "/story/assign"): return response("200 OK", json, await studio.assignments())
     case ("POST", "/story/assign"): return response("200 OK", json, await studio.assign(body))
     case ("GET", "/story/scenario"): return response("200 OK", json, await studio.scenarioData())
@@ -124,7 +126,7 @@ final class Conn: @unchecked Sendable {
 }
 
 let guardian = ServerGuard(args: args, defaultPort: 8771)
-let studioPaths: Set<String> = ["/", "/studio", "/modules", "/story", "/story/new", "/story/event", "/story/edit", "/story/narrate", "/story/save", "/story/scenario", "/story/assign", "/eval/sim-runs", "/metrics"]
+let studioPaths: Set<String> = ["/", "/studio", "/modules", "/story", "/story/new", "/story/event", "/story/edit", "/story/narrate", "/story/save", "/story/scenario", "/story/assign", "/api/assignments", "/eval/sim-runs", "/metrics"]
 Metrics.shared.startLLMProbe(url: ProcessInfo.processInfo.environment["RESCUE_LLM_URL"] ?? "http://localhost:11434")
 let params = NWParameters.tcp
 params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(guardian.host), port: NWEndpoint.Port(rawValue: guardian.port ?? 8771)!)
