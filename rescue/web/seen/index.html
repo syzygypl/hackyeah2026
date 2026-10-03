@@ -180,6 +180,9 @@
     const padD = 0.02;
     map = new maplibregl.Map({ container: "map", style, bounds: [[bb.west, bb.south], [bb.east, bb.north]],
       maxBounds: [[bb.west - padD, bb.south - padD], [bb.east + padD, bb.north + padD]], attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false });
+    // qa-mobile 8: MapLibre opens the compact attribution until the first interaction - on a 360 px phone it covers the
+    // bottom of the map. Start collapsed; the (i) button keeps the OSM / ODbL attribution one tap away.
+    map.once("load", () => { const a = map.getContainer().querySelector(".maplibregl-ctrl-attrib"); if (a) { a.classList.remove("maplibregl-compact-show"); a.removeAttribute("open"); } });
     map.touchZoomRotate.disableRotation();
     map.on("click", e => setPos(e.lngLat.lat, e.lngLat.lng, "map"));
     if (pos) setPos(pos.lat, pos.lon, pos.src, pos.acc);

@@ -452,18 +452,22 @@
   /* ---------- label decluttering (shared by both views) ---------- */
   const chipPri = (cls) => (/\btop1\b/.test(cls) ? 0 : /\btop2\b/.test(cls) ? 1 : /\btop3\b/.test(cls) ? 2 : /\bping\b/.test(cls) ? 3 : /\bipp\b/.test(cls) ? 4 : /\blive\b/.test(cls) ? 5 : /\bseg\b/.test(cls) ? 6 : 7);
   // items: {x, y (anchor px incl. base offset), w, h, pri, apply(dx, dy, dim)}
-  function declutter(items) {
+  // W = frame width (optional): a chip that would cross the left / right edge is shifted inside (qa-mobile 7: callouts and
+  // the "Auto" chip were cut at the edges of a 330 px frame)
+  function declutter(items, W) {
     const placed = [], hit = (a, b) => a.x < b.x + b.w + 2 && b.x < a.x + a.w + 2 && a.y < b.y + b.h + 2 && b.y < a.y + a.h + 2;
+    const M = 6, inside = (it) => { if (!W) return 0; const l = it.x - it.w / 2, r = l + it.w; return it.w > W - 2 * M ? M - l : l < M ? M - l : r > W - M ? W - M - r : 0; };
     items.sort((a, b) => a.pri - b.pri);
     for (const it of items) {
-      if (it.pri === 7) { it.apply(0, 0, false); continue; }
+      const dx = inside(it);
+      if (it.pri === 7) { it.apply(dx, 0, false); continue; }
       const step = it.h + 3, cands = [0, step, -step, 2 * step, -2 * step];
       let done = false;
       for (const dy of cands) {
-        const r = { x: it.x - it.w / 2, y: it.y + dy - it.h / 2, w: it.w, h: it.h };
-        if (!placed.some((q) => hit(q, r))) { placed.push(r); it.apply(0, dy, false); done = true; break; }
+        const r = { x: it.x + dx - it.w / 2, y: it.y + dy - it.h / 2, w: it.w, h: it.h };
+        if (!placed.some((q) => hit(q, r))) { placed.push(r); it.apply(dx, dy, false); done = true; break; }
       }
-      if (!done) { it.apply(0, 0, it.pri > 4); if (it.pri <= 4) placed.push({ x: it.x - it.w / 2, y: it.y - it.h / 2, w: it.w, h: it.h }); }
+      if (!done) { it.apply(dx, 0, it.pri > 4); if (it.pri <= 4) placed.push({ x: it.x + dx - it.w / 2, y: it.y - it.h / 2, w: it.w, h: it.h }); }
     }
   }
 
@@ -482,7 +486,11 @@
     this.map = map;
     map.touchZoomRotate.disableRotation();
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
-    map.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right');
+    // narrow frame (phone, porównanie): compact attribution, collapsed at start (MapLibre opens it until the first interaction);
+    // the (i) button keeps it one tap away (OSM / ODbL attribution stays reachable)
+    const narrowAttr = container.clientWidth < 640;
+    map.addControl(new maplibregl.AttributionControl({ compact: narrowAttr }), 'bottom-right');
+    if (narrowAttr) map.once('load', () => { const a = container.querySelector('.maplibregl-ctrl-attrib'); if (a) { a.classList.remove('maplibregl-compact-show'); a.removeAttribute('open'); } });
     map.addControl(new maplibregl.ScaleControl({ unit: 'metric', maxWidth: 120 }), 'bottom-right');
     const markers = new Map();
     const tileErr = {}, tileOk = {};
@@ -611,7 +619,7 @@
         const el = m.getElement(), p = map.project(m.getLngLat()), b = m.__base || [0, 0];
         return { x: p.x + b[0], y: p.y + b[1], w: el.offsetWidth, h: el.offsetHeight, pri: chipPri(el.className),
           apply: (dx, dy, dim) => { m.setOffset([b[0] + dx, b[1] + dy]); el.style.opacity = dim ? '0.25' : ''; } };
-      }));
+      }), container.clientWidth);
     }
     map.on('zoomend', tidy); map.on('moveend', tidy); map.on('resize', tidy);
     this.fitAll = () => map.fitBounds([[west, south], [east, north]], { padding: 24, duration: 500 });
@@ -697,7 +705,7 @@
         c.__el = el; c.__x = x + (c.offset ? c.offset[0] : 0); c.__y = y + (c.offset ? c.offset[1] : 0);
       }
       declutter(chips.map((c) => ({ x: c.__x, y: c.__y, w: c.__el.offsetWidth, h: c.__el.offsetHeight, pri: chipPri(c.cls),
-        apply: (dx, dy, dim) => { c.__el.style.top = c.__y + dy + 'px'; c.__el.style.opacity = dim ? '0.25' : ''; } })));
+        apply: (dx, dy, dim) => { c.__el.style.left = c.__x + dx + 'px'; c.__el.style.top = c.__y + dy + 'px'; c.__el.style.opacity = dim ? '0.25' : ''; } })), container.clientWidth);
       attr.textContent = [base === 'relief' && opt.relief ? opt.relief.attribution : '', M.T ? '© OpenStreetMap contributors (ODbL)' : '', 'Dane scenariusza fikcyjne'].filter(Boolean).join(' | ');
     }
     cv.addEventListener('mousemove', (e) => {
@@ -1444,6 +1452,10 @@
 
   async function boot() {
     if (!SCALE) return fatal('brak wspólnej skali ../app/scale.js (serwer musi działać w rescue/)');
+    // qa-mobile 7: ?legend=compact = smaller legend (porównanie's 330 px frames); narrow2d (< 400 px) = smaller chips, same rules
+    if (Q.get('legend') === 'compact') document.body.classList.add('legend-compact');
+    const narrow2d = () => document.body.classList.toggle('narrow2d', innerWidth < 400);
+    narrow2d(); addEventListener('resize', narrow2d);
     if (EMBED) {
       document.body.classList.add('embed'); if (EMBED !== '1') document.body.classList.add('embed-' + EMBED);
       // decision S1: embedded in the shell = its tokens (dark operational by default, ?theme=light for print), same as web/3d

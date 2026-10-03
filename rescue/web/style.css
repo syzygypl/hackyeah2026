@@ -190,6 +190,19 @@ body[data-state="loading"] .floating { visibility: hidden; }
 body.embed-scene #legend { width: 236px; }
 body.embed-scene .lg-title { white-space: nowrap; }
 body.embed-scene .lg-ramp, body.embed-scene .lg-stops { width: 100%; }
+/* qa-mobile 7: ?legend=compact (porównanie's narrow frames) - the rules porównanie used to inject from outside */
+body.legend-compact #legend { padding: 4px 7px; font-size: 10px; width: auto; }
+body.legend-compact .lg-title { font-size: 10.5px; margin-bottom: 1px; }
+body.legend-compact .lg-ramp, body.legend-compact .lg-stops { width: 150px; }
+body.legend-compact .lg-ramp { height: 6px; }
+body.legend-compact .lg-stops { font-size: 9px; }
+body.legend-compact .lg-keys { gap: 8px; margin-top: 2px; }
+body.legend-compact .maplibregl-ctrl-scale { display: none; }
+/* frame under 400 px: smaller chips and callouts (declutter also keeps them inside the frame) */
+body.narrow2d .chip { font-size: 11px; padding: 1px 5px; }
+body.narrow2d .chip.seg.top { font-size: 12px; }
+body.narrow2d .chip.seg.top1 { font-size: 12.5px; padding: 2px 6px; }
+body.narrow2d .chip .srch, body.narrow2d .chip .asg { font-size: 10px; }
 .lg-title { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
 .lg-row { display: grid; grid-template-columns: repeat(6, 44px); }
 .lg-ramp { height: 10px; width: 264px; border-radius: 4px; margin: 2px 0 3px; }
