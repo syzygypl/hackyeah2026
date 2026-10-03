@@ -8,14 +8,14 @@ scenario includes a thermal-drone pass, both POD assumptions used in the demo se
 
 | Scenariusz | Kategoria | POD drona | Ranga: fuzja | Ranga: same ringi | Obszar: fuzja | Obszar: ringi | Teren |
 |---|---|---|---|---|---|---|---|
-| kasprowy | ski-tourer | n/a | #2 | #8 | 1.81% | 4.2% | rysowany recznie (fallback) |
-| morskie-oko | child | 0.6 | #1 | #3 | 0.67% | 2.9% | rysowany recznie (fallback) |
-| morskie-oko | child | 0.75 | #1 | #3 | 0.64% | 2.9% | rysowany recznie (fallback) |
+| kasprowy | ski-tourer | n/a | #2 | #5 | 4.94% | 4.2% | prawdziwy (OSM+DEM) |
+| morskie-oko | child | 0.6 | #1 | #1 | 0.03% | 0.2% | prawdziwy (OSM+DEM) |
+| morskie-oko | child | 0.75 | #1 | #1 | 0.03% | 0.2% | prawdziwy (OSM+DEM) |
 | zawrat | hiker | 0.6 | #1 | #19 | 0.22% | 41.0% | prawdziwy (OSM+DEM) |
 | zawrat | hiker | 0.75 | #1 | #19 | 0.11% | 41.0% | prawdziwy (OSM+DEM) |
 
 ## Liczba do pitchu
 
-Miejsce odnalezienia w top 3 segmentow po fuzji w **5/5** przypadkach (obie wersje POD drona, wszystkie scenariusze). Srednio trzeba przeszukac **0.69%** obszaru w kolejnosci POA zanim dojdzie sie do miejsca odnalezienia, wobec **18.4%** gdybysmy uzyli tylko pierscieni Koestera (bez fuzji pozostalych dowodow).
+Miejsce odnalezienia w top 3 segmentow po fuzji w **5/5** przypadkach (obie wersje POD drona, wszystkie scenariusze). Srednio trzeba przeszukac **1.07%** obszaru w kolejnosci POA zanim dojdzie sie do miejsca odnalezienia, wobec **17.3%** gdybysmy uzyli tylko pierscieni Koestera (bez fuzji pozostalych dowodow).
 
 Uwaga: liczby zalezne od terenu - scenariusze bez jeszcze wygenerowanego prawdziwego terenu (OSM+DEM, AI Marcina) uzywaja reczne narysowanego fallbacku ze scenariusza i moga sie zmienic po dolozeniu <nazwa>-terrain.json (tak jak dla zawrat: ranga #1 -> #2).

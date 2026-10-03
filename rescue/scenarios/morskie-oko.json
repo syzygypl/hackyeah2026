@@ -13,7 +13,7 @@
   "cellM": 100,
   "ipp": {
     "name": "IPP: pomost widokowy przy schronisku nad Morskim Okiem (miejsce ostatniej zabawy)",
-    "at": [49.1986, 20.0672]
+    "at": [49.2015, 20.0713]
   },
   "terrain": {
     "trails": [
@@ -34,38 +34,38 @@
     ]
   },
   "segments": [
-    { "id": "M1", "name": "Brzeg wschodni jeziora (plaza piknikowa)", "seed": [49.1995, 20.0700] },
+    { "id": "M1", "name": "Brzeg wschodni jeziora (plaza piknikowa)", "seed": [49.1998, 20.0735] },
     { "id": "M2", "name": "Brzeg zachodni jeziora", "seed": [49.1980, 20.0630] },
-    { "id": "M3", "name": "Las przy wyplywie potoku", "seed": [49.2000, 20.0620] },
+    { "id": "M3", "name": "Las przy wyplywie potoku", "seed": [49.2030, 20.0725] },
     { "id": "M4", "name": "Scierzka widokowa nad jeziorem", "seed": [49.2010, 20.0660] },
     { "id": "M5", "name": "Teren schroniska i parking rowerowy", "seed": [49.1990, 20.0680] },
     { "id": "M6", "name": "Szlak w strone Czarnego Stawu (dolny odcinek)", "seed": [49.1960, 20.0750] },
-    { "id": "M7", "name": "Las poludniowy nad brzegiem", "seed": [49.1970, 20.0700] },
-    { "id": "M8", "name": "Szlak powrotny do Palenicy (gorny odcinek)", "seed": [49.2100, 20.0870] }
+    { "id": "M7", "name": "Las poludniowy nad brzegiem", "seed": [49.1945, 20.0725] },
+    { "id": "M8", "name": "Szlak powrotny do Palenicy (gorny odcinek)", "seed": [49.2120, 20.0830] }
   ],
   "truth": {
     "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu)",
-    "at": [49.2003, 20.0615]
+    "at": [49.2030, 20.0725]
   },
   "events": [
     { "provider": "Terrain", "at": "13:55", "title": "Teren: brzeg jeziora, las, potok wyplywowy", "detail": "Dzieci najczesciej znajdowane blisko ostatniego miejsca zabawy, czesto przy wodzie lub w zagajniku (atrakcyjny teren do zabawy).", "factor": 1 },
     { "provider": "Terrain", "at": "13:55", "title": "Teren: koszt (dalekie, strome odcinki malo prawdopodobne)", "detail": "Dziecko 8 lat rzadko pokonuje duze przewyzszenia samodzielnie.", "factor": 0 },
-    { "provider": "KoesterRings", "at": "13:55", "title": "Koester: dziecko, teren otwarty/las", "detail": "Pierscienie ISRID (przyblizone, kategoria dziecko - znacznie mniejszy zasieg niz dorosly): 25% 0.3 km, 50% 0.8 km, 75% 1.5 km, 95% 3.0 km.", "point": [49.1986, 20.0672], "quantilesKm": [0.3, 0.8, 1.5, 3.0] },
+    { "provider": "KoesterRings", "at": "13:55", "title": "Koester: dziecko, teren otwarty/las", "detail": "Pierscienie ISRID (przyblizone, kategoria dziecko - znacznie mniejszy zasieg niz dorosly): 25% 0.3 km, 50% 0.8 km, 75% 1.5 km, 95% 3.0 km.", "point": [49.2015, 20.0713], "quantilesKm": [0.3, 0.8, 1.5, 3.0] },
     { "provider": "TerrainDifficulty", "at": "13:55", "title": "Trudnosc terenu: brzeg / las / sciezka / stok", "detail": "Dziecko prawdopodobnie zostaje w lagodnym terenie blisko wody. Ratownicy: wolniejsze przeszukanie w gestym lesie (mniejsza widocznosc)." },
     { "provider": "WeatherConditions", "at": "13:55", "title": "Warunki: slonecznie, 22C, wiatr 2 m/s, dobra widocznosc", "detail": "Dobre warunki do przeszukania, ale tlum turystow utrudnia nasluchiwanie wolan.", "visibilityM": 8000, "windMs": 2, "tempC": 22, "precip": "none", "dark": false, "ice": false },
-    { "provider": "TripPlan", "at": "13:58", "title": "Relacja rodzica: zabawa przy kamieniach nad wyplywem potoku", "detail": "\"Siedzielismy na plazy piknikowej, poszla popatrzec na kaczki przy wyplywie potoku, potem zniknela z pola widzenia na chwile.\"", "points": [[49.1995, 20.0700], [49.1990, 20.0680], [49.1986, 20.0672], [49.2000, 20.0640], [49.2010, 20.0620]], "radiusM": 150 },
-    { "provider": "Cell112Fix", "at": "14:05", "title": "CPR 112: brak wlasnego telefonu (dziecko), pomijamy", "detail": "Dziecko nie ma telefonu - brak lokalizacji sieciowej, polegamy na swiadkach.", "point": [49.1986, 20.0672], "radiusM": 600 },
+    { "provider": "TripPlan", "at": "13:58", "title": "Relacja rodzica: zabawa przy kamieniach nad wyplywem potoku", "detail": "\"Siedzielismy na plazy piknikowej, poszla popatrzec na kaczki przy wyplywie potoku, potem zniknela z pola widzenia na chwile.\"", "points": [[49.1995, 20.0700], [49.1990, 20.0680], [49.2015, 20.0713], [49.2020, 20.0700], [49.2030, 20.0725]], "radiusM": 150 },
+    { "provider": "Cell112Fix", "at": "14:05", "title": "CPR 112: brak wlasnego telefonu (dziecko), pomijamy", "detail": "Dziecko nie ma telefonu - brak lokalizacji sieciowej, polegamy na swiadkach.", "point": [49.2015, 20.0713], "radiusM": 600 },
     { "provider": "SegmentSearched", "at": "14:15", "title": "Patrol GOPR + obsluga schroniska: plaza piknikowa i pomost, nic", "detail": "Zespol A przeszukal brzeg wschodni i teren przy schronisku. POD 70%.", "segments": ["M1", "M5"], "pod": 0.7 },
-    { "provider": "Clue", "at": "14:22", "title": "Slad: mala klapka znaleziona przy lesie nad wyplywem potoku", "detail": "Turysta znalazl dzieciecy klapek przy sciezce w lesie, zgodny z opisem obuwia.", "point": [49.2000, 20.0620], "radiusM": 150 },
+    { "provider": "Clue", "at": "14:22", "title": "Slad: mala klapka znaleziona przy lesie nad wyplywem potoku", "detail": "Turysta znalazl dzieciecy klapek przy sciezce w lesie, zgodny z opisem obuwia.", "point": [49.2030, 20.0725], "radiusM": 150 },
     { "provider": "SegmentSearched", "at": "14:35", "title": "Patrol GOPR: brzeg zachodni i sciezka widokowa, nic", "detail": "Zespol B przeszukal brzeg zachodni i gorna sciezke. POD 65%.", "segments": ["M2", "M4"], "pod": 0.65 },
     { "provider": "DronePassEmpty", "at": "14:45", "title": "Dron: przelot nad otwartym terenem brzegu, nic", "detail": "Dron widzi tylko otwarty teren, pod drzewami las zasloniety. POD 60% (ograniczone pod drzewostanem).", "segments": ["M1", "M2", "M4"], "pod": 0.6 },
-    { "provider": "RatunekPing", "at": "14:58", "title": "Zgloszenie: dziecko odnalezione przez psa ratowniczego w zagajniku", "detail": "Pies zaznaczyl w gestym zagajniku przy wyplywie potoku, dziecko przestraszone ale bezpieczne.", "point": [49.2003, 20.0615], "radiusM": 60 }
+    { "provider": "RatunekPing", "at": "14:58", "title": "Zgloszenie: dziecko odnalezione przez psa ratowniczego w zagajniku", "detail": "Pies zaznaczyl w gestym zagajniku przy wyplywie potoku, dziecko przestraszone ale bezpieczne.", "point": [49.2030, 20.0725], "radiusM": 60 }
   ],
   "resources": [
-    { "id": "gopr-a", "name": "Patrol GOPR A (schronisko)", "type": "ground", "base": [49.1986, 20.0672], "readyAt": "14:00" },
+    { "id": "gopr-a", "name": "Patrol GOPR A (schronisko)", "type": "ground", "base": [49.2015, 20.0713], "readyAt": "14:00" },
     { "id": "gopr-b", "name": "Patrol GOPR B (parking Palenica)", "type": "ground", "base": [49.2297, 20.0999], "readyAt": "14:20" },
-    { "id": "dog", "name": "Zespol z psem tropiacym", "type": "dog", "base": [49.1986, 20.0672], "readyAt": "14:10" },
-    { "id": "drone", "name": "Dron termowizyjny", "type": "drone", "base": [49.1986, 20.0672], "readyAt": "14:30" },
+    { "id": "dog", "name": "Zespol z psem tropiacym", "type": "dog", "base": [49.2015, 20.0713], "readyAt": "14:10" },
+    { "id": "drone", "name": "Dron termowizyjny", "type": "drone", "base": [49.2015, 20.0713], "readyAt": "14:30" },
     { "id": "heli", "name": "Smiglowiec TOPR", "type": "heli", "base": [49.293, 19.964], "readyAt": "14:15" }
   ]
 }
