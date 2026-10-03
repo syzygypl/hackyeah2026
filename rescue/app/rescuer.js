@@ -11,7 +11,7 @@ export function initRescuer(ctx) {
   C = ctx;
   if (team) ls.set("rescue-team", team);
   $("rTeam").onchange = () => { team = $("rTeam").value; ls.set("rescue-team", team); lastTaskKey = ""; render(); C.onTeam(team); };
-  $("rCenter").onclick = () => { if (gps) C.map.flyTo({ center: [gps[1], gps[0]], zoom: 14.5, duration: 400 }); else C.toast("Brak pozycji GPS"); };
+  $("rCenter").onclick = () => { if (gps) C.map.flyTo({ center: [gps[1], gps[0]], zoom: 14.5, duration: 400 }); else C.toast("Brak pozycji GPS - włącz lokalizację w telefonie"); };
   if (navigator.geolocation) navigator.geolocation.watchPosition((p) => { gps = [p.coords.latitude, p.coords.longitude, p.coords.accuracy]; drawGps(); }, () => {}, { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
   setInterval(() => { if (C.store.role === "ratownik") pollTask(); }, 10000);
 }
@@ -24,7 +24,7 @@ function task() {
   const S = C.curStep(); if (!S || !team) return null;
   const m = (C.store.manual || []).find((a) => a.resourceId === team && (!a.scenario || a.scenario === C.store.scenario));
   const p = (S.assignments || []).find((a) => a.resourceId === team);
-  if (m) return { ...p, ...m, fromOperator: true, reason: m.note || (p && p.segmentId === m.segmentId ? p.reason : "Przydział od kierownika akcji") , segmentName: m.segmentName || p?.segmentName };
+  if (m) return { ...p, ...m, fromOperator: true, reason: m.note || (p && p.segmentId === m.segmentId ? p.reason : "Zadanie od kierownika akcji") , segmentName: m.segmentName || p?.segmentName };
   return p ? { ...p, fromOperator: false } : null;
 }
 
@@ -43,15 +43,15 @@ export function render() {
   if (key && lastTaskKey && key !== lastTaskKey) { C.toast("Nowe zadanie: " + t.segmentId + " " + (t.segmentName || ""), 6000); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {} }
   lastTaskKey = key;
   const W = (S && S.weather) || {};
-  $("rTask").innerHTML = !me ? `<div class="help">Brak zespołów w scenariuszu.</div>`
+  $("rTask").innerHTML = !me ? `<div class="help">Ten scenariusz nie ma jeszcze zespołów.</div>`
     : !me.available && !(t && t.fromOperator) ? `<div class="rbig off">Zespół niedostępny</div><div>${esc(me.reason)}</div>`
-    : !t ? `<div class="rbig">Brak zadania</div><div class="help">Czekaj na przydział od kierownika akcji.</div>`
-    : `<div class="rlabel">${t.fromOperator ? "Przydział od kierownika akcji" : "Plan silnika"}</div>
+    : !t ? `<div class="rbig">Czekasz na zadanie</div><div class="help">Kierownik akcji przydzieli Wam sektor - pojawi się tutaj.</div>`
+    : `<div class="rlabel">${t.fromOperator ? "Przydział od kierownika akcji" : "Zadanie z planu"}</div>
        <div class="rbig">${esc(t.segmentId)} ${esc(t.segmentName || "")}</div>
        ${t.travelMin != null ? `<div>Dojście ok. ${Math.round(t.travelMin)} min${t.sweepMin ? `, przeszukanie ok. ${Math.round(t.sweepMin)} min` : ""}${t.expectedFind != null ? `, szansa ${pct(t.expectedFind)}` : ""}</div>` : ""}
        ${!me.available ? `<div class="rflag">Plan: ${esc(me.reason)}</div>` : ""}
        ${(t.safety || []).map((f) => `<div class="rflag">! ${esc(f)}</div>`).join("")}
-       <details><summary>Dlaczego tutaj</summary>${esc(t.reason || "")}</details>`;
+       <details><summary>Szczegóły: dlaczego tutaj</summary>${esc(t.reason || "")}</details>`;
   $("rSurv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
   if (t && t.segmentId !== C.store.selSeg) C.selectSeg(t.segmentId, "rescuer");
 }

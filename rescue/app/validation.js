@@ -34,7 +34,7 @@ async function showMain(el) {
   if (!loaded.missing) { el.innerHTML = renderResults(loaded); return; }
   // no calibration yet: show the simulator runs (manifest + run.json)
   if (!simRuns) { try { simRuns = await getJSON("/eval/sim-runs"); } catch (e) { simRuns = []; } }
-  const head = `<h2>Walidacja silnika</h2><div class="vcard note" style="margin-bottom:10px">Brak wyników kalibracji (<code>rescue/eval/calibration/results.json</code>). Kształt: CONTRACT.md, sekcja „eval”. Poniżej przypadki z symulatora.</div>`;
+  const head = `<h2>Walidacja silnika</h2><div class="vcard note" style="margin-bottom:10px">Wyniki kalibracji jeszcze się liczą. Na razie pokazujemy przypadki z symulatora.</div>`;
   if (!simRuns.length) { el.innerHTML = head + `<div class="vcard">Brak przebiegów symulatora w <code>rescue/eval/sim/out/</code> (<code>python3 rescue/eval/sim/sim.py --region zawrat --n 200 --seed 1 --out rescue/eval/sim/out/v1-zawrat</code>).</div>`; return; }
   if (!curSim) curSim = simRuns[0].id;
   const r = simRuns.find((x) => x.id === curSim) || simRuns[0];
