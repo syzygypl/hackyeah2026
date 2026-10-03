@@ -815,6 +815,15 @@ async function setTime(t) {
   renderLiveHead();
   toast(t === "live" ? "Na żywo: mapa pokazuje teraz, ze zgłoszeniami z terenu" : "Historia: nagrany przebieg akcji. Przesuń oś czasu albo naciśnij ▶", 3000);
 }
+async function advance(op) {
+  if (!liveNow()) return;
+  if (op === "start" && !confirm("Cofnąć akcję do początku dla wszystkich podłączonych (operatorzy, telefony ratowników, Centrum)?")) return;
+  $("advNext").disabled = $("advStart").disabled = true;
+  try { const r = await api("/api/advance", { sc: store.scenario, op }); toast("Na żywo: " + r.title, 3500); await pollLive(); }
+  catch (e) { toast(plErr(e), 4500); renderLiveHead(); }
+}
+$("advNext").onclick = () => advance("next");
+$("advStart").onclick = () => advance("start");
 $("tmode").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) setTime(b.dataset.t); };
 // live-only header actions (+ Nowa akcja, Centrum): inactive in Historia, a click explains how to switch
 document.addEventListener("click", (e) => {
@@ -841,8 +850,12 @@ function renderLiveHead() {
   document.querySelectorAll("[data-needslive]").forEach((el) => { el.classList.toggle("needslive", store.time !== "live"); el.setAttribute("aria-disabled", store.time !== "live"); });
   // dock: Historia plays the recording; Na żywo holds the timeline at now
   const on = liveOn();
-  $("slider").disabled = on; $("play").disabled = on;
-  $("play").title = on ? "Odtwarzanie działa w trybie Historia" : "Odtwórz historię";
+  // Na żywo: no replay; the operator moves the incident on for everyone (POST /api/advance), the server's liveCursor says what is next
+  $("slider").hidden = on; $("play").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
+  const lc = D() && D().liveCursor, nx = lc && lc.next;
+  $("advNext").disabled = !liveNow() || !nx; $("advStart").disabled = !liveNow();
+  $("advNextT").textContent = !lc ? "" : nx ? `dalej: ${nx.at} ${nx.title}` : "koniec nagranej akcji";
+  $("advNextT").title = nx ? nx.title : "";
   $("tlabel").textContent = plan ? "Historia" : on ? "Na żywo · teraz" : "Historia";
   document.body.classList.toggle("time-live", on); document.body.classList.toggle("time-hist", !plan && !on);
   // live box: always in Akcja, active only in Na żywo with a live connection
@@ -862,7 +875,7 @@ function renderLiveHead() {
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
 function renderLiveFeed() {
   const el = $("liveFeed"); if (!el) return;
-  const K = { clue: "ślad", dispatch: "przydział", report: "meldunek" };
+  const K = { clue: "ślad", dispatch: "przydział", report: "meldunek", scenario: "zdarzenie" };
   // operator ACK (Mateusz): unconfirmed messages stand out, ✓ confirms one, "Potwierdź wszystkie" confirms the rest (POST /api/ack)
   const unacked = live.events.filter((e) => !e.acked && e.by !== "operator");
   el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"><span class="lft">${esc(hhmm(e.t))}</span> <b>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`).join("")

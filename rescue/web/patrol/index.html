@@ -414,19 +414,27 @@
   }
   setInterval(pollEnded, 20000); pollEnded();
   // Operator ACK of this team's reports (GET /api/live, "acked"): short confirmation on the phone
-  let lastAck = store.get("rescue-patrol-lastack", 0);
+  let lastAck = store.get("rescue-patrol-lastack", 0), lastScen = null;
   async function pollAcks() {
     try {
       const r = await fetch(API + "/api/live?since=0" + (SCN ? "&sc=" + encodeURIComponent(SCN) : ""), { headers: headers(), signal: AbortSignal.timeout(5000) });
       if (!r.ok) return;
-      const mine = ((await r.json()).events || []).filter((e) => e.kind === "report" && e.team === team && e.acked && e.seq > lastAck);
+      const evs = (await r.json()).events || [];
+      // the operator moved the incident on (POST /api/advance, kind "scenario"): new plan and map, so reload this view (not mid-typing)
+      const scn = evs.filter((e) => e.kind === "scenario"), top = scn.length ? Math.max(...scn.map((e) => e.seq)) : 0;
+      if (lastScen === null) lastScen = top;
+      else if (top > lastScen) {
+        lastScen = top; toast("Nowe zdarzenie w akcji: " + scn[scn.length - 1].title); navigator.vibrate?.(200);
+        if (!$("free").value.trim()) setTimeout(() => location.reload(), 2500);
+      }
+      const mine = evs.filter((e) => e.kind === "report" && e.team === team && e.acked && e.seq > lastAck);
       if (!mine.length) return;
       lastAck = Math.max(...mine.map((e) => e.seq)); store.set("rescue-patrol-lastack", lastAck);
       toast(mine.length > 1 ? `Operator potwierdził ${mine.length} meldunki` : "Operator potwierdził Twój meldunek ✓");
       $("last").textContent = $("last").textContent.replace(/ · potwierdzone$/, "") + " · potwierdzone";
     } catch {}
   }
-  setInterval(pollAcks, 15000);
+  setInterval(pollAcks, 15000); pollAcks();
   $("sendFree").onclick = () => { const t = $("free").value.trim(); if (!t) return; report(`${shortTeam()}: ${t}`); $("free").value = ""; $("more").close(); };
   navigator.geolocation?.watchPosition(p => {
     window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;

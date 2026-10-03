@@ -19,6 +19,7 @@ import RescueStudioKit
 //   POST /story/assessment {step}             same for the current Studio story
 //   POST /report, GET /live-events, POST /client-event, GET /health, GET /metrics
 //   GET /modules, GET|POST /story, POST /story/new|event|edit|narrate|save
+//   POST /api/advance {sc, op}               live: operator moves the incident to the next scripted event (next|start|end|default)
 //   POST /api/reset                           clears field reports, the Studio story and assignments (needs the key)
 #if canImport(Darwin)
 setvbuf(stdout, nil, _IOLBF, 0)
@@ -126,6 +127,7 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
     guard var d = (try? Data(contentsOf: path)).flatMap({ try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }) else { return nil }
     if let t = (try? Data(contentsOf: scenariosDir.appendingPathComponent("\(name)-terrain.json"))).flatMap({ try? JSONSerialization.jsonObject(with: $0) }) { d["terrain"] = t }
     var nLive = 0
+    var liveCursor: [String: Any]? = nil
     if live {
         let segs = (d["segments"] as? [[String: Any]]) ?? []
         // Phones stamp reports with their wall clock (e.g. 11:05), not the scenario clock: a time outside the scenario window
@@ -138,9 +140,16 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
         let end = evs.compactMap { ($0["at"] as? String).map(rel) }.max() ?? 0
         let firstFind = evs.filter(isFind).compactMap { ($0["at"] as? String).map(rel) }.min() ?? Int.max
         let liveAt = evs.compactMap { $0["at"] as? String }.filter { rel($0) < firstFind }.max { rel($0) < rel($1) } ?? (d["startClock"] as? String ?? "00:00")
+        // live position (POST /api/advance): only scripted events up to the cursor; without one, the default live moment
+        let cur = await cursors.get(name), now = cur ?? liveAt, nowRel = rel(now)
+        let shown = evs.filter { ($0["at"] as? String).map { rel($0) <= nowRel } ?? true }
+        let next = evs.filter { ($0["at"] as? String).map { rel($0) > nowRel } ?? false }.min { rel($0["at"] as! String) < rel($1["at"] as! String) }
+        liveCursor = ["at": now, "custom": cur != nil, "revealed": shown.count, "total": evs.count,
+                      "next": next.map { ["at": $0["at"] ?? "", "title": $0["title"] ?? $0["provider"] ?? ""] } ?? NSNull()]
+        d["events"] = shown
         let ev = liveEvents(await store.reports(sc: nil) + (await store.reports(sc: name)), segments: Set(segs.compactMap { $0["id"] as? String }),
                             seeds: Dictionary(segs.compactMap { s in (s["id"] as? String).flatMap { id in (s["seed"] as? [Double]).map { (id, $0) } } }, uniquingKeysWith: { a, _ in a }),
-                            mapAt: { rel($0) <= end ? $0 : liveAt })
+                            mapAt: { rel($0) <= min(end, nowRel) ? $0 : now })
         nLive = ev.count
         d["events"] = ((d["events"] as? [[String: Any]]) ?? []) + ev
     }
@@ -150,6 +159,7 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
     var doc = (try? JSONSerialization.jsonObject(with: await StoryPipeline.runData(s))) as? [String: Any] ?? [:]
     doc["scenario"] = name
     doc["liveEventsFolded"] = nLive
+    if let liveCursor { doc["liveCursor"] = liveCursor }
     return try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])
 }
 
@@ -171,7 +181,7 @@ let assessCache = AssessCache()
 /// pushes the ones it changed. Field reports, clues and the live feed are rows, read straight from the store.
 /// The local FileStore is not shared: one process, nothing to sync.
 actor SharedState {
-    static let keys = ["story", "assign", "roster", "acks"]
+    static let keys = ["story", "assign", "roster", "acks", "cursor"]
     var versions: [String: Int] = [:], last: [String: Data] = [:]
     func forget() { versions = [:]; last = [:] }
     func export(_ k: String) async -> Data {
@@ -179,6 +189,7 @@ actor SharedState {
         case "story": return await studio.exportStory()
         case "assign": return await studio.exportAssignments()
         case "acks": return await acks.exportState()
+        case "cursor": return await cursors.exportState()
         default: return await roster.exportState()
         }
     }
@@ -187,6 +198,7 @@ actor SharedState {
         case "story": await studio.importStory(d)
         case "assign": await studio.importAssignments(d)
         case "acks": await acks.importState(d)
+        case "cursor": await cursors.importState(d)
         default: await roster.importState(d)
         }
     }
@@ -266,6 +278,49 @@ actor Acks {
     func importState(_ d: Data) { seqs = Set(((try? JSONSerialization.jsonObject(with: d)) as? [Int]) ?? []) }
 }
 let acks = Acks()
+/// live position per incident (POST /api/advance): sc -> scenario clock "HH:MM" of the last scripted event shown live.
+/// No entry = the default live moment (every scripted event before the scenario's own find). Shared deploy: document "cursor".
+actor Cursors {
+    var at: [String: String] = [:]
+    func get(_ sc: String) -> String? { at[sc] }
+    func set(_ sc: String, _ v: String?) { at[sc] = v }
+    func exportState() -> Data { (try? JSONSerialization.data(withJSONObject: at, options: [.sortedKeys])) ?? Data("{}".utf8) }
+    func importState(_ d: Data) { at = ((try? JSONSerialization.jsonObject(with: d)) as? [String: String]) ?? [:] }
+}
+let cursors = Cursors()
+/// POST /api/advance {sc, op}: next = the next scripted event, start = the first one, end = the last one (the scenario's own
+/// find included), default = back to the default live moment. Every move goes into the live feed (kind "scenario"), so
+/// operators, patrol phones and Centrum refetch the run the same way they do after a clue.
+func advance(_ q: Req) async -> Data {
+    let o = jsonObject(q.body)
+    guard let sc = scParam(q, o), let d = (try? Data(contentsOf: scenariosDir.appendingPathComponent("\(sc).json"))).map(jsonObject), !d.isEmpty else { return jsonErr("400 Bad Request", "unknown sc") }
+    let mins = { (t: String) -> Int? in let p = t.split(separator: ":").compactMap { Int($0) }; return p.count == 2 ? p[0] * 60 + p[1] : nil }
+    let start = mins(d["startClock"] as? String ?? "") ?? 0
+    let rel = { (t: String) -> Int in ((mins(t) ?? start) - start + 1440) % 1440 }
+    let evs = ((d["events"] as? [[String: Any]]) ?? []).filter { $0["at"] is String }.sorted { rel($0["at"] as! String) < rel($1["at"] as! String) }
+    guard let first = evs.first, let last = evs.last else { return jsonErr("409 Conflict", "scenario has no events") }
+    let isFind = { (e: [String: Any]) -> Bool in e["provider"] as? String == "Found" || e["found"] as? Bool == true || (e["title"] as? String ?? "").lowercased().contains("znaleziono") }
+    let firstFind = evs.filter(isFind).map { rel($0["at"] as! String) }.min() ?? Int.max
+    let dflt = evs.last { rel($0["at"] as! String) < firstFind }?["at"] as? String ?? (first["at"] as! String)
+    let now = await cursors.get(sc) ?? dflt
+    let op = (o["op"] as? String ?? "next").lowercased()
+    var target: [String: Any]?
+    switch op {
+    case "next": target = evs.first { rel($0["at"] as! String) > rel(now) }
+    case "start": target = first
+    case "end": target = last
+    case "default": target = nil
+    default: return jsonErr("400 Bad Request", "op: next|start|end|default")
+    }
+    if op == "next" && target == nil { return jsonErr("409 Conflict", "koniec nagrania - nie ma kolejnych zdarzeń") }
+    let at = target?["at"] as? String ?? dflt
+    await cursors.set(sc, op == "default" ? nil : at)
+    let title = op == "start" ? "Akcja od początku (\(at))" : op == "default" ? "Akcja wraca do bieżącego momentu (\(at))"
+        : "\(at) \(target?["title"] as? String ?? target?["provider"] as? String ?? "zdarzenie")"
+    _ = await liveFeed.add(LiveFeedEvent(kind: "scenario", by: "operator", title: title, sc: sc))
+    await assessCache.clear()
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["ok": true, "at": at, "title": title, "found": target.map(isFind) ?? false])) ?? Data("{}".utf8))
+}
 /// The operator/rescuer event feed. Shared deploy: rows in the store (every instance sees one sequence). Laptop: in memory.
 actor LiveFeed {
     var seq = 0
@@ -504,7 +559,9 @@ func incidentsData() async -> Data {
             let d = jsonObject(run), all = (d["steps"] as? [[String: Any]]) ?? []
             // live moment = the step before the replay's scripted find; only a live ZNALEZIONO (meldunek) closes the incident
             let isFind = { (s: [String: Any]) -> Bool in (s["label"] as? String ?? "").uppercased().contains("ZNALEZIONO") || s["source"] as? String == "Found" }
-            let cut = all.firstIndex { isFind($0) && !($0["label"] as? String ?? "").contains("(meldunek)") } ?? all.count
+            // an operator who advanced the incident past the scripted find (POST /api/advance) found the person live
+            let advanced = await cursors.get(sc) != nil
+            let cut = advanced ? all.count : all.firstIndex { isFind($0) && !($0["label"] as? String ?? "").contains("(meldunek)") } ?? all.count
             let steps = Array(all.prefix(max(cut, 1))), last = steps.last ?? [:]
             let segs = (last["segments"] as? [[String: Any]]) ?? []
             let inc = (d["incident"] as? String ?? sc).replacingOccurrences(of: #"\s*\(scenariusz[^)]*\)\s*$"#, with: "", options: .regularExpression)
@@ -613,7 +670,7 @@ func route(_ q: Req) async -> Data {
         return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["fieldKey": guardian.fieldPin ?? guardian.pin ?? ""])) ?? Data("{}".utf8))
     case ("POST", "/api/reset"):
         do { try await store.reset() } catch { return jsonErr("500 Internal Server Error", "reset failed") }
-        await studio.resetAll(); await roster.importState(Data("{}".utf8)); await acks.importState(Data("[]".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear()
+        await studio.resetAll(); await roster.importState(Data("{}".utf8)); await acks.importState(Data("[]".utf8)); await cursors.importState(Data("{}".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear()
         print("[reset] field reports, Studio story and assignments cleared")
         return response("200 OK", json, Data(#"{"reset":true}"#.utf8))
 
@@ -678,6 +735,7 @@ func route(_ q: Req) async -> Data {
         let b = (try? JSONSerialization.data(withJSONObject: o)) ?? q.body
         await feedDispatch(b); return response("200 OK", json, await studio.assignTeam(b))
     case ("POST", "/api/clue"): return await addClue(q)
+    case ("POST", "/api/advance"): return await advance(q)
     case ("GET", "/api/live"): return await liveFeedData(Int(q.query["since"] ?? "") ?? 0, sc: scParam(q))
     case ("POST", "/api/ack"):   // {sc?, seq?}: operator confirms one feed event, or every event of the incident so far
         let o = jsonObject(q.body)
@@ -719,7 +777,7 @@ func route(_ q: Req) async -> Data {
             guard validName(name) else { return jsonErr("400 Bad Request", "bad scenario name") }
             let liveSize = await store.reportCount(sc: nil) + (await store.reportCount(sc: name))
             let llm = q.query["llm"] != "0"
-            let key = "\(name)|\(q.query["step"] ?? "last")|\(liveSize)|\(llm)|\(scenarioStamp(name))"
+            let key = "\(name)|\(q.query["step"] ?? "last")|\(liveSize)|\(llm)|\(scenarioStamp(name))|\(await cursors.get(name) ?? "")"
             if let c = await assessCache.get(key) { return response("200 OK", json, c) }
             guard let run = await runScenario(name, live: q.query["live"] != "0") else { return jsonErr("404 Not Found", "no scenario \(name)") }
             let step = q.query["step"].flatMap(Int.init)

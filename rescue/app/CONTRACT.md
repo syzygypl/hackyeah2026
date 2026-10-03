@@ -159,6 +159,10 @@ Stored as a field report (`source: "live-clue"`, `parsedBy: "manual"`, one `clue
 
 Unchanged; every successful write now also appends a `dispatch` event to the feed (`segmentId: null` -> "odwołany").
 
+### `POST /api/advance {sc, op}` - the operator moves the incident on (Na żywo)
+
+Operator key only. `op`: `next` (the next scripted event), `start` (the first one), `end` (the last one, the scenario's own find included), `default` (no cursor: the default live moment = every scripted event before the scenario's find). The cursor is per incident, shared by every instance (document `cursor`), cleared by `/api/reset`. `GET /api/run/<sc>` (live) then holds only the scripted events up to the cursor (live reports stamped later land at the cursor) and carries `liveCursor: {at, custom, revealed, total, next: {at, title} | null}`. Every move adds a feed event `kind: "scenario"`, so operators (app dock: "⏮ Od początku", "Następne zdarzenie ▶"), patrol phones (reload their view, not while typing) and Centrum refetch like after a clue. Moving past the scripted find ends the incident like a live ZNALEZIONO (teams released, everyone told). Answers `{ok, at, title, found}`; 409 at the end of the recording.
+
 ### `GET /api/live?since=<seq>` - live feed (poll every 3-5 s)
 
 ```jsonc

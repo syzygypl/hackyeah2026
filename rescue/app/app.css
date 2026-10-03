@@ -406,3 +406,7 @@ body.role-ratownik::before,body.role-ratownik::after{display:none}
   header .livehead b{display:none}
   #roleBtn{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
+/* Na żywo: the operator moves the incident on for everyone (replaces play + slider) */
+.advbox{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.advbox #advNextT{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--rl-fs-s)}
+.advbox button{flex:none}
