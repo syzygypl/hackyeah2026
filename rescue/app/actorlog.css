@@ -42,3 +42,5 @@
 #alDrawer .chart svg{width:100%;height:90px;display:block}
 #alDrawer .note{font-size:var(--rl-fs-xs);color:var(--rl-mute);margin-top:12px}
 #alDrawer .help{color:var(--rl-mute);font-size:var(--rl-fs-s)}
+/* touch screens: close, feed and filter buttons were 22-26 px tall (QA mobile) */
+@media (max-width:600px),(pointer:coarse){#alDrawer .al-x{min-width:44px;min-height:44px}#alDrawer .feed button,#alDrawer .chips button{min-height:36px;padding:4px 10px}}

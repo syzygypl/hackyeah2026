@@ -67,7 +67,7 @@ function kv(h, kind) {
   if (h.batteryPct != null) add(h.batteryPct + "%", `bateria, ~${h.flightMinLeft} min lotu`);
   if (h.spareBatteries != null) add(h.spareBatteries, "zapasowe baterie");
   if (h.fuelPct != null) add(h.fuelPct + "%", `paliwo, ~${h.enduranceMinLeft} min`);
-  if (h.maintenanceDueInH != null) add(h.maintenanceDueInH + " h", "do przeglądu");
+  if (h.maintenanceDueInH != null) add(String(h.maintenanceDueInH).replace(".", ",") + " h", "do przeglądu");
   return c.length ? `<div class="kv">${c.join("")}</div>` : "";
 }
 function matches(e, f) {
