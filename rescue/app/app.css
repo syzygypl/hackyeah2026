@@ -337,6 +337,27 @@ body.role-operator header #status{display:none}
 #zasobyLink{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-accent);font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap}
 #zasobyLink:hover{border-color:var(--rl-accent)}
 #liveFeed [data-actor]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
+/* Zasoby akcji (Akcja, right panel under the top 3): one row per unit, click = actor drawer + its track */
+body:not(.mode-akcja) #assets{display:none}
+#assets{margin:10px 0 4px;border-top:1px solid var(--rl-line);padding-top:6px}
+#assets>summary{display:flex;align-items:baseline;gap:8px;cursor:pointer;list-style:none}
+#assets>summary::-webkit-details-marker{display:none}
+#assets>summary h2{margin:0}
+#assets>summary::after{content:"▾";margin-left:auto;color:var(--rl-mute)}
+#assets:not([open])>summary::after{content:"▸"}
+#assetsSum{font-size:var(--rl-fs-xs)}
+.assetlist{max-height:198px;overflow:auto;margin-top:4px}
+.arow{display:flex;align-items:center;gap:7px;padding:4px;border-bottom:1px solid var(--rl-line);font-size:var(--rl-fs-s);cursor:pointer;border-radius:var(--rl-radius-s)}
+.arow:hover,.arow:focus-visible{background:var(--rl-panel-2);outline:none}
+.arow .ak{flex:none;width:26px;text-align:center;font:700 10px/18px var(--rl-mono);border-radius:5px;background:var(--rl-accent);color:var(--rl-on-accent)}
+.arow .an{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arow .as{flex:none;font-size:var(--rl-fs-xs);color:var(--rl-ink-2);white-space:nowrap}
+.arow .ah{flex:none;font:600 var(--rl-fs-xs)/16px var(--rl-mono);font-variant-numeric:tabular-nums;padding:0 5px;border-radius:5px;border:1px solid var(--rl-line-strong);color:var(--rl-ink-2)}
+.arow .ah.amber{background:var(--rl-warn);border-color:var(--rl-warn);color:var(--rl-ink)}
+.arow .ah.red{background:var(--rl-danger);border-color:var(--rl-danger);color:var(--rl-on-danger)}
+.arow .ad{flex:none;width:8px;height:8px;border-radius:50%;background:var(--rl-mute);opacity:.45}
+.arow .ad.live{background:var(--rl-ok);opacity:1}
+.arow .ad.stale{background:var(--rl-warn);opacity:1}
 
 /* "+ Nowa akcja" (AI Michała): operator starts a new search - who, where, when -> /story/new. Tokens only. */
 #newActionBtn{min-height:40px;border-radius:20px;padding:0 16px;font-weight:600;white-space:nowrap}

@@ -1289,11 +1289,56 @@ subs.push((why) => {
   const upd = () => { if (zl) zl.href = "zasoby.html?sc=" + encodeURIComponent(store.scenario || ""); };
   subs.push(upd); upd();
   const atNow = () => { const T = tlDoc(); return T && store.minute != null ? tlClock(T, store.minute) : curClock(); };   // timeline minute when scrubbing
-  const highlight = (a) => postTo("2da", { type: "highlight", actor: a, sc: store.scenario, at: atNow() });
+  // straight to the 2D frame (not postTo: its ready flag drops while a run reloads; the view queues messages until it is ready)
+  const highlight = (a) => { const f = $("frame2d"); try { f && f.contentWindow && f.contentWindow.postMessage({ source: "rescue-app", type: "highlight", actor: a, sc: store.scenario, at: atNow() }, location.origin); } catch (e) {} };
   const showActor = (id) => import("./actorlog.js").then((m) => m.openActor(id, { sc: store.backend === "api" ? store.scenario : undefined, at: liveOn() ? undefined : atNow(),
     onTrack: (a) => { if (store.mode !== "akcja" || store.view === "3d") toast("Ślad zespołu rysuje widok 2D (Akcja, 2D)"); highlight(a); }, onClose: () => highlight(null) }));
   $("liveFeed") && $("liveFeed").addEventListener("click", (e) => { const b = e.target.closest("[data-actor]"); if (b) { showActor(b.dataset.actor); highlight(b.dataset.actor); } });
   addEventListener("message", (e) => { if (e.origin === location.origin && e.data && (e.data.source === "rescue2d" || e.data.source === "rescue3d") && e.data.type === "actor" && typeof e.data.id === "string") showActor(e.data.id); });
   const qa = new URLSearchParams(location.search).get("actor");
   if (qa) setTimeout(() => { showActor(qa); highlight(qa); }, 2500);
+  // "Zasoby akcji" under the top 3 (Akcja): every unit of the incident, status, one health chip, GPS feed dot (GET /api/inventory?sc=&at=)
+  const AK = { pieszy: "PP", pies: "K9", dron: "DR", smiglowiec: "SM", lodz: "ŁD", nurkowie: "NU" };
+  const chip = (u) => {
+    const h = u.health || {}, lv = (codes) => { const w = (u.warnings || []).filter((x) => codes.includes(x.code)); return w.some((x) => x.level === "red") ? "red" : w.length ? "amber" : ""; };
+    if (h.fault) return ["usterka", "red", "Usterka: " + h.fault];
+    if (h.batteryPct != null) return [h.batteryPct + "%", lv(["battery", "spares"]), `Bateria ${h.batteryPct}% (~${h.flightMinLeft} min lotu, szacunek)`];
+    if (h.fuelPct != null) return [h.fuelPct + "%", lv(["fuel", "duty"]), `Paliwo ${h.fuelPct}% (~${h.enduranceMinLeft} min, szacunek)`];
+    if (h.workMin != null) return [`${h.workMin}/${h.workLimitMin} min`, lv(["dogwork", "duty"]), `Pies pracuje ${h.workMin} min bez przerwy (limit ${h.workLimitMin})`];
+    if (h.fatiguePct != null) return [h.fatiguePct + "%", lv(["fatigue", "duty"]), `Zmęczenie ${h.fatiguePct}% (szacunek z trasy i czasu służby)`];
+    return ["-", u.level === "ok" ? "" : u.level, "brak danych o stanie"];
+  };
+  let assetsKey = "", assetsAt = 0, assetsBusy = false;
+  async function loadAssets(force) {
+    const box = $("assetList"); if (!box || store.mode !== "akcja" || store.role === "ratownik" || !$("assets").open) return;
+    if (store.backend !== "api") { box.innerHTML = `<div class="help">Zasoby akcji są dla akcji z serwera (nie dla historii ze Studia).</div>`; return; }
+    const at = liveOn() ? "" : atNow(), key = store.scenario + "|" + at;
+    if (assetsBusy || (!force && key === assetsKey && Date.now() - assetsAt < 20000)) return;
+    assetsBusy = true;
+    try {
+      const d = await api(`/api/inventory?sc=${encodeURIComponent(store.scenario)}${at ? "&at=" + encodeURIComponent(at) : ""}`);
+      assetsKey = key; assetsAt = Date.now();
+      const st = curStep(), asg = (st && st.assignments) || [];
+      const units = (d.units || []).filter((u) => u.atSc === store.scenario);
+      box.innerHTML = units.map((u) => {
+        const [v, lv, tip] = chip(u), gps = (u.feeds || []).find((f) => f.kind === "gps" || f.kind === "collar") || { status: "off" };
+        const plan = !u.sc && (u.home || []).includes(store.scenario), seg = u.segmentId || (asg.find((a) => a.resourceId === u.id) || {}).segmentId;
+        const status = (plan ? "w planie" : u.status) + (seg ? " " + seg : "");
+        return `<div class="arow" data-id="${esc(u.id)}" tabindex="0" title="${esc(u.name)} - kliknij: dziennik, źródła danych i ślad na mapie${esc((u.warnings || []).map((w) => "\n" + w.text).join(""))}">`
+          + `<span class="ak">${esc(AK[u.kind] || "?")}</span><span class="an">${esc(u.name)}</span><span class="as">${esc(status)}</span>`
+          + `<span class="ah ${lv}" title="${esc(tip)}">${esc(v)}</span><span class="ad ${esc(gps.status)}" title="GPS: ${gps.status === "live" ? "na żywo" : gps.status === "stale" ? "nieaktualny" : "brak"}${gps.lastAt ? ", " + esc(gps.lastAt) : ""}"></span></div>`;
+      }).join("") || `<div class="help">Brak zespołów przy tej akcji.</div>`;
+      const red = units.filter((u) => u.level === "red").length, amber = units.filter((u) => u.level === "amber").length;
+      $("assetsSum").innerHTML = `${units.length}${red ? ` · <b style="color:var(--rl-danger)">${red} alarm</b>` : ""}${amber ? ` · ${amber} uwaga` : ""} · ${esc(d.at || "")}`;
+      box.querySelectorAll(".arow").forEach((r) => {
+        const go = () => { showActor(r.dataset.id); highlight(r.dataset.id); };
+        r.onclick = go; r.onkeydown = (e) => { if (e.key === "Enter") go(); };
+      });
+    } catch (e) { box.innerHTML = `<div class="help">Zasoby niedostępne: ${esc(plErr(e))}</div>`; }
+    finally { assetsBusy = false; }
+  }
+  $("assets") && $("assets").addEventListener("toggle", () => loadAssets(true));
+  subs.push((why) => { if (why === "load" || why === "run" || why === "mode" || why === "step") setTimeout(() => loadAssets(why !== "step"), 300); });
+  setInterval(() => { if (!document.hidden) loadAssets(false); }, 4000);   // scrubbed minute changed, or 20 s old -> refetch
+  setTimeout(() => loadAssets(true), 1500);
 }
