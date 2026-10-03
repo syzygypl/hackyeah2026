@@ -1,0 +1,136 @@
+# Zgłoszenie HackTribe - Rescue Locator (SMART CITY), v3
+
+Wersja v3, 2026-10-03 20:50 (T+9.8h), main `4e48798`, produkcja https://rescue-locator.vercel.app (`4e48798`). Przygotowało AI Mateusza (agent hackathon-submission). **[UZUPEŁNIJ]** = potrzebny człowiek.
+
+To wariant dla **SMART CITY**, z Krakowem na pierwszym planie. Ten sam produkt idzie też do DEFENCE (`../../rescue-locator/v3/`), z górami na pierwszym planie.
+
+- **Zadanie:** zadanie otwarte SMART CITY, slug HackTribe `smart-city` (`docs/hackyeah-2026.md`).
+- **Język:** polski.
+- **Wymagane pola** (`docs/tasks/smart-city.txt` pkt 5): tytuł, nazwa zespołu, członkowie (1-6), opis, PDF z maksymalnie 10 slajdami.
+- **MP4 (maks. 3 min):** przygotowujemy według decyzji zespołu; materiały wideo robi AI Michała. Regulamin Smart City w `docs/tasks/smart-city.txt` wymienia tylko PDF. Formularz HackTribe trzeba sprawdzić (checklista, punkt 1).
+- **Kryteria:** pomysł 30%, związek z kategorią 20%, użyteczność 20%, design 20%, kompletność 10%. Prawa autorskie nie przechodzą na organizatora (pkt 14).
+- **Kwestia otwarta:** organizator odradza zgłaszanie tego samego projektu do dwóch kategorii (`docs/summary-1230.md`, pytanie 2). Decyzja Mateusza: zgłaszamy oba warianty. Odpowiedź mentora warto mieć na piśmie (checklista, punkt 2).
+
+**Zasada liczb:** podajemy ranking i przeszukany obszar. Procent przy segmencie to **waga mapy**, a nie szansa znalezienia.
+
+## 1. Tytuł projektu
+
+**Rescue Locator - gdzie szukać zaginionego seniora najpierw**
+
+## 2. Nazwa zespołu / ID zespołu
+
+**[UZUPEŁNIJ]**
+
+## 3. Członkowie zespołu
+
+**[UZUPEŁNIJ]**
+
+## 4. Krótki opis (jeden akapit)
+
+Starszy pan z demencją wychodzi z domu w Nowej Hucie w upale. Córka zgłasza zaginięcie po trzech godzinach. Rescue Locator łączy to, co miasto wie (słowa rodziny, sektor BTS, meldunek motorniczego MPK, zgłoszenia mieszkańców "Widziałem" z GPS, sprawdzone kwartały), w jedną mapę Krakowa, która mówi, gdzie szukać najpierw. Dyżurny prowadzi akcję na żywo. Patrole dostają sektory na telefon. Centrum widzi wszystkie akcje w mieście i regionie oraz wspólną pulę zespołów. Bez biometrii i bez śledzenia telefonów. Działa offline w terenie: lokalny model i mapy offline na laptopie. Pokaz online używa modelu w chmurze.
+
+## 5. Opis projektu (pełny)
+
+### Problem
+
+- **Skala:**
+  - Policja notuje ok. 1700-2000 zaginięć osób 65+ rocznie, czyli kilka dziennie (policja.pl, dane 2019-2024).
+  - Do 40% osób z demencją kiedyś się zgubi (Puls Medycyny).
+  - Źródła i linki: `docs/rescue-locator/city-extension.md`.
+- **Czas:** według badań Koestera (dbS Productions) wszyscy znalezieni w ciągu 24 h przeżyli, a po 24 h tylko 54%.
+- **Dziś:** dyżurny ma w ręku słowa rodziny, kilka telefonów od mieszkańców i patrole. Nie ma jednej mapy, która to łączy.
+
+### Rozwiązanie dla miasta
+
+- **Mapa z fuzji wskazówek:** ten sam silnik co w górach.
+  - Pierścienie Koestera dla demencji (Koester zaczynał badania od zaginięć osób z demencją).
+  - Teren miejski z OSM: parki, zarośla, ogródki, Wisła, Zalew Nowohucki.
+  - Korytarz do dawnego domu, sektor BTS, meldunki patroli.
+- **Mieszkańcy jako czujniki:**
+  - publiczna strona "Widziałem" z kartą osoby zaginionej (`/web/seen/`),
+  - zgłoszenie z GPS staje się punktem świadka (150 m) z godziną i mapa się przelicza,
+  - fałszywe zgłoszenie zamyka patrol, który sprawdził miejsce.
+- **Służby w jednym obrazie:**
+  - patrole policji i straży miejskiej, pies, dron z termowizją,
+  - zespoły dostają sektory na telefon i meldują zwykłym zdaniem.
+- **Centrum:**
+  - wszystkie bieżące akcje z top 3 każdej,
+  - wspólna pula zespołów: zespół przeciąga się między akcjami,
+  - akcje bieżące i zakończone są rozdzielone.
+- **Prywatność:**
+  - bez rozpoznawania twarzy i bez skanowania telefonów,
+  - zgłoszenia mieszkańców są dobrowolne,
+  - dane w demo są fikcyjne.
+
+### Demo: Kraków, Nowa Huta (scenariusz fikcyjny `krakow-nowa-huta.json`)
+
+1. 16:30. Córka zgłasza: Józef K. (osoba fikcyjna), 81 lat, demencja, wyszedł z os. Centrum C. Upał 33°C.
+2. Mapa łączy pierścienie dla demencji, korytarz do dawnego domu w Mogile i sektor BTS Mogiła (450 m).
+3. Motorniczy MPK widział go przy Klasztornej. Zgłoszenie z Parku Lotników okazuje się fałszywe i zamyka je patrol.
+4. 18:40: pies tropiący znajduje go w zaroślach przy rowie na Łąkach Nowohuckich.
+5. **Liczba z tego scenariusza:** przed znalezieniem trzeba przejrzeć 4,8% obszaru zamiast 24,5% przy samych pierścieniach. Segment znalezienia jest #4 vs #9 (`docs/rescue-locator/city-extension.md`). To scenariusz napisany przez nas, więc to ilustracja, nie dowód.
+
+### Czy to pomaga? Symulowane przypadki
+
+**To symulacja, nie prawdziwe akcje.** Przypadki są z gór i z wody. Miejskiego zestawu jeszcze nie ma.
+
+| Góry, 1000 przypadków | Top 3 | Obszar dla 90% osób |
+|---|---|---|
+| **Mapa (silnik)** | **66%** | **29%** |
+| Heurystyka eksperta | 56% | 37% |
+| Od ostatniego znanego punktu | 43% | 68% |
+
+- Kategoria "demencja" w tym zestawie: top 3 w 76%, mediana obszaru 4,5% (`report-land.md`).
+- Woda, 600 przypadków: top 3 w 91% vs 81%.
+
+### Gdzie to stoi w mieście
+
+- Na produkcji (Vercel) działa Centrum, akcje na żywo, telefony patroli i strona "Widziałem".
+- W planie:
+  - miejskie profile zespołów (radiowóz, straż miejska, wolontariusze),
+  - lokalny alert do mieszkańców w promieniu wskazanym przez mapę,
+  - lista kamer monitoringu do sprawdzenia przez człowieka (bez biometrii),
+  - dane po akcjach do profilaktyki: opaski GPS, szkolenia motorniczych.
+
+## 6. Linki
+
+- **Demo online, Kraków:** https://rescue-locator.vercel.app/app/?role=operator&mode=akcja&view=2d&sc=krakow-nowa-huta&time=live (strona startowa: https://rescue-locator.vercel.app)
+- **Strona "Widziałem" dla mieszkańców:** https://rescue-locator.vercel.app/web/seen/
+- **Pokaz w 90 sekund (scenariusz górski):** https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&time=hist&tour=1
+- **Repozytorium:** https://github.com/syzygypl/hackyeah2026
+- **Uruchomienie lokalne:** `bash docs/submission/hackathon/rescue-locator-smartcity/v3/start.sh`
+- **Wideo MP4 (maks. 3 min):** **[UZUPEŁNIJ: AI Michała]**
+- **Prezentacja PDF:** **[UZUPEŁNIJ: eksport `docs/submission/hackathon/rescue-locator-smartcity/v3/deck.html`]**
+
+## 7. Co jest zamockowane
+
+- **Fikcyjne:** osoby, zgłoszenia, zespoły, wywiady.
+- **Ilustracyjne:** progi i prędkości.
+- **Symulowane:** przypadki walidacyjne (z gór i z wody).
+- **Prawdziwe:**
+  - teren Krakowa z OSM + DEM i mapa offline Krakowa,
+  - silnik, Centrum, telefony, strona "Widziałem",
+  - parsowanie zgłoszeń z GPS.
+
+## 8. Ograniczenia
+
+- Kraków to jeden scenariusz napisany przez nas.
+- Fałszywe zgłoszenie, którego nie zamknie patrol, ciągnie mapę do parku. Dlatego zgłoszenia mają wagę, a patrol je potwierdza.
+- Liczby Koestera są amerykańskie i przybliżone.
+- Procenty POA to waga mapy, nie szansa.
+- Offline vs online: działa offline w terenie, z lokalnym modelem i mapami offline na laptopie. Pokaz online używa modelu w chmurze (OpenAI).
+
+## 9. Użycie AI i komponenty zewnętrzne
+
+- Zbudowane w trakcie HackYeah 2026 (pierwszy commit `rescue/` o 13:44).
+- **Narzędzia AI:** Claude Code (Anthropic).
+- **Modele:** lokalnie `qwen3:4b-instruct-2507` (Ollama); w pokazie online model OpenAI przez API. Reguły jako zapas.
+- **Hosting:** Vercel i Neon.
+- **Dane:** © OpenStreetMap contributors (ODbL), Protomaps, Copernicus DEM GLO-30 (© DLR, © Airbus DS; Copernicus, UE, ESA), Sentinel-2 cloudless 2016 by EOX (CC BY 4.0), kwantyle Koestera / ISRID (dbS Productions).
+- **Biblioteki:** MapLibre GL JS, pmtiles, three.js.
+
+## 10. Licencja i IP
+
+- Smart City nie przenosi praw autorskich (`docs/tasks/smart-city.txt` pkt 14).
+- **[UZUPEŁNIJ]** Plik LICENSE.
+- **Zgoda pracodawcy (czerwone):** jak w wariancie DEFENCE. Do tego czasu bez nazwy firmy.
