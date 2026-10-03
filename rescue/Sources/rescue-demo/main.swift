@@ -7,11 +7,17 @@ let args = CommandLine.arguments.dropFirst()
 let scenarioPath = args.first { !$0.hasPrefix("--") } ?? pkgDir.appendingPathComponent("scenarios/zawrat.json").path
 var scenario = try Scenario.load(scenarioPath)
 // Optional precomputed terrain (OSM + DEM) next to the scenario: <name>-terrain.json, same shape as scenario.terrain
-let terrainPath = scenarioPath.replacingOccurrences(of: ".json", with: "-terrain.json")
-if FileManager.default.fileExists(atPath: terrainPath),
-   let t = try? JSONDecoder().decode(Scenario.Terrain.self, from: Data(contentsOf: URL(fileURLWithPath: terrainPath))) {
-    scenario.terrain = t
-    print("Terrain: \(terrainPath)")
+let terrainPath = URL(fileURLWithPath: scenarioPath).deletingLastPathComponent()
+    .appendingPathComponent(URL(fileURLWithPath: scenarioPath).deletingPathExtension().lastPathComponent + "-terrain.json").path
+if FileManager.default.fileExists(atPath: terrainPath) {
+    do {
+        scenario.terrain = try JSONDecoder().decode(Scenario.Terrain.self, from: Data(contentsOf: URL(fileURLWithPath: terrainPath)))
+        print("Terrain: \(terrainPath) (\(scenario.terrain.trails.count) trails, slope \(scenario.terrain.slopeDeg == nil ? "no" : "yes"))")
+    } catch {
+        print("WARNING: \(terrainPath) exists but does not decode (\(error)); using the scenario's own terrain")
+    }
+} else {
+    print("Terrain: scenario's own terrain (\(scenario.terrain.trails.count) trails\(scenario.terrain.trails.isEmpty ? ", FLAT" : "")). For real terrain: python3 rescue/tools/terrain/osm_terrain.py --scenario \(scenarioPath)")
 }
 let clock = ScenarioClock(msPerMinute: args.contains("--fast") ? 0 : 8)
 
