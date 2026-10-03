@@ -1,10 +1,16 @@
 import Foundation
-import Network
+#if canImport(Glibc)
+import Glibc
+#elseif canImport(Darwin)
+import Darwin
+#endif
 import RescueKit
 import RescueStudioKit
 
-// One backend for everything.
+// One backend for everything, on the laptop and on Vercel (container, see Dockerfile.vercel).
 //   swift run rescue-server [port] [--host 0.0.0.0 [--pin NNNN]]     default 127.0.0.1:8780
+// RESCUE_PUBLIC=1 (Vercel): reads are open, every write needs the action key (RESCUE_PIN) as X-Rescue-Pin or JSON pin.
+// DATABASE_URL (Vercel, Neon): field reports and Studio state live in Postgres, shared by every instance.
 // Serves every frontend (out/*.html, web/**) and the live API:
 //   GET  /api/scenarios                       scenario list
 //   GET  /api/run/<scenario>[?live=0]         runs the engine NOW (live field reports folded in) -> rescue-run/1
@@ -13,8 +19,13 @@ import RescueStudioKit
 //   POST /story/assessment {step}             same for the current Studio story
 //   POST /report, GET /live-events, POST /client-event, GET /health, GET /metrics   (as rescue-field)
 //   GET /modules, GET|POST /story, POST /story/new|event|edit|narrate|save          (as rescue-studio)
-// rescue-field serve (8770) and rescue-studio (8771) keep working as before.
+//   POST /api/reset                           clears field reports, the Studio story and assignments (needs the key)
+#if canImport(Darwin)
 setvbuf(stdout, nil, _IOLBF, 0)
+#else
+// Swift 6 refuses the C global `stdout` on Linux: flush every stream once a second instead, so the Vercel log is live
+Thread.detachNewThread { while true { fflush(nil); Thread.sleep(forTimeInterval: 1) } }
+#endif
 let args = Array(CommandLine.arguments.dropFirst())
 let outDir = pkgDir.appendingPathComponent("out")
 let livePath = ProcessInfo.processInfo.environment["RESCUE_LIVE_FILE"] ?? outDir.appendingPathComponent("live-events.json").path
@@ -22,6 +33,10 @@ let defaultScenario = try Scenario.load(scenariosDir.appendingPathComponent("zaw
 let parser = FieldReportParser(segments: defaultScenario.segments)
 let studio = Studio()
 let guardian = ServerGuard(args: args, defaultPort: 8780)
+let env = ProcessInfo.processInfo.environment
+/// Public deploy: no loopback exemption (the platform proxy may connect from loopback), reads open, writes need the key.
+let publicMode = env["RESCUE_PUBLIC"] == "1"
+let store: Store = env["DATABASE_URL"].flatMap { NeonStore(databaseURL: $0) } ?? FileStore(path: livePath)   // live mode: clues per incident in live-<sc>.json next to it
 
 func jsonString<T: Encodable>(_ v: T) -> String {
     let enc = JSONEncoder()
@@ -62,36 +77,6 @@ func staticFile(_ rawPath: String) -> Data? {
 
 // MARK: field reports (same behaviour as rescue-field)
 
-actor LiveStore {
-    let path: String
-    init(path: String) { self.path = path }
-    func append(_ r: FieldReport) throws -> [FieldReport] {
-        var all = FieldReportProvider.load(path)
-        all.append(r)
-        let enc = JSONEncoder()
-        enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        try enc.encode(all).write(to: URL(fileURLWithPath: path), options: .atomic)
-        return all
-    }
-    func raw() -> Data { FileManager.default.contents(atPath: path) ?? Data("[]".utf8) }
-    /// live mode: per-incident clue file (out/live-<sc>.json)
-    func append(_ r: FieldReport, to p: String) throws {
-        var all = FieldReportProvider.load(p); all.append(r)
-        let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
-        try enc.encode(all).write(to: URL(fileURLWithPath: p), options: .atomic)
-    }
-}
-let store = LiveStore(path: livePath)
-/// Idempotent POST /report: a phone that timed out resends the same client id - stored once (in memory, marked on arrival).
-actor SeenReports {
-    var ids: [String] = []
-    func firstTime(_ id: String) -> Bool {
-        if ids.contains(id) { return false }
-        ids.append(id); if ids.count > 5000 { ids.removeFirst(1000) }
-        return true
-    }
-}
-let seenReports = SeenReports()
 let ratePerMin = Int(ProcessInfo.processInfo.environment["RESCUE_RATE_PER_MIN"] ?? "") ?? 10
 let reportLimiter = RateLimiter(max: ratePerMin, perSeconds: 60)
 let maxReportBody = 4096, maxText = 500, maxBody = 4 << 20    // /report 4 KB, /api/run up to 4 MB (terrain inline)
@@ -105,9 +90,9 @@ func scenarioNames() -> [String] {
 func validName(_ n: String) -> Bool { !n.isEmpty && n.count <= 60 && n.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" } }
 
 /// Live field reports -> scenario events (same mapping as the Studio's FieldReport module).
-func liveEvents(segments: Set<String>, seeds: [String: [Double]], mapAt: (String) -> String = { $0 }, extraPath: String? = nil) -> [[String: Any]] {
+func liveEvents(_ reports: [FieldReport], segments: Set<String>, seeds: [String: [Double]], mapAt: (String) -> String = { $0 }) -> [[String: Any]] {
     var out: [[String: Any]] = []
-    for r in FieldReportProvider.load(livePath) + (extraPath.map { FieldReportProvider.load($0) } ?? []) {   // + per-incident clues (live mode sc)
+    for r in reports {
         guard let at = r.at.map(mapAt) else { continue }   // reports without scenario time cannot be placed on the timeline
         for h in r.hints {
             switch h.type {
@@ -153,9 +138,9 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
         let end = evs.compactMap { ($0["at"] as? String).map(rel) }.max() ?? 0
         let firstFind = evs.filter(isFind).compactMap { ($0["at"] as? String).map(rel) }.min() ?? Int.max
         let liveAt = evs.compactMap { $0["at"] as? String }.filter { rel($0) < firstFind }.max { rel($0) < rel($1) } ?? (d["startClock"] as? String ?? "00:00")
-        let ev = liveEvents(segments: Set(segs.compactMap { $0["id"] as? String }),
+        let ev = liveEvents(await store.reports(sc: nil) + (await store.reports(sc: name)), segments: Set(segs.compactMap { $0["id"] as? String }),
                             seeds: Dictionary(segs.compactMap { s in (s["id"] as? String).flatMap { id in (s["seed"] as? [Double]).map { (id, $0) } } }, uniquingKeysWith: { a, _ in a }),
-                            mapAt: { rel($0) <= end ? $0 : liveAt }, extraPath: livePathFor(name))
+                            mapAt: { rel($0) <= end ? $0 : liveAt })
         nLive = ev.count
         d["events"] = ((d["events"] as? [[String: Any]]) ?? []) + ev
     }
@@ -168,7 +153,7 @@ func runScenario(_ name: String, live: Bool, features: String? = nil) async -> D
     return try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])
 }
 
-/// Assessments are slow (local LLM 5-20 s): cache per (scenario, step, live file size).
+/// Assessments are slow (LLM 5-20 s): cache per (scenario, step, number of live reports).
 actor AssessCache {
     var c: [String: Data] = [:]
     var inFlight: Set<String> = []
@@ -177,12 +162,75 @@ actor AssessCache {
     /// true if the caller should start the background computation for k
     func claim(_ k: String) -> Bool { if inFlight.contains(k) || c[k] != nil { return false }; inFlight.insert(k); return true }
     func release(_ k: String) { inFlight.remove(k) }
+    func clear() { c.removeAll() }
 }
 let assessCache = AssessCache()
 
+/// Keeps this instance in step with the shared store: Vercel runs several stateless instances, so a request that touches
+/// state first pulls the documents whose version moved (Studio story, operator assignments, team roster) and a write
+/// pushes the ones it changed. Field reports, clues and the live feed are rows, read straight from the store.
+/// The local FileStore is not shared: one process, nothing to sync.
+actor SharedState {
+    static let keys = ["story", "assign", "roster"]
+    var versions: [String: Int] = [:], last: [String: Data] = [:]
+    func forget() { versions = [:]; last = [:] }
+    func export(_ k: String) async -> Data {
+        switch k {
+        case "story": return await studio.exportStory()
+        case "assign": return await studio.exportAssignments()
+        default: return await roster.exportState()
+        }
+    }
+    func load(_ k: String, _ d: Data) async {
+        switch k {
+        case "story": await studio.importStory(d)
+        case "assign": await studio.importAssignments(d)
+        default: await roster.importState(d)
+        }
+    }
+    var scnVersions: [String: Int] = [:]
+    func pull() async {
+        guard let neon = store as? NeonStore else { return }
+        // Studio saves from any instance -> this instance's scenarios/ (RESCUE_DIR is a writable copy, see Dockerfile.vercel)
+        for (name, v) in await neon.savedScenarioVersions() where v != scnVersions[name] && validName(name) {
+            if let d = await neon.doc("scn:" + name) { try? d.data.write(to: scenariosDir.appendingPathComponent("\(name).json")); scnVersions[name] = d.version }
+        }
+        let vs = await neon.docVersions(Self.keys)
+        for k in Self.keys where (vs[k] ?? 0) != (versions[k] ?? 0) {
+            let d = await neon.doc(k)   // gone (reset) -> empty state
+            await load(k, d?.data ?? Data("{}".utf8))
+            versions[k] = d?.version ?? 0
+            last[k] = await export(k)
+        }
+    }
+    /// after POST /story/save: the saved file goes to the store too
+    func pushScenario(_ name: String) async {
+        guard store.shared, validName(name), let d = try? Data(contentsOf: scenariosDir.appendingPathComponent("\(name).json")) else { return }
+        scnVersions[name] = await store.putDoc("scn:" + name, d)
+    }
+    func push() async {
+        guard store.shared else { return }
+        for k in Self.keys {
+            let d = await export(k)
+            if d != last[k] { versions[k] = await store.putDoc(k, d); last[k] = d }
+        }
+    }
+}
+let shared = SharedState()
+
+/// Requests that change shared state. On the public deploy only these need the action key.
+func isWrite(_ q: Req) -> Bool {
+    guard q.method == "POST" else { return false }
+    return q.path == "/report" || q.path == "/api/assignments" || q.path == "/api/reset" || (q.path.hasPrefix("/story") && q.path != "/story/assessment")
+}
+func duplicateReport() -> Data {
+    Metrics.shared.inc("reports_rejected_total", ["reason": "duplicate"])
+    return response("200 OK", json, Data(#"{"duplicate":true,"hints":[],"parsedBy":"duplicate"}"#.utf8))
+}
+
 func landing() -> Data {
     let rows = [("/app/", "Aplikacja (widok łączony)"), ("/out/index.html", "Demo: mapa prawdopodobieństwa + zespoły (zawrat)"), ("/out/studio.html", "Story Studio: złóż historię z modułów"),
-                ("/web/?run=/api/run/zawrat", "Ekran MapLibre (offline) na żywym runie"), ("/web/3d/?run=/api/run/zawrat", "Widok 3D na żywym runie"),
+                ("/web/?run=/api/run/zawrat", "Ekran MapLibre (offline) na żywym runie"), ("/app/?mode=akcja&view=3d&sc=zawrat", "Widok 3D na żywym runie"),
                 ("/web/patrol/", "Widok patrolu (telefon)"), ("/out/field.html", "Meldunki terenowe"), ("/out/ops.html", "Monitoring (ops)"),
                 ("/api/scenarios", "API: lista scenariuszy"), ("/api/run/zawrat", "API: run zawrat na żywo"), ("/api/assessment/zawrat", "API: ocena sytuacji (lokalny model)")]
     let html = """
@@ -201,20 +249,32 @@ struct LiveFeedEvent: Codable, Sendable {
     var seq = 0, kind = "", t = "", by = "operator", title = ""
     var team: String?, type: String?, segmentId: String?, note: String?, lat: Double?, lon: Double?, sc: String?
 }
+/// The operator/rescuer event feed. Shared deploy: rows in the store (every instance sees one sequence). Laptop: in memory.
 actor LiveFeed {
     var seq = 0
     var events: [LiveFeedEvent] = []
-    func add(_ e: LiveFeedEvent) -> LiveFeedEvent {
-        var e = e; seq += 1; e.seq = seq; e.t = ISO8601DateFormatter().string(from: Date())
+    func add(_ e: LiveFeedEvent) async -> LiveFeedEvent {
+        var e = e; e.t = ISO8601DateFormatter().string(from: Date())
+        if let neon = store as? NeonStore { e.seq = await neon.feedAdd(e); return e }
+        seq += 1; e.seq = seq
         events.append(e); if events.count > 300 { events.removeFirst(100) }
         return e
     }
     /// sc nil -> every event; sc -> that incident's events + sc-less ones (phone reports); seq = highest among them
-    func since(_ s: Int, sc: String? = nil) -> (Int, [LiveFeedEvent]) {
+    func since(_ s: Int, sc: String? = nil) async -> (Int, [LiveFeedEvent]) {
+        if let neon = store as? NeonStore { return await neon.feedSince(s, sc: sc) }
         let mine = sc == nil ? events : events.filter { $0.sc == nil || $0.sc == sc }
         return (sc == nil ? seq : (mine.last?.seq ?? 0), Array(mine.filter { $0.seq > s }.suffix(50)))
     }
-    func last(sc: String) -> LiveFeedEvent? { events.last { $0.sc == sc } }
+    func last(sc: String) async -> LiveFeedEvent? {
+        if let neon = store as? NeonStore { return await neon.feedLast(sc: sc) }
+        return events.last { $0.sc == sc }
+    }
+    func currentSeq() async -> Int {
+        if let neon = store as? NeonStore { return await neon.feedSince(Int.max, sc: nil).0 }
+        return seq
+    }
+    func reset() { seq = 0; events = [] }
 }
 let liveFeed = LiveFeed()
 let clueTypes: [String: (label: String, strength: String)] = ["odziez": ("Odzież", "strong"), "slad": ("Ślad", "medium"), "swiadek": ("Świadek", "weak"),
@@ -222,7 +282,6 @@ let clueTypes: [String: (label: String, strength: String)] = ["odziez": ("Odzie�
 func shortClean(_ v: Any?, _ n: Int) -> String? {
     (v as? String).map { String($0.trimmingCharacters(in: .whitespacesAndNewlines).prefix(n)) }.flatMap { $0.isEmpty ? nil : $0 }
 }
-func livePathFor(_ sc: String) -> String { URL(fileURLWithPath: livePath).deletingLastPathComponent().appendingPathComponent("live-\(sc).json").path }
 /// optional incident id: JSON body "sc" wins over ?sc=
 func scParam(_ q: Req, _ o: [String: Any] = [:]) -> String? { (shortClean(o["sc"], 60) ?? shortClean(q.query["sc"], 60)).flatMap { validName($0) ? $0 : nil } }
 func jsonObject(_ d: Data) -> [String: Any] { ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any]) ?? [:] }
@@ -267,6 +326,17 @@ actor Roster {
         teams[i].sc = sc
         version += 1
         return from
+    }
+    /// shared deploy: which incident each team is on, touched incidents, version (see SharedState)
+    func exportState() -> Data {
+        let o: [String: Any] = ["sc": Dictionary(uniqueKeysWithValues: teams.compactMap { t in t.sc.map { (t.id, $0) } }), "touched": touched.sorted(), "version": version]
+        return (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data("{}".utf8)
+    }
+    func importState(_ d: Data) {
+        let o = jsonObject(d), m = o["sc"] as? [String: String] ?? [:]
+        for i in teams.indices { teams[i].sc = m[teams[i].id] }
+        touched = Set(o["touched"] as? [String] ?? [])
+        version = o["version"] as? Int ?? 0
     }
     func resources(for sc: String) -> [Data]? { touched.contains(sc) ? teams.filter { $0.sc == sc }.map { $0.resByHome[sc] ?? $0.res } : nil }
 }
@@ -313,9 +383,6 @@ func addClue(_ q: Req) async -> Data {
         if let p = s.segments.first(where: { $0.id == seg })?.seed, p.count == 2 { lat = p[0]; lon = p[1] }
     }
     guard let lat, let lon, abs(lat) <= 90, abs(lon) <= 180 else { return jsonErr("400 Bad Request", "lat/lon or a known segmentId required") }
-    if let id = shortClean(o["id"], 100), !(await seenReports.firstTime("clue:" + id)) {
-        return response("200 OK", json, Data(#"{"ok":true,"duplicate":true}"#.utf8))
-    }
     let note = shortClean(o["note"], 200), team = shortClean(o["team"], 64)
     let by = (o["by"] as? String) == "ratownik" ? "ratownik" : "operator"
     let at = (o["at"] as? String).flatMap { $0.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil ? $0 : nil }
@@ -327,10 +394,13 @@ func addClue(_ q: Req) async -> Data {
     let rep: [String: Any] = ["t": ISO8601DateFormatter().string(from: Date()), "at": at, "source": "live-clue", "parsedBy": "manual", "latencyMs": 0,
                               "text": "\(by == "ratownik" ? (team ?? "ratownik") : "operator"): \(desc)", "hints": [hint]]
     guard let r = (try? JSONSerialization.data(withJSONObject: rep)).flatMap({ try? JSONDecoder().decode(FieldReport.self, from: $0) }) else { return jsonErr("500 Internal Server Error", "encode failed") }
+    // idempotent on the client id, like /report
     do {
-        if let sc { try await store.append(r, to: livePathFor(sc)) }
-        else { Metrics.shared.set("live_events_total", [:], Double(try await store.append(r).count)) }
-    } catch { return jsonErr("500 Internal Server Error", "write failed") }
+        guard try await store.appendReport(r, clientId: shortClean(o["id"], 100).map { "clue:" + $0 }, sc: sc) else {
+            return response("200 OK", json, Data(#"{"ok":true,"duplicate":true}"#.utf8))
+        }
+    } catch { print("[clue] store failed: \(error)"); return jsonErr("500 Internal Server Error", "write failed") }
+    if sc == nil { Metrics.shared.set("live_events_total", [:], Double(await store.reportCount(sc: nil))) }
     var e = LiveFeedEvent(kind: "clue", by: by, title: desc)
     e.team = team; e.type = type; e.segmentId = seg; e.note = note; e.lat = lat; e.lon = lon; e.sc = sc
     e = await liveFeed.add(e)
@@ -385,7 +455,6 @@ actor IncidentCache {
     func put(_ k: String, _ v: Data) { if c.count > 200 { c.removeAll() }; c[k] = v }
 }
 let incidentCache = IncidentCache()
-func fileSize(_ p: String) -> Int { (try? FileManager.default.attributesOfItem(atPath: p)[.size] as? Int) ?? 0 }
 /// size+mtime of scenarios/<sc>.json and its terrain: a story re-saved in Studio or pulled by tools/sync-stories.sh invalidates the caches
 func scenarioStamp(_ sc: String) -> String {
     ["\(sc).json", "\(sc)-terrain.json"].map { f -> String in
@@ -394,10 +463,10 @@ func scenarioStamp(_ sc: String) -> String {
     }.joined(separator: ",")
 }
 func incidentsData() async -> Data {
-    let feedSeq = await liveFeed.seq, rv = await roster.version, asg = await assignmentList()
+    let feedSeq = await liveFeed.currentSeq(), rv = await roster.version, asg = await assignmentList(), nLive = await store.reportCount(sc: nil)
     var out: [[String: Any]] = []
     for sc in scenarioNames() {
-        let key = "\(sc)|\(feedSeq)|\(rv)|\(fileSize(livePath))|\(fileSize(livePathFor(sc)))|\(scenarioStamp(sc))"
+        let key = "\(sc)|\(feedSeq)|\(rv)|\(nLive)|\(await store.reportCount(sc: sc))|\(scenarioStamp(sc))"
         var base = await incidentCache.get(key)
         if base == nil, let run = await runScenario(sc, live: true) {
             let d = jsonObject(run), all = (d["steps"] as? [[String: Any]]) ?? []
@@ -442,19 +511,29 @@ func handle(_ q: Req) async -> Data {
         let out = await handle(Req(method: "GET", path: q.path, query: q.query, headers: q.headers, body: q.body, peer: q.peer))
         return out.range(of: Data("\r\n\r\n".utf8)).map { Data(out[..<$0.upperBound]) } ?? out
     }
-    // PIN on LAN for every API call; pages and static assets are open; /metrics scrape from real loopback is open
+    // LAN (--host): PIN for every API call, loopback exempt. Public (Vercel): only writes need it, nobody is exempt.
+    // Pages and static assets are always open; /metrics scrape from real loopback is open.
     let isApi = q.path.hasPrefix("/api/") || q.path.hasPrefix("/story") || ["/modules", "/report", "/live-events", "/client-event", "/metrics"].contains(q.path)
-    let loopScrape = q.method == "GET" && q.path == "/metrics" && ServerGuard.isRealLoopbackPeer(q.peer)
-    if isApi && q.method != "OPTIONS" && !loopScrape && !guardian.authorized(peer: q.peer, headers: q.headers, body: q.body) {
+    let loopScrape = q.method == "GET" && q.path == "/metrics" && ServerGuard.isRealLoopbackPeer(q.peer) && !publicMode
+    let needsKey = publicMode ? isWrite(q) : isApi && q.method != "OPTIONS" && !loopScrape
+    if needsKey && !(publicMode ? guardian.keyMatches(headers: q.headers, body: q.body) : guardian.authorized(peer: q.peer, headers: q.headers, body: q.body)) {
         Metrics.shared.inc("reports_rejected_total", ["reason": "pin"])
         ServerGuard.logReject(401, peer: q.peer, method: q.method, path: q.path)
-        return jsonErr("401 Unauthorized", "PIN required (X-Rescue-Pin header or JSON pin)")
+        return jsonErr("401 Unauthorized", publicMode ? "action key required (X-Rescue-Pin header or JSON pin)" : "PIN required (X-Rescue-Pin header or JSON pin)")
     }
     if q.method == "POST" && q.path != "/report" && !(q.headers["content-type"] ?? "").lowercased().hasPrefix("application/json") {
         return jsonErr("415 Unsupported Media Type", "use application/json")
     }
     if q.path != "/api/run" && q.path != "/story" && q.body.count > 65_536 { return jsonErr("413 Payload Too Large", "body over 64 KB") }
 
+    let stateful = q.method != "OPTIONS" && (q.path.hasPrefix("/api/") || q.path.hasPrefix("/story") || q.path == "/report" || q.path == "/live-events")
+    if stateful { await shared.pull() }
+    let out = await route(q)
+    if stateful && (isWrite(q) || q.path.hasPrefix("/story")) { await shared.push() }   // GET /story may create the default story
+    return out
+}
+
+func route(_ q: Req) async -> Data {
     switch (q.method, q.path) {
     case ("OPTIONS", _): return response("204 No Content", "text/plain", Data())
     case ("GET", "/"): return landing()
@@ -463,7 +542,8 @@ func handle(_ q: Req) async -> Data {
     case ("GET", "/ops.html"): return staticFile("/out/ops.html")!
     case ("GET", "/metrics"): return response("200 OK", Metrics.textType, Metrics.shared.render())
     case ("GET", "/health"):
-        let o: [String: Any] = ["server": "rescue-server", "model": parser.model, "llmUrl": parser.ollamaURL, "pinRequired": guardian.lan,
+        let o: [String: Any] = ["server": "rescue-server", "model": parser.model, "llmUrl": parser.ollamaURL, "llm": LLM.off ? "off" : LLM.tag,
+                                "pinRequired": guardian.lan, "writeKeyRequired": publicMode || guardian.lan, "store": store.shared ? "shared" : "local",
                                 "scenarios": scenarioNames(), "version": Metrics.version]
         return response("200 OK", json, try! JSONSerialization.data(withJSONObject: o, options: [.sortedKeys]))
 
@@ -482,17 +562,25 @@ func handle(_ q: Req) async -> Data {
         return response("200 OK", json, await StoryPipeline.runData(s))
     case ("POST", "/story/assessment"):
         let step = ((try? JSONSerialization.jsonObject(with: q.body)) as? [String: Any])?["step"] as? Int
-        return response("200 OK", json, await Assessment.assess(run: await studio.get(), step: step))
+        let run = await studio.get()
+        return response("200 OK", json, await Assessment.assess(run: run, step: step))
+    case ("POST", "/api/reset"):
+        do { try await store.reset() } catch { return jsonErr("500 Internal Server Error", "reset failed") }
+        await studio.resetAll(); await roster.importState(Data("{}".utf8)); await liveFeed.reset(); await shared.forget(); await assessCache.clear()
+        print("[reset] field reports, Studio story and assignments cleared")
+        return response("200 OK", json, Data(#"{"reset":true}"#.utf8))
 
     // field reports
-    case ("GET", "/live-events"): return response("200 OK", json, await store.raw())
+    case ("GET", "/live-events"):
+        let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        return response("200 OK", json, (try? enc.encode(await store.reports(sc: nil))) ?? Data("[]".utf8))
     case ("POST", "/client-event"):
         let o = (try? JSONSerialization.jsonObject(with: q.body) as? [String: Any]) ?? [:]
         let n = min(max((o["browserReports"] as? Int) ?? 0, 0), 50)
         if n > 0 { Metrics.shared.inc("reports_received_total", ["source": Metrics.clean(q.headers["x-rescue-source"], "api"), "team": Metrics.clean(q.headers["x-rescue-team"]), "parsed_by": "browser"], by: Double(n)) }
         return response("200 OK", json, Data(#"{"counted":\#(n)}"#.utf8))
     case ("POST", "/report"):
-        if !ServerGuard.isLoopbackPeer(q.peer) && !reportLimiter.allow(q.peer) {
+        if (publicMode || !ServerGuard.isLoopbackPeer(q.peer)) && !reportLimiter.allow(q.peer) {
             Metrics.shared.inc("reports_rejected_total", ["reason": "rate"]); ServerGuard.logReject(429, peer: q.peer, method: q.method, path: q.path)
             return jsonErr("429 Too Many Requests", "rate limit \(ratePerMin)/min")
         }
@@ -503,20 +591,22 @@ func handle(_ q: Req) async -> Data {
         }
         var text = ct.hasPrefix("text/plain") ? (String(data: q.body, encoding: .utf8) ?? "") : ""
         var at: String? = nil
+        var clientId: String? = nil
         if ct.hasPrefix("application/json") {
             guard let o = try? JSONSerialization.jsonObject(with: q.body) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
             text = o["text"] as? String ?? ""
             at = (o["at"] as? String).flatMap { $0.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil ? $0 : nil }
-            if let id = (o["id"] as? String) ?? (o["id"] as? NSNumber).map({ "\($0)" }), !id.isEmpty, !(await seenReports.firstTime(String(id.prefix(100)))) {
-                Metrics.shared.inc("reports_rejected_total", ["reason": "duplicate"])
-                return response("200 OK", json, Data(#"{"duplicate":true,"hints":[],"parsedBy":"duplicate"}"#.utf8))
-            }
+            if let id = (o["id"] as? String) ?? (o["id"] as? NSNumber).map({ "\($0)" }), !id.isEmpty { clientId = String(id.prefix(100)) }
         }
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return jsonErr("400 Bad Request", "empty text") }
         guard text.count <= maxText else { Metrics.shared.inc("reports_rejected_total", ["reason": "size"]); return jsonErr("413 Payload Too Large", "text over \(maxText) chars") }
+        // idempotent: a phone that timed out resends the same client id - stored once, the second answer says duplicate
         let r = await parser.parse(text, at: at)
-        do { Metrics.shared.set("live_events_total", [:], Double(try await store.append(r).count)) } catch { return jsonErr("500 Internal Server Error", "write failed") }
+        do {
+            guard try await store.appendReport(r, clientId: clientId, sc: nil) else { return duplicateReport() }
+        } catch { print("[report] store failed: \(error)"); return jsonErr("500 Internal Server Error", "write failed") }
+        Metrics.shared.set("live_events_total", [:], Double(await store.reportCount(sc: nil)))
         let team = Metrics.clean(q.headers["x-rescue-team"]), cid = Metrics.shared.clientId(headers: q.headers, peer: q.peer)
         let by = r.parsedBy.hasPrefix("llm") ? "llm" : "rules"
         Metrics.shared.inc("reports_received_total", ["source": Metrics.clean(q.headers["x-rescue-source"], "api"), "team": team, "parsed_by": by])
@@ -555,7 +645,10 @@ func handle(_ q: Req) async -> Data {
         return response("200 OK", json, out)
     case ("POST", "/story/edit"): return response("200 OK", json, await studio.edit(q.body))
     case ("POST", "/story/narrate"): return response("200 OK", json, await studio.narrate(q.body))
-    case ("POST", "/story/save"): return response("200 OK", json, await studio.save(q.body))
+    case ("POST", "/story/save"):
+        let out = await studio.save(q.body)
+        if let saved = jsonObject(out)["saved"] as? String { await shared.pushScenario(URL(fileURLWithPath: saved).deletingPathExtension().lastPathComponent) }
+        return response("200 OK", json, out)
 
     default:
         // /api/run/<name>, /api/assessment/<name>
@@ -568,7 +661,7 @@ func handle(_ q: Req) async -> Data {
         if q.method == "GET", q.path.hasPrefix("/api/assessment/") {
             let name = String(q.path.dropFirst("/api/assessment/".count))
             guard validName(name) else { return jsonErr("400 Bad Request", "bad scenario name") }
-            let liveSize = (try? FileManager.default.attributesOfItem(atPath: livePath)[.size] as? Int) ?? 0
+            let liveSize = await store.reportCount(sc: nil) + (await store.reportCount(sc: name))
             let llm = q.query["llm"] != "0"
             let key = "\(name)|\(q.query["step"] ?? "last")|\(liveSize)|\(llm)|\(scenarioStamp(name))"
             if let c = await assessCache.get(key) { return response("200 OK", json, c) }
@@ -596,86 +689,129 @@ func handle(_ q: Req) async -> Data {
     }
 }
 
-/// Reads one full HTTP request (headers + Content-Length body), answers, closes.
-final class Conn: @unchecked Sendable {
-    let c: NWConnection
-    var buf = Data()
-    init(_ c: NWConnection) { self.c = c }
-    var peer: String {
-        if case let .hostPort(h, _) = c.endpoint { let s = "\(h)"; return s.split(separator: "%").first.map(String.init) ?? s }
-        return "?"
+// MARK: HTTP server (POSIX sockets: builds on macOS and on Linux for the Vercel container)
+
+enum Parsed { case ready(Req), tooBig(String, String) }
+
+/// One full HTTP request (headers + Content-Length body) from the bytes read so far, or nil if more are needed.
+func parseRequest(_ buf: Data, peer: String) -> Parsed? {
+    guard let sep = buf.range(of: Data("\r\n\r\n".utf8)) else { return nil }
+    let head = String(decoding: buf[..<sep.lowerBound], as: UTF8.self)
+    let lines = head.components(separatedBy: "\r\n")
+    let first = lines[0].split(separator: " ")
+    guard first.count >= 2 else { return .ready(Req(method: "GET", path: "/bad", query: [:], headers: [:], body: Data(), peer: peer)) }
+    var headers: [String: String] = [:]
+    for l in lines.dropFirst() {
+        guard let colon = l.firstIndex(of: ":") else { continue }
+        headers[l[..<colon].lowercased()] = l[l.index(after: colon)...].trimmingCharacters(in: .whitespaces)
     }
-    func start() { c.start(queue: .global()); read() }
-    func finish(_ out: Data) { c.send(content: out, completion: .contentProcessed { _ in self.c.cancel() }) }
-    func read() {
-        c.receive(minimumIncompleteLength: 1, maximumLength: 1 << 20) { data, _, done, err in
-            if let data { self.buf.append(data) }
-            switch self.complete() {
-            case .some(.tooBig(let m, let p)):
-                ServerGuard.logReject(413, peer: self.peer, method: m, path: p)
-                self.finish(jsonErr("413 Payload Too Large", "body too large"))
-            case .some(.ready(let req)):
-                Task {
-                    let t0 = Date()
-                    let out = await handle(req)
-                    let code = String(decoding: out.prefix(12).dropFirst(9), as: UTF8.self)
-                    let label = knownPaths.contains(req.path) ? req.path : req.path.hasPrefix("/api/run/") ? "/api/run/*" : req.path.hasPrefix("/api/assessment/") ? "/api/assessment/*"
-                        : req.path.hasPrefix("/story") ? "/story*" : req.path.hasPrefix("/web/") ? "/web/*" : req.path.hasPrefix("/out/") ? "/out/*" : "other"
-                    Metrics.shared.inc("http_requests_total", ["path": label, "code": code])
-                    if req.path.hasPrefix("/api/") || (req.method == "POST" && req.path != "/report") {
-                        print("\(req.method) \(req.path) \(code) \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
-                    }
-                    self.finish(out)
-                }
-            case .none:
-                if done || err != nil || self.buf.count > maxBody + 65_536 { self.c.cancel() } else { self.read() }
-            }
+    let len = Int(headers["content-length"] ?? "0") ?? 0
+    let method = String(first[0])
+    let target = String(first[1])
+    let parts = target.split(separator: "?", maxSplits: 1)
+    let path = parts.first.map(String.init) ?? "/"
+    var query: [String: String] = [:]
+    if parts.count > 1 {
+        for kv in parts[1].split(separator: "&") {
+            let p = kv.split(separator: "=", maxSplits: 1).map { String($0).removingPercentEncoding ?? String($0) }
+            if let k = p.first { query[k] = p.count > 1 ? p[1] : "" }
         }
     }
-    enum Parsed { case ready(Req), tooBig(String, String) }
-    func complete() -> Parsed? {
-        guard let sep = buf.range(of: Data("\r\n\r\n".utf8)) else { return nil }
-        let head = String(decoding: buf[..<sep.lowerBound], as: UTF8.self)
-        let lines = head.components(separatedBy: "\r\n")
-        let first = lines[0].split(separator: " ")
-        guard first.count >= 2 else { return .ready(Req(method: "GET", path: "/bad", query: [:], headers: [:], body: Data(), peer: peer)) }
-        var headers: [String: String] = [:]
-        for l in lines.dropFirst() {
-            guard let colon = l.firstIndex(of: ":") else { continue }
-            headers[l[..<colon].lowercased()] = l[l.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+    if len > maxBody || len < 0 { return .tooBig(method, path) }
+    let body = buf[sep.upperBound...]
+    guard body.count >= len else { return nil }
+    // behind the Vercel proxy the socket peer is the proxy: the client is the first X-Forwarded-For entry
+    let client = publicMode ? (headers["x-forwarded-for"]?.split(separator: ",").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? peer) : peer
+    return .ready(Req(method: method, path: path, query: query, headers: headers, body: Data(body.prefix(len)), peer: client))
+}
+
+func sendAll(_ fd: Int32, _ data: Data) {
+    data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+        guard let base = raw.baseAddress else { return }
+        var off = 0
+        while off < raw.count {
+            let n = send(fd, base + off, raw.count - off, 0)
+            if n <= 0 { break }
+            off += n
         }
-        let len = Int(headers["content-length"] ?? "0") ?? 0
-        let method = String(first[0])
-        let target = String(first[1])
-        let parts = target.split(separator: "?", maxSplits: 1)
-        let path = parts.first.map(String.init) ?? "/"
-        var query: [String: String] = [:]
-        if parts.count > 1 {
-            for kv in parts[1].split(separator: "&") {
-                let p = kv.split(separator: "=", maxSplits: 1).map { String($0).removingPercentEncoding ?? String($0) }
-                if let k = p.first { query[k] = p.count > 1 ? p[1] : "" }
-            }
-        }
-        if len > maxBody || len < 0 { return .tooBig(method, path) }
-        let body = buf[sep.upperBound...]
-        guard body.count >= len else { return nil }
-        return .ready(Req(method: method, path: path, query: query, headers: headers, body: Data(body.prefix(len)), peer: peer))
     }
 }
 
-Metrics.shared.set("live_events_total", [:], Double(FieldReportProvider.load(livePath).count))
-Metrics.shared.startLLMProbe(url: parser.ollamaURL)
-let params = NWParameters.tcp
-params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(guardian.host), port: NWEndpoint.Port(rawValue: guardian.port ?? 8780)!)
-let listener = try NWListener(using: params)
-listener.newConnectionHandler = { Conn($0).start() }
-listener.stateUpdateHandler = { st in
-    if case .ready = st {
-        print("rescue-server on http://\(guardian.host):\(guardian.port ?? 8780)/  - frontends (/out, /web), live engine (/api/run/<scenario>), assessment (/api/assessment/<scenario>), field reports, Studio, /metrics")
-        for l in guardian.banner(name: "rescue-server", lanAddresses: localIPv4Addresses()) { print(l) }
-        print("Local LLM: \(parser.model) at \(parser.ollamaURL) (reports, narratives, assessment); fallback: rules. Live file: \(livePath)")
+func serveConnection(_ fd: Int32, peer: String) {
+    var tv = timeval(tv_sec: 30, tv_usec: 0)
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+    var buf = Data()
+    var chunk = [UInt8](repeating: 0, count: 65_536)
+    while true {
+        switch parseRequest(buf, peer: peer) {
+        case .some(.tooBig(let m, let p)):
+            ServerGuard.logReject(413, peer: peer, method: m, path: p)
+            sendAll(fd, jsonErr("413 Payload Too Large", "body too large")); close(fd); return
+        case .some(.ready(let req)):
+            Task {
+                let t0 = Date()
+                let out = await handle(req)
+                let code = String(decoding: out.prefix(12).dropFirst(9), as: UTF8.self)
+                let label = knownPaths.contains(req.path) ? req.path : req.path.hasPrefix("/api/run/") ? "/api/run/*" : req.path.hasPrefix("/api/assessment/") ? "/api/assessment/*"
+                    : req.path.hasPrefix("/story") ? "/story*" : req.path.hasPrefix("/web/") ? "/web/*" : req.path.hasPrefix("/out/") ? "/out/*" : "other"
+                Metrics.shared.inc("http_requests_total", ["path": label, "code": code])
+                if req.path.hasPrefix("/api/") || (req.method == "POST" && req.path != "/report") {
+                    print("\(req.method) \(req.path) \(code) \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
+                }
+                sendAll(fd, out); close(fd)
+            }
+            return
+        case .none:
+            let n = recv(fd, &chunk, chunk.count, 0)
+            if n <= 0 || buf.count > maxBody + 65_536 { close(fd); return }
+            buf.append(chunk, count: n)
+        }
     }
-    if case let .failed(e) = st { print("listener failed: \(e)"); exit(1) }
 }
-listener.start(queue: .main)
+
+func listenTCP(host: String, port: UInt16) -> Int32 {
+    #if os(Linux)
+    let fd = socket(AF_INET, Int32(SOCK_STREAM.rawValue), 0)
+    #else
+    let fd = socket(AF_INET, SOCK_STREAM, 0)
+    #endif
+    var one: Int32 = 1
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, socklen_t(MemoryLayout<Int32>.size))
+    var addr = sockaddr_in()
+    addr.sin_family = sa_family_t(AF_INET)
+    addr.sin_port = port.bigEndian
+    guard inet_pton(AF_INET, ServerGuard.isLoopbackHost(host) ? "127.0.0.1" : host, &addr.sin_addr) == 1 else { print("bad --host \(host) (IPv4 only)"); exit(1) }
+    #if !os(Linux)
+    addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+    #endif
+    let ok = withUnsafePointer(to: &addr) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) } }
+    guard ok == 0, listen(fd, 128) == 0 else { print("listen on \(host):\(port) failed (errno \(errno))"); exit(1) }
+    return fd
+}
+
+signal(SIGPIPE, SIG_IGN)
+if let neon = store as? NeonStore {
+    do { try await neon.migrate() } catch { print("store: \(error)"); exit(1) }
+}
+Metrics.shared.set("live_events_total", [:], Double(await store.reportCount(sc: nil)))
+if !LLM.openAI { Metrics.shared.startLLMProbe(url: parser.ollamaURL) }
+let port = guardian.port ?? 8780
+let listener = listenTCP(host: guardian.host, port: port)
+print("rescue-server on http://\(guardian.host):\(port)/  - frontends (/app, /web, /out), live engine (/api/run/<scenario>), assessment (/api/assessment/<scenario>), field reports, Studio, /metrics")
+if publicMode { print("  public: reads open, writes need the action key\(guardian.pinGenerated ? " - RESCUE_PIN IS NOT SET, every write will be refused" : "")") }
+else { for l in guardian.banner(name: "rescue-server", lanAddresses: localIPv4Addresses()) { print(l) } }
+print("LLM: \(LLM.off ? "off" : "\(LLM.model) at \(LLM.endpoint)") (reports, narratives, assessment); fallback: rules. Store: \(store.label)")
+Thread.detachNewThread {
+    while true {
+        var a = sockaddr_in()
+        var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let c = withUnsafeMutablePointer(to: &a) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { accept(listener, $0, &len) } }
+        guard c >= 0 else { continue }
+        var ip = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+        var sa = a.sin_addr
+        inet_ntop(AF_INET, &sa, &ip, socklen_t(INET_ADDRSTRLEN))
+        let peer = String(cString: ip)
+        DispatchQueue.global().async { serveConnection(c, peer: peer) }
+    }
+}
 while true { try await Task.sleep(for: .seconds(3600)) }

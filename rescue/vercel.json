@@ -1,0 +1,112 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "tools/vercel/",
+      "installCommand": "true",
+      "buildCommand": "sh static.sh",
+      "outputDirectory": "public"
+    },
+    "api": {
+      "root": "./",
+      "runtime": "container",
+      "entrypoint": "Dockerfile.vercel"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/app/",
+      "permanent": false
+    },
+    {
+      "source": "/studio",
+      "destination": "/out/studio.html",
+      "permanent": false
+    },
+    {
+      "source": "/field.html",
+      "destination": "/out/field.html",
+      "permanent": false
+    },
+    {
+      "source": "/ops.html",
+      "destination": "/out/ops.html",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/story",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/story/:path*",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/report",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/live-events",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/client-event",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/health",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/metrics",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/modules",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/eval/sim-runs",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/scenarios/:path*",
+      "destination": {
+        "service": "api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "web"
+      }
+    }
+  ]
+}

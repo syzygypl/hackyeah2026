@@ -3,3 +3,6 @@
 version.json
 out/live-events.json
 out/live-*.json
+.vercel
+.env*
+tools/vercel/public/

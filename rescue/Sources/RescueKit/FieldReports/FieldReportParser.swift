@@ -38,8 +38,8 @@ public struct FieldReport: Codable, Sendable {
     public var hints: [FieldHint]
 }
 
-/// Turns a Polish radio-style report into FieldHints. Local Ollama first, keyword rules as fallback.
-/// Never calls any cloud API: the only network target is RESCUE_LLM_URL (default localhost:11434).
+/// Turns a Polish radio-style report into FieldHints. The model first (LLM: OpenAI when OPENAI_API_KEY is set, else local Ollama),
+/// keyword rules as fallback.
 public struct FieldReportParser: Sendable {
     public let segments: [Scenario.Segment]
     public let model: String
@@ -49,8 +49,8 @@ public struct FieldReportParser: Sendable {
     public init(segments: [Scenario.Segment]) {
         let env = ProcessInfo.processInfo.environment
         self.segments = segments
-        self.model = env["RESCUE_LLM_MODEL"] ?? "qwen3:4b-instruct-2507-q4_K_M"
-        self.ollamaURL = env["RESCUE_LLM_URL"] ?? "http://localhost:11434"
+        self.model = LLM.model
+        self.ollamaURL = LLM.endpoint
         self.timeoutS = Double(env["RESCUE_LLM_TIMEOUT"] ?? "") ?? 30
     }
 
@@ -58,15 +58,15 @@ public struct FieldReportParser: Sendable {
         let t0 = Date()
         let iso = ISO8601DateFormatter().string(from: t0)
         var note: String? = nil
-        if ProcessInfo.processInfo.environment["RESCUE_LLM_OFF"] == nil {
+        if !LLM.off {
             do {
                 let hints = try await parseLLM(text)
                 let ms = Int(Date().timeIntervalSince(t0) * 1000)
                 Metrics.shared.inc("llm_requests_total", ["model": model, "result": "ok"])
-                return FieldReport(t: iso, at: at, text: text, parsedBy: "llm-local:\(model)", latencyMs: ms, hints: hints)
+                return FieldReport(t: iso, at: at, text: text, parsedBy: "\(LLM.tag):\(model)", latencyMs: ms, hints: hints)
             } catch {
                 Metrics.shared.inc("llm_requests_total", ["model": model, "result": "error"])
-                note = "LLM niedostępny lub zły JSON: \(String((error as? ParseError)?.description ?? error.localizedDescription).prefix(160))"
+                note = "LLM niedostępny lub zły JSON: \(String((error as? ParseError)?.description ?? (error as? LLM.Failure)?.description ?? error.localizedDescription).prefix(160))"
             }
         } else {
             note = "RESCUE_LLM_OFF"
@@ -177,22 +177,7 @@ public struct FieldReportParser: Sendable {
             messages.append(["role": "assistant", "content": a])
         }
         messages.append(["role": "user", "content": text])
-        let body: [String: Any] = [
-            "model": model, "stream": false, "messages": messages,
-            "format": schema, "options": ["temperature": 0], "keep_alive": "30m",
-        ]
-        guard let url = URL(string: ollamaURL + "/api/chat") else { throw ParseError(description: "bad url") }
-        var req = URLRequest(url: url, timeoutInterval: timeoutS)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
-            throw ParseError(description: "HTTP \((resp as? HTTPURLResponse)?.statusCode ?? 0)")
-        }
-        guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let msg = obj["message"] as? [String: Any], let content = msg["content"] as? String
-        else { throw ParseError(description: "no message.content") }
+        let content = try await LLM.chat(messages, schema: schema, name: "field_report", timeout: timeoutS)
         if ProcessInfo.processInfo.environment["RESCUE_LLM_DEBUG"] != nil { FileHandle.standardError.write(Data(("raw: " + content + "\n").utf8)) }
         var o = try JSONDecoder().decode(LLMOut.self, from: Data(content.utf8))
         // guards against small-model hallucination: weather only if the text talks about it

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Demo-network hardening for the local HTTP servers (rescue-field, rescue-studio).
+/// Hardening for rescue-server on a LAN (--host) and on the public deploy (RESCUE_PUBLIC=1, writes only).
 /// Loopback-only by default. Any other --host REQUIRES a PIN (given with --pin or auto-generated, 6 digits).
 /// Loopback clients never need the PIN. LAN clients send it as header `X-Rescue-Pin` or JSON field `pin`.
 public struct ServerGuard: Sendable {
@@ -21,7 +21,7 @@ public struct ServerGuard: Sendable {
         let strictPin = ProcessInfo.processInfo.environment["RESCUE_GUARD_STRICT"] == "1" && !(val("--pin") ?? "").isEmpty
         if ServerGuard.isLoopbackHost(host) && !strictPin {
             pin = nil; pinGenerated = false
-        } else if let p = val("--pin"), !p.isEmpty {
+        } else if let p = val("--pin") ?? ProcessInfo.processInfo.environment["RESCUE_PIN"], !p.isEmpty {
             pin = p; pinGenerated = false
         } else {
             var g = SystemRandomNumberGenerator()
@@ -51,6 +51,16 @@ public struct ServerGuard: Sendable {
             diff |= (i < x.count ? x[i] : 0) ^ (i < y.count ? y[i] : 0)
         }
         return diff == 0
+    }
+
+    /// The key alone, no loopback exemption (public deploy: the platform proxy may connect from loopback).
+    public func keyMatches(headers: [String: String], body: Data) -> Bool {
+        guard let pin else { return false }
+        var given = headers["x-rescue-pin"] ?? ""
+        if given.isEmpty, let o = try? JSONSerialization.jsonObject(with: body) as? [String: Any] {
+            given = (o["pin"] as? String) ?? (o["pin"] as? Int).map(String.init) ?? ""
+        }
+        return ServerGuard.constantTimeEqual(given, pin)
     }
 
     /// true if the request may proceed. Loopback always passes.
@@ -101,9 +111,14 @@ public func localIPv4Addresses() -> [String] {
     guard getifaddrs(&ifa) == 0, let first = ifa else { return out }
     defer { freeifaddrs(ifa) }
     for p in sequence(first: first, next: { $0.pointee.ifa_next }) {
-        guard let sa = p.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) else { continue }
+        guard let sa = p.pointee.ifa_addr, Int32(sa.pointee.sa_family) == AF_INET else { continue }
         var b = [CChar](repeating: 0, count: Int(NI_MAXHOST))
-        if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &b, socklen_t(b.count), nil, 0, NI_NUMERICHOST) == 0 {
+        #if os(Linux)
+        let saLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+        #else
+        let saLen = socklen_t(sa.pointee.sa_len)
+        #endif
+        if getnameinfo(sa, saLen, &b, socklen_t(b.count), nil, 0, NI_NUMERICHOST) == 0 {
             let a = String(cString: b)
             if !a.hasPrefix("127.") { out.append(a) }
         }

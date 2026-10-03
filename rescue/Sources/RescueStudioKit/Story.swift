@@ -1,9 +1,13 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 import RescueKit
 
 // Story Studio: compose an incident from module events. State lives in one actor; everything crossing it is Data.
 
-public let pkgDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+/// rescue/ - RESCUE_DIR overrides it where the binary runs away from its sources (the Vercel container).
+public let pkgDir = ProcessInfo.processInfo.environment["RESCUE_DIR"].map { URL(fileURLWithPath: $0) } ?? URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 public let scenariosDir = pkgDir.appendingPathComponent("scenarios")
 
 func normPL(_ s: String) -> String {
@@ -161,14 +165,12 @@ func parseNarrativeRules(_ text: String) -> [NarrItem] {
     return out
 }
 
-// MARK: local LLM (Ollama, localhost only). Model gives types and place NAMES, never coordinates.
+// MARK: LLM (OpenAI or local Ollama, see LLM.swift). Model gives types and place NAMES, never coordinates.
 
 func parseNarrativeLLM(_ text: String, segs: [[String]]) async -> ([NarrItem], String?) {
     let env = ProcessInfo.processInfo.environment
-    let model = env["RESCUE_LLM_MODEL"] ?? "qwen3:4b-instruct-2507-q4_K_M"
-    if env["RESCUE_LLM_OFF"] == "1" { Metrics.shared.inc("llm_requests_total", ["model": model, "result": "off"]); return ([], "RESCUE_LLM_OFF=1") }
-    let base = env["RESCUE_LLM_URL"] ?? "http://localhost:11434"
-    guard let url = URL(string: base + "/api/chat"), ["localhost", "127.0.0.1"].contains(url.host ?? "") else { return ([], "LLM URL not local") }
+    let model = LLM.model
+    if LLM.off { Metrics.shared.inc("llm_requests_total", ["model": model, "result": "off"]); return ([], "RESCUE_LLM_OFF=1") }
     let segList = segs.map { "\($0[0]): \($0[1])" }.joined(separator: "; ")
     let sys = """
     Zamieniasz polską relację o zaginięciu w górach na listę zdarzeń JSON. Nie wymyślaj niczego, czego nie ma w tekście.
@@ -187,17 +189,10 @@ func parseNarrativeLLM(_ text: String, segs: [[String]]) async -> ([NarrItem], S
         "dark": ["type": "boolean"], "ice": ["type": "boolean"], "precip": ["type": "string", "enum": ["none", "rain", "snow"]],
         "description": ["type": "string"]], "required": ["type"]]
     let schema: [String: Any] = ["type": "object", "properties": ["events": ["type": "array", "items": item]], "required": ["events"]]
-    let body: [String: Any] = ["model": model, "stream": false, "format": schema, "options": ["temperature": 0],
-                               "messages": [["role": "system", "content": sys], ["role": "user", "content": text]]]
-    var req = URLRequest(url: url, timeoutInterval: Double(env["RESCUE_LLM_TIMEOUT"] ?? "") ?? 45)
-    req.httpMethod = "POST"
-    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    req.httpBody = try? JSONSerialization.data(withJSONObject: body)
     do {
-        let (data, _) = try await URLSession.shared.data(for: req)
-        guard let o = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let msg = (o["message"] as? [String: Any])?["content"] as? String,
-              let parsed = try? JSONDecoder().decode([String: [NarrItem]].self, from: Data(msg.utf8)),
+        let msg = try await LLM.chat([["role": "system", "content": sys], ["role": "user", "content": text]], schema: schema, name: "narrative",
+                                     timeout: Double(env["RESCUE_LLM_TIMEOUT"] ?? "") ?? 45)
+        guard let parsed = try? JSONDecoder().decode([String: [NarrItem]].self, from: Data(msg.utf8)),
               let evs = parsed["events"] else { Metrics.shared.inc("llm_requests_total", ["model": model, "result": "error"]); return ([], "LLM: bad JSON") }
         Metrics.shared.inc("llm_requests_total", ["model": model, "result": "ok"])
         // anti-hallucination: keep only places whose stem is in the text, segments that exist
@@ -214,7 +209,7 @@ func parseNarrativeLLM(_ text: String, segs: [[String]]) async -> ([NarrItem], S
         return (cleaned, nil)
     } catch {
         Metrics.shared.inc("llm_requests_total", ["model": model, "result": "error"])
-        return ([], "LLM unreachable: \(error.localizedDescription)")
+        return ([], "LLM: \((error as? LLM.Failure)?.description ?? error.localizedDescription)")
     }
 }
 

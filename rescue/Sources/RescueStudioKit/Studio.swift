@@ -494,6 +494,27 @@ public actor Studio {
         return assignmentsByTeam()
     }
 
+    // MARK: state shared between server instances (rescue-server keeps it in its Store on Vercel)
+
+    public var hasStory: Bool { !base.isEmpty }
+    public func exportStory() -> Data {
+        jsonData(["base": base, "items": items, "nextId": nextId, "undo": undoStack.map { ["base": $0.0, "items": $0.1] }])
+    }
+    /// Replaces the story with a stored one and reruns the engine so GET /story answers at once.
+    public func importStory(_ d: Data) async {
+        let o = jsonObj(d)
+        base = o["base"] as? [String: Any] ?? [:]
+        items = o["items"] as? [[String: Any]] ?? []
+        nextId = o["nextId"] as? Int ?? items.count + 1
+        undoStack = ((o["undo"] as? [[String: Any]]) ?? []).map { ($0["base"] as? [String: Any] ?? [:], $0["items"] as? [[String: Any]] ?? []) }
+        if base.isEmpty { lastRun = Data("{}".utf8) } else { _ = await rerun() }
+    }
+    public func exportAssignments() -> Data { jsonData(manual) }
+    public func importAssignments(_ d: Data) {
+        manual = ((try? JSONSerialization.jsonObject(with: d)) as? [String: [String: Any]]) ?? [:]
+    }
+    public func resetAll() { manual = [:]; base = [:]; items = []; undoStack = []; nextId = 1; lastRun = Data("{}".utf8) }
+
     public func scenarioData() async -> Data {
         if base.isEmpty { _ = await newStory(jsonData(["template": "zawrat"])) }
         var d = scenarioDict()

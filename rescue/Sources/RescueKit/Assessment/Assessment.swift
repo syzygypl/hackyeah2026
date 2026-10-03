@@ -9,9 +9,9 @@ import FoundationNetworking
 /// a deterministic template assessment from the same data is returned, labelled "reguły".
 /// Reads the run only; it never changes the probability map or the planner.
 public enum Assessment {
-    public static var model: String { ProcessInfo.processInfo.environment["RESCUE_LLM_MODEL"] ?? "qwen3:4b-instruct-2507-q4_K_M" }
+    public static var model: String { LLM.model }
     nonisolated(unsafe) static var lastFailure = ""
-    public static var ollamaURL: String { ProcessInfo.processInfo.environment["RESCUE_LLM_URL"] ?? "http://localhost:11434" }
+    public static var ollamaURL: String { LLM.endpoint }
 
     // MARK: facts extracted from the run
 
@@ -141,7 +141,6 @@ public enum Assessment {
     // MARK: local LLM with grounding
 
     static func llm(_ f: Facts) async -> ([String: Any], [String])? {
-        guard let url = URL(string: ollamaURL + "/api/chat"), ["localhost", "127.0.0.1"].contains(url.host ?? "") else { return nil }
         let segList = f.segments.prefix(8).map { "\(Scenario.segLabel($0.id, $0.name)): \(pct($0.poa)), \(String(format: "%.1f", $0.area))% obszaru, przeszukany POD \(pct(f.searched[$0.id] ?? 0))" }
         let ev = f.evidence.map { "\($0.id) [\($0.t) \($0.source)] \($0.label)" }
         let plan = f.assignments.map { a in
@@ -180,20 +179,12 @@ public enum Assessment {
             "ryzyka": ["type": "array", "items": ["type": "object", "required": ["typ", "opis"], "properties": ["typ": str, "opis": str]]],
             "brakuje": ["type": "array", "items": ["type": "object", "required": ["informacja", "dlaczego"], "properties": ["informacja": str, "dlaczego": str]]],
         ]]
-        let body: [String: Any] = ["model": model, "stream": false, "format": schema, "options": ["temperature": 0],
-                                   "messages": [["role": "system", "content": sys], ["role": "user", "content": user]]]
-        var req = URLRequest(url: url, timeoutInterval: Double(ProcessInfo.processInfo.environment["RESCUE_LLM_TIMEOUT"] ?? "") ?? 120)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        let data: Data
-        do { (data, _) = try await URLSession.shared.data(for: req) } catch {
-            lastFailure = (error as? URLError)?.code == .timedOut ? "lokalny model nie odpowiedział w \(Int(req.timeoutInterval)) s" : "Ollama nieosiągalna (\(ollamaURL))"
-            return nil
-        }
-        guard let o = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let msg = (o["message"] as? [String: Any])?["content"] as? String,
-              let a = try? JSONSerialization.jsonObject(with: Data(msg.utf8)) as? [String: Any] else { lastFailure = "model zwrócił niepoprawny JSON"; return nil }
+        let msg: String
+        do {
+            msg = try await LLM.chat([["role": "system", "content": sys], ["role": "user", "content": user]], schema: schema, name: "assessment",
+                                     timeout: Double(ProcessInfo.processInfo.environment["RESCUE_LLM_TIMEOUT"] ?? "") ?? 120)
+        } catch { lastFailure = (error as? LLM.Failure)?.description ?? "model nieosiągalny"; return nil }
+        guard let a = try? JSONSerialization.jsonObject(with: Data(msg.utf8)) as? [String: Any] else { lastFailure = "model zwrócił niepoprawny JSON"; return nil }
         guard let g = ground(a, f) else { lastFailure = "nic z odpowiedzi modelu nie przeszło weryfikacji (nieistniejące segmenty/zespoły)"; return nil }
         return g
     }
