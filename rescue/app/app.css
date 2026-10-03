@@ -334,3 +334,20 @@ body.role-operator header #status{display:none}
 #liveFeed{max-height:180px;overflow:auto}
 #centrumLink{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-accent);font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap}
 #centrumLink:hover{border-color:var(--rl-accent)}
+
+/* "+ Nowa akcja" (AI Michała): operator starts a new search - who, where, when -> /story/new. Tokens only. */
+#newActionBtn{min-height:40px;border-radius:20px;padding:0 16px;font-weight:700;background:var(--rl-danger);color:var(--rl-on-danger);border:0;white-space:nowrap}
+body.role-ratownik #newActionBtn{display:none}
+#newAction{border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);background:var(--rl-panel-solid);color:var(--rl-ink);box-shadow:var(--rl-shadow);width:min(560px,94vw);padding:18px 20px}
+#newAction::backdrop{background:rgba(20,24,27,.45)}
+#newAction h2{margin:0 0 10px;font-size:var(--rl-fs-xl)}
+#newAction label{display:block;margin:12px 0 4px;font-size:var(--rl-fs-s);color:var(--rl-mute);text-transform:uppercase;letter-spacing:.5px}
+#newAction input,#newAction select{width:100%;box-sizing:border-box;min-height:42px;padding:8px 10px;border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius);background:var(--rl-card);color:var(--rl-ink);font:inherit}
+#newAction #naLatLon{margin-top:6px}
+.na-chips{display:flex;flex-wrap:wrap;gap:6px}
+.na-chips button{min-height:38px;padding:0 12px;border-radius:19px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);font:inherit}
+.na-chips button.on{background:var(--rl-accent);border-color:var(--rl-accent);color:var(--rl-on-accent)}
+.na-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.na-act{margin-top:14px}
+.na-act button{min-height:44px;border-radius:22px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);font:inherit;font-weight:600}
+.na-act button.primary{background:var(--rl-danger);border-color:var(--rl-danger);color:var(--rl-on-danger)}

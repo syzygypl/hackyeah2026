@@ -2,7 +2,7 @@
 // + shared panels. Backends: unified rescue-server (/api/*) when it answers, else rescue-studio (/story*, /modules),
 // else static run files from out/. Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
-import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "../web/basemap/basemap.js";
+import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/basemap/basemap.js";
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
 import { initRescuer, render as renderRescuer, pollTask, myTeam } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
@@ -80,6 +80,7 @@ function applyRun(run, extra = {}, why = "run") {
   if (why === "load") evOff.clear();
   set({ ...extra, run, step: run.steps ? run.steps.length : 1 }, why);
   if (fit && run.bbox && mapReady) map.fitBounds([[run.bbox.west, run.bbox.south], [run.bbox.east, run.bbox.north]], { padding: 20, duration: 0 });
+  if (fit && run.bbox) swapBasemap(run.bbox);
   fetchAssessment();
 }
 // every edit goes through here: re-run on the server, refresh 2D, panels and 3D
@@ -139,6 +140,16 @@ function setupLayers() {
   mapReady = true;
   if (store.run && store.run.bbox) map.fitBounds([[store.run.bbox.west, store.run.bbox.south], [store.run.bbox.east, store.run.bbox.north]], { padding: 20, duration: 0 });
   renderMap();
+}
+// Offline basemap of the run's region (Tatry, Bieszczady, ..., Kraków); the style swap re-adds our layers via style.load
+let baseFile = "tatry.pmtiles";
+async function swapBasemap(bb) {
+  const file = (regionFor(bb) || {}).file || "tatry.pmtiles";
+  if (file === baseFile) return;
+  baseFile = file;
+  try { await loadBasemap(maplibregl, file); } catch (e) { return; }
+  mapReady = false;
+  map.setStyle(offlineStyle({ flavor: "grayscale", file }), { diff: false });
 }
 // style.load fires without a paint (hidden tabs); "load" waits for the first frame
 map.on("style.load", setupLayers); map.on("load", setupLayers); if (map.isStyleLoaded()) setupLayers();
@@ -892,3 +903,44 @@ async function boot() {
   } catch (e) { console.error(e); toast("Nie mogę połączyć się z serwerem akcji. Uruchom „swift run rescue-server” i otwórz http://127.0.0.1:8780/app/", 10000); }
 }
 boot();
+
+// ---------- "+ Nowa akcja" (AI Michała): who, where, when -> POST /story/new -> Studio in Plan mode to add evidence
+{
+  const hhmm = (d) => d.toTimeString().slice(0, 5);
+  const LABEL = { hiker: "turysta", dementia: "senior z demencją", child: "dziecko", gatherer: "grzybiarz", boater: "żeglarz / kajakarz", swimmer: "pływak" };
+  let places = null;
+  async function loadPlaces() {
+    if (places) return places;
+    const ids = (store.scenList || []).filter((s) => s.api).map((s) => s.id);
+    places = (await Promise.all(ids.map(async (id) => {
+      try { const sc = await (await fetch(`../scenarios/${id}.json`, { cache: "no-store" })).json(); return sc.ipp && sc.ipp.at ? { id, name: sc.incident ? sc.incident.split(" - ").slice(1).join(" - ").replace(/\s*\(.*?\)\s*$/, "") || id : id, at: sc.ipp.at } : null; }
+      catch (e) { return null; }
+    }))).filter(Boolean);
+    return places;
+  }
+  $("newActionBtn").onclick = async () => {
+    if (!store.hasStudio) { toast("Nowa akcja wymaga serwera akcji: swift run rescue-server"); return; }
+    const now = new Date();
+    $("naReport").value = hhmm(now); $("naLast").value = hhmm(new Date(now - 2 * 3600e3));
+    const ps = await loadPlaces();
+    $("naWhere").innerHTML = ps.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+    $("newAction").showModal();
+  };
+  $("naCat").onclick = (ev) => { const b = ev.target.closest("button"); if (!b) return; $("naCat").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); };
+  $("newAction").addEventListener("close", async () => {
+    if ($("newAction").returnValue !== "ok") return;
+    const cat = $("naCat").querySelector("button.on")?.dataset.v || "hiker";
+    const ll = $("naLatLon").value.split(/[,\s;]+/).map(Number).filter((x) => !isNaN(x));
+    const place = places.find((p) => p.id === $("naWhere").value);
+    const ipp = ll.length === 2 ? ll : place ? place.at : null;
+    if (!ipp) { toast("Podaj miejsce zaginięcia"); return; }
+    const who = $("naWho").value.trim(), start = $("naReport").value || hhmm(new Date()), last = $("naLast").value;
+    const where = ll.length === 2 ? `${ipp[0].toFixed(4)}, ${ipp[1].toFixed(4)}` : place.name;
+    const incident = `Akcja: ${who || LABEL[cat]} - ${where}${last ? `, ostatni kontakt ${last}` : ""} (zgłoszenie ${start})`;
+    teamOps = [];
+    await run(() => api("/story/new", { template: !ll.length && place && place.id === "zawrat" ? "zawrat" : undefined, ipp, category: cat, startClock: start, incident }), "Nowa akcja: " + where);
+    try { await loadScenario("studio"); } catch (e) {}
+    setMode("edycja");
+    $("naWho").value = ""; $("naLatLon").value = "";
+  });
+}

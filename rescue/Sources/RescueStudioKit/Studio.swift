@@ -79,6 +79,7 @@ public actor Studio {
             base["incident"] = o["incident"] as? String ?? "Nowa historia - Tatry, rejon Zawratu (fikcyjna)"
         } else {
             base = autoTemplate(ipp: ipp, startClock: start)
+            if let inc = o["incident"] as? String { base["incident"] = inc }   // "+ Nowa akcja" in the app sends who/where/when
             if var subj = base["subject"] as? [String: Any] { subj["category"] = cat; base["subject"] = subj }
         }
         items = []

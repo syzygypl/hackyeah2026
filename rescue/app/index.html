@@ -23,11 +23,32 @@
   <span class="edit-only edit-mode"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
   <label id="pinbox" style="display:none">PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
   <span id="status" class="mute"></span>
+  <button id="newActionBtn" title="Nowa akcja poszukiwawcza: kto, gdzie, kiedy">+ Nowa akcja</button>
   <a id="centrumLink" href="centrum.html" title="Wszystkie akcje i zespoły na jednej mapie">Centrum - wszystkie akcje</a>
   <button id="roleBtn" title="Zmień rolę (ratownik / operator)">Rola</button>
   <span id="firstRun" class="note" role="status" hidden><span id="firstRunText"></span> <button id="firstRunOk">OK, rozumiem</button></span>
 </header>
 <span id="views" class="views" role="tablist" aria-label="Widok"></span>
+<dialog id="newAction" aria-label="Nowa akcja poszukiwawcza"><form method="dialog" id="naForm">
+  <h2>Nowa akcja poszukiwawcza</h2>
+  <label>Kto zaginął</label>
+  <div class="na-chips" id="naCat">
+    <button type="button" data-v="hiker" class="on">Turysta</button><button type="button" data-v="dementia">Senior z demencją</button>
+    <button type="button" data-v="child">Dziecko</button><button type="button" data-v="gatherer">Grzybiarz</button>
+    <button type="button" data-v="boater">Żeglarz / kajakarz</button><button type="button" data-v="swimmer">Pływak</button>
+  </div>
+  <label for="naWho">Opis osoby</label>
+  <input id="naWho" placeholder="np. Anna K., 34 lata, czerwona kurtka, bez telefonu" autocomplete="off">
+  <label for="naWhere">Miejsce zaginięcia (ostatnio widziany)</label>
+  <select id="naWhere"></select>
+  <input id="naLatLon" placeholder="albo współrzędne: 49.2310, 20.0120" inputmode="decimal" autocomplete="off">
+  <div class="na-row">
+    <span><label for="naLast">Ostatni kontakt</label><input id="naLast" type="time"></span>
+    <span><label for="naReport">Zgłoszenie</label><input id="naReport" type="time"></span>
+  </div>
+  <p class="help" id="naNote">Mapa liczy się od razu. Potem w trybie Plan dodajesz dowody (świadek, telefon, ślad) i przydzielasz zespoły.</p>
+  <div class="na-row na-act"><button value="cancel" formnovalidate>Anuluj</button><button id="naGo" value="ok" class="primary">Utwórz akcję</button></div>
+</form></dialog>
 <aside id="left">
   <div class="edit-only edit-mode">
     <h2>Dowody - przeciągnij na mapę</h2>
