@@ -62,7 +62,7 @@ function kv(h, kind) {
   const add = (v, l) => { if (v !== undefined && v !== null) c.push(`<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`); };
   if (h.dutyMin != null) add(`${Math.floor(h.dutyMin / 60)}:${String(h.dutyMin % 60).padStart(2, "0")}`, "na służbie (h:min)");
   if (h.fatiguePct != null) add(h.fatiguePct + "%", "zmęczenie (szac.)");
-  if (h.distanceKm != null) add(h.distanceKm + " km", `przejście, +${h.climbM} m`);
+  if (h.distanceKm != null) add(String(h.distanceKm).replace(".", ",") + " km", `przejście, +${h.climbM} m`);
   if (h.workMin != null) add(`${h.workMin}/${h.workLimitMin}`, "pies: min pracy / limit");
   if (h.batteryPct != null) add(h.batteryPct + "%", `bateria, ~${h.flightMinLeft} min lotu`);
   if (h.spareBatteries != null) add(h.spareBatteries, "zapasowe baterie");

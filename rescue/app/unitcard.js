@@ -24,7 +24,7 @@ export function unitCard(u, opts) {
   const bars = [];
   if (h.batteryPct != null) bars.push(bar(`Bateria (~${h.flightMinLeft} min lotu, zapas ${h.spareBatteries} szt.)`, h.batteryPct, h.batteryPct + "%", codeLevel(u, ["battery"])));
   if (h.fuelPct != null) bars.push(bar(`Paliwo (~${h.enduranceMinLeft} min)`, h.fuelPct, h.fuelPct + "%", codeLevel(u, ["fuel"])));
-  if (h.fatiguePct != null) bars.push(bar(`Zmęczenie - szacunek (${h.distanceKm} km, +${h.climbM} m)`, h.fatiguePct, h.fatiguePct + "%", codeLevel(u, ["fatigue"])));
+  if (h.fatiguePct != null) bars.push(bar(`Zmęczenie - szacunek (${String(h.distanceKm).replace(".", ",")} km, +${h.climbM} m)`, h.fatiguePct, h.fatiguePct + "%", codeLevel(u, ["fatigue"])));
   if (h.workMin != null) bars.push(bar(`Pies: praca bez przerwy (limit ${h.workLimitMin} min)`, (h.workMin / h.workLimitMin) * 100, `${h.workMin} min`, codeLevel(u, ["dogwork"])));
   if (h.dutyMin != null) bars.push(bar(`Służba załogi (limit ${Math.round(h.dutyLimitMin / 60)} h)`, (h.dutyMin / h.dutyLimitMin) * 100, `${Math.floor(h.dutyMin / 60)} h ${String(h.dutyMin % 60).padStart(2, "0")} min`, codeLevel(u, ["duty"])));
   if (h.maintenanceDueInH != null) bars.push(bar(`Do przeglądu (co ${h.maintenanceEveryH} h, ostatni ${h.lastMaintenance || "?"})`, (Math.max(0, h.maintenanceDueInH) / h.maintenanceEveryH) * 100, `${String(h.maintenanceDueInH).replace(".", ",")} h`, codeLevel(u, ["maintenance"])));
