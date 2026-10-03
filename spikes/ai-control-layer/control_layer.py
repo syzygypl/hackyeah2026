@@ -14,10 +14,12 @@ Policy and signature feed are hot-reloaded on every request (mtime check). Stdli
 import base64
 import codecs
 import hashlib
+import hmac
 import html
 import json
 import os
 import re
+import sys
 import threading
 import time
 import unicodedata
@@ -134,19 +136,57 @@ def find_sensitive(text, pii_types=tuple(PII_PATTERNS)):
     return hits
 
 
+_AUDIT_KEY = None
+
+
+def audit_key():
+    """HMAC key for every value-derived token (7c): ACL_AUDIT_HMAC_KEY from env/.env; if unset, a random per-process
+    key (tokens then only correlate within one run). Never a bare hash of PII: those are brute-forceable (PESEL ~10^10)."""
+    global _AUDIT_KEY
+    if _AUDIT_KEY is None:
+        k = os.environ.get("ACL_AUDIT_HMAC_KEY", "")
+        if not k:
+            try:
+                with open(os.path.join(HERE, ".env")) as f:
+                    k = next((l.split("=", 1)[1].strip().strip('"\'') for l in f if l.startswith("ACL_AUDIT_HMAC_KEY=")), "")
+            except OSError:
+                pass
+        if not k:
+            k = os.urandom(32).hex()
+            sys.stderr.write("[control-layer] ACL_AUDIT_HMAC_KEY not set: using a random per-process key, "
+                             "PII correlation tokens will not match across restarts\n")
+        _AUDIT_KEY = k.encode()
+    return _AUDIT_KEY
+
+
+def keyed_hash(data, n=None):
+    h = hmac.new(audit_key(), data.encode() if isinstance(data, str) else data, hashlib.sha256).hexdigest()
+    return h[:n] if n else h
+
+
+def pii_token(value):
+    """10-hex HMAC token: the same PESEL/IBAN/card correlates across audit events, the value cannot be recovered."""
+    return keyed_hash(re.sub(r"\s", "", value).upper(), 10)
+
+
+def audit_safe(text):
+    """What may be written to the audit: secrets AND every PII type replaced by HMAC-tokenized markers (7c)."""
+    return redact(text, True, tuple(PII_PATTERNS))[0]
+
+
 def redact(text, secrets=True, pii_types=()):
     labels = []
     t = normalize_text(text)
     if secrets:
         for label, rx in SECRET_PATTERNS.items():
-            t, n = rx.subn(f"[REDACTED:{label}]", t)
+            t, n = rx.subn(lambda m, label=label: f"[REDACTED:{label}#{pii_token(m.group(0))}]", t)
             labels += [label] * n
     for label in pii_types:
         def sub(m, label=label):
             if not _valid(label, m.group(0)):
                 return m.group(0)
             labels.append(label)
-            return f"[REDACTED:{label}]"
+            return f"[REDACTED:{label}#{pii_token(m.group(0))}]"
         t = PII_PATTERNS[label].sub(sub, t)
     return t, labels
 
@@ -484,7 +524,8 @@ class ControlLayer:
             output = {"error": "denied_by_control_layer", "guardrail": "fail_closed"}
         session.calls += 1
         ev["policy_version"] = self.store.version
-        ev["args"] = _map_strings(args, lambda s: redact(self._detokenize(session, s))[0])  # audit never holds vault values
+        ev["args"] = _map_strings(args, audit_safe if not session.vault else
+                                  (lambda s: audit_safe(self._detokenize(session, s))))  # audit: no raw PII, no vault values
         ev["agent_reasoning"] = agent_reasoning
         ev["overhead_us"] = round((time.perf_counter_ns() - t0 - tool_ns) / 1000, 1)
         ev.update(tokens_total=session.tokens, usd_total=round(session.usd, 5), compute_ms_total=round(session.compute_ms, 1))
@@ -576,7 +617,7 @@ class ControlLayer:
             ev["decision"] = ev["decision_final"] = DENY
             out = None
         session.calls += 1
-        ev["args"] = {"text": redact(text[:300])[0]}
+        ev["args"] = {"text": audit_safe(self._detokenize(session, text[:300]))}
         ev["overhead_us"] = round((time.perf_counter_ns() - t0) / 1000, 1)
         ev.update(tokens_total=session.tokens, usd_total=round(session.usd, 5), compute_ms_total=round(session.compute_ms, 1))
         self._append(ev)
@@ -670,7 +711,7 @@ class ControlLayer:
         c = self._c("loop_detection")
         if not c:
             return
-        fp = hashlib.sha256((name + json.dumps(args, sort_keys=True, default=str)).encode()).hexdigest()
+        fp = keyed_hash(name + json.dumps(args, sort_keys=True, default=str))  # 7c: keyed, args may carry PII
         s.fingerprints[fp] = s.fingerprints.get(fp, 0) + 1
         if s.fingerprints[fp] > c.get("max_identical_calls", 3):
             self._block(ev, "loop_detection", f"identical call repeated {s.fingerprints[fp]}x - runaway agent loop")

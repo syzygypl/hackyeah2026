@@ -136,6 +136,13 @@ curl -s localhost:8787/audit     # JSONL export
 curl -s localhost:8787/report    # markdown report
 ```
 
+Audit privacy (7c):
+- **No raw PII:** audit records, metrics, reports and stored approval payloads never contain raw PII or secrets. Every value is replaced by `[REDACTED:<type>#<hmac10>]`.
+- **Keyed tokens:** the token is HMAC-SHA256 keyed by `ACL_AUDIT_HMAC_KEY` (env or gitignored `.env`). The same PESEL, IBAN or card yields the same token, so the security team can correlate events, but the value can't be brute-forced the way a bare hash of an 11-digit PESEL can.
+- **Key unset:** a random per-process key is used and a warning is printed (correlation only within one run).
+- **Internal keys:** in-memory loop fingerprints, approval payload binding and the verdict cache use keyed hashes too.
+- **What stays plain SHA-256:** only the policy version and the audit hash chain, which covers already-redacted records.
+
 Approvals (F6): a caller can never approve its own held call, and a self-declared `approved_by` is ignored.
 - A held call returns 403 + `approval_id`. The server stores a hash of the exact payload (session, tool, args).
 - An admin approves or rejects via `POST /v1/approvals/{id}` with the bearer token; `GET /v1/approvals` lists pending ones.

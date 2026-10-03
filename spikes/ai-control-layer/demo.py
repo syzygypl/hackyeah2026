@@ -123,7 +123,9 @@ def main():
 
     print(f"\n{C['b']}Live policy edit (hot reload, same layer, same session, no restart){C['x']}")
     env = PolicyEnv()
-    live = ControlLayer(TOOLS, policy_path=env.path)
+    sent = []  # what the email tool actually received (the audit itself always stores PII redacted)
+    live = ControlLayer(dict(TOOLS, send_email=lambda to, subject, body: sent.append(body) or {"status": "sent"}),
+                        policy_path=env.path)
     ls = Session("sess-live", "judge")
     probe = ("send_email", {"to": "ops@bank.example", "subject": "q", "body": "client card 4111 1111 1111 1111"})
     steps = [("default policy", None),
@@ -141,7 +143,8 @@ def main():
         r = live.call(ls, probe[0], dict(probe[1], subject=f"q{i}"))
         ev = r["event"]
         print(f"  {label:34} -> {C[r['decision']]}{ev['decision']:6}{C['x']} policy {ev['policy_version']}  "
-              f"body sent: {ev['args']['body'] if r['decision'] == ALLOW else '-'}")
+              f"body sent: {sent[-1] if r['decision'] == ALLOW and sent else '-'}")
+        sent.clear()
     if live.store.errors:
         print(f"  {C['dim']}{live.store.errors[-1]}{C['x']}")
 

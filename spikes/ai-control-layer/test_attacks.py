@@ -1345,6 +1345,43 @@ class ApprovalApi(PolicyApi):
         self.assertEqual(self._req("POST", "/admin/cache/clear", {}, token="test-token-123")[0], 200)
 
 
+class AuditPrivacy(unittest.TestCase):
+    """7c: no raw PII and no bare (unkeyed, brute-forceable) hash of PII anywhere in the audit; HMAC tokens correlate."""
+
+    VALUES = ["90010112349", "4111 1111 1111 1111", "anna.kowalska@gmail.com", "DE89370400440532013000", "AKIAIOSFODNN7EXAMPLE"]
+
+    def test_no_raw_or_bare_hashed_pii_in_audit(self):
+        import hashlib
+        layer, s, env = fresh()
+        layer.check_prompt(s, "Client PESEL 90010112349, card 4111 1111 1111 1111, pay DE89 3704 0044 0532 0130 00")
+        layer.call(s, "send_email", {"to": "ops@bank.example", "subject": "s", "body": "anna.kowalska@gmail.com 90010112349"})
+        layer.call(s, "query_customers", {})
+        layer.call(s, "run_sql", {"query": "SELECT 'AKIAIOSFODNN7EXAMPLE'"})
+        p = os.path.join(env.dir, "audit.jsonl")
+        layer.export_audit(p)
+        dump = open(p).read() + json.dumps(layer.metrics([s]))
+        for v in self.VALUES:
+            compact = v.replace(" ", "")
+            self.assertNotIn(compact, dump.replace(" ", ""))
+            for variant in {v, compact, compact.upper(), compact.lower()}:
+                for algo in ("sha256", "sha1", "md5"):
+                    self.assertNotIn(hashlib.new(algo, variant.encode()).hexdigest()[:10], dump, (v, algo))
+
+    def test_hmac_tokens_correlate_within_key(self):
+        from control_layer import pii_token, redact
+        a = redact("PESEL 90010112349", False, ["pesel"])[0]
+        b = redact("again 90010112349", False, ["pesel"])[0]
+        tok = a.split("#")[1].rstrip("]")
+        self.assertIn(tok, b)  # same value -> same token: the security team can correlate events
+        self.assertEqual(tok, pii_token("90010112349"))
+        self.assertNotIn(tok, redact("PESEL 85121203459", False, ["pesel"])[0])
+
+    def test_secret_marker_not_rematched_on_second_pass(self):
+        from control_layer import redact
+        once = redact("api_key=sk-live-4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c")[0]
+        self.assertEqual(redact(once)[0], once)
+
+
 class Performance(unittest.TestCase):
     def test_overhead_under_1ms_p99(self):
         p = measure_overhead(2000)
@@ -1369,7 +1406,7 @@ GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
           "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
-          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "Performance": "performance"}
+          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "AuditPrivacy": "audit privacy: HMAC, no bare PII hashes (7c)", "Performance": "performance"}
 
 
 def run_suite():

@@ -31,7 +31,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from control_layer import HERE, ControlLayer, PolicyStore, Session, policy_diff, redact, security_report
+from control_layer import HERE, ControlLayer, PolicyStore, Session, audit_safe, keyed_hash, policy_diff, security_report
 from mock_tools import TOOLS
 
 def load_dotenv(path=os.path.join(HERE, ".env")):
@@ -58,7 +58,7 @@ APPROVAL_TTL_S = 600
 
 
 def _payload_hash(session_id, tool, args):
-    return hashlib.sha256(json.dumps([session_id, tool, args], sort_keys=True, default=str).encode()).hexdigest()
+    return keyed_hash(json.dumps([session_id, tool, args], sort_keys=True, default=str))  # 7c: keyed, args carry PII
 
 
 def approver(session, tool, args, reasons):
@@ -81,7 +81,7 @@ def approver(session, tool, args, reasons):
             return False, None, PENDING_APPROVER.problem
         new = secrets.token_urlsafe(9)
         APPROVALS[new] = {"id": new, "session": session.id, "tool": tool, "payload_hash": h,
-                          "args": {k: (redact(v)[0] if isinstance(v, str) else v) for k, v in args.items()},
+                          "args": {k: (audit_safe(v) if isinstance(v, str) else v) for k, v in args.items()},
                           "reasons": list(reasons), "status": "pending", "created": time.time(), "decided_by": None}
         PENDING_APPROVER.pending = new
         return False, None, f"pending approval {new}: an admin must approve via POST /v1/approvals/{new}"

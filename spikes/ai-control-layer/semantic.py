@@ -15,7 +15,9 @@ Finding: llama-guard3 classifies harm categories (S1-S14) and says "safe" to cla
 which is why the heuristic stays in the loop and is not only a fallback.
 """
 import hashlib
+import hmac
 import json
+import os
 import math
 import re
 import socket
@@ -132,6 +134,7 @@ class SemanticGuard:
         self.installed, self._checked_at, self._url = None, 0, None  # None = never reached Ollama
         self.ollama_ok = None
         self.cache = {}
+        self.key = os.urandom(32)  # cache keys are keyed hashes (7c); in-memory only, so a per-process key is enough
         self.warm, self.cooldown, self._warming = set(), {}, set()
         self._ps_checked_at = 0
         self._timeouts = {}  # model -> consecutive short-input timeouts  # models loaded once; circuit breaker: model -> retry-after timestamp
@@ -214,7 +217,7 @@ class SemanticGuard:
         """cacheable only for a tier's PRIMARY model: fallback verdicts (e.g. llama-guard filling in while qwen3guard
         is on cooldown) are less reliable and must not stick. Entries expire after semantic.cache_ttl_s."""
         fmt = model_format(model)
-        key = hashlib.sha256(f"{model}\0{system}\0{context}\0{text}".encode()).hexdigest()
+        key = hmac.new(self.key, f"{model}\0{system}\0{context}\0{text}".encode(), hashlib.sha256).hexdigest()  # 7c
         hit = self.cache.get(key) if cacheable else None
         if hit and time.time() - hit["_at"] < cfg.get("cache_ttl_s", 600):
             self.stats["cache_hits"] += 1
