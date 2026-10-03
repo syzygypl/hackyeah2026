@@ -182,13 +182,13 @@
   {
    "provider": "Clue",
    "at": "18:01",
-   "title": "Świadek: widziany/a około 09:25",
+   "title": "Świadek: widziany/a około 09:25 (turysta niepewny miejsca)",
    "detail": "Relacja innych turystów, pewność miejsca średnia.",
    "point": [
     49.217509,
     20.054218
    ],
-   "radiusM": 250,
+   "radiusM": 650,
    "seenAt": "09:25"
   },
   {
@@ -208,6 +208,32 @@
    "title": "IMGW: zachód słońca 18:30",
    "detail": "Prognoza dla rejonu.",
    "factor": 1.0
+  },
+  {
+   "provider": "Clue",
+   "at": "18:16",
+   "title": "Świadek: kierowca busa widział starszego mężczyznę na drodze do Palenicy około 11:40",
+   "detail": "Zgłoszenie telefoniczne po komunikacie w radiu; opis ubrania się zgadza.",
+   "point": [
+    49.2135,
+    20.0815
+   ],
+   "radiusM": 530,
+   "clueKind": "sighting",
+   "seenAt": "11:40"
+  },
+  {
+   "provider": "Clue",
+   "at": "18:26",
+   "title": "Świadek: rowerzysta minął starszego mężczyznę schodzącego drogą w dół doliny, około 12:05",
+   "detail": "Nie pamięta ubrania, widział go z daleka.",
+   "point": [
+    49.2165,
+    20.0855
+   ],
+   "radiusM": 600,
+   "clueKind": "sighting",
+   "seenAt": "12:05"
   },
   {
    "provider": "SegmentSearched",

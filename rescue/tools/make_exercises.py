@@ -39,6 +39,17 @@ EXERCISES = [
      "place": "Morskie Oko / Dolina Rybiego Potoku", "pickupAfter": 50, "budgetMin": 240,
      "who": "Mężczyzna, 85 lat, demencja. Rano wyszedł ze schroniska na spacer, ostatni kontakt 9:13. Zgłoszenie o 17:41. Deszcz, 1°C.",
      "clue": {"after": 40, "frac": 0.85, "title": "Świadek: turystka widziała starszego mężczyznę bez kurtki", "clueKind": "sighting", "radiusM": 350},
+     # difficulty: the early sighting is uncertain and two later sightings point the other way (road down the valley, M8),
+     # so at pickup M4 ~54% vs M8 ~43% and the helicopter (only before dusk at 19:01) has to be bet on one of them.
+     # All radii stay > 500 m on purpose: a sighting <= 500 m moves the Koester rings (ClueProvider) and flips the map.
+     # Truth and future events unchanged.
+     "knownEdits": {("Clue", "18:01"): {"radiusM": 650, "title": "Świadek: widziany/a około 09:25 (turysta niepewny miejsca)"}},
+     "extraKnown": [{"provider": "Clue", "at": "18:16", "title": "Świadek: kierowca busa widział starszego mężczyznę na drodze do Palenicy około 11:40",
+                     "detail": "Zgłoszenie telefoniczne po komunikacie w radiu; opis ubrania się zgadza.", "point": [49.2135, 20.0815],
+                     "radiusM": 530, "clueKind": "sighting", "seenAt": "11:40"},
+                    {"provider": "Clue", "at": "18:26", "title": "Świadek: rowerzysta minął starszego mężczyznę schodzącego drogą w dół doliny, około 12:05",
+                     "detail": "Nie pamięta ubrania, widział go z daleka.", "point": [49.2165, 20.0855],
+                     "radiusM": 600, "clueKind": "sighting", "seenAt": "12:05"}],
      "inProgress": "gopr-a"},
 ]
 
@@ -74,6 +85,12 @@ def main():
         segs = case["segments"]
         truth_seg = nearest_seg(truth["find"], segs)   # approximate (engine: nearest seed per cell); only to keep pre-searched segments honest
         known = [e for e in case["events"] if (hm(e["at"]) - start) % 1440 <= x["pickupAfter"]]
+        # optional per-exercise tuning of what the trainee knows at pickup (difficulty), truth and future untouched
+        for (prov, at), upd in x.get("knownEdits", {}).items():
+            for e in known:
+                if e["provider"] == prov and e["at"] == at:
+                    e.update(upd)
+        known += [dict(e) for e in x.get("extraKnown", [])]
         future = [e for e in case["events"] if (hm(e["at"]) - start) % 1440 > x["pickupAfter"]]
         # mid-way: two hasty searches near the IPP already came back empty, one team is still out
         ipp = case["ipp"]["at"]
