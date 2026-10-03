@@ -973,7 +973,7 @@ actor Exercises {
                 "budget": ["teams": teams.count, "hours": Double(s.end - s.pickup) / 60], "stepMin": s.stepMin,
                 "over": over, "found": s.found, "dark": d["dark"] ?? false, "survival": d["survival"] ?? [:],
                 "segments": ((d["segments"] as? [[String: Any]]) ?? []).map { ["id": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0, "rank": $0["rank"] ?? 0] },
-                "teams": teams, "feed": s.feed, "decisions": s.decisions.count, "run": "/api/exercise/\(s.sid)/run?v=\(s.events.count)"]
+                "teams": teams, "feed": s.feed, "decisions": s.decisions.count, "run": "/api/exercise/\(s.sid)/run?v=\(s.events.count)-\(s.jobs.count)"]
     }
 
     /// Sessions: in memory on the laptop; with a shared store (Vercel + Neon) every change is written as document "ex:<sid>"
@@ -1022,15 +1022,29 @@ actor Exercises {
         case ("GET", ""): return ok(await stateDoc(s))
         case ("GET", "live"): return response("200 OK", json, Data("[]".utf8))   // 2D embed live= (no field reports in an exercise)
         case ("GET", "run"):
-            let key = "\(s.sid)|\(s.events.count)"
-            if let c = runCache[key] { return response("200 OK", json, c) }
-            guard let sc = s.scenario() else { return jsonErr("500 Internal Server Error", "scenario") }
-            var doc = jsonObject(await StoryPipeline.runData(sc))
+            let key = "\(s.sid)|\(s.events.count)"   // the engine run changes only with the events; the team overlay below every time
+            var doc: [String: Any]
+            if let c = runCache[key] { doc = jsonObject(c) } else {
+                guard let sc = s.scenario() else { return jsonErr("500 Internal Server Error", "scenario") }
+                let d = await StoryPipeline.runData(sc)
+                if runCache.count > 30 { runCache.removeAll() }
+                runCache[key] = d
+                doc = jsonObject(d)
+            }
             doc["scenario"] = s.meta["region"] ?? s.id; doc["exercise"] = s.id
-            let d = (try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])) ?? Data()
-            if runCache.count > 30 { runCache.removeAll() }
-            runCache[key] = d
-            return response("200 OK", json, d)
+            // the map shows the trainee's teams, not the engine's plan (that is the answer key, compared in the score)
+            if var steps = doc["steps"] as? [[String: Any]] {
+                let names = Dictionary(((doc["steps"] as? [[String: Any]])?.last?["segments"] as? [[String: Any]] ?? []).compactMap { g in (g["id"] as? String).map { ($0, g["name"] ?? $0) } }, uniquingKeysWith: { a, _ in a })
+                for i in steps.indices {
+                    let m = steps[i]["minute"] as? Int ?? 0, last = i == steps.count - 1
+                    steps[i]["assignments"] = s.jobs.filter { last ? (!$0.done && $0.end > s.minute) : ($0.start <= m && m < $0.end) }.map { j -> [String: Any] in
+                        ["resourceId": j.team, "segmentId": j.seg, "segmentName": names[j.seg] ?? j.seg, "pod": j.pod, "poa": j.poa, "travelMin": Double(j.arrive - j.start),
+                         "etaMin": Double(j.arrive - j.start), "sweepMin": j.end - j.arrive, "safety": [String](), "reason": "decyzja ćwiczącego", "why": "decyzja ćwiczącego"]
+                    }
+                }
+                doc["steps"] = steps
+            }
+            return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])) ?? Data())
         case ("POST", "act"):
             let o = jsonObject(q.body)
             guard let team = shortClean(o["team"], 64), let seg = shortClean(o["segmentId"], 16) else { return jsonErr("400 Bad Request", "team and segmentId required") }
