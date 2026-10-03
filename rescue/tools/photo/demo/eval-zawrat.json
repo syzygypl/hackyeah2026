@@ -1,0 +1,234 @@
+{
+ "sc": "zawrat",
+ "truth": [
+  49.2158,
+  20.0188
+ ],
+ "heading": 217.0,
+ "note": "SYNTHETIC photo rendered from the DEM",
+ "profilesBuildS": 0.3,
+ "runs": {
+  "synthetic-zawrat-truth-h217": {
+   "truthCellP": 0.13743,
+   "truthRank": 1,
+   "cellsTotal": 3600,
+   "truthPercentile": 100.0,
+   "top1DistM": 61,
+   "massWithin300m": 0.378,
+   "headingErrDeg": 1.0,
+   "runtimeS": 6.47
+  },
+  "synthetic-zawrat-truth-noise3px": {
+   "truthCellP": 0.13875,
+   "truthRank": 1,
+   "cellsTotal": 3600,
+   "truthPercentile": 100.0,
+   "top1DistM": 61,
+   "massWithin300m": 0.382,
+   "headingErrDeg": 1.0,
+   "runtimeS": 6.48
+  },
+  "synthetic-zawrat-truth-pitch20": {
+   "truthCellP": 0.13997,
+   "truthRank": 1,
+   "cellsTotal": 3600,
+   "truthPercentile": 100.0,
+   "top1DistM": 61,
+   "massWithin300m": 0.377,
+   "headingErrDeg": 1.0,
+   "runtimeS": 6.5
+  },
+  "synthetic-zawrat-truth-clouds": {
+   "truthCellP": 0.13743,
+   "truthRank": 1,
+   "cellsTotal": 3600,
+   "truthPercentile": 100.0,
+   "top1DistM": 61,
+   "massWithin300m": 0.378,
+   "headingErrDeg": 1.0,
+   "runtimeS": 6.46
+  },
+  "synthetic-zawrat-truth-fov55": {
+   "truthCellP": 0.00455,
+   "truthRank": 42,
+   "cellsTotal": 3600,
+   "truthPercentile": 98.86,
+   "top1DistM": 4174,
+   "massWithin300m": 0.117,
+   "headingErrDeg": 45.0,
+   "runtimeS": 5.35
+  },
+  "synthetic-zawrat-truth-fov75": {
+   "truthCellP": 0.00013,
+   "truthRank": 623,
+   "cellsTotal": 3600,
+   "truthPercentile": 82.72,
+   "top1DistM": 2048,
+   "massWithin300m": 0.111,
+   "headingErrDeg": 67.0,
+   "runtimeS": 7.22
+  }
+ },
+ "exif": {
+  "point": {
+   "lat": 49.2158,
+   "lon": 20.0188,
+   "accM": 8.0,
+   "at": "2026-10-03T12:20:00Z",
+   "src": "exif",
+   "altM": 2002.0
+  },
+  "errM": 0.0,
+  "cell": [
+   10,
+   36
+  ]
+ },
+ "truthHeadingSweep": {
+  "runs": [
+   {
+    "truthCellP": 0.00944,
+    "truthRank": 17,
+    "cellsTotal": 3600,
+    "truthPercentile": 99.56,
+    "top1DistM": 4650,
+    "massWithin300m": 0.039,
+    "headingErrDeg": 100.0,
+    "runtimeS": 6.41,
+    "heading": 7
+   },
+   {
+    "truthCellP": 0.01001,
+    "truthRank": 20,
+    "cellsTotal": 3600,
+    "truthPercentile": 99.47,
+    "top1DistM": 2074,
+    "massWithin300m": 0.013,
+    "headingErrDeg": 66.0,
+    "runtimeS": 6.43,
+    "heading": 37
+   },
+   {
+    "truthCellP": 0.00782,
+    "truthRank": 26,
+    "cellsTotal": 3600,
+    "truthPercentile": 99.31,
+    "top1DistM": 3074,
+    "massWithin300m": 0.013,
+    "headingErrDeg": 124.0,
+    "runtimeS": 6.44,
+    "heading": 67
+   },
+   {
+    "truthCellP": 0.0,
+    "truthRank": null,
+    "cellsTotal": 3600,
+    "truthPercentile": null,
+    "top1DistM": 1664,
+    "massWithin300m": 0.002,
+    "headingErrDeg": 49.0,
+    "runtimeS": 6.41,
+    "heading": 97
+   },
+   {
+    "truthCellP": 0.00018,
+    "truthRank": 491,
+    "cellsTotal": 3600,
+    "truthPercentile": 86.39,
+    "top1DistM": 3701,
+    "massWithin300m": 0.005,
+    "headingErrDeg": 176.0,
+    "runtimeS": 6.44,
+    "heading": 127
+   },
+   {
+    "truthCellP": 0.0,
+    "truthRank": null,
+    "cellsTotal": 3600,
+    "truthPercentile": null,
+    "top1DistM": 3725,
+    "massWithin300m": 0.017,
+    "headingErrDeg": 40.0,
+    "runtimeS": 6.45,
+    "heading": 157
+   },
+   {
+    "truthCellP": 0.0688,
+    "truthRank": 2,
+    "cellsTotal": 3600,
+    "truthPercentile": 99.97,
+    "top1DistM": 77,
+    "massWithin300m": 0.172,
+    "headingErrDeg": 3.0,
+    "runtimeS": 6.46,
+    "heading": 187
+   },
+   {
+    "truthCellP": 0.13743,
+    "truthRank": 1,
+    "cellsTotal": 3600,
+    "truthPercentile": 100.0,
+    "top1DistM": 61,
+    "massWithin300m": 0.378,
+    "headingErrDeg": 1.0,
+    "runtimeS": 6.47,
+    "heading": 217
+   },
+   {
+    "truthCellP": 0.05552,
+    "truthRank": 3,
+    "cellsTotal": 3600,
+    "truthPercentile": 99.94,
+    "top1DistM": 77,
+    "massWithin300m": 0.543,
+    "headingErrDeg": 3.0,
+    "runtimeS": 6.45,
+    "heading": 247
+   },
+   {
+    "truthCellP": 0.14502,
+    "truthRank": 2,
+    "cellsTotal": 3600,
+    "truthPercentile": 99.97,
+    "top1DistM": 81,
+    "massWithin300m": 0.404,
+    "headingErrDeg": 3.0,
+    "runtimeS": 6.98,
+    "heading": 277
+   },
+   {
+    "truthCellP": 0.30705,
+    "truthRank": 1,
+    "cellsTotal": 3600,
+    "truthPercentile": 100.0,
+    "top1DistM": 61,
+    "massWithin300m": 0.575,
+    "headingErrDeg": 2.0,
+    "runtimeS": 6.42,
+    "heading": 307
+   },
+   {
+    "truthCellP": 0.06871,
+    "truthRank": 2,
+    "cellsTotal": 3600,
+    "truthPercentile": 99.97,
+    "top1DistM": 4935,
+    "massWithin300m": 0.1,
+    "headingErrDeg": 79.0,
+    "runtimeS": 6.41,
+    "heading": 337
+   }
+  ],
+  "medianPercentile": 99.75,
+  "truthInTop5pct": 9,
+  "top1Within300m": 5
+ },
+ "random": {
+  "n": 20,
+  "noisePx": 2,
+  "medianPercentile": 100.0,
+  "medianTop1DistM": 39.5,
+  "top1Within300m": 14,
+  "truthInTop5pct": 19
+ }
+}
