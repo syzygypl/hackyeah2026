@@ -61,6 +61,31 @@ def crew_for(uid, kind, name):
     return [{"name": f"{uid.upper()}-{i + 1} (fikcyjny)", "role": r} for i, r in enumerate(roles)]
 
 
+OPERATORS = [("policj", "Policja"), ("policyj", "Policja"), ("straż miejska", "Straż Miejska"), ("wopr", "WOPR"), ("psp", "PSP"), ("osp", "OSP"),
+             ("gopr", "GOPR"), ("topr", "TOPR"), ("lpr", "LPR"), ("sar", "SAR"), ("marynarki", "Marynarka Wojenna")]
+
+
+def operator_of(name):
+    n = name.lower()
+    return next((op for k, op in OPERATORS if k in n), None)
+
+
+def base_of(name):
+    par = re.search(r"\(([^)]*)\)", name)
+    return par.group(1) if par and not re.search(r"\d+ ?os|fikcyj|termowizj", par.group(1)) else "baza wg scenariusza"
+
+
+def home_variant(uid, kind, h):
+    """What the unit is in ONE scenario that defines it: a shared id (drone, dog, heli, divers...) is a different physical
+    unit per region (Policja drone in Kraków, WOPR drone on Śniardwy, GOPR drone in Bieszczady). With ?sc= the server
+    should show this variant (name, base, operator, crew), not the first scenario's one (top-level fields)."""
+    op = operator_of(h["name"])
+    crew = crew_for(uid, kind, h["name"])
+    if op and kind in ("pies", "dron", "lodz", "nurkowie", "smiglowiec"):
+        crew = [dict(c, role=f"{c['role']} ({op})") for c in crew]
+    return {"name": h["name"], "readyAt": h.get("readyAt"), "base": base_of(h["name"]), "operator": op, "crew": crew}
+
+
 def unit_for(uid, kind, name, rng):
     serial = lambda p: f"{p}-{rng.randint(100, 999)}"  # noqa: E731 - fictional
     u = {"model": "", "callsign": serial(uid.split("-")[0].upper()), "equipment": {}, "spares": [], "maintenanceLog": []}
@@ -122,13 +147,14 @@ def main():
         entry = {"id": uid, "kind": u["kind"], "name": first["name"], "base": base}
         entry.update(unit_for(uid, u["kind"], first["name"], rng))
         entry["crew"] = crew_for(uid, u["kind"], first["name"])
-        entry["byHome"] = {sc: {"name": h["name"], "readyAt": h.get("readyAt")} for sc, h in homes.items()}  # extra, informational
+        entry["byHome"] = {sc: home_variant(uid, u["kind"], h) for sc, h in homes.items()}   # per-scenario variant (name, base, operator, crew)
         entry["fictional"] = True
         out.append(entry)
     doc = {"schema": "rescue-inventory/1", "note": "Dane fikcyjne (hackathon): bez prawdziwych osób, znaków wywoławczych i numerów seryjnych.",
            "generated": "rescue/tools/inventory/make_inventory.py",
            "_doc": "One unit per roster id (rescue/app/CONTRACT.md 'Zasoby i dziennik' section 5). Crew = role + fictional "
-                   "label. byHome = the name of a shared id in each scenario that defines it (informational). Health "
+                   "label. byHome = per scenario that defines the id: name, base, operator, crew of THAT region's unit (a shared id is a "
+                   "different unit per region; with ?sc= show byHome[sc], top-level = the first scenario's variant). Health "
                    "parameters per kind: params.json (sources in docs/rescue-locator/zasoby.md).",
            "units": out}
     os.makedirs(OUT, exist_ok=True)

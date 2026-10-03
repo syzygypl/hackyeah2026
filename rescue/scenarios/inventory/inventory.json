@@ -2,7 +2,7 @@
  "schema": "rescue-inventory/1",
  "note": "Dane fikcyjne (hackathon): bez prawdziwych osób, znaków wywoławczych i numerów seryjnych.",
  "generated": "rescue/tools/inventory/make_inventory.py",
- "_doc": "One unit per roster id (rescue/app/CONTRACT.md 'Zasoby i dziennik' section 5). Crew = role + fictional label. byHome = the name of a shared id in each scenario that defines it (informational). Health parameters per kind: params.json (sources in docs/rescue-locator/zasoby.md).",
+ "_doc": "One unit per roster id (rescue/app/CONTRACT.md 'Zasoby i dziennik' section 5). Crew = role + fictional label. byHome = per scenario that defines the id: name, base, operator, crew of THAT region's unit (a shared id is a different unit per region; with ?sc= show byHome[sc], top-level = the first scenario's variant). Health parameters per kind: params.json (sources in docs/rescue-locator/zasoby.md).",
  "units": [
   {
    "id": "beach-patrol",
@@ -42,7 +42,19 @@
    "byHome": {
     "miedzyzdroje": {
      "name": "Ratownicy + Policja - patrol plaży",
-     "readyAt": "14:00"
+     "readyAt": "14:00",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "BEACH-PATROL-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "BEACH-PATROL-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
     }
    },
    "fictional": true
@@ -97,15 +109,87 @@
    "byHome": {
     "morzycko": {
      "name": "Nurkowie PSP (SGRW Szczecin)",
-     "readyAt": "23:00"
+     "readyAt": "23:00",
+     "base": "SGRW Szczecin",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DIVERS-1 (fikcyjny)",
+       "role": "nurek kierujący (PSP)"
+      },
+      {
+       "name": "DIVERS-2 (fikcyjny)",
+       "role": "nurek roboczy (PSP)"
+      },
+      {
+       "name": "DIVERS-3 (fikcyjny)",
+       "role": "nurek asekuracyjny (PSP)"
+      },
+      {
+       "name": "DIVERS-4 (fikcyjny)",
+       "role": "sygnalista (PSP)"
+      },
+      {
+       "name": "DIVERS-5 (fikcyjny)",
+       "role": "sprzętowiec (PSP)"
+      }
+     ]
     },
     "sniardwy": {
      "name": "Nurkowie PSP (SGRW Olsztyn)",
-     "readyAt": "18:40"
+     "readyAt": "18:40",
+     "base": "SGRW Olsztyn",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DIVERS-1 (fikcyjny)",
+       "role": "nurek kierujący (PSP)"
+      },
+      {
+       "name": "DIVERS-2 (fikcyjny)",
+       "role": "nurek roboczy (PSP)"
+      },
+      {
+       "name": "DIVERS-3 (fikcyjny)",
+       "role": "nurek asekuracyjny (PSP)"
+      },
+      {
+       "name": "DIVERS-4 (fikcyjny)",
+       "role": "sygnalista (PSP)"
+      },
+      {
+       "name": "DIVERS-5 (fikcyjny)",
+       "role": "sprzętowiec (PSP)"
+      }
+     ]
     },
     "tragedia-w-moryniu": {
      "name": "Nurkowie PSP (SGRW Szczecin)",
-     "readyAt": "23:00"
+     "readyAt": "23:00",
+     "base": "SGRW Szczecin",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DIVERS-1 (fikcyjny)",
+       "role": "nurek kierujący (PSP)"
+      },
+      {
+       "name": "DIVERS-2 (fikcyjny)",
+       "role": "nurek roboczy (PSP)"
+      },
+      {
+       "name": "DIVERS-3 (fikcyjny)",
+       "role": "nurek asekuracyjny (PSP)"
+      },
+      {
+       "name": "DIVERS-4 (fikcyjny)",
+       "role": "sygnalista (PSP)"
+      },
+      {
+       "name": "DIVERS-5 (fikcyjny)",
+       "role": "sprzętowiec (PSP)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -149,27 +233,75 @@
    "byHome": {
     "bieszczady-wetlinska": {
      "name": "Przewodnik z psem GOPR",
-     "readyAt": "19:00"
+     "readyAt": "19:00",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "DOG-1 (fikcyjny)",
+       "role": "przewodnik psa (GOPR)"
+      }
+     ]
     },
     "karkonosze-sniezka": {
      "name": "Zespół GOPR z psem lawinowym",
-     "readyAt": "17:00"
+     "readyAt": "17:00",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "DOG-1 (fikcyjny)",
+       "role": "przewodnik psa (GOPR)"
+      }
+     ]
     },
     "kasprowy": {
      "name": "Zespol z psem lawinowym",
-     "readyAt": "15:40"
+     "readyAt": "15:40",
+     "base": "baza wg scenariusza",
+     "operator": null,
+     "crew": [
+      {
+       "name": "DOG-1 (fikcyjny)",
+       "role": "przewodnik psa"
+      }
+     ]
     },
     "krakow-nowa-huta": {
      "name": "Policyjny pies tropiący",
-     "readyAt": "17:40"
+     "readyAt": "17:40",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "DOG-1 (fikcyjny)",
+       "role": "przewodnik psa (Policja)"
+      }
+     ]
     },
     "morskie-oko": {
      "name": "Zespol z psem tropiacym",
-     "readyAt": "14:10"
+     "readyAt": "14:10",
+     "base": "baza wg scenariusza",
+     "operator": null,
+     "crew": [
+      {
+       "name": "DOG-1 (fikcyjny)",
+       "role": "przewodnik psa"
+      }
+     ]
     },
     "zawrat": {
      "name": "Zespół z psem (doszedł z patrolem A)",
-     "readyAt": "19:15"
+     "readyAt": "19:15",
+     "base": "doszedł z patrolem A",
+     "operator": null,
+     "crew": [
+      {
+       "name": "DOG-1 (fikcyjny)",
+       "role": "przewodnik psa"
+      }
+     ]
     }
    },
    "fictional": true
@@ -228,7 +360,19 @@
    "byHome": {
     "rodzina-dziecko-las": {
      "name": "Dron termowizyjny GOPR Karkonosze",
-     "readyAt": "16:20"
+     "readyAt": "16:20",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "DRON-GOPR-KPZ-1 (fikcyjny)",
+       "role": "operator drona (GOPR)"
+      },
+      {
+       "name": "DRON-GOPR-KPZ-2 (fikcyjny)",
+       "role": "obserwator (GOPR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -287,23 +431,83 @@
    "byHome": {
     "zapora-huzele": {
      "name": "Dron termowizyjny PSP Krosno",
-     "readyAt": "08:16"
+     "readyAt": "08:16",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
     },
     "zapora-myczkowce": {
      "name": "Dron termowizyjny PSP Krosno",
-     "readyAt": "06:18"
+     "readyAt": "06:18",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
     },
     "zapora-tlo-olszanica": {
      "name": "Dron termowizyjny PSP Krosno",
-     "readyAt": "07:20"
+     "readyAt": "07:20",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
     },
     "zapora-uherce": {
      "name": "Dron termowizyjny PSP Krosno",
-     "readyAt": "06:37"
+     "readyAt": "06:37",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
     },
     "zapora-zaluz": {
      "name": "Dron termowizyjny PSP Krosno",
-     "readyAt": "09:29"
+     "readyAt": "09:29",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -362,43 +566,163 @@
    "byHome": {
     "bieszczady-wetlinska": {
      "name": "Dron termowizyjny GOPR",
-     "readyAt": "19:20"
+     "readyAt": "19:20",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona (GOPR)"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator (GOPR)"
+      }
+     ]
     },
     "karkonosze-sniezka": {
      "name": "Dron termowizyjny GOPR",
-     "readyAt": "16:30"
+     "readyAt": "16:30",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona (GOPR)"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator (GOPR)"
+      }
+     ]
     },
     "kasprowy": {
      "name": "Dron termowizyjny",
-     "readyAt": "15:15"
+     "readyAt": "15:15",
+     "base": "baza wg scenariusza",
+     "operator": null,
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator"
+      }
+     ]
     },
     "krakow-nowa-huta": {
      "name": "Dron Policji z termowizją",
-     "readyAt": "17:20"
+     "readyAt": "17:20",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona (Policja)"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator (Policja)"
+      }
+     ]
     },
     "miedzyzdroje": {
      "name": "Dron WOPR",
-     "readyAt": "14:20"
+     "readyAt": "14:20",
+     "base": "baza wg scenariusza",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona (WOPR)"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator (WOPR)"
+      }
+     ]
     },
     "morskie-oko": {
      "name": "Dron termowizyjny",
-     "readyAt": "14:30"
+     "readyAt": "14:30",
+     "base": "baza wg scenariusza",
+     "operator": null,
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator"
+      }
+     ]
     },
     "morzycko": {
      "name": "Dron termowizyjny PSP Gryfino",
-     "readyAt": "22:30"
+     "readyAt": "22:30",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
     },
     "sniardwy": {
      "name": "Dron WOPR z termowizją",
-     "readyAt": "17:40"
+     "readyAt": "17:40",
+     "base": "baza wg scenariusza",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona (WOPR)"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator (WOPR)"
+      }
+     ]
     },
     "tragedia-w-moryniu": {
      "name": "Dron termowizyjny PSP Gryfino",
-     "readyAt": "22:30"
+     "readyAt": "22:30",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
     },
     "zawrat": {
      "name": "Dron termowizyjny",
-     "readyAt": "19:05"
+     "readyAt": "19:05",
+     "base": "baza wg scenariusza",
+     "operator": null,
+     "crew": [
+      {
+       "name": "DRONE-1 (fikcyjny)",
+       "role": "operator drona"
+      },
+      {
+       "name": "DRONE-2 (fikcyjny)",
+       "role": "obserwator"
+      }
+     ]
     }
    },
    "fictional": true
@@ -449,19 +773,99 @@
    "byHome": {
     "bieszczady-wetlinska": {
      "name": "GOPR Bieszczady patrol A (Ustrzyki Górne)",
-     "readyAt": "17:50"
+     "readyAt": "17:50",
+     "base": "Ustrzyki Górne",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-A-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-A-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "karkonosze-sniezka": {
      "name": "GOPR Karkonosze patrol A (Dom Śląski)",
-     "readyAt": "16:00"
+     "readyAt": "16:00",
+     "base": "Dom Śląski",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-A-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-A-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "kasprowy": {
      "name": "Patrol GOPR A (4 os.)",
-     "readyAt": "15:20"
+     "readyAt": "15:20",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-A-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-A-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "morskie-oko": {
      "name": "Patrol GOPR A (schronisko)",
-     "readyAt": "14:00"
+     "readyAt": "14:00",
+     "base": "schronisko",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-A-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-A-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-A-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -512,19 +916,99 @@
    "byHome": {
     "bieszczady-wetlinska": {
      "name": "GOPR Bieszczady patrol B (Cisna / Wetlina)",
-     "readyAt": "18:05"
+     "readyAt": "18:05",
+     "base": "Cisna / Wetlina",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-B-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-B-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "karkonosze-sniezka": {
      "name": "GOPR Karkonosze patrol B (Karpacz)",
-     "readyAt": "16:20"
+     "readyAt": "16:20",
+     "base": "Karpacz",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-B-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-B-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "kasprowy": {
      "name": "Patrol GOPR B (stacja gorna)",
-     "readyAt": "15:00"
+     "readyAt": "15:00",
+     "base": "stacja gorna",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-B-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-B-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "morskie-oko": {
      "name": "Patrol GOPR B (parking Palenica)",
-     "readyAt": "14:20"
+     "readyAt": "14:20",
+     "base": "parking Palenica",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-B-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-B-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-B-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -575,7 +1059,27 @@
    "byHome": {
     "rodzina-dziecko-las": {
      "name": "GOPR Karkonosze - patrol A (Karpacz)",
-     "readyAt": "16:05"
+     "readyAt": "16:05",
+     "base": "Karpacz",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-KPZ-A-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-KPZ-A-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KPZ-A-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KPZ-A-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -626,7 +1130,27 @@
    "byHome": {
     "rodzina-dziecko-las": {
      "name": "GOPR Karkonosze - patrol B (ratownicy z dyżuru domowego)",
-     "readyAt": "16:35"
+     "readyAt": "16:35",
+     "base": "ratownicy z dyżuru domowego",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-KPZ-B-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-KPZ-B-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KPZ-B-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KPZ-B-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -677,27 +1201,147 @@
    "byHome": {
     "zapora-huzele": {
      "name": "GOPR Bieszczady - patrol Lesko",
-     "readyAt": "07:56"
+     "readyAt": "07:56",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-lesko": {
      "name": "GOPR Bieszczady - patrol Lesko",
-     "readyAt": "07:35"
+     "readyAt": "07:35",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-myczkowce": {
      "name": "GOPR Bieszczady - patrol Lesko",
-     "readyAt": "06:08"
+     "readyAt": "06:08",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-tlo-olszanica": {
      "name": "GOPR Bieszczady - patrol Lesko",
-     "readyAt": "07:10"
+     "readyAt": "07:10",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-tlo-tarnica": {
      "name": "GOPR Bieszczady - patrol Lesko",
-     "readyAt": "10:00"
+     "readyAt": "10:00",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-zaluz": {
      "name": "GOPR Bieszczady - patrol Lesko",
-     "readyAt": "09:19"
+     "readyAt": "09:19",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-LESKO-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -750,39 +1394,183 @@
    "byHome": {
     "bieszczady-wetlinska": {
      "name": "Śmigłowiec Policji (Rzeszów)",
-     "readyAt": "18:40"
+     "readyAt": "18:40",
+     "base": "Rzeszów",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (Policja)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (Policja)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (Policja)"
+      }
+     ]
     },
     "karkonosze-sniezka": {
      "name": "Śmigłowiec LPR (Wrocław)",
-     "readyAt": "16:15"
+     "readyAt": "16:15",
+     "base": "Wrocław",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
     },
     "kasprowy": {
      "name": "Smiglowiec TOPR",
-     "readyAt": "14:55"
+     "readyAt": "14:55",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (TOPR)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (TOPR)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (TOPR)"
+      }
+     ]
     },
     "miedzyzdroje": {
      "name": "Śmigłowiec SAR Marynarki Wojennej (Darłowo)",
-     "readyAt": "14:30"
+     "readyAt": "14:30",
+     "base": "Darłowo",
+     "operator": "SAR",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (SAR)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (SAR)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (SAR)"
+      }
+     ]
     },
     "morskie-oko": {
      "name": "Smiglowiec TOPR",
-     "readyAt": "14:15"
+     "readyAt": "14:15",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (TOPR)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (TOPR)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (TOPR)"
+      }
+     ]
     },
     "morzycko": {
      "name": "Śmigłowiec Policji (Szczecin)",
-     "readyAt": "22:40"
+     "readyAt": "22:40",
+     "base": "Szczecin",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (Policja)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (Policja)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (Policja)"
+      }
+     ]
     },
     "sniardwy": {
      "name": "Śmigłowiec LPR (Olsztyn)",
-     "readyAt": "17:30"
+     "readyAt": "17:30",
+     "base": "Olsztyn",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
     },
     "tragedia-w-moryniu": {
      "name": "Śmigłowiec Policji (Szczecin)",
-     "readyAt": "22:40"
+     "readyAt": "22:40",
+     "base": "Szczecin",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (Policja)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (Policja)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (Policja)"
+      }
+     ]
     },
     "zawrat": {
      "name": "Śmigłowiec TOPR",
-     "readyAt": "17:50"
+     "readyAt": "17:50",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "HELI-1 (fikcyjny)",
+       "role": "pilot dowódca (TOPR)"
+      },
+      {
+       "name": "HELI-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (TOPR)"
+      },
+      {
+       "name": "HELI-3 (fikcyjny)",
+       "role": "ratownik (TOPR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -835,7 +1623,23 @@
    "byHome": {
     "rodzina-dziecko-las": {
      "name": "Śmigłowiec LPR (Jelenia Góra)",
-     "readyAt": "16:40"
+     "readyAt": "16:40",
+     "base": "Jelenia Góra",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-JG-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-JG-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-JG-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -888,15 +1692,63 @@
    "byHome": {
     "zapora-lesko": {
      "name": "Śmigłowiec LPR (Sanok)",
-     "readyAt": "07:55"
+     "readyAt": "07:55",
+     "base": "Sanok",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-SANOK-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-SANOK-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-SANOK-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
     },
     "zapora-tlo-tarnica": {
      "name": "Śmigłowiec LPR (Sanok)",
-     "readyAt": "10:10"
+     "readyAt": "10:10",
+     "base": "Sanok",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-SANOK-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-SANOK-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-SANOK-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
     },
     "zapora-zaluz": {
      "name": "Śmigłowiec LPR (Sanok)",
-     "readyAt": "09:09"
+     "readyAt": "09:09",
+     "base": "Sanok",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-SANOK-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-SANOK-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-SANOK-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -945,11 +1797,35 @@
    "byHome": {
     "morzycko": {
      "name": "Łódź OSP Moryń",
-     "readyAt": "22:00"
+     "readyAt": "22:00",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-BOAT-1 (fikcyjny)",
+       "role": "sternik (OSP)"
+      },
+      {
+       "name": "OSP-BOAT-2 (fikcyjny)",
+       "role": "ratownik (OSP)"
+      }
+     ]
     },
     "tragedia-w-moryniu": {
      "name": "Łódź OSP Moryń",
-     "readyAt": "22:00"
+     "readyAt": "22:00",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-BOAT-1 (fikcyjny)",
+       "role": "sternik (OSP)"
+      },
+      {
+       "name": "OSP-BOAT-2 (fikcyjny)",
+       "role": "ratownik (OSP)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -996,11 +1872,43 @@
    "byHome": {
     "zapora-tlo-olszanica": {
      "name": "OSP Olszanica",
-     "readyAt": "07:00"
+     "readyAt": "07:00",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-OLSZANICA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-OLSZANICA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-OLSZANICA-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-uherce": {
      "name": "OSP Olszanica",
-     "readyAt": "06:17"
+     "readyAt": "06:17",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-OLSZANICA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-OLSZANICA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-OLSZANICA-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1044,7 +1952,15 @@
    "byHome": {
     "rodzina-dziecko-las": {
      "name": "Przewodnik z psem tropiącym GOPR",
-     "readyAt": "16:50"
+     "readyAt": "16:50",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "PIES-GOPR-KPZ-1 (fikcyjny)",
+       "role": "przewodnik psa (GOPR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1087,7 +2003,19 @@
    "byHome": {
     "krakow-nowa-huta": {
      "name": "Patrol Policji A (KP Nowa Huta)",
-     "readyAt": "16:45"
+     "readyAt": "16:45",
+     "base": "KP Nowa Huta",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-A-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-A-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1130,7 +2058,19 @@
    "byHome": {
     "krakow-nowa-huta": {
      "name": "Patrol Policji B",
-     "readyAt": "17:00"
+     "readyAt": "17:00",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-B-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-B-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1173,7 +2113,19 @@
    "byHome": {
     "rodzina-dziecko-las": {
      "name": "Patrol Policji (KP Karpacz)",
-     "readyAt": "15:55"
+     "readyAt": "15:55",
+     "base": "KP Karpacz",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-KARPACZ-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-KARPACZ-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1224,15 +2176,59 @@
    "byHome": {
     "morzycko": {
      "name": "Policja Gryfino + OSP - patrol brzegowy (termowizja ręczna)",
-     "readyAt": "22:05"
+     "readyAt": "22:05",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICE-SHORE-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICE-SHORE-2 (fikcyjny)",
+       "role": "policjant"
+      },
+      {
+       "name": "POLICE-SHORE-3 (fikcyjny)",
+       "role": "strażak OSP"
+      }
+     ]
     },
     "sniardwy": {
      "name": "Policja Pisz - patrol brzegowy",
-     "readyAt": "17:10"
+     "readyAt": "17:10",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICE-SHORE-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICE-SHORE-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
     },
     "tragedia-w-moryniu": {
      "name": "Policja Gryfino + OSP - patrol brzegowy (termowizja ręczna)",
-     "readyAt": "22:05"
+     "readyAt": "22:05",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICE-SHORE-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICE-SHORE-2 (fikcyjny)",
+       "role": "policjant"
+      },
+      {
+       "name": "POLICE-SHORE-3 (fikcyjny)",
+       "role": "strażak OSP"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1285,7 +2281,23 @@
    "byHome": {
     "sniardwy": {
      "name": "Łódź PSP JRG Pisz",
-     "readyAt": "17:20"
+     "readyAt": "17:20",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-BOAT-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-BOAT-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-BOAT-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1328,19 +2340,67 @@
    "byHome": {
     "zapora-huzele": {
      "name": "PSP JRG Lesko - zastęp",
-     "readyAt": "07:46"
+     "readyAt": "07:46",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-lesko": {
      "name": "PSP JRG Lesko - zastęp",
-     "readyAt": "07:25"
+     "readyAt": "07:25",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-myczkowce": {
      "name": "PSP JRG Lesko - zastęp",
-     "readyAt": "05:58"
+     "readyAt": "05:58",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     },
     "zapora-uherce": {
      "name": "PSP JRG Lesko - zastęp",
-     "readyAt": "06:27"
+     "readyAt": "06:27",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LESKO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1393,15 +2453,63 @@
    "byHome": {
     "zapora-huzele": {
      "name": "Łódź PSP JRG Sanok",
-     "readyAt": "08:06"
+     "readyAt": "08:06",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LODZ-SANOK-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SANOK-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SANOK-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      }
+     ]
     },
     "zapora-lesko": {
      "name": "Łódź PSP JRG Sanok",
-     "readyAt": "07:45"
+     "readyAt": "07:45",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LODZ-SANOK-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SANOK-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SANOK-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      }
+     ]
     },
     "zapora-zaluz": {
      "name": "Łódź PSP JRG Sanok",
-     "readyAt": "08:59"
+     "readyAt": "08:59",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LODZ-SANOK-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SANOK-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SANOK-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1454,7 +2562,23 @@
    "byHome": {
     "miedzyzdroje": {
      "name": "Łódź Morskiej Służby SAR (Świnoujście)",
-     "readyAt": "14:15"
+     "readyAt": "14:15",
+     "base": "Świnoujście",
+     "operator": "SAR",
+     "crew": [
+      {
+       "name": "SAR-BOAT-1 (fikcyjny)",
+       "role": "sternik (SAR)"
+      },
+      {
+       "name": "SAR-BOAT-2 (fikcyjny)",
+       "role": "ratownik (SAR)"
+      },
+      {
+       "name": "SAR-BOAT-3 (fikcyjny)",
+       "role": "ratownik (SAR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1497,7 +2621,19 @@
    "byHome": {
     "krakow-nowa-huta": {
      "name": "Straż Miejska (2 os.)",
-     "readyAt": "17:05"
+     "readyAt": "17:05",
+     "base": "baza wg scenariusza",
+     "operator": "Straż Miejska",
+     "crew": [
+      {
+       "name": "SM-1 (fikcyjny)",
+       "role": "strażnik miejski"
+      },
+      {
+       "name": "SM-2 (fikcyjny)",
+       "role": "strażnik miejski"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1548,7 +2684,27 @@
    "byHome": {
     "zawrat": {
      "name": "Patrol TOPR A (4 os.)",
-     "readyAt": "18:40"
+     "readyAt": "18:40",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "TOPR-A-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "TOPR-A-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-A-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-A-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1599,7 +2755,27 @@
    "byHome": {
     "zawrat": {
      "name": "Patrol TOPR B (dyżurka Murowaniec)",
-     "readyAt": "19:10"
+     "readyAt": "19:10",
+     "base": "dyżurka Murowaniec",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "TOPR-B-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "TOPR-B-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-B-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-B-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1648,19 +2824,67 @@
    "byHome": {
     "miedzyzdroje": {
      "name": "Łódź ratownicza WOPR (przystań morska)",
-     "readyAt": "14:10"
+     "readyAt": "14:10",
+     "base": "przystań morska",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-BOAT-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-BOAT-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
     },
     "morzycko": {
      "name": "Łódź WOPR Zachodniopomorskie",
-     "readyAt": "22:20"
+     "readyAt": "22:20",
+     "base": "baza wg scenariusza",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-BOAT-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-BOAT-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
     },
     "sniardwy": {
      "name": "Łódź WOPR Mazury (Mikołajki)",
-     "readyAt": "16:55"
+     "readyAt": "16:55",
+     "base": "Mikołajki",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-BOAT-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-BOAT-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
     },
     "tragedia-w-moryniu": {
      "name": "Łódź WOPR Zachodniopomorskie",
-     "readyAt": "22:20"
+     "readyAt": "22:20",
+     "base": "baza wg scenariusza",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-BOAT-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-BOAT-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1709,7 +2933,19 @@
    "byHome": {
     "miedzyzdroje": {
      "name": "Skuter WOPR (kąpielisko Międzyzdroje)",
-     "readyAt": "14:00"
+     "readyAt": "14:00",
+     "base": "kąpielisko Międzyzdroje",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-JETSKI-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-JETSKI-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
     }
    },
    "fictional": true
@@ -1758,11 +2994,35 @@
    "byHome": {
     "zapora-myczkowce": {
      "name": "Łódź WOPR Bieszczady (Polańczyk)",
-     "readyAt": "05:48"
+     "readyAt": "05:48",
+     "base": "Polańczyk",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-SOLINA-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-SOLINA-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
     },
     "zapora-uherce": {
      "name": "Łódź WOPR Bieszczady (Polańczyk)",
-     "readyAt": "06:07"
+     "readyAt": "06:07",
+     "base": "Polańczyk",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-SOLINA-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-SOLINA-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
     }
    },
    "fictional": true
