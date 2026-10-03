@@ -494,7 +494,7 @@ $("pSave").onclick = async () => {
   const rej = state.metrics?.policy?.rejected_edits || [];
   $("pMsg").innerHTML = rej.length && before === after
     ? `<span style="color:var(--deny)">Gateway rejected the edit, last good policy stays active: ${esc(JSON.stringify(rej.at(-1)))}</span>`
-    : `<span style="color:var(--allow)">Applied. Policy <span class="mono">${esc(before || "?")}</span> → <span class="mono">${esc(j.version || after || "?")}</span>, logged as policy_changed in the audit log. Re-send a console request to see the effect.</span>`;
+    : `<span style="color:var(--allow)">Applied. Policy <span class="mono">${esc(before || "?")}</span> → <span class="mono">${esc(j.version || after || "?")}</span>, logged as policy_changed in the audit log.${(j.changed || []).length ? `<ul style="margin:6px 0 0;padding-left:18px">${j.changed.map(c => `<li class="mono">${esc(c)}</li>`).join("")}</ul>` : " No effective change."} Re-send a console request to see the effect.</span>`;
   renderPolicy(true);
 };
 $("pReset").onclick = async () => {
