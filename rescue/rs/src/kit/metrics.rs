@@ -1,7 +1,6 @@
 //! Port of Sources/RescueKit/Metrics.swift
 //! Hand-written Prometheus text exposition (format 0.0.4) for the local servers. No dependencies.
 //! One process-wide registry: `Metrics::shared()`. All metric names get the `rescue_` prefix.
-use crate::kit::*;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -74,9 +73,6 @@ impl Metrics {
         *SILENT_SECONDS
     }
     pub const BUCKETS: [f64; 14] = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0, 30.0];
-    pub fn buckets() -> &'static [f64] {
-        &Self::BUCKETS
-    }
     pub const TEXT_TYPE: &'static str = "text/plain; version=0.0.4; charset=utf-8";
     pub fn text_type() -> &'static str {
         Self::TEXT_TYPE
@@ -181,19 +177,6 @@ impl Metrics {
         }
         st.clients.insert(id.clone());
         id
-    }
-
-    /// Normalised path label: only known routes, everything else "other" (scanners can't blow up cardinality).
-    pub fn path_label(p: &str, known: &HashSet<String>) -> String {
-        if known.contains(p) {
-            p.to_string()
-        } else if p.starts_with("/web/") {
-            "/web/*".into()
-        } else if p.starts_with("/out/") {
-            "/out/*".into()
-        } else {
-            "other".into()
-        }
     }
 
     pub fn render(&self) -> Vec<u8> {

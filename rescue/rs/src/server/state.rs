@@ -227,7 +227,6 @@ impl Roster {
     pub fn list(&self) -> Vec<RosterTeam> { self.0.lock().teams.clone() }
     pub fn team(&self, id: &str) -> Option<RosterTeam> { self.0.lock().teams.iter().find(|t| t.id == id).cloned() }
     pub fn is_touched(&self, sc: &str) -> bool { self.0.lock().touched.contains(sc) }
-    pub fn version(&self) -> i64 { self.0.lock().version }
     /// incidents already closed after a live find (release teams + one "found" feed event); true the first time
     pub fn mark_ended(&self, sc: &str) -> bool {
         let mut g = self.0.lock();

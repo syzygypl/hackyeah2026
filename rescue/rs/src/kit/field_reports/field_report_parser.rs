@@ -91,11 +91,6 @@ pub struct FieldReportParser {
     pub timeout_s: f64,
 }
 
-#[derive(Debug, Clone)]
-pub struct FieldReportParserParseError {
-    pub description: String,
-}
-
 /// Flat shape the small local model fills (easier than a polymorphic list); mapped to FieldHints in code.
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -461,9 +456,6 @@ Segmenty:
         ("murowan", "S15"), ("hala gasienicow", "S15"), ("hali gasienicow", "S15"),
         ("wołoszyn", "S16"), ("woloszyn", "S16"), ("za mnichem", "S18"), ("wodogrzmot", "S19"),
     ];
-    pub fn aliases() -> &'static [(&'static str, &'static str)] {
-        Self::ALIASES
-    }
 
     pub fn find_segments(&self, f: &str) -> Vec<String> {
         let mut found: Vec<String> = vec![];

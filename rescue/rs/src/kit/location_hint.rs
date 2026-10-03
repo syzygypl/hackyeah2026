@@ -11,6 +11,7 @@ pub struct LocationHint {
     pub minute: i64,
     pub clock: String,
     pub title: String,
+    #[allow(dead_code)] // the provider's explanation (Swift parity); no response carries it
     pub detail: String,
     pub evidence: LocationHintEvidence,
     /// Extra marker for the map (e.g. the car at the trailhead).
@@ -77,11 +78,6 @@ impl Default for LocationHintConditions {
             ice: false,
             note: String::new(),
         }
-    }
-}
-impl LocationHintConditions {
-    pub fn new() -> Self {
-        Self::default()
     }
 }
 

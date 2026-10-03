@@ -353,16 +353,12 @@ async fn advisor_incidents(only: Option<&BTreeSet<String>>, skip: Option<&str>) 
         let status = if mine.iter().any(|e| e.kind == "found") { "ended" } else if mine.is_empty() { "replay" } else { "live" };
         out.push(AdvIn {
             sc: sc.clone(),
-            title: parts[0].to_string(),
             place: if parts.len() > 1 { parts[1..].join(" - ") } else { sc.clone() },
             at: ipp,
             minute: happened,
-            reported_minute: reported,
-            category: gs(&subj, "category").unwrap_or("").to_string(),
             text: lines.join("\n"),
             status: status.to_string(),
             wind_from_deg: wind.and_then(|w| gf(w, "windFromDeg")),
-            wind_ms: wind.and_then(|w| gf(w, "windMs")),
         });
     }
     out

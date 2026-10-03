@@ -50,13 +50,6 @@ impl Store {
             Store::Neon(n) => n.report_count(sc).await,
         }
     }
-    /// Version of a document, 0 when it does not exist. Shared stores only; the local store never changes under us.
-    pub async fn doc_version(&self, key: &str) -> i64 {
-        match self {
-            Store::File(_) => 0,
-            Store::Neon(n) => n.doc_version(key).await,
-        }
-    }
     pub async fn doc(&self, key: &str) -> Option<(i64, Vec<u8>)> {
         match self {
             Store::File(_) => None,
@@ -285,17 +278,6 @@ impl NeonStore {
         };
         rows.ok().and_then(|r| r.first().map(|x| int(x.get("n")))).unwrap_or(0)
     }
-    /// Studio saves (POST /story/save) live as documents "scn:<name>" so every instance has them
-    pub async fn saved_scenario_versions(&self) -> HashMap<String, i64> {
-        let rows = self.sql("SELECT k, version FROM rescue_docs WHERE k LIKE 'scn:%'", vec![]).await.unwrap_or_default();
-        let mut m = HashMap::new();
-        for r in rows {
-            if let Some(k) = r.get("k").and_then(|k| k.as_str()) {
-                m.entry(k.chars().skip(4).collect()).or_insert(int(r.get("version")));
-            }
-        }
-        m
-    }
     /// SharedState.pull in one round trip: version of every document in `keys` and every saved scenario ("scn:<name>"),
     /// with the body only where the version differs from `known` (k -> version this instance holds). k -> (version, body).
     pub async fn doc_changes(&self, keys: &[&str], known: &HashMap<String, i64>) -> Result<HashMap<String, (i64, Option<String>)>, String> {
@@ -313,19 +295,6 @@ impl NeonStore {
             }
         }
         Ok(m)
-    }
-    pub async fn doc_versions(&self, keys: &[&str]) -> HashMap<String, i64> {
-        let rows = self
-            .sql("SELECT k, version FROM rescue_docs WHERE k = ANY($1)", vec![json!(format!("{{{}}}", keys.join(",")))])
-            .await
-            .unwrap_or_default();
-        let mut m = HashMap::new();
-        for r in rows {
-            if let Some(k) = r.get("k").and_then(|k| k.as_str()) {
-                m.entry(k.to_string()).or_insert(int(r.get("version")));
-            }
-        }
-        m
     }
 
     // live feed (LiveFeed): one sequence for every instance
@@ -399,9 +368,6 @@ impl NeonStore {
     pub async fn feed_last(&self, sc: &str) -> Option<LiveFeedEvent> {
         let rows = self.sql("SELECT seq, body FROM rescue_feed WHERE sc = $1 ORDER BY seq DESC LIMIT 1", vec![json!(sc)]).await.unwrap_or_default();
         Self::feed_events(&rows).into_iter().next()
-    }
-    async fn doc_version(&self, key: &str) -> i64 {
-        self.sql("SELECT version FROM rescue_docs WHERE k = $1", vec![json!(key)]).await.ok().and_then(|r| r.first().map(|x| int(x.get("version")))).unwrap_or(0)
     }
     pub async fn doc(&self, key: &str) -> Option<(i64, Vec<u8>)> {
         let rows = self.sql("SELECT version, v FROM rescue_docs WHERE k = $1", vec![json!(key)]).await.ok()?;

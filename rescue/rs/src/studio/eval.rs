@@ -1,6 +1,5 @@
 //! Port of Sources/RescueStudioKit/Eval.swift
 //! Read-only rescue/eval/ outputs for the app's Walidacja mode, served by rescue-server.
-use crate::kit::*;
 use crate::studio::*;
 use serde_json::{json, Value};
 

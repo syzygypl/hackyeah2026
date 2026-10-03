@@ -340,6 +340,7 @@ impl InvPre {
 }
 
 /// condition of one unit from its estimated path up to atMin (CONTRACT "Zasoby i dziennik" 3)
+#[allow(unused_assignments)] // `still` reset by a rest event after the last step (Swift port, same logic)
 fn inv_health(kind: &str, unit: &Obj, path: Option<&Vec<Vec<f64>>>, at_min: i64, start: i64, events: &[InvEvent], dem: Option<&DEM>, params: &Obj) -> (Obj, bool) {
     let p = |k: &str| inv_p(params, kind, k);
     let empty = Map::new();

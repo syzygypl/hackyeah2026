@@ -139,10 +139,6 @@ impl TimelineCache {
             file_stamps(name)
         )
     }
-    pub async fn engine(&self, name: &str, live: bool, features: Option<&str>) -> Option<(String, Arc<TimelineEngine>)> {
-        let k = self.key(name, live, features).await;
-        self.engine_for(k, name, live, features).await
-    }
     async fn engine_for(&self, k: String, name: &str, live: bool, features: Option<&str>) -> Option<(String, Arc<TimelineEngine>)> {
         if let Some(e) = self.engines.lock().get(&k) {
             return Some((k, e.clone()));

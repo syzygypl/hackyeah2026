@@ -1,7 +1,6 @@
 //! Port of Sources/RescueKit/ModuleRegistry.swift
 use crate::kit::*;
 use once_cell::sync::Lazy;
-use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
 /// Event schema a module (provider) accepts, for the Story Studio palette and GET /modules.
@@ -25,9 +24,6 @@ impl ModuleField {
     pub fn d(key: &str, label: &str, type_: &str, def: &str) -> ModuleField {
         Self::new(key, label, type_, def, vec![])
     }
-    pub fn json(&self) -> Value {
-        json!({"key": self.key, "label": self.label, "type": self.type_, "default": self.def, "options": self.options})
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -40,10 +36,6 @@ pub struct ModuleSchema {
 impl ModuleSchema {
     pub fn new(name: &str, label: &str, help: &str, fields: Vec<ModuleField>) -> ModuleSchema {
         ModuleSchema { name: name.into(), label: label.into(), help: help.into(), fields }
-    }
-    pub fn json(&self) -> Value {
-        json!({"name": self.name, "label": self.label, "help": self.help,
-               "fields": self.fields.iter().map(|f| f.json()).collect::<Vec<_>>()})
     }
 }
 

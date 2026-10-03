@@ -66,11 +66,6 @@ impl StoryPipeline {
         swift_json_bytes(&doc)
     }
 
-    /// Swift `runData(s)` with defaults (no timeline, frameMin 5, frames true).
-    pub fn run_data_default(scenario: &Scenario) -> Vec<u8> {
-        Self::run_data(scenario, None, 5, true)
-    }
-
     /// Swift writes GET /modules with JSONSerialization and no `.sortedKeys`, i.e. in Dictionary hash order, which Swift
     /// seeds per dictionary instance. The order below is the one the Swift server served (rs/golden/modules.json):
     /// {categories, modules}, each module {help, label, name, fields}, each field in its own order (MODULE_FIELD_ORDER;

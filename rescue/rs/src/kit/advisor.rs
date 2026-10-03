@@ -18,16 +18,11 @@ pub struct Advisor;
 #[derive(Clone, Debug)]
 pub struct AdvisorIncident {
     pub sc: String,
-    pub title: String,
     pub place: String,
     pub at: Vec<f64>, // [lat, lon] (IPP)
     pub minute: i64,  // when it happened (last contact), absolute minutes (see `minutes`)
-    pub reported_minute: i64,
-    pub category: String,
-    pub text: String,   // incident + subject note + scripted events + live feed notes
-    pub status: String, // live | ended | replay
+    pub text: String, // incident + subject note + scripted events + live feed notes
     pub wind_from_deg: Option<f64>,
-    pub wind_ms: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

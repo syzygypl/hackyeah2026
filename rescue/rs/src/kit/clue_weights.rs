@@ -291,10 +291,6 @@ impl ClueWeights {
         base.join("scenarios/weights/clue-weights.json").to_string_lossy().into_owned()
     }
 
-    pub fn load_params() -> ClueWeightsParams {
-        CACHED_PARAMS.clone()
-    }
-
     /// None when no hint is weightable (old scenarios without clues stay untouched)
     pub fn new(s: &Scenario, hints: &[LocationHint], grid: &ProbabilityGrid, params: Option<ClueWeightsParams>) -> Option<ClueWeights> {
         let p = params.unwrap_or_else(|| CACHED_PARAMS.clone());

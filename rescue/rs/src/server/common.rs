@@ -5,7 +5,7 @@ use axum::body::Bytes;
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use serde::Serialize;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value};
 use std::collections::HashMap;
 use std::future::Future;
 use std::path::{Path, PathBuf};

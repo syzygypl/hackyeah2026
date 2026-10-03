@@ -2,7 +2,6 @@
 //! Hardening for rescue-server on a LAN (--host) and on the public deploy (RESCUE_PUBLIC=1, writes only).
 //! Loopback-only by default. Any other --host REQUIRES a PIN (given with --pin or auto-generated, 6 digits).
 //! Loopback clients never need the PIN. LAN clients send it as header `X-Rescue-Pin` or JSON field `pin`.
-use crate::kit::*;
 use parking_lot::Mutex;
 use rand::Rng;
 use serde_json::Value;

@@ -122,12 +122,6 @@ impl LLM {
         }
     }
 
-    /// messages: [{role, content}] -> the assistant's content (a JSON string). Async variant.
-    pub async fn chat_async<M: Serialize, S: Serialize>(messages: &[M], schema: &S, name: &str, timeout: f64) -> Result<String, LLMFailure> {
-        let (url, auth, body) = Self::request(messages, schema, name)?;
-        Self::send(url, auth, body, timeout, Self::open_ai()).await
-    }
-
     /// messages: [{role, content}] -> the assistant's content (a JSON string). Blocking: runs the request on its own
     /// thread with a private current-thread runtime, so it is safe from any context (spawn_blocking, rayon, plain main).
     pub fn chat<M: Serialize, S: Serialize>(messages: &[M], schema: &S, name: &str, timeout: f64) -> Result<String, LLMFailure> {

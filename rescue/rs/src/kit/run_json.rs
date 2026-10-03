@@ -163,18 +163,6 @@ pub fn run_json_object(
     doc
 }
 
-pub fn write_run_json(
-    path: &str,
-    s: &Scenario,
-    grid: &ProbabilityGrid,
-    hints: &[LocationHint],
-    plans: &[SearchPlannerPlan],
-    summary: Map<String, Value>,
-) -> Result<(), String> {
-    let doc = run_json_object(s, grid, hints, plans, summary);
-    std::fs::write(path, swift_json(&Value::Object(doc))).map_err(|e| e.to_string())
-}
-
 pub fn weather_json(p: &SearchPlannerPlan) -> Map<String, Value> {
     let c = &p.conditions;
     let v = json!({"visibilityM": c.visibility_m, "windMs": c.wind_ms, "tempC": c.temp_c, "precip": c.precip,

@@ -16,9 +16,6 @@ type Obj = Map<String, Value>;
 fn zawrat_base() -> PathBuf {
     scenarios_dir().join("zawrat.json")
 }
-fn zawrat_terrain() -> PathBuf {
-    scenarios_dir().join("zawrat-terrain.json")
-}
 
 /// Swift `JSONSerialization.data(withJSONObject:options: [.sortedKeys])`.
 pub fn json_data(o: &Value) -> Vec<u8> {
@@ -147,7 +144,6 @@ struct StudioState {
     manual: Obj, // operator assignments by resource id (app: rola operator -> ratownik)
     base: Obj,   // scenario without events
     items: Vec<Obj>, // {id, input, events, parsedBy?, note?}
-    terrain_info: Obj,
     last_run: Vec<u8>,
     next_id: i64,
     undo_stack: Vec<(Obj, Vec<Obj>)>, // (base, items) before each change, for "Cofnij"
@@ -1193,7 +1189,6 @@ impl Studio {
                 manual: Map::new(),
                 base: Map::new(),
                 items: vec![],
-                terrain_info: Map::new(),
                 last_run: b"{}".to_vec(),
                 next_id: 1,
                 undo_stack: vec![],
@@ -1202,16 +1197,6 @@ impl Studio {
     }
 
     // MARK: bases
-
-    pub fn zawrat_template(&self) -> Obj {
-        zawrat_template()
-    }
-    pub fn auto_template(&self, ipp: &[f64], start_clock: &str) -> Obj {
-        auto_template(ipp, start_clock)
-    }
-    pub fn inside(&self, p: &[f64], bb: &Obj) -> bool {
-        inside(p, bb)
-    }
 
     pub fn new_story(&self, body: &[u8]) -> Vec<u8> {
         self.st.lock().new_story(body)
@@ -1269,9 +1254,6 @@ impl Studio {
 
     // MARK: state shared between server instances (rescue-server keeps it in its Store on Vercel)
 
-    pub fn has_story(&self) -> bool {
-        !self.st.lock().base.is_empty()
-    }
     pub fn export_story(&self) -> Vec<u8> {
         let st = self.st.lock();
         json_data(&json!({"base": st.base, "items": st.items, "nextId": st.next_id,

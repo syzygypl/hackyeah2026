@@ -16,13 +16,6 @@ pub enum PersonTrackBehaviour {
     Stay,
 }
 impl PersonTrackBehaviour {
-    pub fn raw_value(&self) -> &'static str {
-        match self {
-            PersonTrackBehaviour::Trail => "trail",
-            PersonTrackBehaviour::Downhill => "downhill",
-            PersonTrackBehaviour::Stay => "stay",
-        }
-    }
 }
 
 static CLOCK_IN_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\b(\d{1,2}):(\d{2})\b").unwrap());

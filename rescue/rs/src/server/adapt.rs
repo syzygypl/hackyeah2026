@@ -8,7 +8,7 @@ use axum::body::Bytes;
 use once_cell::sync::Lazy;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub type Obj = Map<String, Value>;
 
@@ -141,16 +141,12 @@ pub async fn assess(run: Bytes, step: Option<i64>, use_llm: bool) -> Vec<u8> {
 
 pub struct AdvIn {
     pub sc: String,
-    pub title: String,
     pub place: String,
     pub at: Vec<f64>,
     pub minute: i64,
-    pub reported_minute: i64,
-    pub category: String,
     pub text: String,
     pub status: String,
     pub wind_from_deg: Option<f64>,
-    pub wind_ms: Option<f64>,
 }
 pub fn advisor_minutes(date: &str, clock: &str) -> i64 { Advisor::minutes(date, clock) as i64 }
 pub fn advisor_clock(m: i64) -> String { Advisor::clock(m) }
@@ -160,16 +156,11 @@ pub fn advisor_analyze(incs: &[AdvIn], catalogue_path: &str) -> Obj {
         .iter()
         .map(|i| AdvisorIncident {
             sc: i.sc.clone(),
-            title: i.title.clone(),
             place: i.place.clone(),
             at: i.at.clone(),
             minute: i.minute,
-            reported_minute: i.reported_minute,
-            category: i.category.clone(),
             text: i.text.clone(),
-            status: i.status.clone(),
             wind_from_deg: i.wind_from_deg,
-            wind_ms: i.wind_ms,
         })
         .collect();
     let cat = AdvisorCatalogue::load(catalogue_path);

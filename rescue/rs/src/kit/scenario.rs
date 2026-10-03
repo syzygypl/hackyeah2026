@@ -212,9 +212,6 @@ pub const ALL_FEATURES: [&str; 6] =
     ["traceWindow", "eventsBeforeStart", "podModel", "availabilityWindows", "hypothermiaModel", "behaviourLayers"];
 
 impl Scenario {
-    pub fn all_features() -> &'static [&'static str] {
-        &ALL_FEATURES
-    }
 
     pub fn has(&self, f: &str) -> bool {
         self.features.as_ref().and_then(|m| m.get(f)).copied() == Some(true)
@@ -405,9 +402,6 @@ impl From<[f64; 2]> for Coord {
 pub struct Geo;
 impl Geo {
     pub const M_PER_DEG_LAT: f64 = 111_320.0;
-    pub fn m_per_deg_lat() -> f64 {
-        Self::M_PER_DEG_LAT
-    }
     #[inline]
     pub fn meters(a: Coord, b: Coord) -> f64 {
         let kx = Self::M_PER_DEG_LAT * ((a.lat + b.lat) / 2.0 * std::f64::consts::PI / 180.0).cos();

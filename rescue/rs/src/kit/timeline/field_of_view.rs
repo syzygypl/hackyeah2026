@@ -34,11 +34,6 @@ impl Default for FieldOfViewEnv {
         FieldOfViewEnv { dark: false, visibility_m: 10_000.0, wind_ms: 3.0, wind_from_deg: None }
     }
 }
-impl FieldOfViewEnv {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
 
 impl FieldOfView {
     pub const TARGET_M: f64 = 0.5;

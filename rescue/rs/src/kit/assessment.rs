@@ -29,7 +29,6 @@ struct AssessmentEv {
     id: String,
     t: String,
     source: String,
-    kind: String,
     label: String,
 }
 
@@ -94,9 +93,6 @@ impl Assessment {
     pub fn model() -> String {
         LLM::model()
     }
-    pub fn ollama_url() -> String {
-        LLM::endpoint()
-    }
     pub fn last_failure() -> String {
         LAST_FAILURE.lock().clone()
     }
@@ -138,7 +134,6 @@ impl Assessment {
                 id: format!("E{}", f.evidence.len() + 1),
                 t: s_of(s.get("t")).unwrap_or_default(),
                 source: s_of(s.get("source")).unwrap_or_default(),
-                kind: kind.clone(),
                 label: label.clone(),
             });
             if kind == "searched" {

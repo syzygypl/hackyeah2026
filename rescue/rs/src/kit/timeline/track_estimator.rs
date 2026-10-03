@@ -81,11 +81,6 @@ impl TrackEstimator {
         (-3.5 * (slope + 0.05).abs()).exp() / (-3.5 * 0.05f64).exp()
     }
 
-    /// Path between two fixes (with the kind of path, for the accuracy growth factor).
-    pub fn path(&self, a: &TrackFix, b: &TrackFix, kind: &str, along: Option<&str>) -> (Vec<Coord>, f64) {
-        self.route(a.coord(), b.coord(), kind, along, None, None)
-    }
-
     /// Path A -> B. `along`: constraint mode (reverse = back the way it came = trails for walkers); `color`: only trails
     /// whose name starts with it; `via`: a reported target, used when the detour through it is plausible (<= 1.5x + 200 m).
     pub fn route(&self, a: Coord, b: Coord, kind: &str, along_in: Option<&str>, color: Option<&str>, via: Option<Coord>) -> (Vec<Coord>, f64) {

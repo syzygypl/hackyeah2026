@@ -9,12 +9,10 @@ pub trait HintProvider {
 
 /// Scenario time to wall-clock time for the replay (unused: everything is synchronous here).
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ScenarioClock {
-    pub ms_per_minute: i64,
-}
+pub struct ScenarioClock;
 impl ScenarioClock {
-    pub fn new(ms_per_minute: i64) -> Self {
-        ScenarioClock { ms_per_minute }
+    pub fn new(_ms_per_minute: i64) -> Self {
+        ScenarioClock
     }
 }
 

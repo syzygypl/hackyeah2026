@@ -115,9 +115,6 @@ pub struct SearchPlannerSegHistory {
     pub types: BTreeSet<String>,
 }
 impl SearchPlannerSegHistory {
-    pub fn new() -> Self {
-        Self::default()
-    }
     pub fn add(&mut self, pod: f64, type_: Option<&str>) {
         self.cum_pod = 1.0 - (1.0 - self.cum_pod) * (1.0 - pod);
         if let Some(t) = type_ {
@@ -189,7 +186,6 @@ pub struct SearchPlannerOption {
 pub struct SearchPlannerSimJob {
     pub resource: String,
     pub segment: String,
-    pub start: f64,
     pub end: f64,
     pub cells: Vec<usize>,
     pub pods: Vec<f64>,
@@ -415,7 +411,7 @@ impl SearchPlanner {
     }
 
     /// Minutes to travel from `from` to the segment core.
-    pub fn travel(ctx: &SearchPlannerCtx, p: &SearchPlannerProfile, from: Coord, seg: usize, core: &[usize], c: &Cond) -> f64 {
+    pub fn travel(ctx: &SearchPlannerCtx, p: &SearchPlannerProfile, from: Coord, core: &[usize], c: &Cond) -> f64 {
         let to = ctx.centroid_of(core);
         let d = Geo::meters(from, to);
         if p.air {
@@ -440,7 +436,7 @@ impl SearchPlanner {
     }
 
     /// Drive + walk via the access roads. None without roads / vehicle.
-    pub fn drive_travel(ctx: &SearchPlannerCtx, p: &SearchPlannerProfile, vehicle_from: Option<Coord>, seg: usize, core: &[usize], c: &Cond) -> Option<(f64, Coord)> {
+    pub fn drive_travel(ctx: &SearchPlannerCtx, p: &SearchPlannerProfile, vehicle_from: Option<Coord>, core: &[usize], c: &Cond) -> Option<(f64, Coord)> {
         let vf = vehicle_from?;
         if p.air {
             return None;
@@ -458,7 +454,7 @@ impl SearchPlanner {
             };
             let along = road[..k + 1].windows(2).fold(0.0, |a, w| a + Geo::meters(w[0], w[1]));
             let drive = 10.0 + Geo::meters(vf, road[0]) * 1.4 / (50_000.0 / 60.0) + along * 1.2 / (25_000.0 / 60.0);
-            let walk = Self::travel(ctx, p, road[k], seg, core, c);
+            let walk = Self::travel(ctx, p, road[k], core, c);
             if drive + walk < best.map(|b| b.0).unwrap_or(f64::INFINITY) {
                 best = Some((drive + walk, road[k]));
             }
@@ -670,11 +666,11 @@ impl SearchPlanner {
                 continue;
             }
             let pod = sum_f(cr.iter().map(|&i| poa[i] * Self::pod(ctx, p, &r.type_, i, c))) / seg_poa;
-            let mut tr = Self::travel(ctx, p, from, seg, &cr, c);
+            let mut tr = Self::travel(ctx, p, from, &cr, c);
             let mut by_vehicle = false;
             // a team still at its base can take the vehicle instead (once out in the field it walks)
             if at_base {
-                if let Some((dt, _)) = Self::drive_travel(ctx, p, r.vehicle_from.as_ref().map(|v| Coord::from_slice(v)), seg, &cr, c) {
+                if let Some((dt, _)) = Self::drive_travel(ctx, p, r.vehicle_from.as_ref().map(|v| Coord::from_slice(v)), &cr, c) {
                     if dt < tr {
                         tr = dt;
                         by_vehicle = true;
@@ -998,7 +994,6 @@ impl SearchPlanner {
             jobs.push(SearchPlannerSimJob {
                 resource: res[i].id.clone(),
                 segment: s.segments[best.seg].id.clone(),
-                start: free[i],
                 end,
                 cells: best.core.clone(),
                 pods,
@@ -1008,22 +1003,6 @@ impl SearchPlanner {
             busy_seg[i] = Some(best.seg);
         }
         jobs
-    }
-
-    /// Cumulative probability of finding over time (minutes from now).
-    #[allow(clippy::too_many_arguments)]
-    pub fn simulate(
-        grid: &ProbabilityGrid,
-        start: &[f64],
-        c: &Cond,
-        minute: i64,
-        smart: bool,
-        horizon_min: f64,
-        state: &HashMap<String, SearchPlannerTeamState>,
-        history: &HashMap<String, SearchPlannerSegHistory>,
-    ) -> Vec<(f64, f64)> {
-        let jobs = Self::simulate_jobs(grid, start, c, minute, smart, horizon_min, state, history);
-        Self::curve(start, &jobs)
     }
 
     /// The curve part of `simulate` for already simulated jobs (sorts them by end, like Swift).
