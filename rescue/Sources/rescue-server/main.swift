@@ -677,6 +677,69 @@ func incidentsData() async -> Data {
     return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])) ?? Data("[]".utf8))
 }
 
+// MARK: advisor (Doradca, CONTRACT.md "Advisor"): GET /api/advisor - do several incidents share one common source?
+// Input = every listed incident (scenario file: IPP, date + last contact / start, category, texts) + its live feed notes,
+// plus the hazards catalogue scenarios/hazards/hazards.json. Engine: RescueKit/Advisor.swift (deterministic, explained).
+// ?llm=1 adds the model's plain-Polish summary of the top hypothesis (grounded in evidence ids, rules fallback).
+// ?only=a,b,c / ?skip=<prefix>: analyse a subset (tests, "quiet day"). Cached by (scenario files, feed seq, query).
+actor AdvisorCache {
+    var c: [String: Data] = [:]
+    func get(_ k: String) -> Data? { c[k] }
+    func put(_ k: String, _ d: Data) { if c.count > 50 { c.removeAll() }; c[k] = d }
+}
+let advisorCache = AdvisorCache()
+func advisorIncidents(only: Set<String>?, skip: String?) async -> [Advisor.Incident] {
+    let feed = await liveFeed.since(0, sc: nil).1
+    var out: [Advisor.Incident] = []
+    for sc in scenarioNames() where (only.map { $0.contains(sc) } ?? true) && !(skip.map { !$0.isEmpty && sc.hasPrefix($0) } ?? false) {
+        guard let d = (try? Data(contentsOf: scenariosDir.appendingPathComponent("\(sc).json"))).flatMap({ try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }),
+              let ipp = (d["ipp"] as? [String: Any])?["at"] as? [Double], ipp.count == 2 else { continue }
+        let date = d["date"] as? String ?? "", start = d["startClock"] as? String ?? "00:00"
+        let subj = d["subject"] as? [String: Any] ?? [:]
+        let reported = Advisor.minutes(date: date, clock: start)
+        // last contact is in the past: a clock after the start is the previous evening (Scenario.minutePast)
+        var happened = reported
+        if let lc = subj["lastContact"] as? String {
+            let m = Advisor.minutes(date: date, clock: lc)
+            happened = m - reported > 120 ? m - 1440 : m
+        }
+        let inc = (d["incident"] as? String ?? sc).replacingOccurrences(of: #"\s*\(scenariusz[^)]*\)\s*$"#, with: "", options: .regularExpression)
+        let parts = inc.components(separatedBy: " - ")
+        // reports only: the scenario's own setup modules (terrain, weather, rings) describe the place, not what people reported
+        let setup: Set<String> = ["Terrain", "TerrainDifficulty", "WeatherConditions", "KoesterRings", "Weather"]
+        let all = ((d["events"] as? [[String: Any]]) ?? [])
+        let wind = all.first { $0["provider"] as? String == "WeatherConditions" && $0["windFromDeg"] != nil }
+        let evs = all.filter { !setup.contains($0["provider"] as? String ?? "") && $0["found"] as? Bool != true && $0["epilogue"] as? Bool != true && !(($0["title"] as? String ?? "").uppercased().contains("ZNALEZIONO")) }
+        let mine = feed.filter { $0.sc == sc }
+        let text = ([inc, subj["note"] as? String ?? ""] + evs.map { "\($0["title"] as? String ?? ""). \($0["detail"] as? String ?? "")" }
+                    + mine.map { "\($0.title). \($0.note ?? "")" }).joined(separator: "\n")
+        out.append(Advisor.Incident(sc: sc, title: parts[0], place: parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc, at: ipp,
+                                    minute: happened, reportedMinute: reported, category: subj["category"] as? String ?? "", text: text,
+                                    status: mine.contains { $0.kind == "found" } ? "ended" : mine.isEmpty ? "replay" : "live",
+                                    windFromDeg: (wind?["windFromDeg"] as? NSNumber)?.doubleValue, windMs: (wind?["windMs"] as? NSNumber)?.doubleValue))
+    }
+    return out
+}
+func advisorData(_ q: Req) async -> Data {
+    let only = q.query["only"].map { Set($0.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter(validName)) }
+    let skip = q.query["skip"].flatMap { validName($0) ? $0 : nil }
+    let llm = q.query["llm"] == "1"
+    let catPath = scenariosDir.appendingPathComponent("hazards/hazards.json").path
+    let catStamp = ((try? FileManager.default.attributesOfItem(atPath: catPath))?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+    let key = "\(await liveFeed.currentSeq())|\(catStamp)|\(only?.sorted().joined(separator: ",") ?? "*")|\(skip ?? "")|\(llm)|" + scenarioNames().map(scenarioStamp).joined(separator: ";")
+    if let c = await advisorCache.get(key) { return response("200 OK", json, c) }
+    let incs = await advisorIncidents(only: only, skip: skip)
+    var r = Advisor.analyze(incs, catalogue: Advisor.Catalogue.load(catPath))
+    if let top = (r["hypotheses"] as? [[String: Any]])?.first {
+        r["narrative"] = llm ? await Advisor.narrate(top) : Advisor.rulesNarrative(top)
+    }
+    r["computedAt"] = ISO8601DateFormatter().string(from: Date())
+    r["positions"] = Dictionary(uniqueKeysWithValues: incs.map { ($0.sc, ["at": $0.at, "time": Advisor.clock($0.minute), "status": $0.status] as [String: Any]) })
+    let d = (try? JSONSerialization.data(withJSONObject: r, options: [.sortedKeys])) ?? Data("{}".utf8)
+    await advisorCache.put(key, d)
+    return response("200 OK", json, d)
+}
+
 // MARK: exercise (training mode, CONTRACT.md "Exercise mode"): pick up a fictional search mid-way, decide, get scored.
 // Scenarios rescue/scenarios/exercises/<id>.json (not incidents), hidden truth rescue/exercises/<id>.truth.json (never served).
 // Team search outcomes use the engine's own numbers (ExerciseProbe: planner POD / travel / sweep per team and segment);
@@ -1432,6 +1495,7 @@ func route(_ q: Req) async -> Data {
         let n = await acks.add(seqs)
         return response("200 OK", json, Data(#"{"ok":true,"acked":\#(n)}"#.utf8))
     case ("GET", "/api/incidents"): return await incidentsData()
+    case ("GET", "/api/advisor"): return await advisorData(q)   // MARK: advisor
     case ("GET", "/api/teams"): return await teamsData()
     case ("POST", "/api/teams/assign"): return await rosterAssign(q)
     case ("GET", "/story/assign"): return response("200 OK", json, await studio.assignments())
