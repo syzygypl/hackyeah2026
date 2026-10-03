@@ -590,6 +590,48 @@ class AuditIntegrity(unittest.TestCase):
         self.assertIn("tool_authz", m["latency_us"])
 
 
+class Concurrency(unittest.TestCase):
+    """Gateway mode: slow model/tool calls in one session must not block other sessions or readers."""
+
+    def test_parallel_sessions_do_not_serialize_and_chain_stays_valid(self):
+        layer, _, _ = fresh()
+        layer.tools = dict(TOOLS, search_kb=lambda query: time.sleep(0.3) or "ok")
+        errors = []
+
+        def worker(i):
+            try:
+                s = Session(f"s{i}", "agent")
+                for j in range(2):
+                    layer.call(s, "search_kb", {"query": f"q{i}-{j}"})
+            except Exception as e:
+                errors.append(e)
+        t = time.time()
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(8)]
+        [x.start() for x in threads]
+        time.sleep(0.1)
+        t_read = time.time()
+        layer.metrics()  # a dashboard poll while 8 slow calls are in flight
+        read_s = time.time() - t_read
+        [x.join() for x in threads]
+        self.assertEqual(errors, [])
+        self.assertLess(time.time() - t, 8 * 2 * 0.3 / 2)  # well under serialized 4.8 s
+        self.assertLess(read_s, 0.2)
+        self.assertEqual(len(layer.audit), 16)
+        self.assertEqual(layer.verify_chain(), (True, None))
+        self.assertEqual(sorted(e["seq"] for e in layer.audit), list(range(16)))
+
+    def test_policy_snapshot_is_per_thread(self):
+        layer, s, env = fresh()
+        layer.call(s, "search_kb", {"query": "warm"})
+        seen = []
+        t = threading.Thread(target=lambda: (layer._load_policy(), seen.append(layer.policy["mode"])))
+        env.edit(lambda p: p.update(mode="monitor"))
+        t.start()
+        t.join()
+        self.assertEqual(seen, ["monitor"])
+        self.assertEqual(layer.policy["mode"], "enforce")  # this thread keeps its snapshot until its next call
+
+
 class Performance(unittest.TestCase):
     def test_overhead_under_1ms_p99(self):
         p = measure_overhead(2000)
@@ -613,7 +655,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
           "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)",
-          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Performance": "performance"}
+          "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "Performance": "performance"}
 
 
 def run_suite():

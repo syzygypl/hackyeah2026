@@ -16,6 +16,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 import time
 import unicodedata
 import urllib.request
@@ -226,9 +227,22 @@ class ControlLayer:
         self.tools, self.approver = tools, approver
         self.store = PolicyStore(policy_path) if policy_path else PolicyStore()
         self.semantic = SemanticGuard()
-        self.policy = None
+        self._tl = threading.local()  # per-thread policy snapshot: a call sees one policy version end to end
+        self._lock = threading.RLock()  # guards policy reload + audit chain only; model calls run outside it
         self.audit = []
         self._head = "0" * 64
+
+    @property
+    def policy(self):
+        return getattr(self._tl, "policy", None)
+
+    @policy.setter
+    def policy(self, value):
+        self._tl.policy = value
+
+    def audit_snapshot(self):
+        with self._lock:
+            return list(self.audit)
 
     # -- helpers
     def _c(self, name):
@@ -257,7 +271,8 @@ class ControlLayer:
 
     def _load_policy(self):
         try:
-            self.policy = self.store.get()
+            with self._lock:
+                self.policy = self.store.get()
         except Exception:
             self.policy = None
 
@@ -568,16 +583,17 @@ class ControlLayer:
 
     # -- tamper-evident audit log
     def _append(self, ev):
-        ev["seq"] = len(self.audit)
-        ev["ts"] = time.strftime("%Y-%m-%dT%H:%M:%S")
-        ev["prev_hash"] = self._head
-        ev["hash"] = hashlib.sha256((self._head + json.dumps(ev, sort_keys=True, default=str)).encode()).hexdigest()
-        self._head = ev["hash"]
-        self.audit.append(ev)
+        with self._lock:
+            ev["seq"] = len(self.audit)
+            ev["ts"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+            ev["prev_hash"] = self._head
+            ev["hash"] = hashlib.sha256((self._head + json.dumps(ev, sort_keys=True, default=str)).encode()).hexdigest()
+            self._head = ev["hash"]
+            self.audit.append(ev)
 
     def verify_chain(self, records=None):
         head = "0" * 64
-        for ev in records if records is not None else self.audit:
+        for ev in records if records is not None else self.audit_snapshot():
             body = {k: v for k, v in ev.items() if k != "hash"}
             if body["prev_hash"] != head:
                 return False, ev["seq"]
@@ -588,12 +604,12 @@ class ControlLayer:
 
     def export_audit(self, path):
         with open(path, "w") as f:
-            for ev in self.audit:
+            for ev in self.audit_snapshot():
                 f.write(json.dumps(ev, ensure_ascii=False, default=str) + "\n")
 
     # -- real-time metrics + performance telemetry
     def metrics(self, sessions=()):
-        a = self.audit
+        a = self.audit_snapshot()
         by_dec, by_g, lat = {}, {}, {}
         for e in a:
             by_dec[e["decision"]] = by_dec.get(e["decision"], 0) + 1
@@ -606,8 +622,8 @@ class ControlLayer:
         def pct(xs, p):
             xs = sorted(xs)
             return xs[min(len(xs) - 1, int(len(xs) * p))]
-        ok, _ = self.verify_chain()
-        p = self.policy or {}
+        ok, _ = self.verify_chain(a)
+        p = self.policy or self.store.policy or {}
         ctr = p.get("controls", {})
         return {
             "policy": {"version": self.store.version, "mode": p.get("mode"), "reloads": self.store.reloads,
@@ -629,7 +645,7 @@ class ControlLayer:
 
 # ---------------------------------------------------------------- security report (management + security team)
 def security_report(layer, sessions, selftest=None, perf=None):
-    a = layer.audit
+    a = layer.audit_snapshot()
     m = layer.metrics(sessions)
     approvals = [e for e in a if e["decision"] == APPROVAL]
     flagged = [e for e in a if e["guardrails"]]

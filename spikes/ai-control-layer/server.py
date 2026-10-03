@@ -4,6 +4,7 @@ Run:  python3 server.py [port]      (default 8787, binds 127.0.0.1)
 
   POST /v1/prompt  {"session": "s1", "text": "..."}                       app -> LLM prompt check
   POST /v1/tool    {"session": "s1", "tool": "send_email", "args": {...},
+                    "purpose": "the user's actual task (the judge model uses it as context)",
                     "approved_by": "optional human, simulates the approval click"}
   GET  /metrics    real-time metrics + per-check latency telemetry (JSON)
   GET  /audit      exportable audit log (JSONL, hash-chained)
@@ -18,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from control_layer import ControlLayer, Session, security_report
 from mock_tools import TOOLS
 
-LOCK = threading.Lock()
+SESSIONS_LOCK = threading.Lock()  # guards the sessions dict only
 SESSIONS = {}
 PENDING_APPROVER = threading.local()
 
@@ -31,8 +32,18 @@ def approver(session, tool, args, reasons):
 LAYER = ControlLayer(TOOLS, approver=approver)
 
 
-def session(sid):
-    return SESSIONS.setdefault(sid or "default", Session(sid or "default", "http-client"))
+def session(sid, purpose=None):
+    """One lock per session: calls in the same session run in order (budget, loop, taint stay consistent);
+    different sessions and all GETs run in parallel, so a 2.5 s judge call never blocks the dashboard."""
+    sid = sid or "default"
+    with SESSIONS_LOCK:
+        if sid not in SESSIONS:
+            SESSIONS[sid] = Session(sid, "http-client", purpose or "")
+            SESSIONS[sid].lock = threading.Lock()
+        s = SESSIONS[sid]
+        if purpose:
+            s.purpose = purpose
+        return s
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -45,16 +56,17 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
-        with LOCK:
-            LAYER._load_policy()
-            if self.path == "/metrics":
-                return self._send(200, LAYER.metrics(SESSIONS.values()))
-            if self.path == "/audit":
-                return self._send(200, "".join(json.dumps(e, ensure_ascii=False, default=str) + "\n" for e in LAYER.audit), "application/x-ndjson")
-            if self.path == "/report":
-                return self._send(200, security_report(LAYER, list(SESSIONS.values())), "text/markdown")
-            if self.path == "/policy":
-                return self._send(200, {"version": LAYER.store.version, "policy": LAYER.policy, "rejected_edits": LAYER.store.errors[-5:]})
+        LAYER._load_policy()  # no request-wide lock: reads use snapshots, never wait on model calls
+        with SESSIONS_LOCK:
+            sessions = list(SESSIONS.values())
+        if self.path == "/metrics":
+            return self._send(200, LAYER.metrics(sessions))
+        if self.path == "/audit":
+            return self._send(200, "".join(json.dumps(e, ensure_ascii=False, default=str) + "\n" for e in LAYER.audit_snapshot()), "application/x-ndjson")
+        if self.path == "/report":
+            return self._send(200, security_report(LAYER, sessions), "text/markdown")
+        if self.path == "/policy":
+            return self._send(200, {"version": LAYER.store.version, "policy": LAYER.policy, "rejected_edits": LAYER.store.errors[-5:]})
         self._send(200, __doc__, "text/plain")
 
     def do_POST(self):
@@ -62,8 +74,8 @@ class Handler(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         except Exception:
             return self._send(400, {"error": "invalid JSON"})
-        with LOCK:
-            s = session(req.get("session"))
+        s = session(req.get("session"), req.get("purpose"))
+        with s.lock:
             if self.path == "/v1/prompt":
                 r = LAYER.check_prompt(s, str(req.get("text", "")), req.get("direction", "input"))
             elif self.path == "/v1/tool":

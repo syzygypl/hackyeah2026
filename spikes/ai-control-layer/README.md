@@ -99,6 +99,8 @@ curl -s localhost:8787/audit     # JSONL export
 curl -s localhost:8787/report    # markdown report
 ```
 
+Concurrency: there is no request-wide lock. Each session has its own lock, so calls within one session stay ordered and budget, loop and taint stay consistent. Different sessions and all GETs run in parallel. The layer only locks policy reload and the audit-chain append, and each thread works on its own policy snapshot. Measured: `/metrics` answers in about 1 ms while a 2.5 s judge call runs in another session.
+
 The tests run against a temp copy of `policy.json`. If you weaken the policy (disable a control, raise a threshold), the matching negative tests fail on purpose, so the suite also catches config regressions.
 
 ## Files
