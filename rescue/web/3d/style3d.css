@@ -327,3 +327,27 @@ body.embed-scene #feed { left: calc(var(--inset-l, 0px) + 10px); bottom: calc(va
 body.embed-scene #game { top: calc(var(--inset-t, 0px) + 10px); left: calc((100vw + var(--inset-l, 0px) - var(--inset-r, 0px)) / 2); width: min(520px, calc(100vw - var(--inset-l, 0px) - var(--inset-r, 0px) - 40px)); min-width: 0; }
 body.embed-scene .tip { max-width: 260px; }
 body.embed-scene.cinema #sceneLegend, body.embed-scene.cinema #sceneCtl > :not(.seg-switch) { opacity: 0; pointer-events: none; }
+
+/* look inside /app (ui design, canvas https://claude.ai/artifact/MKFv412DcTTKiZsPvanixR): paper overlays like the shell's panels */
+body.embed .floating, body.embed #sceneCtl, body.embed #sceneLegend, body.embed #feed, body.embed #game, body.embed #offbanner { background: var(--rl-panel, rgba(250,248,243,.93)); border: 1px solid var(--rl-line, rgba(35,39,42,.12)); border-radius: 12px; box-shadow: var(--rl-shadow, 0 6px 24px rgba(30,40,50,.14)); backdrop-filter: blur(var(--rl-blur, 14px)); -webkit-backdrop-filter: blur(var(--rl-blur, 14px)); color: var(--rl-ink, #23272a); }
+body.embed #sceneLegend { padding: 9px 12px; font-size: 12.5px; }
+body.embed #sceneLegend .lg-title { font-weight: 700; font-size: 13px; }
+body.embed #sceneLegend .stops, body.embed .legend .stops { font-family: var(--rl-mono, monospace); font-size: 10.5px; }
+body.embed #sceneLegend .k-top { border-top-color: var(--rl-ink, #23272a); }
+body.embed #sceneCtl { width: 196px; padding: 6px; gap: 6px; font-size: 13.5px; }
+body.embed #sceneCtl .seg-switch { border: 0; border-radius: 9px; padding: 3px; gap: 2px; background: color-mix(in srgb, var(--rl-ink, #23272a) 6%, transparent); }
+body.embed #sceneCtl .seg-switch button { border: 0; border-radius: 7px; min-height: 32px; font-size: 13.5px; font-weight: 600; color: var(--rl-ink-2, #4a5054); }
+body.embed #sceneCtl .seg-switch button.on { background: var(--rl-chrome, #23272a); color: var(--rl-on-chrome, #faf8f3); }
+body.embed #sceneCtl .ctl-row { gap: 4px 12px; padding: 2px 4px; }
+body.embed #sceneCtl .chk { min-height: 28px; color: var(--rl-ink, #23272a); }
+body.embed #sceneCtl .chk input { width: 16px; height: 16px; accent-color: var(--rl-accent, #1f4e79); }
+body.embed #sceneCtl .full { min-height: 34px; background: var(--rl-card, #fff); color: var(--rl-ink, #23272a); border: 1px solid var(--rl-line-strong, rgba(35,39,42,.22)); border-radius: 8px; font-size: 13px; font-weight: 600; }
+body.embed #sceneCtl .full:hover { border-color: var(--rl-ink, #23272a); }
+body.embed #sceneCtl [data-b="btn-game"] { background: var(--rl-danger, #b8322a); color: var(--rl-on-danger, #fff); border-color: var(--rl-danger, #b8322a); }
+body.embed .lbl3d { background: color-mix(in srgb, var(--rl-panel-solid, #faf8f3) 94%, transparent); color: var(--rl-ink, #23272a); border-color: var(--rl-line, rgba(35,39,42,.12)); font-family: var(--rl-font); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+body.embed .lbl3d.top3 .rk { color: var(--rl-danger, #b8322a); }
+body.embed .tip, body.embed .toast { background: var(--rl-panel-solid, #faf8f3); color: var(--rl-ink, #23272a); border: 1px solid var(--rl-line, rgba(35,39,42,.12)); border-radius: 10px; box-shadow: var(--rl-shadow); }
+body.embed .btn { background: var(--rl-card, #fff); color: var(--rl-ink, #23272a); border-color: var(--rl-line-strong, rgba(35,39,42,.22)); border-radius: 8px; }
+body.embed .btn.on { color: var(--rl-accent, #1f4e79); border-color: var(--rl-accent, #1f4e79); background: color-mix(in srgb, var(--rl-accent, #1f4e79) 8%, var(--rl-card, #fff)); }
+body.embed .btn.red { background: var(--rl-danger, #b8322a); border-color: var(--rl-danger, #b8322a); color: var(--rl-on-danger, #fff); }
+body.embed .wchip, body.embed #game .stat, body.embed #game code { background: color-mix(in srgb, var(--rl-ink, #23272a) 6%, transparent); }

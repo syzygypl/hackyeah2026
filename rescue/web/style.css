@@ -303,3 +303,19 @@ body.embed-scene #mapctl { top: calc(var(--inset-t, 0px) + 10px); right: calc(va
 body.embed-scene #legend { top: calc(var(--inset-t, 0px) + 10px); left: calc(var(--inset-l, 0px) + 10px); }
 body.embed-scene .maplibregl-ctrl-bottom-right { right: var(--inset-r, 0px); bottom: var(--inset-b, 0px); }
 body.embed-scene .maplibregl-ctrl-bottom-left { left: var(--inset-l, 0px); bottom: var(--inset-b, 0px); }
+
+/* look inside /app (ui design, canvas https://claude.ai/artifact/MKFv412DcTTKiZsPvanixR): paper overlays like the shell's panels */
+body.embed { font-family: var(--rl-font, system-ui); }
+body.embed .floating { background: var(--rl-panel, rgba(250,248,243,.93)); border: 1px solid var(--rl-line, rgba(35,39,42,.12)); border-radius: 12px; box-shadow: var(--rl-shadow, 0 6px 24px rgba(30,40,50,.14)); backdrop-filter: blur(var(--rl-blur, 14px)); -webkit-backdrop-filter: blur(var(--rl-blur, 14px)); color: var(--rl-ink, #23272a); }
+body.embed #legend { padding: 9px 12px; }
+body.embed .lg-title { font-size: 13px; }
+body.embed .lg-stops, body.embed .lg-row.lbl span { font-family: var(--rl-mono, monospace); }
+body.embed .k.ln-seg { border-top-color: var(--rl-ink, #23272a); }
+body.embed #mapctl { padding: 6px; gap: 6px; font-size: 13.5px; }
+body.embed .seg-switch { border: 0; border-radius: 9px; padding: 3px; gap: 2px; background: color-mix(in srgb, var(--rl-ink, #23272a) 6%, transparent); }
+body.embed .seg-switch button { border: 0; border-radius: 7px; min-height: 32px; font-size: 13.5px; font-weight: 600; color: var(--rl-ink-2, #4a5054); }
+body.embed .seg-switch button.on { background: var(--rl-chrome, #23272a); color: var(--rl-on-chrome, #faf8f3); }
+body.embed .ctl-row { gap: 4px 12px; }
+body.embed .ctl-row .chk { font-size: 13.5px; min-height: 28px; }
+body.embed .ctl-row .chk input { width: 16px; height: 16px; accent-color: var(--rl-accent, #1f4e79); }
+body.embed .tip { background: var(--rl-panel-solid, #faf8f3); border-radius: 10px; box-shadow: var(--rl-shadow); }
