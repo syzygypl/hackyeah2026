@@ -18,7 +18,7 @@ Keyboard: left / right = step, space = play / pause, Home / End = first / last s
 
 ### Scenario switcher
 
-The header has a **Scenariusz** select: Zawrat (`../out/run.json`), Morskie Oko (`../out/morskie-oko.run.json`) and Kasprowy (`../out/kasprowy.run.json`).
+The header has a **Scenariusz** select: Zawrat (`../out/run.json`), Morskie Oko (`../out/morskie-oko.run.json`), Kasprowy (`../out/kasprowy.run.json`) and the two blind tests replayed with the answer revealed: `blind-01-replay` (Zawrat bbox, basemap) and `blind-02-replay` (Zakopane, DEM relief).
 - **Generating runs:** `cd rescue && swift run rescue-demo --fast scenarios/<name>.json`.
 - **Missing runs:** the page probes each file with `HEAD`, and scenarios without one are greyed out ("brak run.json").
 - **Switching:** reloads the page with `?sc=<id>`, and the map fits that scenario's bbox.
@@ -36,7 +36,7 @@ When `rescue-field` runs on the LAN (`serve --host 0.0.0.0 --pin NNNN`), its end
 
 | Param | Default | What |
 |---|---|---|
-| `sc` | `zawrat` | scenario from the header switcher: `zawrat`, `morskie-oko`, `kasprowy` (sets run, scenario and DEM) |
+| `sc` | `zawrat` | scenario from the header switcher: `zawrat`, `morskie-oko`, `kasprowy`, `blind-01-replay`, `blind-02-replay` (sets run, scenario and DEM) |
 | `run` | per `sc` | engine output to show; overrides the switcher (shown as "Własny"), e.g. `?run=../out/zawrat.run.json` |
 | `scenario` | `../scenarios/zawrat.json` | scenario for overlay geometry (route, BTS sector, rings, find spot); skipped when its bbox differs from run.json |
 | `terrain` | `<scenario>-terrain.json` | trails, streams, lakes, huts, steep ground, `slopeDeg` |

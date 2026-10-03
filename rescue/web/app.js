@@ -16,6 +16,9 @@
     { id: 'zawrat', label: 'Zawrat', run: '../out/run.json', scenario: '../scenarios/zawrat.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
     { id: 'morskie-oko', label: 'Morskie Oko', run: '../out/morskie-oko.run.json', scenario: '../scenarios/morskie-oko.json', dem: '../tools/terrain/data/morskie-oko-dem.json', basemap: false },
     { id: 'kasprowy', label: 'Kasprowy', run: '../out/kasprowy.run.json', scenario: '../scenarios/kasprowy.json', dem: '../tools/terrain/data/kasprowy-dem.json', basemap: false },
+    // blind tests replayed with the hidden answer revealed (same bbox as Zawrat for blind-01; blind-02 is Zakopane)
+    { id: 'blind-01-replay', label: 'Test na ślepo 1 (powtórka)', run: '../out/blind-01-replay.run.json', scenario: '../scenarios/blind-01-replay.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
+    { id: 'blind-02-replay', label: 'Test na ślepo 2 (powtórka)', run: '../out/blind-02-replay.run.json', scenario: '../scenarios/blind-02-replay.json', dem: '../tools/terrain/data/blind-02-dem.json', basemap: false },
   ];
   const SC = SCENARIOS.find((x) => x.id === Q.get('sc')) || SCENARIOS[0];
   const CUSTOM_RUN = Q.has('run') || Q.has('runInline'); // ?run= (or a parent-supplied run) wins over the switcher
@@ -60,6 +63,9 @@
   function warn(msg) { DIAG.warnings.push(String(msg)); console.warn('[rescue]', msg); diag(); }
   window.addEventListener('error', (e) => { DIAG.errors.push(String(e.message || e)); diag(); });
   window.addEventListener('unhandledrejection', (e) => { DIAG.errors.push('promise: ' + String(e.reason && e.reason.message || e.reason)); diag(); });
+
+  // S3 (parity with 3D): the find segment is value.findSeg, falling back to value.truthSeg (blind-01-replay has only that)
+  const findSegOf = (v) => (v ? v.findSeg || v.truthSeg || null : null);
 
   /* ---------- formatting ---------- */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -749,7 +755,7 @@
 
   function renderRanking(st, searched) {
     const M = S.M, max = st[0].poa || 1;
-    const truth = M.R.value && M.R.value.truthSeg;
+    const truth = M.R.value && findSegOf(M.R.value);
     $('#rankmode').textContent = S.disabled.size && M.hints.some((h) => h.k <= S.step && S.disabled.has(h.id)) ? 'przeliczony w przeglądarce' : 'silnik, krok ' + (S.step + 1);
     $('#ranking tbody').innerHTML = st.map((s, j) => {
       const top = j < 3, sr = searched[s.id];
@@ -797,7 +803,7 @@
       <div class="v-big">${pct(v.top3poa)} <span>prawdopodobieństwa</span></div>
       <div class="v-sub">w <b>${pct(v.top3area)}</b> obszaru - top 3 segmenty z ${M.segList.length}</div>
       <div class="v-row"><span class="v-num ok">#${v.rankFused}</span><span class="v-vs">vs</span><span class="v-num">#${v.rankRings}</span>
-        <span class="v-txt">miejsce odnalezienia (${esc(v.truthSeg)}): po fuzji wskazówek vs same pierścienie Koestera</span></div>
+        <span class="v-txt">miejsce odnalezienia (${esc(findSegOf(v))}): po fuzji wskazówek vs same pierścienie Koestera</span></div>
       <div class="v-row"><span class="v-num ok">${pct(v.areaFused, 1)}</span><span class="v-vs">vs</span><span class="v-num">${pct(v.areaRings, 1)}</span>
         <span class="v-txt">obszaru do przeszukania, zanim zespół trafi</span></div>
       ${v.pos2hPlanned != null && v.pos2hNaive != null ? `<div class="v-row"><span class="v-num ok">${pct(v.pos2hPlanned)}</span><span class="v-vs">vs</span><span class="v-num">${pct(v.pos2hNaive)}</span>
