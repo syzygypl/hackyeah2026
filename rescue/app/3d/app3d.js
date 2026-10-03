@@ -1541,6 +1541,8 @@ function renderOffBanner(i) {
   el.innerHTML = `Widok przeliczony w przeglądarce bez: ${off.map((k) => `<b>${esc(short(R.steps[k].label))}</b>`).join(', ')} <button class="btn sm" id="resetoff">Przywróć</button>`;
   $('resetoff').onclick = () => { setEvidence('*', true); toParent({ type: 'evidence', id: '*', on: true }); };
 }
+// Na żywo: the shell's {type:'time', live:true} (fallback: a run URL without live=0); then the frame does not re-rank the top 3
+let TL_LIVE = (() => { try { return !P.reveal && new URL(P.run, location.href).searchParams.get('live') !== '0' && Q.get('embed') === 'scene'; } catch { return false; } })();
 const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
 function drawTop(ranked) {
   disposeGroup(dyn.top);
@@ -1891,7 +1893,9 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
     if (f.step >= 0 && STEP !== f.step) setStep(f.step, false, true);
     if (R.timeline.searchEvents !== 'keep') WASH.clear();
     if (f.poaGrid?.length === R.rows * R.cols) showHeat(heatCanvasGrid(f.poaGrid), true);
-    if (f.segments?.length) drawTop(rankedOf(f.segments));
+    // top 3 = the shell panel's source: Historia ranks the minute's frame, Na żywo ranks the live step (shell tlSegments)
+    if (f.segments?.length && !TL_LIVE) drawTop(rankedOf(f.segments));
+    else if (TL_LIVE) { const OG = gridFor(STEP); drawTop(OG ? rankedOf(segPoa(OG)) : rankedOf(R.steps[STEP].segments)); }
     compose();
   },
   onStopCamera: () => { if (CINE.on && !CINE.inserting) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
@@ -2109,7 +2113,7 @@ addEventListener('message', (e) => {
   const m = e.data; fromParent = true;
   try {
     if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
-    else if (m.type === 'time' && Number.isFinite(m.minute)) TL3D?.setTime(m.minute, m.t, true, m.frame, m.frameMinute);
+    else if (m.type === 'time' && Number.isFinite(m.minute)) { if (typeof m.live === 'boolean') TL_LIVE = m.live; TL3D?.setTime(m.minute, m.t, true, m.frame, m.frameMinute); }
     else if (m.type === 'fpp') { if (m.on === false) TL3D?.stopFpp(); else TL3D?.startFpp(m.actorId); }
     else if (m.type === 'actor' && (m.id === null || typeof m.id === 'string')) TL3D?.selectActor(m.id, false);
     else if (m.type === 'highlight' && typeof m.actor === 'string') {

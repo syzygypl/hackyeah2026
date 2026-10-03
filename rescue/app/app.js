@@ -1280,7 +1280,7 @@ function tlSegments(S) {
 }
 // a new frame goes to a view at most every 180 ms while playing fast (heat rebuilds are not free); the minute always goes
 function tlPostOne(k, T, m, frame) {
-  const msg = { type: "time", minute: m, t: tlClock(T, m) }, now = performance.now(), last = TLP.sent[k];
+  const msg = { type: "time", minute: m, t: tlClock(T, m), live: liveOn() }, now = performance.now(), last = TLP.sent[k];
   if (frame && last && frame !== last && playing && now - (TLP.sentAt[k] || 0) < 180 && last.minute <= m) frame = last;
   if (frame) { msg.frameMinute = frame.minute; if (last !== frame) { msg.frame = frame; TLP.sent[k] = frame; TLP.sentAt[k] = now; } }
   postTo(k, msg);
