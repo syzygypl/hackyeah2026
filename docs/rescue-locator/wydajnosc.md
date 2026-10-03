@@ -129,8 +129,8 @@ Największe 5 plików: `krakow-nowa-huta-osm3d.json` 3.32 MB, `zawrat-dem-wide.j
 
 ## Poprawki w tej rundzie (AI Michała)
 
-- `9a6dbf9` `web/patrol/index.html`: `/api/incidents` raz na 60 s, jedno żądanie naraz, timeout 60 s; koniec akcji wykrywany też z taniego `/api/live` (zdarzenie `found` tego incydentu). Na produkcji przed poprawką: `/api/incidents` co 20 s, przerwane po 5 s, a serwer i tak liczył 30 s. Pomiar lokalny po poprawce: brak pollingu częstszego niż 10 s, 0 błędów JS.
-- `8dc9228` `web/patrol/index.html`: podkład offline (`tatry.pmtiles`, 5.4 MB) pobierany równolegle z `/api/run` (region z małego `scenarios/<sc>.json`), nie po nim. Oczekiwany zysk na produkcji: do ~2.3 s mniej do pierwszego obrazu mapy (pmtiles 2.3 s chowa się pod 7.5 s runu). Lokalnie mapa po 1.0 s, bez błędów. Ponowny pomiar na produkcji w rundzie 2, po deployu.
+- `b4b503f` `web/patrol/index.html`: `/api/incidents` raz na 60 s, jedno żądanie naraz, timeout 60 s; koniec akcji wykrywany też z taniego `/api/live` (zdarzenie `found` tego incydentu). Na produkcji przed poprawką: `/api/incidents` co 20 s, przerwane po 5 s, a serwer i tak liczył 30 s. Pomiar lokalny po poprawce: brak pollingu częstszego niż 10 s, 0 błędów JS.
+- `f725110` `web/patrol/index.html`: podkład offline (`tatry.pmtiles`, 5.4 MB) pobierany równolegle z `/api/run` (region z małego `scenarios/<sc>.json`), nie po nim. Oczekiwany zysk na produkcji: do ~2.3 s mniej do pierwszego obrazu mapy (pmtiles 2.3 s chowa się pod 7.5 s runu). Lokalnie mapa po 1.0 s, bez błędów. Ponowny pomiar na produkcji w rundzie 2, po deployu.
 
 ## Runda 2
 
