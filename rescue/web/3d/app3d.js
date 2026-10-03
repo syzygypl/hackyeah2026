@@ -1,0 +1,833 @@
+// Rescue Locator 3D - terrain diorama of the POA timeline, its source signals, and a blind test game.
+// Reads the same offline files as the 2D screen: out/run.json (rescue-run/1), scenarios/<sc>.json,
+// scenarios/<sc>-terrain.json, tools/terrain/data/<sc>-dem.json and out/live-events.json.
+// The timeline is computed by the Swift engine; the page draws it. Only the blind test game
+// updates the map in the browser (Bayes: segment POA x (1 - POD) after an empty patrol).
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { Line2 } from 'three/addons/lines/Line2.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { LineGeometry } from 'three/addons/lines/LineGeometry.js';
+
+// ---------- config ----------
+const Q = new URLSearchParams(location.search);
+const SCENS = {
+  zawrat: { name: 'Zawrat', run: '../../out/run.json' },
+  'morskie-oko': { name: 'Morskie Oko', run: '../../out/morskie-oko.run.json' },
+  kasprowy: { name: 'Kasprowy', run: '../../out/kasprowy.run.json' },
+  'blind-01': { name: 'Test na ślepo: runda 1 (replay)', run: '../../out/blind-01-replay.run.json', scenario: '../../scenarios/blind-01-replay.json',
+    terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', reveal: '../../blindtest/blind-01.reveal.json' },
+};
+const SC = SCENS[Q.get('sc')] ? Q.get('sc') : 'zawrat';
+const P = {
+  run: Q.get('run') || SCENS[SC].run,
+  scenario: Q.get('scenario') || SCENS[SC].scenario || `../../scenarios/${SC}.json`,
+  terrain: Q.get('terrain') || SCENS[SC].terrain || `../../scenarios/${SC}-terrain.json`,
+  dem: Q.get('dem') || SCENS[SC].dem || `../../tools/terrain/data/${SC}-dem.json`,
+  reveal: Q.get('reveal') || SCENS[SC].reveal,
+  live: Q.get('live') || '../../out/live-events.json',
+};
+const EX = Number(Q.get('exag')) || 1.5; // vertical exaggeration
+const PLAY_MS = Number(Q.get('playMs')) || 2600;
+const KM = 111.32;
+const KIND = { terrain: 'Teren', cost: 'Koszt terenu', difficulty: 'Trudność', conditions: 'Warunki', rings: 'Statystyka', route: 'Trasa', containment: 'Auto', sector: 'BTS', weather: 'Pogoda', searched: 'Przeszukano', point: 'Znaleziono', clue: 'Ślad' };
+// source signals: [badge, colour, plain-language name]
+const SIG = {
+  Terrain: ['T', '#6b705c', 'Teren (OSM + DEM)'],
+  TerrainDifficulty: ['Tr', '#8d7b68', 'Trudność terenu'],
+  KoesterRings: ['K', '#457b9d', 'Statystyka zaginięć (Koester / ISRID)'],
+  WeatherConditions: ['W', '#7d8a9c', 'Warunki na miejscu'],
+  Weather: ['W', '#7d8a9c', 'Prognoza IMGW'],
+  TripPlan: ['P', '#6c4ab6', 'Plan wycieczki od rodziny'],
+  TrailheadCar: ['A', '#2a9d8f', 'Auto na parkingu'],
+  Cell112Fix: ['B', '#1f4e79', 'CPR 112: sektor BTS'],
+  Witness: ['Ś', '#e76f51', 'Świadek'],
+  SegmentSearched: ['N', '#555b61', 'Patrol: przeszukano, nic'],
+  DronePassEmpty: ['D', '#555b61', 'Dron termowizyjny: nic'],
+  Clue: ['!', '#2d6a4f', 'Ślad / znalezienie'],
+  RatunekPing: ['G', '#2d6a4f', 'Ratunek: ping GPS'],
+};
+const sigOf = (e) => (/świadek/i.test(e.title || '') ? ['Ś', '#e76f51', 'Świadek'] : /ZNALEZIONO/i.test(e.title || '') ? ['!', '#2d6a4f', 'Znalezienie'] : null) || SIG[e.provider] || [e.provider?.[0] || '•', /świadek|witness/i.test(e.title + e.provider) ? '#e76f51' : '#6b6f72', e.provider || 'Sygnał'];
+const TEAM_COL = { heli: '#1f4e79', ground: '#b8860b', dog: '#8d5524', drone: '#6c4ab6' };
+
+const $ = (id) => document.getElementById(id);
+const pct = (p) => (p >= 0.095 ? Math.round(p * 100) : (p * 100).toFixed(1)) + '%';
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const getJSON = async (u, optional) => {
+  try { const r = await fetch(u, { cache: 'no-cache' }); if (!r.ok) throw new Error(r.status + ' ' + u); return await r.json(); }
+  catch (e) { if (optional) return null; throw e; }
+};
+
+// Replay fallback when the engine output is not in the repo: one step per scenario event, segments from the
+// scenario seeds (nearest seed, approximate), uniform POA. Clearly flagged in the UI; nothing is invented.
+function synthRun(sc) {
+  const bb = sc.bbox, cell = sc.cellM || 100;
+  const rows = Math.round(((bb.north - bb.south) * 111320) / cell), cols = Math.round(((bb.east - bb.west) * 111320 * Math.cos((((bb.north + bb.south) / 2) * Math.PI) / 180)) / cell);
+  const N = rows * cols, dLa = (bb.north - bb.south) / rows, dLo = (bb.east - bb.west) / cols, kx = Math.cos((((bb.north + bb.south) / 2) * Math.PI) / 180);
+  const segOf = new Array(N), count = {};
+  for (let i = 0; i < N; i++) {
+    const la = bb.north - (Math.floor(i / cols) + 0.5) * dLa, lo = bb.west + ((i % cols) + 0.5) * dLo;
+    let best = null, bd = Infinity;
+    for (const s of sc.segments) { const d = (s.seed[0] - la) ** 2 + ((s.seed[1] - lo) * kx) ** 2; if (d < bd) { bd = d; best = s.id; } }
+    segOf[i] = best; count[best] = (count[best] || 0) + 1;
+  }
+  const segments = sc.segments.map((s) => ({ id: s.id, name: s.name, poa: 1 / sc.segments.length, areaPct: (100 * (count[s.id] || 0)) / N, polygon: [] }));
+  const kindOf = { Terrain: 'terrain', TerrainDifficulty: 'difficulty', KoesterRings: 'rings', WeatherConditions: 'conditions', TripPlan: 'route', TrailheadCar: 'containment', Cell112Fix: 'sector', Weather: 'weather', SegmentSearched: 'searched', DronePassEmpty: 'searched', Clue: 'clue' };
+  let weather = {};
+  const steps = sc.events.map((e) => {
+    if (e.provider === 'WeatherConditions') weather = { ...weather, ...Object.fromEntries(['visibilityM', 'windMs', 'tempC', 'precip', 'dark', 'ice'].filter((k) => k in e).map((k) => [k, e[k]])) };
+    return { t: e.at, label: e.title, kind: /ZNALEZIONO/i.test(e.title) ? 'point' : kindOf[e.provider] || 'clue', source: e.provider, poaGrid: new Array(N).fill(1 / N), segments, weather: { ...weather }, assignments: [], resources: [] };
+  });
+  return { schema: 'rescue-run/1', synthetic: true, incident: sc.incident, bbox: bb, cellM: cell, rows, cols, ipp: { lat: sc.ipp.at[0], lon: sc.ipp.at[1], name: sc.ipp.name }, segOf, steps, value: {} };
+}
+
+// ---------- load ----------
+let R, SCN, TER, DEM, REV;
+try {
+  [R, SCN, TER, DEM, REV] = await Promise.all([getJSON(P.run, !!P.reveal), getJSON(P.scenario, true), getJSON(P.terrain, true), getJSON(P.dem), P.reveal ? getJSON(P.reveal, true) : null]);
+  if (!R && SCN) R = synthRun(SCN); // replay without engine output: signals and patrols only, no POA map
+  if (R.schema !== 'rescue-run/1') throw new Error('run.json: schema ' + R.schema);
+} catch (e) {
+  $('loadmsg').textContent = 'Nie udało się wczytać danych: ' + e.message + '. Uruchom serwer w katalogu rescue/ (python3 -m http.server 8000) i otwórz /web/3d/.';
+  throw e;
+}
+$('incident').textContent = (R.incident || '') + (R.synthetic ? ' · brak run.json z silnika: bez mapy POA, segmenty przybliżone' : '');
+
+// ---------- geo ----------
+const stLon = DEM.step, stLat = DEM.stepLat || DEM.step;
+const latN = DEM.lat0, latS = DEM.lat0 - DEM.rows * stLat, lonW = DEM.lon0, lonE = DEM.lon0 + DEM.cols * stLon;
+const latC = (latN + latS) / 2, lonC = (lonW + lonE) / 2, KX = Math.cos((latC * Math.PI) / 180);
+const WKM = (lonE - lonW) * KX * KM, HKM = (latN - latS) * KM;
+let zMin = Infinity, zMax = -Infinity;
+for (const row of DEM.z) for (const v of row) { if (v < zMin) zMin = v; if (v > zMax) zMax = v; }
+const toX = (lon) => (lon - lonC) * KX * KM;
+const toZ = (lat) => (latC - lat) * KM;
+const toLon = (x) => x / (KX * KM) + lonC;
+const toLat = (z) => latC - z / KM;
+const inside = ([la, lo]) => la < latN && la > latS && lo > lonW && lo < lonE;
+function elevM(lat, lon) {
+  const r = clamp((DEM.lat0 - lat) / stLat - 0.5, 0, DEM.rows - 1), c = clamp((lon - DEM.lon0) / stLon - 0.5, 0, DEM.cols - 1);
+  const r0 = Math.floor(r), c0 = Math.floor(c), r1 = Math.min(r0 + 1, DEM.rows - 1), c1 = Math.min(c0 + 1, DEM.cols - 1), fr = r - r0, fc = c - c0;
+  const z = DEM.z;
+  return (z[r0][c0] * (1 - fc) + z[r0][c1] * fc) * (1 - fr) + (z[r1][c0] * (1 - fc) + z[r1][c1] * fc) * fr;
+}
+const hAt = (lat, lon) => ((elevM(lat, lon) - zMin) * EX) / 1000;
+const v3 = (lat, lon, lift = 0) => new THREE.Vector3(toX(lon), hAt(lat, lon) + lift, toZ(lat));
+
+// run grid helpers
+const B = R.bbox, dLat = (B.north - B.south) / R.rows, dLon = (B.east - B.west) / R.cols;
+const segs = new Map();
+R.steps[0].segments.forEach((s) => segs.set(s.id, { id: s.id, name: s.name, polygon: s.polygon, areaPct: s.areaPct, n: 0, sLat: 0, sLon: 0, cells: [] }));
+R.segOf.forEach((id, i) => {
+  const g = segs.get(id); if (!g) return;
+  const r = Math.floor(i / R.cols), c = i % R.cols;
+  g.n++; g.cells.push(i); g.sLat += B.north - (r + 0.5) * dLat; g.sLon += B.west + (c + 0.5) * dLon;
+});
+for (const g of segs.values()) g.center = g.n ? [g.sLat / g.n, g.sLon / g.n] : [g.polygon[0][1], g.polygon[0][0]];
+const cellOf = (lat, lon) => {
+  const r = Math.floor((B.north - lat) / dLat), c = Math.floor((lon - B.west) / dLon);
+  return r >= 0 && r < R.rows && c >= 0 && c < R.cols ? r * R.cols + c : -1;
+};
+
+// scenario events (signals) and their timeline steps (matched by title == step label, as in 2D)
+const EVENTS = (SCN?.events || []).map((e) => ({ ...e, step: R.steps.findIndex((s) => s.label === e.title) }));
+const evByLabel = new Map(EVENTS.map((e) => [e.title, e]));
+const resources = new Map((SCN?.resources || []).map((r) => [r.id, r]));
+const isFound = (e) => e.found || /ZNALEZIONO/i.test(e.title || '');
+const foundEv = EVENTS.find((e) => isFound(e) && e.step >= 0);
+const foundStep = foundEv ? foundEv.step : -1;
+const foundAt = foundEv?.point || SCN?.truth?.at;
+function influence(k) {
+  if (k <= 0) return null;
+  const prev = new Map(R.steps[k - 1].segments.map((s) => [s.id, s.poa]));
+  let best = null;
+  for (const s of R.steps[k].segments) { const d = s.poa - (prev.get(s.id) ?? 0); if (!best || d > best.d) best = { d, name: s.name }; }
+  return best && best.d > 0.004 ? best : null;
+}
+
+// ---------- renderer / scene ----------
+const host = $('scene');
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.NeutralToneMapping;
+host.appendChild(renderer.domElement);
+const labels = new CSS2DRenderer();
+labels.setSize(innerWidth, innerHeight);
+Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
+host.appendChild(labels.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 400);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.46; controls.minDistance = 0.5; controls.maxDistance = 30;
+controls.autoRotateSpeed = 0.3;
+
+const lineMats = new Set();
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight); labels.setSize(innerWidth, innerHeight);
+  for (const m of lineMats) m.resolution.set(innerWidth, innerHeight);
+});
+
+// ---------- sky, lights ----------
+const skyMat = new THREE.ShaderMaterial({
+  side: THREE.BackSide, depthWrite: false, fog: false,
+  uniforms: { top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() } },
+  vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(vP.y*1.5+0.1,0.0,1.0); gl_FragColor = vec4(mix(bottom, top, pow(h,0.8)), 1.0); }',
+});
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(180, 32, 16), skyMat));
+const starGeo = new THREE.BufferGeometry();
+{
+  const n = 900, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const th = Math.random() * Math.PI * 2, y = 0.15 + Math.random() * 0.85, rr = Math.sqrt(1 - y * y);
+    pos.set([Math.cos(th) * rr * 170, y * 170, Math.sin(th) * rr * 170], i * 3);
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+}
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.3, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false });
+scene.add(new THREE.Points(starGeo, starMat));
+const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+sun.position.set(-7, 6, -2); // low sun from the west, slightly north: crisp relief
+scene.add(hemi, sun);
+scene.fog = new THREE.Fog(0xffffff, 12, 60);
+
+// ---------- terrain texture ----------
+const TS = 4; // texture pixels per DEM pixel
+const TW = DEM.cols * TS, TH = DEM.rows * TS;
+const HYPSO = [[900, [88, 112, 74]], [1200, [80, 106, 70]], [1450, [100, 120, 82]], [1650, [134, 142, 100]], [1850, [152, 148, 130]], [2050, [172, 167, 157]], [2250, [200, 196, 188]], [2500, [238, 236, 231]]];
+function lerpStops(stops, v) {
+  if (v <= stops[0][0]) return stops[0][1];
+  for (let i = 1; i < stops.length; i++) if (v <= stops[i][0]) {
+    const [e0, a] = stops[i - 1], [e1, b] = stops[i], t = (v - e0) / (e1 - e0);
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  }
+  return stops[stops.length - 1][1];
+}
+const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; baseCanvas.height = TH;
+{
+  // hypsometric tint + NW hillshade + brown contours every 50 m (stronger every 250 m), like a printed topo map
+  const g = baseCanvas.getContext('2d'), img = g.createImageData(TW, TH), d = img.data;
+  const E = new Float32Array(TW * TH);
+  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) E[y * TW + x] = elevM(DEM.lat0 - ((y + 0.5) / TS) * stLat, DEM.lon0 + ((x + 0.5) / TS) * stLon);
+  const px = (stLon * KX * KM * 1000) / TS, py = (stLat * KM * 1000) / TS;
+  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
+    const i = y * TW + x, e = E[i];
+    const right = E[y * TW + Math.min(x + 1, TW - 1)], left = E[y * TW + Math.max(x - 1, 0)];
+    const down = E[Math.min(y + 1, TH - 1) * TW + x], up = E[Math.max(y - 1, 0) * TW + x];
+    const nx = -(right - left) / (2 * px), ny = -(down - up) / (2 * py), len = Math.hypot(nx, ny, 1);
+    const shade = clamp((-0.62 * nx + 0.62 * ny + 0.48) / len / 0.8, 0.35, 1.25);
+    let [r, gg, b] = lerpStops(HYPSO, e);
+    const k = 0.55 + 0.5 * shade; r *= k; gg *= k; b *= k;
+    const f = (s) => Math.floor(e / s) !== Math.floor(right / s) || Math.floor(e / s) !== Math.floor(down / s);
+    const w = f(250) ? 0.5 : f(50) ? 0.24 : 0;
+    if (w) { r = r * (1 - w) + 120 * w; gg = gg * (1 - w) + 88 * w; b = b * (1 - w) + 56 * w; }
+    d[i * 4] = r; d[i * 4 + 1] = gg; d[i * 4 + 2] = b; d[i * 4 + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+}
+const compCanvas = document.createElement('canvas'); compCanvas.width = TW; compCanvas.height = TH;
+const glowCanvas = document.createElement('canvas'); glowCanvas.width = TW; glowCanvas.height = TH;
+const compTex = new THREE.CanvasTexture(compCanvas); compTex.colorSpace = THREE.SRGBColorSpace; compTex.anisotropy = 8;
+const glowTex = new THREE.CanvasTexture(glowCanvas); glowTex.colorSpace = THREE.SRGBColorSpace;
+
+const terrainGeo = new THREE.PlaneGeometry(WKM, HKM, DEM.cols - 1, DEM.rows - 1);
+terrainGeo.rotateX(-Math.PI / 2);
+{
+  const pos = terrainGeo.attributes.position;
+  for (let r = 0; r < DEM.rows; r++) for (let c = 0; c < DEM.cols; c++) pos.setY(r * DEM.cols + c, ((DEM.z[r][c] - zMin) * EX) / 1000);
+  terrainGeo.computeVertexNormals();
+}
+const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissiveMap: glowTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.96, metalness: 0 });
+const terrain = new THREE.Mesh(terrainGeo, terrainMat);
+scene.add(terrain);
+{
+  // diorama skirt: earth cut down to a base plate
+  const base = -0.25, pos = terrainGeo.attributes.position, verts = [], idx = [];
+  const edge = (ids) => {
+    const o = verts.length / 3;
+    ids.forEach((id) => verts.push(pos.getX(id), pos.getY(id), pos.getZ(id), pos.getX(id), base, pos.getZ(id)));
+    for (let i = 0; i < ids.length - 1; i++) { const a = o + i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  };
+  const C = DEM.cols, Rw = DEM.rows, seq = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+  edge(seq(C, (i) => i)); edge(seq(C, (i) => (Rw - 1) * C + (C - 1 - i))); edge(seq(Rw, (i) => (Rw - 1 - i) * C)); edge(seq(Rw, (i) => i * C + C - 1));
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3)); g.setIndex(idx); g.computeVertexNormals();
+  scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x6f5e4c, roughness: 1, side: THREE.DoubleSide })));
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(WKM, HKM).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x4a3f34, roughness: 1 }));
+  plate.position.y = base; scene.add(plate);
+}
+
+// ---------- heat (POA) ----------
+const RAMP = [[0, [233, 196, 106]], [0.5, [217, 130, 43]], [1, [184, 50, 42]]];
+const heatRect = {
+  x: ((B.west - DEM.lon0) / stLon) * TS, y: ((DEM.lat0 - B.north) / stLat) * TS,
+  w: ((B.east - B.west) / stLon) * TS, h: ((B.north - B.south) / stLat) * TS,
+};
+function heatCanvasGrid(p) {
+  let mx = 0, mn = Infinity; for (const v of p) { if (v > mx) mx = v; if (v < mn) mn = v; }
+  if (mx - mn < 1e-12) return null; // uniform (replay without engine output): no heat
+  const small = document.createElement('canvas'); small.width = R.cols; small.height = R.rows;
+  const g = small.getContext('2d'), img = g.createImageData(R.cols, R.rows);
+  for (let i = 0; i < p.length; i++) {
+    const v = Math.pow(p[i] / (mx || 1), 0.6), [r, gg, b] = lerpStops(RAMP, v);
+    img.data.set([r, gg, b, 255 * clamp((v - 0.06) * 0.85, 0, 0.66)], i * 4);
+  }
+  g.putImageData(img, 0, 0);
+  const mid = document.createElement('canvas'); mid.width = R.cols * 4; mid.height = R.rows * 4;
+  const gm = mid.getContext('2d'); gm.imageSmoothingQuality = 'high'; gm.drawImage(small, 0, 0, mid.width, mid.height);
+  const out = document.createElement('canvas'); out.width = Math.round(heatRect.w); out.height = Math.round(heatRect.h);
+  const go = out.getContext('2d'); go.imageSmoothingQuality = 'high'; go.filter = 'blur(2px)'; go.drawImage(mid, 0, 0, out.width, out.height);
+  return out;
+}
+const heatCache = new Map();
+const heatOf = (i) => { if (!heatCache.has(i)) heatCache.set(i, heatCanvasGrid(R.steps[i].poaGrid)); return heatCache.get(i); };
+let heatFrom = null, heatTo = null, heatT = 1;
+function compose() {
+  const g = compCanvas.getContext('2d'), gg = glowCanvas.getContext('2d');
+  g.globalAlpha = 1; g.drawImage(baseCanvas, 0, 0);
+  gg.globalAlpha = 1; gg.fillStyle = '#000'; gg.fillRect(0, 0, TW, TH);
+  const draw = (cv, a) => {
+    if (!cv || a <= 0) return;
+    g.globalAlpha = a; g.drawImage(cv, heatRect.x, heatRect.y, heatRect.w, heatRect.h);
+    gg.globalAlpha = a; gg.drawImage(cv, heatRect.x, heatRect.y, heatRect.w, heatRect.h);
+  };
+  draw(heatFrom, 1 - heatT); draw(heatTo, heatT);
+  g.globalAlpha = 1; gg.globalAlpha = 1;
+  compTex.needsUpdate = true; glowTex.needsUpdate = true;
+}
+const showHeat = (cv, animate = true) => { heatFrom = animate ? heatTo : null; heatTo = cv; heatT = heatFrom ? 0 : 1; compose(); };
+
+// ---------- lines, pins, labels ----------
+function densify(pts, maxKm = 0.03) {
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    if (i) {
+      const [la0, lo0] = pts[i - 1], [la1, lo1] = pts[i];
+      const n = Math.ceil(Math.hypot((lo1 - lo0) * KX * KM, (la1 - la0) * KM) / maxKm);
+      for (let k = 1; k < n; k++) out.push([la0 + ((la1 - la0) * k) / n, lo0 + ((lo1 - lo0) * k) / n]);
+    }
+    out.push(pts[i]);
+  }
+  return out;
+}
+function makeLine(vecs, { color = '#222', width = 2, opacity = 1, dashed = false, dash = 0.05, gap = 0.04 } = {}) {
+  const geo = new LineGeometry(); geo.setPositions(vecs.flatMap((v) => [v.x, v.y, v.z]));
+  const mat = new LineMaterial({ color, linewidth: width, transparent: opacity < 1, opacity, dashed, dashSize: dash, gapSize: gap });
+  mat.resolution.set(innerWidth, innerHeight); lineMats.add(mat);
+  const l = new Line2(geo, mat); if (dashed) l.computeLineDistances();
+  return l;
+}
+// draped polyline in [lat, lon]; parts outside the DEM are dropped
+function drapeRuns(latlon, lift, opts, group) {
+  let run = [];
+  const flush = () => { if (run.length > 1) group.add(makeLine(run.map(([la, lo]) => v3(la, lo, lift)), opts)); run = []; };
+  for (const p of densify(latlon)) { if (inside(p)) run.push(p); else flush(); }
+  flush();
+}
+const ringLL = (poly) => poly.map(([lo, la]) => [la, lo]); // polygons are [lon, lat]
+const circleLL = ([la, lo], rM, n = 96) => Array.from({ length: n + 1 }, (_, i) => {
+  const a = (i / n) * Math.PI * 2; return [la + (Math.sin(a) * rM) / 1000 / KM, lo + (Math.cos(a) * rM) / 1000 / (KM * KX)];
+});
+function disposeGroup(g) {
+  g.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) { lineMats.delete(o.material); o.material.dispose(); } if (o.isCSS2DObject) o.element.remove(); });
+  g.clear();
+}
+function label(html, cls, pos) {
+  const el = document.createElement('div'); el.className = 'lbl3d ' + (cls || ''); el.innerHTML = html;
+  const o = new CSS2DObject(el); o.position.copy(pos); return o;
+}
+const ballGeo = new THREE.SphereGeometry(1, 16, 12);
+function pin(lat, lon, color, h = 0.2, html = null, cls = '', r = 0.016) {
+  const g = new THREE.Group(), p0 = v3(lat, lon, 0.004), p1 = p0.clone().add(new THREE.Vector3(0, h, 0));
+  g.add(makeLine([p0, p1], { color: '#2b2f33', width: 1.4, opacity: 0.85 }));
+  const head = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color, roughness: 0.5 }));
+  head.scale.setScalar(r); head.position.copy(p1); g.add(head);
+  if (html) g.add(label(html, cls, p1.clone().add(new THREE.Vector3(0, r, 0))));
+  return g;
+}
+
+// ---------- static map features ----------
+const TRAIL_COL = { czerwony: '#d62828', niebieski: '#1d5fbf', zielony: '#2b9348', 'żółty': '#d9a400', czarny: '#222222' };
+const statics = new THREE.Group(); scene.add(statics);
+for (const t of TER?.trails || []) {
+  const key = (t.name || '').split(/[\s:]/)[0].toLowerCase();
+  drapeRuns(t.points, 0.013, { color: '#fbf8f0', width: 4, opacity: 0.55 }, statics);
+  drapeRuns(t.points, 0.014, { color: TRAIL_COL[key] || '#555', width: 2 }, statics);
+}
+for (const s of TER?.streams || []) drapeRuns(s.points, 0.008, { color: '#3a86c8', width: 1.3, opacity: 0.75 }, statics);
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x3f7fa3, roughness: 0.3, metalness: 0.1 });
+for (const l of TER?.lakes || []) {
+  const m = new THREE.Mesh(new THREE.CircleGeometry(l.radiusM / 1000, 48).rotateX(-Math.PI / 2), waterMat);
+  m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
+}
+for (const h of TER?.huts || []) statics.add(pin(h.at[0], h.at[1], '#7f5539', 0.07, esc(h.name), 'hut', 0.011));
+for (const g of segs.values()) drapeRuns(ringLL(g.polygon), 0.016, { color: '#2b2f33', width: 1, opacity: 0.28 }, statics);
+statics.add(pin(R.ipp.lat, R.ipp.lon, '#b8860b', 0.3, 'IPP · ostatnio widziany', 'ipp', 0.02));
+const foundPin = foundAt ? pin(foundAt[0], foundAt[1], '#2d6a4f', 0.42, 'ZNALEZIONO · ' + esc(foundEv?.at || ''), 'found', 0.026) : null;
+if (foundPin) { foundPin.visible = false; scene.add(foundPin); }
+// blind test reveal: the hider's true spot, published with the salt after the round
+const revealPin = REV?.at ? pin(REV.at[0], REV.at[1], '#b8322a', 0.55, 'Odsłonięte: tu była · ' + esc(REV.round || ''), 'target', 0.028) : null;
+if (revealPin) { revealPin.visible = false; scene.add(revealPin); }
+
+// dynamic layers
+const dyn = { top: new THREE.Group(), searched: new THREE.Group(), teams: new THREE.Group(), signals: new THREE.Group(), live: new THREE.Group(), game: new THREE.Group() };
+Object.values(dyn).forEach((g) => scene.add(g));
+const movers = [];
+
+// ---------- mood: daylight, fog, dusk ----------
+const MOODS = {
+  day: { top: '#86aacb', bottom: '#e6ebe8', fog: '#dde3e4', sun: '#fff1da', sunI: 2.6, hs: '#e4ecf3', hg: '#6b6250', hI: 0.95, stars: 0, emis: 0, exp: 1.0 },
+  fog: { top: '#aeb9c2', bottom: '#e4e7e6', fog: '#d3d9dc', sun: '#f1f1f1', sunI: 1.5, hs: '#e8edf0', hg: '#77736a', hI: 1.15, stars: 0, emis: 0, exp: 1.0 },
+  night: { top: '#33445f', bottom: '#8593a7', fog: '#6d7c91', sun: '#dde5fd', sunI: 2.1, hs: '#c3cfe3', hg: '#4a4a50', hI: 1.35, stars: 0.5, emis: 0.3, exp: 1.0 },
+};
+const cur = { top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60 };
+let tgt = { ...cur }, weatherOn = true;
+function setMood(w) {
+  const vis = w?.visibilityM ?? 10000, dark = !!w?.dark && weatherOn;
+  const m = dark ? MOODS.night : weatherOn && vis < 500 ? MOODS.fog : MOODS.day;
+  tgt = {
+    top: new THREE.Color(m.top), bottom: new THREE.Color(m.bottom), fog: new THREE.Color(m.fog), sun: new THREE.Color(m.sun), hs: new THREE.Color(m.hs), hg: new THREE.Color(m.hg),
+    sunI: m.sunI, hI: m.hI, stars: m.stars * (vis >= 500 ? 1 : 0.1), emis: m.emis, exp: m.exp,
+    near: !weatherOn ? 60 : vis <= 100 ? 4 : vis < 500 ? 5 : 12, far: !weatherOn ? 140 : vis <= 100 ? 15 : vis < 500 ? 20 : 60,
+  };
+}
+function stepMood(dt) {
+  const k = 1 - Math.exp(-dt * 1.8);
+  for (const c of ['top', 'bottom', 'fog', 'sun', 'hs', 'hg']) cur[c].lerp(tgt[c], k);
+  for (const n of ['sunI', 'hI', 'stars', 'emis', 'exp', 'near', 'far']) cur[n] += (tgt[n] - cur[n]) * k;
+  skyMat.uniforms.top.value.copy(cur.top); skyMat.uniforms.bottom.value.copy(cur.bottom);
+  scene.fog.color.copy(cur.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
+  sun.color.copy(cur.sun); sun.intensity = cur.sunI; hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hI;
+  starMat.opacity = cur.stars; terrainMat.emissiveIntensity = cur.emis; renderer.toneMappingExposure = cur.exp;
+}
+
+// ---------- source signals ----------
+function anchorOf(e) {
+  if (e.point && inside(e.point)) return e.point;
+  if (e.points?.length) { const ins = e.points.filter(inside); if (ins.length) return e.provider === 'TrailheadCar' ? ins[0] : ins[Math.floor(ins.length / 2)]; }
+  if (e.segments?.length) { const g = segs.get(e.segments[0]); if (g) return g.center; }
+  return null;
+}
+function drawSignal(e, isCur) {
+  const [badge, col] = sigOf(e), G = dyn.signals, op = isCur ? 1 : 0.6;
+  if (e.provider === 'KoesterRings' && e.point) {
+    (e.quantilesKm || []).forEach((q, j) => {
+      const ring = circleLL(e.point, q * 1000, 160);
+      drapeRuns(ring, 0.02, { color: col, width: 1.5, opacity: 0.75 * op, dashed: true, dash: 0.08, gap: 0.05 }, G);
+      const at = ring[20];
+      if (isCur && inside(at)) G.add(label(`${[25, 50, 75, 95][j] ?? ''}% · ${q} km`, 'ring', v3(at[0], at[1], 0.05)));
+    });
+    return; // the IPP pin marks the centre
+  }
+  if (isFound(e)) return; // the find pin is shown separately
+  if (e.points?.length) drapeRuns(e.points, 0.024, { color: col, width: isCur ? 3 : 2.2, opacity: op, dashed: e.provider === 'TrailheadCar', dash: 0.05, gap: 0.035 }, G);
+  if (e.point && e.radiusM >= 100) drapeRuns(circleLL(e.point, e.radiusM), 0.022, { color: col, width: 1.8, opacity: 0.85 * op, dashed: true, dash: 0.06, gap: 0.04 }, G);
+  const a = anchorOf(e); if (!a) return;
+  const short = e.title.length > 40 ? e.title.slice(0, 38) + '…' : e.title;
+  G.add(pin(a[0], a[1], col, isCur ? 0.34 : 0.2, `<span class="d" style="background:${col}"></span><b>${esc(e.at)}</b> ${esc(isCur ? short : badge)}`, 'sig' + (isCur ? ' cur' : ''), isCur ? 0.022 : 0.015));
+}
+function renderSignals(i) {
+  const list = $('signals');
+  if (!EVENTS.length) { list.innerHTML = R.steps.map((s, k) => `<li class="${k > i ? 'future' : k === i ? 'cur' : ''}" data-step="${k}"><span class="ic" style="background:#6b6f72">${k + 1}</span><div><div class="tt">${esc(s.label)}</div><div class="meta"><span class="t">${s.t}</span>${esc(s.source || '')}</div></div></li>`).join(''); return; }
+  list.innerHTML = EVENTS.map((e, k) => {
+    const [badge, col, name] = sigOf(e), inf = e.step >= 0 ? influence(e.step) : null;
+    const cls = e.step < 0 || e.step > i ? 'future' : e.step === i ? 'cur' : '';
+    return `<li class="${cls}" data-ev="${k}"><span class="ic" style="background:${col}">${esc(badge)}</span><div><div class="tt">${esc(e.title)}</div><div class="meta"><span class="t">${esc(e.at)}</span>${esc(name)}${e.wave ? ` · fala ${e.wave}` : ''}${e.pod ? ` · POD ${Math.round(e.pod * 100)}%` : ''}${e.step < 0 ? ' · poza osią czasu' : ''}</div>${inf ? `<div class="inf">wpływ: ${esc(inf.name)} +${(inf.d * 100).toFixed(1)} pp</div>` : ''}</div></li>`;
+  }).join('');
+  list.querySelector('li.cur')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+$('signals').addEventListener('click', (ev) => {
+  const li = ev.target.closest('li'); if (!li || G.phase !== 'off') return;
+  if (li.dataset.step) { stopPlay(); setStep(+li.dataset.step); return; }
+  const e = EVENTS[+li.dataset.ev]; if (e.step >= 0) { stopPlay(); setStep(e.step); }
+  const a = anchorOf(e) || e.point; if (a && inside(a)) flyTo(v3(a[0], a[1]), e.points?.length > 20 ? 4.2 : 2.6);
+});
+
+// ---------- step state ----------
+let STEP = -1;
+const searchedUpTo = (i) => { const s = new Set(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i) (e.segments || []).forEach((id) => s.add(id)); }); return s; };
+const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
+function drawTop(ranked) {
+  disposeGroup(dyn.top);
+  if (R.synthetic && G.phase === 'off') return;
+  ranked.slice(0, 3).forEach((sg, k) => {
+    const g = segs.get(sg.id); if (!g) return;
+    drapeRuns(ringLL(g.polygon), 0.02, { color: k === 0 ? '#b8322a' : '#2b2f33', width: k === 0 ? 3.2 : 2, opacity: k === 0 ? 1 : 0.75 }, dyn.top);
+    dyn.top.add(label(`<span>${esc(sg.name)}</span><span class="p">${pct(sg.poa)}</span>`, k === 0 ? 'rank1' : '', v3(g.center[0], g.center[1], 0.14)));
+  });
+}
+function setStep(i, animate = true) {
+  if (G.phase !== 'off') return;
+  i = clamp(i, 0, R.steps.length - 1);
+  const prev = STEP; STEP = i;
+  const s = R.steps[i], ranked = rankedOf(s.segments);
+  showHeat(heatOf(i), animate && prev >= 0);
+  drawTop(ranked);
+  disposeGroup(dyn.searched);
+  const searched = searchedUpTo(i);
+  for (const id of searched) { const g = segs.get(id); if (g) drapeRuns(ringLL(g.polygon), 0.018, { color: '#555b61', width: 1.8, opacity: 0.9, dashed: true, dash: 0.035, gap: 0.03 }, dyn.searched); }
+  disposeGroup(dyn.signals);
+  EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i) drawSignal(e, e.step === i); });
+  drawTeams(s);
+  if (foundPin) foundPin.visible = foundStep >= 0 && i >= foundStep;
+  if (revealPin) revealPin.visible = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1);
+  setMood(s.weather);
+  renderUI(i, ranked, searched, prev);
+  renderSignals(i);
+}
+function drawTeams(s) {
+  disposeGroup(dyn.teams); movers.length = 0;
+  const resInfo = new Map((s.resources || []).map((r) => [r.id, r]));
+  for (const a of s.assignments || []) {
+    const res = resources.get(a.resourceId), g = segs.get(a.segmentId); if (!res?.base || !g) continue;
+    const type = resInfo.get(a.resourceId)?.type || res.type, col = TEAM_COL[type] || '#555';
+    const p0 = v3(res.base[0], res.base[1], 0.03), p2 = v3(g.center[0], g.center[1], 0.05);
+    const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + (type === 'heli' || type === 'drone' ? 0.45 : 0.22) + p0.distanceTo(p2) * 0.12;
+    const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2), pts = curve.getPoints(64);
+    const line = makeLine(pts, { color: col, width: 1.8, opacity: 0.9, dashed: true, dash: 0.05, gap: 0.04 });
+    const dot = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: col })); dot.scale.setScalar(0.014);
+    dyn.teams.add(line, dot, label(`${esc(res.name.split(' (')[0])} · ${Math.round(a.etaMin)} min`, 'team', p1.clone()));
+    movers.push({ curve, dot, mat: line.material, t: Math.random() });
+  }
+}
+
+// ---------- UI ----------
+function renderUI(i, ranked, searched, prev) {
+  const s = R.steps[i];
+  $('sc-clock').textContent = s.t;
+  const kind = $('sc-kind'); kind.className = 'kind k-' + s.kind; kind.textContent = KIND[s.kind] || s.kind;
+  $('sc-label').textContent = s.label;
+  const lead = ranked[0];
+  let html = `Najbardziej prawdopodobne: <b>${esc(lead.name)}</b> <span class="pct">${pct(lead.poa)}</span>`;
+  if (prev >= 0 && prev !== i) { const pl = rankedOf(R.steps[prev].segments)[0]; if (pl.id !== lead.id) html += `<br>Zmiana lidera (było: ${esc(pl.name)})`; }
+  if (foundStep >= 0 && i >= foundStep && R.value?.findSegName) {
+    const rank = rankedOf(R.steps[Math.max(0, foundStep - 1)].segments).findIndex((x) => x.id === R.value.findSeg) + 1;
+    html += `<br>Znaleziony w: <b>${esc(R.value.findSegName)}</b>${rank ? ` (#${rank} w rankingu tuż przed)` : ''}`;
+  }
+  if (REV && i >= (foundStep >= 0 ? foundStep : R.steps.length - 1)) html += `<br><br><b>Odsłonięcie (${esc(REV.round)}):</b> ${esc(REV.story || '')}${REV.state ? ` <i>(${esc(REV.state)})</i>` : ''}`;
+  if (R.synthetic) html = `<span class="pct">Brak run.json z silnika</span>: mapa POA pojawi się, gdy plik trafi do repo.<br>` + html.replace(/^Najbardziej[^<]*<b>[^<]*<\/b> <span class="pct">[^<]*<\/span>/, '');
+  $('sc-lead').innerHTML = html;
+  const w = s.weather || {}, chips = [];
+  if (w.visibilityM != null) chips.push([`widoczność ${w.visibilityM >= 1000 ? (w.visibilityM / 1000).toFixed(1) + ' km' : w.visibilityM + ' m'}`, w.visibilityM < 200 ? 'warn' : '']);
+  if (w.windMs != null) chips.push([`wiatr ${w.windMs} m/s`, w.windMs >= 12 ? 'warn' : '']);
+  if (w.tempC != null) chips.push([`${w.tempC > 0 ? '+' : ''}${w.tempC}°C`, '']);
+  if (w.precip && w.precip !== 'none') chips.push([{ rain: 'mżawka', snow: 'śnieg' }[w.precip] || w.precip, '']);
+  if (w.dark) chips.push(['ciemno', 'night']);
+  if (w.ice) chips.push(['oblodzenie', 'warn']);
+  $('weather').innerHTML = chips.map(([t, c]) => `<span class="wchip ${c}">${esc(t)}</span>`).join('');
+  renderRanking(ranked, searched, foundStep >= 0 && i >= foundStep ? R.value?.findSeg : null);
+  const res = new Map((s.resources || []).map((r) => [r.id, r]));
+  $('teams').innerHTML = (s.assignments || []).length
+    ? s.assignments.map((a) => {
+      const t = res.get(a.resourceId)?.type || resources.get(a.resourceId)?.type, n = res.get(a.resourceId)?.name || resources.get(a.resourceId)?.name || a.resourceId;
+      return `<li><span class="dot" style="background:${TEAM_COL[t] || '#555'}"></span><span>${esc(n.split(' (')[0])} → ${esc(a.segmentName)}</span><span class="eta">${Math.round(a.etaMin)} min</span></li>`;
+    }).join('')
+    : '<li class="none">Brak przydziałów w tym kroku</li>';
+  $('slider').value = i;
+  document.querySelectorAll('.tick').forEach((t, k) => { t.classList.toggle('cur', k === i); t.classList.toggle('past', k < i); });
+}
+function renderRanking(ranked, searched, foundSeg) {
+  if (R.synthetic && G.phase === 'off') { $('ranklist').innerHTML = '<li class="none" style="cursor:default;color:var(--mute);font-size:12.5px">Ranking pojawi się z plikiem run.json silnika.</li>'; return; }
+  const mx = ranked[0].poa || 1;
+  $('ranklist').innerHTML = ranked.slice(0, 8).map((sg) => {
+    const cls = [searched.has(sg.id) ? 'searched' : '', sg.id === foundSeg ? 'found' : ''].join(' ');
+    return `<li class="${cls}" data-seg="${sg.id}"><div class="row"><span class="nm"><i>${sg.id}</i>${esc(sg.name)}</span><span class="pv">${pct(sg.poa)}</span></div><div class="bar"><i style="width:${(sg.poa / mx) * 100}%"></i></div><div class="act">Wyślij tu patrol</div></li>`;
+  }).join('');
+}
+$('ranklist').addEventListener('click', (e) => {
+  const li = e.target.closest('li'); if (!li) return;
+  if (G.phase === 'search') return sendPatrol(li.dataset.seg);
+  const g = segs.get(li.dataset.seg); if (g) flyTo(v3(g.center[0], g.center[1]), 2.4);
+});
+
+function buildTimeline() {
+  const n = R.steps.length, el = $('ticks');
+  $('slider').max = n - 1;
+  el.innerHTML = R.steps.map((s, k) => `<div class="tick k-${s.kind}${k === 0 || s.t !== R.steps[k - 1].t ? ' lbl' : ''}" style="left:${n > 1 ? (k / (n - 1)) * 100 : 50}%" title="${esc(s.t + ' · ' + s.label)}"><b></b><span>${s.t}</span></div>`).join('');
+  el.querySelectorAll('.tick').forEach((t, k) => t.addEventListener('click', () => { stopPlay(); setStep(k); }));
+  $('slider').addEventListener('input', (e) => { stopPlay(); setStep(+e.target.value); });
+}
+let playTimer = null;
+const stopPlay = () => { clearInterval(playTimer); playTimer = null; $('play').classList.remove('on'); };
+function togglePlay() {
+  if (G.phase !== 'off') return;
+  if (playTimer) return stopPlay();
+  if (STEP >= R.steps.length - 1) setStep(0);
+  $('play').classList.add('on');
+  playTimer = setInterval(() => { if (STEP >= R.steps.length - 1) return stopPlay(); setStep(STEP + 1); }, PLAY_MS);
+}
+$('play').addEventListener('click', togglePlay);
+addEventListener('keydown', (e) => {
+  if (e.target.closest('select,input') || G.phase !== 'off') return;
+  if (e.key === 'ArrowRight') { stopPlay(); setStep(STEP + 1); }
+  else if (e.key === 'ArrowLeft') { stopPlay(); setStep(STEP - 1); }
+  else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+  else if (e.key === 'Home') { stopPlay(); setStep(0); }
+  else if (e.key === 'End') { stopPlay(); setStep(R.steps.length - 1); }
+});
+(async () => {
+  const sel = $('scensel');
+  for (const [id, s] of Object.entries(SCENS)) {
+    const o = document.createElement('option'); o.value = id; o.textContent = s.name; o.selected = id === SC;
+    if (id !== SC) { try { const r = await fetch(s.run, { method: 'HEAD' }); if (!r.ok) throw 0; } catch { o.disabled = true; o.textContent += ' (brak run.json)'; } }
+    sel.appendChild(o);
+  }
+  sel.addEventListener('change', () => { const u = new URL(location.href); u.searchParams.set('sc', sel.value); u.searchParams.delete('run'); location.href = u.toString(); });
+})();
+
+// ---------- camera ----------
+let fly = null;
+function flyTo(target, dist = 3, dur = 1.6) {
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  if (dir.y < 0.4) { dir.y = 0.5; dir.normalize(); }
+  fly = { t: 0, dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: target.clone().add(dir.multiplyScalar(dist)), t1: target.clone() };
+}
+const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const center = new THREE.Vector3(0, ((zMax - zMin) * EX) / 2400, 0);
+const SPAN = Math.max(WKM, HKM);
+function overview(dur = 1.8) {
+  // oblique view from the south-east, the whole massif in frame
+  fly = { t: 0, dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: center.clone().add(new THREE.Vector3(SPAN * 0.42, SPAN * 0.62, SPAN * 0.92)), t1: center.clone() };
+}
+$('btn-all').addEventListener('click', () => overview());
+$('btn-top').addEventListener('click', () => {
+  const s = G.phase === 'off' ? rankedOf(R.steps[STEP].segments)[0] : G.ranked[0];
+  const g = segs.get(s.id); flyTo(v3(g.center[0], g.center[1]), 2.4);
+});
+let autoRot = false, idleAt = performance.now();
+$('btn-rot').addEventListener('click', () => { autoRot = !autoRot; $('btn-rot').classList.toggle('on', autoRot); });
+$('btn-fog').addEventListener('click', () => { weatherOn = !weatherOn; $('btn-fog').classList.toggle('on', weatherOn); setMood(R.steps[Math.max(0, STEP)].weather); });
+controls.addEventListener('start', () => { idleAt = Infinity; fly = null; });
+controls.addEventListener('end', () => { idleAt = performance.now(); });
+
+// ---------- pointer: tooltip, hide click, double-click fly ----------
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let hoverPending = false, lastEv = null, downAt = null;
+const diffLabel = new Map((R.difficultyClasses || []).map((d) => [d.id, d.label]));
+const pick = (e) => { mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(mouse, camera); return ray.intersectObject(terrain)[0]; };
+const cv = renderer.domElement;
+cv.addEventListener('pointermove', (e) => { lastEv = e; if (!hoverPending) { hoverPending = true; requestAnimationFrame(hover); } });
+cv.addEventListener('pointerleave', () => { $('tip').hidden = true; });
+cv.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+cv.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  if (G.phase === 'hide') { const h = pick(e); if (h) hideAt(toLat(h.point.z), toLon(h.point.x)); }
+});
+cv.addEventListener('dblclick', (e) => { const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
+function hover() {
+  hoverPending = false; const e = lastEv, tip = $('tip'); if (!e) return;
+  const hit = pick(e); if (!hit) { tip.hidden = true; return; }
+  const lat = toLat(hit.point.z), lon = toLon(hit.point.x), k = cellOf(lat, lon);
+  let html = G.phase === 'hide' ? '<div><b>Kliknij, aby tu ukryć zaginionego</b></div>' : '';
+  html += `<div><b>${Math.round(elevM(lat, lon))} m n.p.m.</b></div>`;
+  if (k >= 0) {
+    const g = segs.get(R.segOf[k]), grid = G.phase === 'search' || G.phase === 'done' ? G.grid : R.steps[STEP].poaGrid;
+    if (G.phase !== 'hide') html += `<div>${esc(g?.name || R.segOf[k])} · komórka 100 m: <b>${(grid[k] * 100).toFixed(2)}%</b></div>`;
+    else html += `<div>${esc(g?.name || R.segOf[k])}</div>`;
+    const sl = TER?.slopeDeg?.[k], d = R.difficulty?.[k];
+    html += `<div>${sl != null ? `nachylenie ${Math.round(sl)}°` : ''}${d != null && diffLabel.has(d) ? ` · ${esc(diffLabel.get(d))}` : ''}</div>`;
+  }
+  tip.innerHTML = html; tip.hidden = false;
+  tip.style.left = Math.min(e.clientX + 14, innerWidth - 260) + 'px'; tip.style.top = e.clientY + 14 + 'px';
+}
+
+// ---------- blind test game ----------
+// You hide the missing person; the map keeps the engine's POA from the chosen step and does not know the spot.
+// A SHA-256 commitment of the spot + salt is shown up front. Each patrol to a segment finds the person with
+// probability POD if they are there; the draw is HMAC(salt, segment|attempt), so the result is fixed in advance
+// and the same draws drive the naive baseline (segments in order of distance from IPP).
+const G = { phase: 'off' };
+const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)));
+async function draw(seg, n) {
+  if (!G.key) G.key = await crypto.subtle.importKey('raw', new TextEncoder().encode(G.salt), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', G.key, new TextEncoder().encode(`${seg}|${n}`)));
+  return (sig[0] * 2 ** 24 + sig[1] * 2 ** 16 + sig[2] * 2 ** 8 + sig[3]) / 2 ** 32;
+}
+const PATROL_MIN = 30;
+function segPoa(grid) {
+  return [...segs.values()].map((g) => ({ id: g.id, name: g.name, areaPct: g.areaPct, poa: g.cells.reduce((a, i) => a + grid[i], 0) }));
+}
+function gamePanel(html) { const p = $('game'); p.hidden = false; p.innerHTML = html; }
+function lockTimeline(on) {
+  stopPlay(); $('play').disabled = on; $('slider').disabled = on;
+  document.body.classList.toggle('searching', on && G.phase === 'search');
+}
+function startGame() {
+  if (G.phase !== 'off') return endGame();
+  const base = Q.has('blindStep') ? +Q.get('blindStep') : R.value?.beforePing ?? STEP;
+  if (STEP !== base) setStep(base);
+  Object.assign(G, { phase: 'hide', base, target: null, salt: null, key: null, commit: null, patrols: [], attempts: new Map(), searched: new Set(), found: false });
+  disposeGroup(dyn.teams); movers.length = 0; if (foundPin) foundPin.visible = false; if (revealPin) revealPin.visible = false;
+  $('teams').innerHTML = '<li class="none">W teście patrole wysyłasz Ty (z IPP), POD ' + (R.steps[base].weather?.dark ? '60' : '75') + '%.</li>';
+  lockTimeline(true); document.body.classList.add('hiding'); $('btn-game').textContent = 'Zakończ test';
+  gamePanel(`<h3>Test na ślepo: ukryj zaginionego</h3>
+    <p>Kliknij w teren, żeby schować osobę. Mapa zostaje taka, jak policzył ją silnik o <b>${esc(R.steps[base].t)}</b> (${esc(R.steps[base].label)}) i nie wie, gdzie kliknąłeś. Spróbuj ją przechytrzyć.</p>
+    <div class="row"><button class="btn" id="g-rand">Losuj miejsce</button><button class="btn" id="g-cancel">Anuluj</button></div>`);
+  $('g-rand').onclick = () => { let p; do p = [B.south + Math.random() * (B.north - B.south), B.west + Math.random() * (B.east - B.west)]; while (!inside(p)); hideAt(p[0], p[1], true); };
+  $('g-cancel').onclick = endGame;
+}
+async function hideAt(lat, lon, random = false) {
+  const k = cellOf(lat, lon); if (k < 0) return;
+  G.target = [lat, lon]; G.cell = k; G.seg = R.segOf[k];
+  G.salt = hex(crypto.getRandomValues(new Uint8Array(16)));
+  G.commit = await sha256(`${lat.toFixed(5)},${lon.toFixed(5)}|${G.salt}`);
+  G.grid = Float64Array.from(R.steps[G.base].poaGrid);
+  G.start = rankedOf(segPoa(G.grid));
+  G.phase = 'search'; G.random = random;
+  document.body.classList.remove('hiding'); lockTimeline(true);
+  refreshGame();
+}
+function refreshGame(msg = '') {
+  G.ranked = rankedOf(segPoa(G.grid));
+  showHeat(heatCanvasGrid(G.grid));
+  drawTop(G.ranked);
+  renderRanking(G.ranked, G.searched, G.found ? G.seg : null);
+  disposeGroup(dyn.searched);
+  for (const id of G.searched) { const g = segs.get(id); if (g) drapeRuns(ringLL(g.polygon), 0.018, { color: '#555b61', width: 1.8, opacity: 0.9, dashed: true, dash: 0.035, gap: 0.03 }, dyn.searched); }
+  const area = [...G.searched].reduce((a, id) => a + (segs.get(id)?.areaPct || 0), 0);
+  const clock = addMin(R.steps[G.base].t, G.patrols.length * PATROL_MIN);
+  const stats = `<div class="stats"><div class="stat"><b>${G.patrols.length}</b><span>patroli</span></div><div class="stat"><b>${area.toFixed(1)}%</b><span>obszaru przeszukane</span></div><div class="stat"><b>${clock}</b><span>czas akcji</span></div></div>`;
+  const log = G.patrols.length ? `<ol>${G.patrols.map((p) => `<li>${esc(p.name)}: ${p.found ? '<b>ZNALEZIONO</b>' : 'nic'} (POD ${Math.round(p.pod * 100)}%)</li>`).join('')}</ol>` : '';
+  if (G.phase === 'search') {
+    gamePanel(`<h3>Szukaj</h3>
+      <p>Zobowiązanie (SHA-256 miejsca i soli): <code>${G.commit.slice(0, 24)}…</code></p>
+      <p>Wyślij patrol do lidera albo kliknij segment w rankingu. Puste przeszukanie obniża prawdopodobieństwo segmentu (POA × (1 − POD)) i mapa się przelicza.</p>
+      ${stats}${msg ? `<p>${msg}</p>` : ''}${log}
+      <div class="row"><button class="btn red" id="g-lead">Patrol do lidera</button><button class="btn" id="g-auto">${G.auto ? 'Stop' : 'Szukaj automatycznie'}</button><button class="btn" id="g-reveal">Odsłoń</button></div>`);
+    $('g-lead').onclick = () => sendPatrol(G.ranked[0].id);
+    $('g-auto').onclick = () => { G.auto = !G.auto; refreshGame(); if (G.auto) autoNext(); };
+    $('g-reveal').onclick = () => finish(false);
+  }
+}
+const addMin = (t, m) => { const [h, mm] = t.split(':').map(Number), x = h * 60 + mm + m; return `${String(Math.floor(x / 60) % 24).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
+let busy = false;
+async function sendPatrol(segId) {
+  if (G.phase !== 'search' || busy) return;
+  busy = true;
+  const g = segs.get(segId), n = (G.attempts.get(segId) || 0) + 1; G.attempts.set(segId, n);
+  const pod = R.steps[G.base].weather?.dark ? 0.6 : 0.75;
+  const u = await draw(segId, n), found = segId === G.seg && u < pod;
+  // animate the patrol from the IPP to the segment, then resolve
+  const p0 = v3(R.ipp.lat, R.ipp.lon, 0.03), p2 = v3(g.center[0], g.center[1], 0.05);
+  const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + 0.25 + p0.distanceTo(p2) * 0.12;
+  const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2);
+  const line = makeLine(curve.getPoints(48), { color: '#b8322a', width: 1.8, opacity: 0.85, dashed: true, dash: 0.05, gap: 0.04 });
+  const dot = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: '#b8322a' })); dot.scale.setScalar(0.016);
+  dyn.game.add(line, dot);
+  await new Promise((res) => movers.push({ curve, dot, mat: line.material, t: 0, once: true, done: res }));
+  dyn.game.remove(line, dot); lineMats.delete(line.material); line.geometry.dispose(); line.material.dispose();
+  G.patrols.push({ id: segId, name: g.name, found, pod });
+  G.searched.add(segId);
+  dyn.game.add(label(found ? 'ZNALEZIONO' : 'nic', 'patrol' + (found ? ' ok' : ''), v3(g.center[0], g.center[1], 0.08)));
+  busy = false;
+  if (found) { G.found = true; return finish(true); }
+  // Bayes update after an empty search
+  let tot = 0; for (const i of g.cells) G.grid[i] *= 1 - pod;
+  for (const v of G.grid) tot += v; for (let i = 0; i < G.grid.length; i++) G.grid[i] /= tot;
+  refreshGame(`Patrol w ${esc(g.name)}: nic.`);
+  if (G.patrols.length >= 40) return finish(false);
+  if (G.auto) setTimeout(autoNext, 500);
+}
+function autoNext() { if (G.auto && G.phase === 'search') sendPatrol(G.ranked[0].id); }
+async function naiveCount() {
+  // same draws, but patrols go through segments in order of distance from the IPP, round after round
+  const order = [...segs.values()].map((g) => ({ id: g.id, d: Math.hypot((g.center[0] - R.ipp.lat) * KM, (g.center[1] - R.ipp.lon) * KM * KX) })).sort((a, b) => a.d - b.d);
+  const pod = R.steps[G.base].weather?.dark ? 0.6 : 0.75, att = new Map();
+  for (let n = 1; n <= 200; n++) {
+    const s = order[(n - 1) % order.length].id, k = (att.get(s) || 0) + 1; att.set(s, k);
+    if (s === G.seg && (await draw(s, k)) < pod) return n;
+  }
+  return null;
+}
+async function finish(found) {
+  G.phase = 'done'; G.auto = false;
+  const rank0 = G.start.findIndex((s) => s.id === G.seg) + 1, naive = await naiveCount();
+  const tpin = pin(G.target[0], G.target[1], found ? '#2d6a4f' : '#b8322a', 0.45, found ? 'Tu był · znaleziony' : 'Tu był ukryty', found ? 'found' : 'target', 0.026);
+  dyn.game.add(tpin);
+  const verify = await sha256(`${G.target[0].toFixed(5)},${G.target[1].toFixed(5)}|${G.salt}`);
+  const area = [...G.searched].reduce((a, id) => a + (segs.get(id)?.areaPct || 0), 0);
+  refreshGame();
+  gamePanel(`<h3>${found ? 'Znaleziony' : 'Odsłonięte'}</h3>
+    <div class="res ${found ? 'ok' : 'fail'}">${found
+      ? `Silnik znalazł osobę w <b>${G.patrols.length}</b> patrolach (${area.toFixed(1)}% obszaru).`
+      : `Nie znaleziono w ${G.patrols.length} patrolach.`}
+      Naiwnie (od IPP, segment po segmencie): <b>${naive ?? '>200'}</b> patroli.<br>
+      Segment kryjówki (${esc(segs.get(G.seg).name)}) był <b>#${rank0}</b> z ${G.start.length} w rankingu przed pierwszym patrolem.</div>
+    <p>Miejsce: <code>${G.target[0].toFixed(5)}, ${G.target[1].toFixed(5)}</code> · sól: <code>${G.salt}</code><br>
+      SHA-256 zgodny ze zobowiązaniem: <b>${verify === G.commit ? 'tak' : 'NIE'}</b></p>
+    <div class="row"><button class="btn red" id="g-again">Zagraj jeszcze raz</button><button class="btn" id="g-end">Zakończ</button></div>`);
+  $('g-again').onclick = () => { endGame(); startGame(); };
+  $('g-end').onclick = endGame;
+  flyTo(v3(G.target[0], G.target[1]), 3);
+}
+function endGame() {
+  G.phase = 'off'; G.auto = false; disposeGroup(dyn.game);
+  $('game').hidden = true; $('btn-game').textContent = 'Test na ślepo';
+  document.body.classList.remove('hiding', 'searching'); lockTimeline(false);
+  const s = STEP; STEP = -1; setStep(s, false);
+}
+$('btn-game').addEventListener('click', startGame);
+
+// ---------- live field reports ----------
+const seenLive = new Set();
+async function pollLive() {
+  const ev = await getJSON(P.live, true);
+  if (Array.isArray(ev)) for (const e of ev) {
+    const key = e.t + '|' + e.text; if (seenLive.has(key)) continue; seenLive.add(key);
+    toast(e);
+    for (const h of e.hints || []) {
+      const g = segs.get(h.segmentId), at = h.lat != null && h.lon != null ? [h.lat, h.lon] : g ? g.center : null; if (!at) continue;
+      if (h.type === 'clue') dyn.live.add(pin(at[0], at[1], '#b8860b', 0.26, 'Ślad: ' + esc(h.description || ''), 'sig cur', 0.018));
+      else if (h.type === 'segmentSearched' && g) drapeRuns(ringLL(g.polygon), 0.022, { color: '#b8860b', width: 2, opacity: 0.9 }, dyn.live);
+    }
+  }
+  setTimeout(pollLive, 4000);
+}
+function toast(e) {
+  const el = document.createElement('div'); el.className = 'toast';
+  el.innerHTML = `<span class="t">${esc(e.at || '')} meldunek</span>${esc(e.text)}`;
+  const feed = $('feed'); feed.prepend(el);
+  while (feed.children.length > 4) feed.lastChild.remove();
+  setTimeout(() => el.remove(), 30000);
+}
+
+// ---------- loop ----------
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (heatT < 1) { heatT = Math.min(1, heatT + dt / 0.7); compose(); }
+  stepMood(dt);
+  if (fly) {
+    fly.t += dt / fly.dur; const k = ease(Math.min(1, fly.t));
+    camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k);
+    if (fly.t >= 1) { fly = null; idleAt = performance.now(); }
+  }
+  controls.autoRotate = autoRot && !fly && performance.now() - idleAt > 4000;
+  controls.update();
+  for (let i = movers.length - 1; i >= 0; i--) {
+    const m = movers[i];
+    if (m.once) { m.t += dt / 1.1; m.dot.position.copy(m.curve.getPoint(Math.min(1, m.t))); if (m.t >= 1) { movers.splice(i, 1); m.done(); } }
+    else { m.t = (m.t + dt * 0.15) % 1; m.dot.position.copy(m.curve.getPoint(m.t)); m.mat.dashOffset -= dt * 0.08; }
+  }
+  renderer.render(scene, camera);
+  labels.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+// ---------- start ----------
+buildTimeline();
+setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
+for (let k = 0; k < 60; k++) stepMood(0.1);
+camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
+controls.target.copy(center);
+overview(2.6);
+frame();
+pollLive();
+document.body.dataset.state = 'ready';

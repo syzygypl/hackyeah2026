@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rescue Locator 3D</title>
+<link rel="stylesheet" href="style3d.css">
+<link rel="icon" href="data:,">
+<script type="importmap">
+{ "imports": {
+  "three": "../vendor/three/three.module.min.js",
+  "three/addons/": "../vendor/three/addons/"
+} }
+</script>
+</head>
+<body data-state="loading">
+<div id="scene"></div>
+
+<header id="top" class="panel">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 27 L13 8 L19 16 L26 4 L39 27 Z" fill="#3d4a3f"/><path d="M26 4 L30.5 11.5 L27.5 10 L25 12.5 L22.6 9.6 Z" fill="#f4f1ea"/><path d="M13 8 L16 12.6 L13.4 11.6 L11.2 13 Z" fill="#f4f1ea"/></svg>
+    <div>
+      <h1>Rescue Locator <span class="dim">3D</span></h1>
+      <div id="incident" class="sub">Wczytywanie terenu...</div>
+    </div>
+  </div>
+  <div class="top-right">
+    <button id="btn-game" class="btn red" title="Ukryj zaginionego i sprawdź, czy silnik go znajdzie">Test na ślepo</button>
+    <label class="scen">Scenariusz <select id="scensel" aria-label="Scenariusz"></select></label>
+    <span class="pill fict">Dane fikcyjne</span>
+    <a class="pill link" href="../">Widok 2D</a>
+  </div>
+</header>
+
+<aside id="left" class="panel">
+  <section id="stepcard" aria-live="polite">
+    <div class="sc-head"><span id="sc-clock" class="clock">--:--</span><span id="sc-kind" class="kind"></span></div>
+    <div id="sc-label" class="sc-label"></div>
+    <div id="sc-lead" class="sc-lead"></div>
+    <div id="weather" class="weather"></div>
+  </section>
+  <h2>Sygnały źródłowe</h2>
+  <ol id="signals"></ol>
+  <p class="note">Każdy sygnał to wejście silnika (Swift, RescueKit). Kliknij, żeby zobaczyć go na mapie. „Wpływ” = segment, który zyskał najwięcej po dodaniu sygnału.</p>
+</aside>
+
+<aside id="right" class="panel">
+  <h2>Gdzie szukać najpierw</h2>
+  <ol id="ranklist"></ol>
+  <h2 class="mt">Zespoły w tym kroku</h2>
+  <ul id="teams"></ul>
+</aside>
+
+<section id="game" class="panel" hidden></section>
+<section id="feed" aria-live="polite"></section>
+
+<footer id="timeline" class="panel">
+  <button id="play" class="play" aria-label="Odtwórz / pauza"><span></span></button>
+  <div class="track">
+    <div id="ticks" class="ticks"></div>
+    <input id="slider" type="range" min="0" max="0" value="0" aria-label="Krok osi czasu">
+  </div>
+  <div class="legend" aria-label="Legenda POA">
+    <span>Prawdopodobieństwo</span><i class="ramp"></i><span class="lo">niskie</span><span class="hi">wysokie</span>
+  </div>
+</footer>
+
+<div id="hud">
+  <button id="btn-top" class="btn" title="Przelot do najbardziej prawdopodobnego segmentu">Lider</button>
+  <button id="btn-all" class="btn" title="Cały obszar">Cały obszar</button>
+  <button id="btn-rot" class="btn" title="Powolny obrót kamery">Obrót</button>
+  <button id="btn-fog" class="btn on" title="Mgła i zmrok wg warunków z kroku">Pogoda</button>
+</div>
+
+<div id="tip" class="tip" hidden></div>
+<div id="loading"><div class="spinner"></div><p id="loadmsg">Wczytywanie modelu terenu (Copernicus DEM)...</p></div>
+
+<script type="module" src="app3d.js"></script>
+</body>
+</html>
