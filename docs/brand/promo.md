@@ -4,7 +4,7 @@ All numbers from `brand.md` §5. Wording follows `docs/research/legal-check-pl.m
 
 1. **Teaser:** Jedna faktura. Ukryte polecenie: przelej 95 000 euro. Airlock mówi: nie.
 2. **Hero stat:** 58 mikrosekund. Tyle trwa deterministyczna kontrola każdego wywołania agenta, na twoim sprzęcie.
-3. **Before/after:** Przedtem agent czytał fakturę i robił, co mu kazała. Teraz ta sama faktura jest oznaczona jako niezaufana w 134 ms, a przelew czeka na kontrolę na cztery oczy (w demo symulowaną).
+3. **Before/after:** Przedtem agent czytał fakturę i robił, co mu kazała. Teraz ta sama faktura jest oznaczona jako niezaufana w 134 ms, a przelew czeka na kontrolę na cztery oczy, którą zatwierdza tylko admin.
 4. **One more thing:** Każda reguła mówi "tak". Granite Guardian czyta zadanie, nie regułę, i mówi "to nie było w planie".
 5. **Closing:** Agenci działają. Airlock decyduje. A Rój wyciąga i cytuje, nie doradza, a gdy nie jest pewny, mówi "nie wiem, sprawdź".
 

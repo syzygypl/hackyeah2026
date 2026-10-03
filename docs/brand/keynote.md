@@ -26,7 +26,7 @@ Status deck (10 slides by default, 12 with the live-pitch slides): https://claud
 | Guardrails | 30 | **95,000 EUR. Denied.** | 19/20 attacks caught, 1 false alarm in 16 benign items on our 36-item test set (EN + PL, smoke test, not a benchmark); 18 of 29 interactions blocked in the demo run; 16 signatures incl. SSRF, SSTI, XXE, markdown exfil; Polish injection heuristics; IBANs tokenized in prompts; in consensus mode, guard disagreement is settled by risk (arbiter, weighted votes, then allow + flag or deny) |
 | Architecture / perf | 20 | **58 µs** | benchmark p99 118 µs (demo run p50 73 µs); Qwen3Guard p50 134 ms; Granite 521 ms on short text (1.9 s at 2,000 chars), only on high-risk calls; consensus runs guards in parallel: 165 ms for two, 569 ms s with Granite |
 | Reporting | 20 | **29 of 29** decisions in a verified hash chain | dashboard live console with µs per check, "where guards disagreed" report section, JSONL export |
-| Tests | 15 | **129/129** | demo cases with real models; 75/75 unit tests on the demo Mac; 7 proxy tests; weakening the policy fails tests on purpose |
+| Tests | 15 | **129/129** | demo cases with real models; 108 unit tests (fcba685); 7 proxy tests; weakening the policy fails tests on purpose |
 | Implementability | 15 | **1 URL** | Ollama-compatible proxy (:11434 to :11500), or 1 stdlib client file and 2 calls; 3 commands to deploy; policy edits via authenticated PUT |
 
 ## 10 slides for the final PDF (one sentence each)
@@ -49,12 +49,12 @@ Deck variants: the artifact shows the 10-slide version by default (consensus fol
 ## Speaker notes
 
 - Say "scripted" for the 95k scene. The real-model scene right before it carries the truth.
-- Never say "secure" or "production-ready". Say "blocks these attacks in our tests". Planned items (MCP proxy, real approval queue, shared audit store) only if asked.
-- Do not show the approval flow as a security control until `server.py` authenticates `approved_by` (a self-approved 15k transfer was reproduced on the demo Mac). Show deny and redact, not approve.
+- Never say "secure" or "production-ready". Say "blocks these attacks in our tests". Planned items (MCP proxy, shared audit store) only if asked.
+- Approval is a real admin-gated control now (42be894): admin-only `POST /v1/approvals/{id}`, bound to the exact payload, single use, 10-minute expiry; a caller's `approved_by` is ignored. Good live beat: a self-approved 15k transfer is held, then denied.
 - Never claim consensus is more accurate: on our test set it caught 18/20 with 4 false alarms vs tiered 19/20 with 1. Tiered stays the default; consensus is about visible disagreement and the risk rule (shipped in 2fcd99a).
 - Granite slows with long text (1.9 s at 2,000 chars, 4.1 s at 6,000), so keep demo inputs short and the model warm. Polish benign prompts are the weak spot (7/42 wrongly blocked).
-- Approvals are simulated (scripted approver, or the `X-ACL-Approved-By` header in the proxy). Four-eyes is an internal control, not PSD2 SCA: the bank still authenticates the payment. Never "authorises".
-- "Models run on your machine, no prompt goes to a model provider" holds only once `claude-sonnet-5-5` is out of `models.allowed` (owner: Marcin). Until then say "the guard models run locally".
+- Four-eyes is an internal control, not PSD2 SCA: the bank still authenticates the payment. Never "authorises".
+- "Models run on your machine, no prompt goes to a model provider" is true: the committed policy allows only local models (d16de01).
 - Compliance: "supports AI Act Art. 12/14 and DORA logging", never "compliant", "AI Act-ready" or "certified". The log is tamper-evident, never "immutable". Redaction covers PESEL, IBAN, card numbers and e-mails on configured paths, not "all PII". Stored hashes are pseudonymised, so still personal data.
 - Cover shows the neutral label "Zespół HackYeah 2026": employer IP consent is pending (rules §6.1). No employer name anywhere visible until the humans settle it.
 - Legal source: `docs/research/legal-check-pl.md` (desk check, not legal advice).

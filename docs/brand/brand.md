@@ -57,8 +57,8 @@ The 58 µs line is about the deterministic path only (p50). Never use it for the
 5. **No buzzword soup.** Banned: revolutionary, cutting-edge, seamless, leverage, next-gen, AI-powered, enterprise-grade, military-grade, bulletproof, unhackable, zero-trust (unless we show it).
 6. **Honest by design.** We say "hackathon prototype", "measured on one MacBook", "not production-hardened". "Nie wiem" is a feature in Rój; humility is a feature in the brand.
 7. **No production-security claims.** Never "secure", "safe", "compliant", "certified". Say "blocks these attacks in our test suite" or "in the demo run".
-8. **Local is the headline, said precisely.** "Models run on your hardware; no prompt goes to a model provider." Conditional until `claude-sonnet-5-5` is out of `models.allowed`; until then "the guard models run locally". Never "nothing leaves": tools like `send_email` send data out by design.
-11. **Compliance is "supports", never "makes you".** "Supports AI Act Art. 12/14 and DORA logging." The log is "tamper-evident", never "immutable". Approvals are "four-eyes review (simulated)", never "authorises" or SCA. Source: `docs/research/legal-check-pl.md`.
+8. **Local is the headline, said precisely.** "Models run on your hardware; no prompt goes to a model provider." True since d16de01: the committed policy allows only local models. Never "nothing leaves": tools like `send_email` send data out by design.
+11. **Compliance is "supports", never "makes you".** "Supports AI Act Art. 12/14 and DORA logging." The log is "tamper-evident", never "immutable". Approvals are "four-eyes review (admin-gated)", never "authorises" or SCA. Source: `docs/research/legal-check-pl.md`.
 9. **Plain hyphens, no em dashes.** Sentence case for headings. No exclamation marks. No emoji in the deck.
 10. **Product names are proper nouns.** "Airlock blocks it", not "the Airlock tool" or "our ACL solution". Never the acronym on a slide.
 
@@ -112,14 +112,18 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Self-test | demo.py **129/129** cases (114 after the detection plan, 120 after IBAN tokenization); 81 unit tests + 7 proxy tests green on 00fea5a | sample-security-report.md at 0952c83, run ~12:25 | measured. Supersedes 95 |
 | Demo-run overhead | p50 73 µs, p99 155 µs, about 10,700 checks/s with 16 signatures | architecture README at d523cd6 | measured. 58 µs stays the benchmark headline |
 | Guard consensus | 3 families vote in parallel (Qwen, Llama, Granite); disagreement is settled by risk: arbiter (Granite 8B), then accuracy-weighted votes, then low/medium allow + flag, high/critical deny; a human only where a policy rule says so. Risk map in policy.json, toggled live. 0.16 s for two guards, 1.07 s p50 with Granite on high-risk calls; the 9k off-task payment (critical tool) is denied under the rule | 0952c83; rule decided 12:23, tested live on Marcin's Mac (4 models), commit pending | latencies measured, 1 live run (6 prompts + 3 calls). Opt-in mode |
-| Ollama proxy | protect any Ollama agent by changing one URL (:11434 to :11500); 7 tests | 917b83c | built. Approval via header is simulated |
+| Ollama proxy | protect any Ollama agent by changing one URL (:11434 to :11500); 7 tests | 917b83c | built. Approvals: admin-only API since 42be894 |
 | Dashboard | live console: 12 one-click attacks + 2 legit, verdict, reasons, µs per check; policy edits via authenticated PUT, atomic write, audited | f000cb6, 88f1934, 00fea5a | built |
 | IBAN in prompts | tokenized, resolved only inside payment tool calls | f3186a9 | built |
 | PII before models | models only ever see PII-redacted text; a hidden injection marks the session compromised even when the PII check already blocked the prompt | a0eda2b, 7468e6e | built |
 | Demo Mac verification (HEAD) | tiered gateway **19/20** attacks caught, 1/16 benign blocked, 36 labelled items x 5 runs (EN + PL); qwen3guard p50 **134 ms** (p95 173); Granite **521 ms** on short text, 1.9 s at 2,000 chars, 4.1 s at 6,000; **75/75** unit tests, **129/129** demo cases with real models | docs/research/demo-mac-test.md | measured. Say "on our test set"; smoke test, not a benchmark. Supersedes 194 ms / 1.4 s as headline |
 | Consensus accuracy | 18/20 caught, 4/16 benign held, 36% guard disagreement | demo-mac-test.md | measured. **Never claim consensus is better than tiered** |
 | Risk-tier escalation | arbiter, log-odds weighted votes, then allow + flag (low/medium) or deny (high/critical) | 2fcd99a | shipped in code |
-| Approval flow | `server.py` accepts unauthenticated `approved_by` (self-approved 15k transfer reproduced) | summary-1230.md | **known gap: don't present approval as secure** until fixed |
+| Approval flow | admin-only `POST /v1/approvals/{id}`, payload-bound, single use, 10-min expiry; caller's `approved_by` ignored. Demo Mac: self-approved 15k held then DENY; fake approval_id DENY | 42be894 | verified. Four-eyes review, not PSD2 SCA |
+| Long inputs and judge failures | judge failure on tool output taints the session; models see head + tail of long input (injection on the last line of 24k chars caught); judge cap 2,000 chars; **108 tests** | fcba685 | built |
+| Model resilience | evicted or timed-out models re-warm in the background | 7ce31f9 | built |
+| Local only | committed policy allows only local models | d16de01 | true |
+| Pre-event code | nothing in the repo predates 11:00 (checked by AI Andrzeja) | thread | confirmed |
 | Polish benign prompts | 7/42 wrongly blocked (EN 0/8) | demo-mac-test.md | measured weak spot |
 | Agent model | qwen3:4b-instruct allowlisted and digest-pinned as the agent model | da52ab8 | built |
 | Real model agent | qwen3:4b ignored the hidden instruction in 3/3 runs; Airlock still sent the payment to a human | `spikes/acl-agent/README.md` | measured, n=3 |
@@ -133,4 +137,4 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Condorcet | three independent 90% voters: 2.8% majority error; with correlation 0.4 the floor is 4% | swarm-math §1-2 | *(theory)*, not measured on our letters |
 | Rój "% lokalnie", cost 5.7x cheaper | - | swarm-math §6 | *(theory, all inputs assumed)*. Don't put on a slide as a result |
 
-Not ours to claim: "compliant" / "AI Act-ready" / "nothing leaves", "protects all PII" (we redact PESEL, IBAN, card, e-mail on configured paths; stored hashes are pseudonymised, still personal data), production readiness, MCP proxy (planned), a real approval queue (planned, approval is simulated), persistent shared audit store (planned), per-user authz (planned).
+Not ours to claim: "compliant" / "AI Act-ready" / "nothing leaves", "protects all PII" (we redact PESEL, IBAN, card, e-mail on configured paths; stored hashes are pseudonymised, still personal data), production readiness, MCP proxy (planned), persistent shared audit store (planned), per-user authz (planned).
