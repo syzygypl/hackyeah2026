@@ -172,6 +172,17 @@ function elevM(lat, lon) {
   const z = DEM.z;
   return (z[r0][c0] * (1 - fc) + z[r0][c1] * fc) * (1 - fr) + (z[r1][c0] * (1 - fc) + z[r1][c1] * fc) * fr;
 }
+// water outside the Tatras: the scenario terrain's waterMask (grid over the scenario bbox: sea, lakes) plus sea-level DEM
+// pixels in regions; the Tatra cuts keep their lake circles only. LOW = a lowland region (no Tatra vegetation belts).
+const LOW = !!SCENS[SC].region;
+const WM = TER?.waterMask && TER.slopeGrid && SCN?.bbox ? { m: TER.waterMask, rows: TER.slopeGrid.rows, cols: TER.slopeGrid.cols, b: SCN.bbox } : null;
+function isWater(la, lo) {
+  if (WM && la <= WM.b.north && la >= WM.b.south && lo >= WM.b.west && lo <= WM.b.east) {
+    const r = Math.min(WM.rows - 1, Math.floor(((WM.b.north - la) / (WM.b.north - WM.b.south)) * WM.rows)), c = Math.min(WM.cols - 1, Math.floor(((lo - WM.b.west) / (WM.b.east - WM.b.west)) * WM.cols));
+    return !!WM.m[r * WM.cols + c];
+  }
+  return LOW && elevM(la, lo) <= 0.3;
+}
 const hAt = (lat, lon) => ((elevM(lat, lon) - zMin) * EX) / 1000;
 const v3 = (lat, lon, lift = 0) => new THREE.Vector3(toX(lon), hAt(lat, lon) + lift, toZ(lat));
 
@@ -326,7 +337,9 @@ const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; base
     const down = E[Math.min(y + 1, TH - 1) * TW + x], up = E[Math.max(y - 1, 0) * TW + x];
     const gx = (right - left) / (2 * px), gy = (down - up) / (2 * py), slope = (Math.atan(Math.hypot(gx, gy)) * 180) / Math.PI;
     const len = Math.hypot(gx, gy, 1), shade = clamp((0.62 * gx - 0.62 * gy + 0.5) / len / 0.78, 0, 1.4);
-    let c = mix3(lerpStops(VEG, e), lerpStops(ROCK, e), smooth(26, 42, slope));
+    const wla = DEM.lat0 - ((y + 0.5) / TS) * stLat, wlo = DEM.lon0 + ((x + 0.5) / TS) * stLon;
+    if ((LOW || WM) && isWater(wla, wlo)) { const k = 0.9 + 0.1 * Math.sin(x * 0.07 + y * 0.05); d[i * 4] = 92 * k; d[i * 4 + 1] = 142 * k; d[i * 4 + 2] = 166 * k; d[i * 4 + 3] = 255; continue; }
+    let c = LOW ? mix3([168, 178, 132], [150, 142, 120], smooth(14, 30, slope)) : mix3(lerpStops(VEG, e), lerpStops(ROCK, e), smooth(26, 42, slope));
     c = mix3(c, [236, 238, 242], smooth(2350, 2550, e) * 0.8);
     c = c.map((v) => v * (0.62 + 0.42 * shade));
     if (shade < 0.75) c = mix3(c, [58, 74, 112], (0.75 - shade) * 0.45);
@@ -646,8 +659,9 @@ const forest = new THREE.Group(); scene.add(forest);
     const la = latS + rnd() * (latN - latS), lo = lonW + rnd() * (lonE - lonW), e = elevM(la, lo);
     const dz = Math.hypot(elevM(la, lo + 0.0004) - elevM(la, lo - 0.0004), elevM(la + 0.0003, lo) - elevM(la - 0.0003, lo)) / 2 / 33;
     const slope = (Math.atan(dz) * 180) / Math.PI;
-    if (slope > 38 || inLake(la, lo)) continue;
+    if (slope > 38 || inLake(la, lo) || isWater(la, lo)) continue;
     const nz = noise(toX(lo) * 2.2 + 50, toZ(la) * 2.2 + 50);
+    if (LOW) { if (nz > 0.6 && rnd() < 0.8) spruce.push([la, lo, e]); continue; } // lowland: woods in patches, not a Tatra belt
     if (e < 1520 && nz > 0.32 - (1520 - e) / 2500 && rnd() < 0.9) spruce.push([la, lo, e]);
     else if (e >= 1450 && e < 1850 && nz > 0.45 && rnd() < 0.55) pine.push([la, lo, e]);
   }
