@@ -73,3 +73,10 @@ a{color:var(--rl-accent)}
   .st-steps{grid-template-columns:1fr;gap:8px}
 }
 @media (max-width:480px){.st-cards{grid-template-columns:1fr;gap:10px}}
+/* casual visitors: one line to the tourist/family landing (QA mobile) */
+.st-casual{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;min-height:44px;padding:10px 16px;border:1px dashed var(--rl-line-strong);border-radius:var(--rl-radius);color:var(--rl-ink-2);text-decoration:none}
+.st-casual b{color:var(--rl-ink)}
+.st-casual:hover span{color:var(--rl-accent)}
+:root:not([data-theme=dark]){--rl-mute:#5d6165}
+/* phone: the fixed version stamp sat on top of the role cards; put it after the footer instead */
+@media (max-width:760px){#rl-version{position:static!important;text-align:right;padding:0 16px 12px;text-shadow:none!important}.st-srv{margin-left:0}}
