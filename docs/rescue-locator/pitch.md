@@ -14,15 +14,21 @@ Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research
 - **Wow moment:** Step 4. An empty search result is evidence too: the map re-flows live, and the next real signal confirms it.
 - **Value number:** Top 3 segments hold ~60% of the probability in ~12% of the search area (TBC); first-hour task list in ~30 seconds instead of ~20 minutes of map work.
 
-### Demo moment to check (for the judges)
+### Target task: DEFENCE (open task)
 
-| What judges look for | Where the demo shows it |
-|---|---|
-| Real problem, real user | Step 1: real GOPR/TOPR workflow, Koester reflex tasks |
-| Working tech, not slides | Steps 2 and 4: live heatmap re-fusion on every hint |
-| Innovation | Step 4: negative evidence (empty search) moves probability (Bayes update) |
-| Feasibility / extensibility | Architecture slide: every hint source is a pluggable provider in a Swift package |
-| Impact | Value number |
+Fits the brief almost word for word ([`docs/tasks/defence.txt`](../tasks/defence.txt)): "improving coordination and information sharing during emergencies", "consider what happens when information is incomplete, resources are limited", "show how your solution supports the people involved". Category-fit line for the pitch: *crisis response when the information is incomplete*. IP is not transferred; English or Polish allowed (we pitch in Polish). No MP4 required, but we record one anyway as a backup (see [`video.md`](video.md)).
+
+### Judging criteria -> demo moment (default open-task criteria)
+
+| Criterion (weight) | Where the demo shows it | Say it out loud |
+|---|---|---|
+| Idea & Innovation (30%) | Step 4: empty drone pass lowers segment 3, map re-flows, Ratunek ping lands in the new top segment | "Brak wyniku to też informacja" - negative evidence as a Bayes update, which CalTopo does not do automatically |
+| Relation to Category (20%) | Steps 1-2: incomplete, stale, mixed hints in the first hour, few teams, fog and sunset | Use the brief's own words: incomplete information, limited resources, coordination during an emergency |
+| Practical Applicability / Usability (20%) | Step 3: first-hour plan with one task per team, readable in 5 seconds; one click per hint | 30 s instead of ~20 min; follows the existing GOPR/TOPR reflex-task workflow, no new process |
+| Design (20%) | Whole demo: one screen, heatmap centre, hints left, plan right; toggling a hint shows its contribution | Keep the screen calm: one colour ramp, big % numbers, no settings |
+| Completeness & Implementation Value (10%) | Architecture slide + roadmap: providers in a Swift package, mocked inputs listed honestly | "Prawdziwe: silnik fuzji i ranking. Zamockowane: dane wejściowe i teren. Dalej: LiDAR GUGiK i backtest na dawnych akcjach" |
+
+AI disclosure (required by the open-task rules): name the AI tools used (Claude Code for code and docs), external data (Koester / ISRID approximate quantiles, attributed), libraries, and state that everything was built during HackYeah. Goes on slide 10 and in the HackTribe description.
 
 ## Pitch (90 s, Polish)
 
@@ -38,7 +44,7 @@ Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research
 >
 > Trzy sektory, około 12 procent obszaru, około 60 procent szansy. Plan pierwszej godziny w 30 sekund zamiast 20 minut pracy nad mapą. Tylko legalne źródła, zero śledzenia, a każdy nowy sygnał - AML, RECCO, dron - to po prostu kolejny moduł.
 >
-> Rescue Locator. Gdzie szukać najpierw.
+> Reagowanie kryzysowe wtedy, gdy informacji jest mało, a zespołów jeszcze mniej. Rescue Locator. Gdzie szukać najpierw.
 
 ## Likely judge questions
 
