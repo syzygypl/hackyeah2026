@@ -172,9 +172,12 @@ Rescuers type (or paste dictated) short Polish radio-style reports; a **local** 
 ```sh
 swift run rescue-field "Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"   # parse one, print JSON + path used
 swift run rescue-field serve          # http://127.0.0.1:8770 : GET / (field page), POST /report, GET /live-events, GET /health
+swift run rescue-field serve 8770 --host 0.0.0.0   # demo LAN / hotspot: a phone can reach it, LAN URLs printed
 swift run rescue-field replay         # scenario + live-events.json through the grid, top 3 after each field hint
 open out/field.html                   # also works as file://, talks to 127.0.0.1:8770
 ```
+
+`--host 0.0.0.0` exposes the server to the local network so a real phone (e.g. `web/patrol/`) can post reports. There is **no authentication**: anyone on that network can read and post. Use it only on the demo hotspot / LAN, never on venue-wide or public Wi-Fi without a hotspot. Default stays `127.0.0.1`. CORS stays open (`*`).
 
 - Parser: `Sources/RescueKit/FieldReports/FieldReportParser.swift`. Ollama `/api/chat` with a JSON-schema `format` (segment ids as an enum), temperature 0, few-shot prompt with the scenario's segment names. Env: `RESCUE_LLM_MODEL` (default `qwen3:4b-instruct-2507-q4_K_M`, `gemma3:4b` also works), `RESCUE_LLM_URL` (default `http://localhost:11434`), `RESCUE_LLM_TIMEOUT` (s, default 30), `RESCUE_LLM_OFF=1`.
 - Fallback when Ollama is unreachable or returns bad JSON: keyword/regex rules (segment names + aliases, "nic"/"pusto" -> searched, "widoczność N m", "N m/s", "nie poleci"/"bateria" -> resource down). `parsedBy` says which path: `llm-local:<model>` or `rules`. If the local server itself is down, `field.html` parses with the same rules in the browser (marked "reguły awaryjne (przeglądarka)", kept in localStorage only).

@@ -4,7 +4,7 @@ import RescueKit
 
 // Usage:
 //   swift run rescue-field "<meldunek>"     parse one report, print JSON + path used (does not write live-events.json)
-//   swift run rescue-field serve [port]     local HTTP server, default 127.0.0.1:8770
+//   swift run rescue-field serve [port] [--host 0.0.0.0]   HTTP server, default 127.0.0.1:8770 (--host for the demo LAN)
 // Env: RESCUE_LLM_MODEL, RESCUE_LLM_URL (default http://localhost:11434), RESCUE_LLM_TIMEOUT (s), RESCUE_LLM_OFF=1
 let pkgDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 let scenario = try Scenario.load(pkgDir.appendingPathComponent("scenarios/zawrat.json").path)
@@ -148,14 +148,38 @@ final class Conn: @unchecked Sendable {
     }
 }
 
-let port = UInt16(args.dropFirst().first ?? "") ?? 8770
+let hostIdx = args.firstIndex(of: "--host")
+let host = hostIdx.flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } ?? "127.0.0.1"
+let positional = args.enumerated().filter { i, a in !a.hasPrefix("--") && (hostIdx == nil || i != hostIdx! + 1) }.map(\.element)
+let port = UInt16(positional.dropFirst().first ?? "") ?? 8770
 let params = NWParameters.tcp
-params.requiredLocalEndpoint = NWEndpoint.hostPort(host: "127.0.0.1", port: NWEndpoint.Port(rawValue: port)!)
+params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port)!)
+
+/// IPv4 addresses of this machine (for printing LAN URLs when bound beyond localhost).
+func lanAddresses() -> [String] {
+    var out: [String] = []
+    var ifa: UnsafeMutablePointer<ifaddrs>?
+    guard getifaddrs(&ifa) == 0, let first = ifa else { return out }
+    defer { freeifaddrs(ifa) }
+    for p in sequence(first: first, next: { $0.pointee.ifa_next }) {
+        guard let sa = p.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET) else { continue }
+        var buf = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+        if getnameinfo(sa, socklen_t(sa.pointee.sa_len), &buf, socklen_t(buf.count), nil, 0, NI_NUMERICHOST) == 0 {
+            let a = String(cString: buf)
+            if !a.hasPrefix("127.") { out.append(a) }
+        }
+    }
+    return out
+}
 let listener = try NWListener(using: params)
 listener.newConnectionHandler = { Conn($0).start() }
 listener.stateUpdateHandler = { st in
     if case .ready = st {
-        print("rescue-field serving on http://127.0.0.1:\(port)  (POST /report, GET /live-events, GET / = field.html)")
+        print("rescue-field serving on http://\(host):\(port)  (POST /report, GET /live-events, GET / = field.html)")
+        if host != "127.0.0.1" && host != "localhost" {
+            for a in (host == "0.0.0.0" ? lanAddresses() : [host]) { print("  LAN: http://\(a):\(port)/") }
+            print("  WARNING: no authentication. Anyone on this network can read and post reports. Use only on the demo hotspot/LAN.")
+        }
         print("LLM: \(parser.model) at \(parser.ollamaURL) (local only), fallback: rules. Live file: \(livePath)")
     }
     if case let .failed(e) = st { print("listener failed: \(e)"); exit(1) }
