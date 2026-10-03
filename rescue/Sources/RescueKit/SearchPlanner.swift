@@ -43,6 +43,10 @@ public enum SearchPlanner {
         public let resources: [ResourceStatus]
         public let assignments: [Assignment]
         public let survival: Survival
+        /// team state AFTER this step's assignments are committed, and segment history so far (for run.json / simulation)
+        public var state: [String: TeamState] = [:]
+        public var history: [String: SegHistory] = [:]
+        public var stateBefore: [String: TeamState] = [:]
     }
 
     // MARK: weather
@@ -169,9 +173,82 @@ public enum SearchPlanner {
         return f
     }
 
+    /// Where a team is and until when it is busy (from the planner's own assignments and from reports naming the team).
+    /// A team still walking in (minute < arriveAt) can be re-tasked from where it set off; once it sweeps it is locked.
+    public struct TeamState: Sendable {
+        public var busyUntil: Int
+        public var position: Coord
+        public var segment: String?
+        public var arriveAt: Int
+        public var from: Coord
+        public init(busyUntil: Int, position: Coord, segment: String?, arriveAt: Int? = nil, from: Coord? = nil) {
+            self.busyUntil = busyUntil; self.position = position; self.segment = segment
+            self.arriveAt = arriveAt ?? busyUntil; self.from = from ?? position
+        }
+        public func sweeping(_ m: Int) -> Bool { m >= arriveAt && m < busyUntil }
+        public func travelling(_ m: Int) -> Bool { m < arriveAt }
+    }
+    /// What was already done in a segment: combined POD of all passes and which resource types swept it.
+    public struct SegHistory: Sendable {
+        public var cumPod: Double = 0
+        public var types: Set<String> = []
+        public init() {}
+        public mutating func add(pod: Double, type: String?) { cumPod = 1 - (1 - cumPod) * (1 - pod); if let type { types.insert(type) } }
+    }
+
+    /// Team named in a search report: "topr-a: S12 przeszukany" -> "topr-a"; drone passes -> the first drone.
+    public static func reportedTeam(_ h: LocationHint, _ res: [Scenario.Resource]) -> Scenario.Resource? {
+        let t = h.title.lowercased()
+        if let r = res.first(where: { t.hasPrefix($0.id.lowercased() + ":") || t.hasPrefix($0.id.lowercased() + " ") }) { return r }
+        if h.source == "DronePassEmpty" || t.hasPrefix("dron") { return res.first { $0.type == "drone" } }
+        return nil
+    }
+
+    /// Updates team state and segment history from one arrived hint (call in stream order, before planning that step).
+    public static func observe(_ h: LocationHint, grid: ProbabilityGrid, state: inout [String: TeamState], history: inout [String: SegHistory]) {
+        guard case let .searched(ids, pod) = h.evidence else { return }
+        let res = resources(grid.scenario)
+        let team = reportedTeam(h, res)
+        for id in ids { history[id, default: SegHistory()].add(pod: pod, type: team?.type ?? (h.source == "DronePassEmpty" ? "drone" : nil)) }
+        if let team, let seg = ids.last, let k = grid.scenario.segments.firstIndex(where: { $0.id == seg }) {
+            // the team reported back from that segment: free now, standing there
+            let cells = (0..<grid.count).filter { grid.segmentOf[$0] == k }
+            let c = Coord(cells.map { grid.centers[$0].lat }.reduce(0, +) / Double(cells.count), cells.map { grid.centers[$0].lon }.reduce(0, +) / Double(cells.count))
+            state[team.id] = TeamState(busyUntil: h.minute, position: c, segment: nil)
+        }
+    }
+
+    /// One step of the live loop: learn from the hint, plan, commit the plan as the teams' new state.
+    public static func step(_ h: LocationHint, grid: ProbabilityGrid, poa: [Double], conditions: LocationHint.Conditions, closed: Bool,
+                            state: inout [String: TeamState], history: inout [String: SegHistory]) -> Plan {
+        observe(h, grid: grid, state: &state, history: &history)
+        let before = state
+        var p = plan(grid: grid, poa: poa, conditions: conditions, minute: h.minute, closed: closed, state: state, history: history)
+        if !closed { commit(p, grid: grid, minute: h.minute, state: &state) }
+        p.stateBefore = before
+        p.state = state
+        p.history = history
+        return p
+    }
+
+    /// Records the planner's assignments as commitments (the team is on its way / sweeping until travel + sweep).
+    public static func commit(_ plan: Plan, grid: ProbabilityGrid, minute: Int, state: inout [String: TeamState]) {
+        for a in plan.assignments {
+            guard let k = grid.scenario.segments.firstIndex(where: { $0.id == a.segmentId }) else { continue }
+            let cells = (0..<grid.count).filter { grid.segmentOf[$0] == k }
+            let c = Coord(cells.map { grid.centers[$0].lat }.reduce(0, +) / Double(cells.count), cells.map { grid.centers[$0].lon }.reduce(0, +) / Double(cells.count))
+            let prev = state[a.resourceId]
+            // re-tasked while still walking in: it sets off from where the previous job started (simple, no mid-route position)
+            let from = prev.map { $0.travelling(minute) ? $0.from : $0.position } ?? Coord(grid.scenario.resources?.first { $0.id == a.resourceId }?.base ?? [c.lat, c.lon])
+            state[a.resourceId] = TeamState(busyUntil: minute + Int((a.travelMin + a.sweepMin).rounded()), position: c, segment: a.segmentId,
+                                            arriveAt: minute + Int(a.travelMin.rounded()), from: from)
+        }
+    }
+
     struct Option { let r: Int; let seg: Int; let core: [Int]; let travel: Double; let sweep: Double; let pod: Double; let poa: Double; let rate: Double; let safety: [String] }
 
-    static func options(_ ctx: Ctx, _ res: [Scenario.Resource], idx: Int, from: Coord, poa: [Double], _ c: LocationHint.Conditions, urgency: Double) -> [Option] {
+    static func options(_ ctx: Ctx, _ res: [Scenario.Resource], idx: Int, from: Coord, poa: [Double], _ c: LocationHint.Conditions, urgency: Double,
+                        history: [String: SegHistory] = [:]) -> [Option] {
         let r = res[idx]
         guard let p = profiles[r.type] else { return [] }
         var out: [Option] = []
@@ -184,7 +261,13 @@ public enum SearchPlanner {
             let pod = cr.reduce(0) { $0 + poa[$1] * cellPod(p, r.type, ctx.grid.difficulty[$1], c) } / segPoa
             let tr = travel(ctx, p, from: from, seg: seg, core: cr, c)
             let sw = sweep(ctx, p, core: cr, c, rope: !safety.isEmpty && r.type == "ground")
-            let rate = segPoa * pod / ((tr * urgency + sw) / 60)
+            var rate = segPoa * pod / ((tr * urgency + sw) / 60)
+            // diminishing returns: prefer less-searched segments when rates are close (at most -15%),
+            // and do not keep re-sending the same kind of resource over a segment it already swept (-15%)
+            if let h = history[ctx.grid.scenario.segments[seg].id] {
+                rate *= 1 - 0.15 * h.cumPod
+                if h.types.contains(r.type) { rate *= 0.85 }
+            }
             out.append(Option(r: idx, seg: seg, core: cr, travel: tr, sweep: sw, pod: pod, poa: segPoa, rate: rate, safety: safety))
         }
         return out
@@ -194,7 +277,8 @@ public enum SearchPlanner {
 
     // MARK: plan
 
-    public static func plan(grid: ProbabilityGrid, poa: [Double], conditions c: LocationHint.Conditions, minute: Int, closed: Bool = false) -> Plan {
+    public static func plan(grid: ProbabilityGrid, poa: [Double], conditions c: LocationHint.Conditions, minute: Int, closed: Bool = false,
+                            state: [String: TeamState] = [:], history: [String: SegHistory] = [:]) -> Plan {
         let s = grid.scenario
         if closed {
             let surv = survival(s, minute: minute, c)
@@ -207,13 +291,21 @@ public enum SearchPlanner {
         let urgency = surv.level == "krytyczny" ? 1.5 : 1.0   // critical: favour segments we reach fast
         var statuses: [ResourceStatus] = []
         var opts: [Option] = []
+        // segments another team is sweeping right now are not offered to anyone else
+        let sweeping = Set(state.values.filter { $0.sweeping(minute) }.compactMap(\.segment))
         for (i, r) in res.enumerated() {
-            let (ok, why) = gate(r, c, minute: minute, scenario: s)
+            var (ok, why) = gate(r, c, minute: minute, scenario: s)
+            var from = Coord(r.base)
+            if let st = state[r.id] {
+                if st.sweeping(minute) { if ok { ok = false; why = "przeszukuje \(st.segment ?? "?") do \(s.clock(st.busyUntil))" } }
+                else if st.travelling(minute) { from = st.from; if ok { why = "w drodze do \(st.segment ?? "?") (można przekierować)" } }
+                else { from = st.position }
+            }
             statuses.append(ResourceStatus(id: r.id, name: r.name, type: r.type, available: ok, reason: why))
-            if ok { opts += options(ctx, res, idx: i, from: Coord(r.base), poa: poa, c, urgency: urgency) }
+            if ok { opts += options(ctx, res, idx: i, from: from, poa: poa, c, urgency: urgency, history: history) }
         }
-        // Greedy: best rate first, one resource per segment
-        var usedR = Set<Int>(), usedS = Set<Int>()
+        // Greedy: best rate first, one resource per segment, never a segment another team is already sweeping
+        var usedR = Set<Int>(), usedS = Set(s.segments.indices.filter { sweeping.contains(s.segments[$0].id) })
         var out: [Assignment] = []
         for o in opts.sorted(by: { $0.rate > $1.rate }) where !usedR.contains(o.r) && !usedS.contains(o.seg) {
             usedR.insert(o.r); usedS.insert(o.seg)
@@ -225,7 +317,7 @@ public enum SearchPlanner {
                                   travelMin: o.travel, sweepMin: o.sweep, pod: o.pod, poa: o.poa,
                                   expectedFind: o.poa * o.pod, ratePerHour: o.rate, reason: reason, safety: o.safety))
         }
-        return Plan(conditions: c, resources: statuses, assignments: out, survival: surv)
+        return Plan(conditions: c, resources: statuses, assignments: out, survival: surv, state: state, history: history, stateBefore: state)
     }
 
     // MARK: simulation for the value number
@@ -239,21 +331,32 @@ public enum SearchPlanner {
     /// Every available resource keeps taking jobs until the horizon. smart = best POA x POD / time;
     /// naive = biggest POA first (classic, ignores terrain and weather in the choice; physics still applies).
     public static func simulateJobs(grid: ProbabilityGrid, poa start: [Double], conditions c: LocationHint.Conditions,
-                                    minute: Int, smart: Bool, horizonMin: Double = 360) -> [SimJob] {
+                                    minute: Int, smart: Bool, horizonMin: Double = 360,
+                                    state: [String: TeamState] = [:], history: [String: SegHistory] = [:]) -> [SimJob] {
         let s = grid.scenario
         let ctx = Ctx(grid)
         let res = resources(s)
         var poa = start
-        var free = res.map { max(0, Double(s.minute($0.readyAt) - minute)) }
-        var pos = res.map { Coord($0.base) }
-        var busySeg = [Int?](repeating: nil, count: res.count)
+        var hist = history
+        var free = res.map { r -> Double in
+            let busy = state[r.id].map { $0.sweeping(minute) ? $0.busyUntil : Int.min } ?? Int.min
+            return max(0, Double(max(s.minute(r.readyAt), busy) - minute))
+        }
+        var pos = res.map { r -> Coord in
+            guard let st = state[r.id] else { return Coord(r.base) }
+            return st.travelling(minute) ? st.from : st.position
+        }
+        var busySeg = res.map { r -> Int? in
+            guard let st = state[r.id], st.sweeping(minute), let seg = st.segment else { return nil }
+            return s.segments.firstIndex { $0.id == seg }
+        }
         let avail = res.map { r in gate(r, c, minute: minute + 10_000, scenario: s).0 }  // weather gate now; readiness via `free`
         var jobs: [SimJob] = []
         while jobs.count < 200 {
             guard let i = res.indices.filter({ avail[$0] }).min(by: { free[$0] < free[$1] }), free[i] < horizonMin else { break }
             busySeg[i] = nil
             let taken = Set(busySeg.compactMap { $0 })
-            var o = options(ctx, res, idx: i, from: pos[i], poa: poa, c, urgency: 1).filter { !taken.contains($0.seg) }
+            var o = options(ctx, res, idx: i, from: pos[i], poa: poa, c, urgency: 1, history: smart ? hist : [:]).filter { !taken.contains($0.seg) }
             if smart { o.sort { $0.rate > $1.rate } } else { o.sort { $0.poa > $1.poa } }
             guard let best = o.first, let p = profiles[res[i].type] else { break }
             let end = free[i] + best.travel + best.sweep
@@ -263,6 +366,7 @@ public enum SearchPlanner {
                 pods.append(d)
                 poa[cell] *= (1 - d)
             }
+            hist[s.segments[best.seg].id, default: SegHistory()].add(pod: zip(best.core, pods).reduce(0) { $0 + start[$1.0] * $1.1 } / max(1e-12, best.core.reduce(0) { $0 + start[$1] }), type: res[i].type)
             jobs.append(SimJob(resource: res[i].id, segment: s.segments[best.seg].id, start: free[i], end: end, cells: best.core, pods: pods))
             free[i] = end
             pos[i] = ctx.centroid(best.core)
@@ -273,8 +377,9 @@ public enum SearchPlanner {
 
     /// Cumulative probability of finding over time (minutes from now): sum over jobs of POA x POD of the swept cells.
     public static func simulate(grid: ProbabilityGrid, poa start: [Double], conditions c: LocationHint.Conditions,
-                                minute: Int, smart: Bool, horizonMin: Double = 360) -> [(Double, Double)] {
-        let jobs = simulateJobs(grid: grid, poa: start, conditions: c, minute: minute, smart: smart, horizonMin: horizonMin)
+                                minute: Int, smart: Bool, horizonMin: Double = 360,
+                                state: [String: TeamState] = [:], history: [String: SegHistory] = [:]) -> [(Double, Double)] {
+        let jobs = simulateJobs(grid: grid, poa: start, conditions: c, minute: minute, smart: smart, horizonMin: horizonMin, state: state, history: history)
         var poa = start, found = 0.0
         var curve: [(Double, Double)] = [(0, 0)]
         for j in jobs.sorted(by: { $0.end < $1.end }) {

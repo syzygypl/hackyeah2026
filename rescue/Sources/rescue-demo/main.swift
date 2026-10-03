@@ -60,6 +60,8 @@ var snaps: [Snap] = []
 var plans: [SearchPlanner.Plan] = []
 var conditions = LocationHint.Conditions()
 var closedCase = false
+var teamState: [String: SearchPlanner.TeamState] = [:]
+var segHistory: [String: SearchPlanner.SegHistory] = [:]
 for h in arrived {
     grid.add(h)
     if case let .conditions(c) = h.evidence { conditions = c }
@@ -67,7 +69,7 @@ for h in arrived {
     let poa = grid.poa()
     let segs = grid.segments(poa)
     snaps.append(Snap(segs: segs, poa: poa))
-    let plan = SearchPlanner.plan(grid: grid, poa: poa, conditions: conditions, minute: h.minute, closed: closedCase)
+    let plan = SearchPlanner.step(h, grid: grid, poa: poa, conditions: conditions, closed: closedCase, state: &teamState, history: &segHistory)
     plans.append(plan)
     print("[\(h.clock)] \(h.source.padding(toLength: 17, withPad: " ", startingAt: 0)) \(h.title)")
     print("        top3: \(top3Line(segs))")
@@ -107,8 +109,10 @@ if blind {
 }
 // Search allocation value: terrain+weather-aware plan vs naive "biggest POA first", same teams, same physics
 let planC = plans[beforePing].conditions
-let smartCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: true)
-let naiveCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: false)
+let smartCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: true,
+                                        state: plans[beforePing].stateBefore, history: plans[beforePing].history)
+let naiveCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: false,
+                                        state: plans[beforePing].stateBefore, history: plans[beforePing].history)
 let t50s = SearchPlanner.timeTo(0.5, smartCurve), t50n = SearchPlanner.timeTo(0.5, naiveCurve)
 let pos2s = SearchPlanner.posAt(120, smartCurve), pos2n = SearchPlanner.posAt(120, naiveCurve)
 func hm(_ m: Double?) -> String { m.map { String(format: "%d h %02d min", Int($0) / 60, Int($0) % 60) } ?? "> 6 h" }
@@ -144,8 +148,9 @@ if !blind {
     let firstSearch = max(0, (arrived.firstIndex { $0.kind == "searched" } ?? arrived.count) - 1)
     for (key, k) in [("Clues", firstSearch), ("", beforePing)] {
         let c = plans[k].conditions, m = arrived[k].minute
-        summary["truthPlanned" + key] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: snaps[k].poa, conditions: c, minute: m, smart: true), truthCell: truthCell)
-        summary["truthNaive" + key] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: snaps[k].poa, conditions: c, minute: m, smart: false), truthCell: truthCell)
+        let st = plans[k].stateBefore, hi = plans[k].history
+        summary["truthPlanned" + key] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: snaps[k].poa, conditions: c, minute: m, smart: true, state: st, history: hi), truthCell: truthCell)
+        summary["truthNaive" + key] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: snaps[k].poa, conditions: c, minute: m, smart: false, state: st, history: hi), truthCell: truthCell)
     }
     let tp = summary["truthPlannedClues"] as! [String: Any], tn = summary["truthNaiveClues"] as! [String: Any]
     print("Plan backtest from \(arrived[firstSearch].clock): true cell detected with p=\(tp["p2h"]!) after 2 h, \(tp["p4h"]!) after 4 h (naive \(tn["p2h"]!) / \(tn["p4h"]!)); first sweep at +\(tp["firstSweepMin"] ?? "-") min (naive +\(tn["firstSweepMin"] ?? "-"))")

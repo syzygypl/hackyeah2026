@@ -38,7 +38,17 @@ public func runJSONObject(scenario s: Scenario, grid: ProbabilityGrid, hints: [L
             "hintId": h.id,
             "hintsActive": hints.prefix(k).map(\.id),
             "weather": weatherJSON(plans[k - 1]),
-            "resources": plans[k - 1].resources.map(resourceJSON),
+            "resources": plans[k - 1].resources.map { r -> [String: Any] in
+                var d = resourceJSON(r)
+                if let st = plans[k - 1].state[r.id] {   // additive: where the team is / until when it is busy
+                    d["busyUntil"] = s.clock(st.busyUntil); d["busyUntilMinute"] = st.busyUntil
+                    d["position"] = [st.position.lat, st.position.lon]
+                    if st.busyUntil > hints[k - 1].minute, let seg = st.segment { d["currentSegment"] = seg }
+                    d["arriveAt"] = s.clock(st.arriveAt)
+                }
+                return d
+            },
+            "segmentHistory": plans[k - 1].history.mapValues { ["cumPod": ($0.cumPod * 1000).rounded() / 1000, "types": $0.types.sorted()] },
             "assignments": plans[k - 1].assignments.map(assignmentJSON),
             "poaGrid": poa.map(r4g),
             "segments": segs.map { sc -> [String: Any] in

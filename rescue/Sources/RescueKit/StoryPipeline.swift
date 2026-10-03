@@ -60,13 +60,15 @@ public enum StoryPipeline {
         var poas: [[Double]] = []
         var cond = LocationHint.Conditions()
         var closed = false
+        var teamState: [String: SearchPlanner.TeamState] = [:]
+        var segHistory: [String: SearchPlanner.SegHistory] = [:]
         for h in arrived {
             grid.add(h)
             if case let .conditions(c) = h.evidence { cond = c }
             if h.kind == "found" { closed = true }
             let poa = grid.poa()
             poas.append(poa)
-            plans.append(SearchPlanner.plan(grid: grid, poa: poa, conditions: cond, minute: h.minute, closed: closed))
+            plans.append(SearchPlanner.step(h, grid: grid, poa: poa, conditions: cond, closed: closed, state: &teamState, history: &segHistory))
         }
         if arrived.isEmpty {
             return ["schema": "rescue-run/1", "error": "no events"]
@@ -91,8 +93,9 @@ public enum StoryPipeline {
                         "areaFused": areaToFind(poas[beforePing]), "areaRings": areaToFind(ringsPoa), "truthSeg": truthSeg]
         }
         let c = plans[beforePing].conditions, m = arrived[beforePing].minute
-        let smart = SearchPlanner.simulate(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: true)
-        let naive = SearchPlanner.simulate(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: false)
+        let st = plans[beforePing].stateBefore, hi = plans[beforePing].history
+        let smart = SearchPlanner.simulate(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: true, state: st, history: hi)
+        let naive = SearchPlanner.simulate(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: false, state: st, history: hi)
         var summary: [String: Any] = [
             "top3poa": min(1, fused.prefix(3).map(\.poa).reduce(0, +)),
             "top3area": fused.prefix(3).map(\.areaFrac).reduce(0, +),
@@ -104,8 +107,8 @@ public enum StoryPipeline {
         ]
         if let t = scenario.truth {
             let tc = grid.cellIndex(Coord(t.at))
-            backtest["truthPlanned"] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: true), truthCell: tc)
-            backtest["truthNaive"] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: false), truthCell: tc)
+            backtest["truthPlanned"] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: true, state: st, history: hi), truthCell: tc)
+            backtest["truthNaive"] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: false, state: st, history: hi), truthCell: tc)
         }
         summary.merge(backtest) { $1 }
         summary["coverage"] = coverage

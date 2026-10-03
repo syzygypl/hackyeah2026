@@ -92,7 +92,9 @@ def evaluate(name, run=True):
 
 def main():
     run = "--no-run" not in sys.argv
-    names = sorted(f[:-5] for f in os.listdir(SCN) if f.endswith(".json") and not f.endswith("-terrain.json"))
+    # blind rounds that are still running are never evaluated (round fairness); blind-02 explicitly excluded
+    names = sorted(f[:-5] for f in os.listdir(SCN) if f.endswith(".json") and not f.endswith("-terrain.json")
+                   and not f.startswith("blind-02"))
     res = [r for r in (evaluate(n, run) for n in names) if r]
     print(f"{'scenario':<20} {'moment':<7} {'time':<6} {'seg':>8} {'segPOA':>7} {'cell':>11} {'area%':>7} {'km2':>6} {'peak->truth':>11}")
     for r in res:
