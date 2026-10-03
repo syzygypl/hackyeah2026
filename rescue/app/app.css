@@ -400,3 +400,9 @@ body.time-hist::after{border-color:var(--rl-accent)}
 body.time-live::before,body.time-hist::before{content:"NA ŻYWO";position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:61;pointer-events:none;padding:2px 14px 4px;border-radius:0 0 10px 10px;background:var(--rl-danger);color:var(--rl-on-danger);font:700 12px/1.2 var(--rl-font);letter-spacing:.14em}
 body.time-hist::before{content:"HISTORIA · NAGRANIE";background:var(--rl-accent);color:var(--rl-on-accent)}
 body.role-ratownik::before,body.role-ratownik::after{display:none}
+/* demo review (faa0899) pt 6: with Na żywo / Historia and Udostępnij the bar wrapped at 1280 px: under 1500 px the live
+   badge stays but the title goes (the scenario picker names the incident), and long role labels truncate */
+@media (max-width:1499px){
+  header .livehead b{display:none}
+  #roleBtn{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
