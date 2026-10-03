@@ -175,6 +175,81 @@
    "fictional": true
   },
   {
+   "id": "dron-psp",
+   "kind": "dron",
+   "name": "Dron termowizyjny PSP Krosno",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-335",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 151.3,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 139.1,
+    "lastMaintenance": "2026-09-19"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-06",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-17",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "zapora-huzele": {
+     "name": "Dron termowizyjny PSP Krosno",
+     "readyAt": "08:16"
+    },
+    "zapora-myczkowce": {
+     "name": "Dron termowizyjny PSP Krosno",
+     "readyAt": "06:18"
+    },
+    "zapora-tlo-olszanica": {
+     "name": "Dron termowizyjny PSP Krosno",
+     "readyAt": "07:20"
+    },
+    "zapora-uherce": {
+     "name": "Dron termowizyjny PSP Krosno",
+     "readyAt": "06:37"
+    },
+    "zapora-zaluz": {
+     "name": "Dron termowizyjny PSP Krosno",
+     "readyAt": "09:29"
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "drone",
    "kind": "dron",
    "name": "Dron termowizyjny GOPR",
@@ -396,6 +471,77 @@
    "fictional": true
   },
   {
+   "id": "gopr-lesko",
+   "kind": "pieszy",
+   "name": "GOPR Bieszczady - patrol Lesko",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-581",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-10",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-LESKO-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-LESKO-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-LESKO-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-LESKO-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "zapora-huzele": {
+     "name": "GOPR Bieszczady - patrol Lesko",
+     "readyAt": "07:56"
+    },
+    "zapora-lesko": {
+     "name": "GOPR Bieszczady - patrol Lesko",
+     "readyAt": "07:35"
+    },
+    "zapora-myczkowce": {
+     "name": "GOPR Bieszczady - patrol Lesko",
+     "readyAt": "06:08"
+    },
+    "zapora-tlo-olszanica": {
+     "name": "GOPR Bieszczady - patrol Lesko",
+     "readyAt": "07:10"
+    },
+    "zapora-tlo-tarnica": {
+     "name": "GOPR Bieszczady - patrol Lesko",
+     "readyAt": "10:00"
+    },
+    "zapora-zaluz": {
+     "name": "GOPR Bieszczady - patrol Lesko",
+     "readyAt": "09:19"
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "heli",
    "kind": "smiglowiec",
    "name": "Śmigłowiec Policji (Rzeszów)",
@@ -481,6 +627,67 @@
    "fictional": true
   },
   {
+   "id": "heli-lpr-sanok",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Sanok)",
+   "base": "Sanok",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "HELI-740",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 4024.7,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 3981.8,
+    "lastMaintenance": "2026-09-19"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-20",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "HELI-LPR-SANOK-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "HELI-LPR-SANOK-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "HELI-LPR-SANOK-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "zapora-lesko": {
+     "name": "Śmigłowiec LPR (Sanok)",
+     "readyAt": "07:55"
+    },
+    "zapora-tlo-tarnica": {
+     "name": "Śmigłowiec LPR (Sanok)",
+     "readyAt": "10:10"
+    },
+    "zapora-zaluz": {
+     "name": "Śmigłowiec LPR (Sanok)",
+     "readyAt": "09:09"
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "osp-boat",
    "kind": "lodz",
    "name": "Łódź OSP Moryń",
@@ -529,6 +736,57 @@
     "tragedia-w-moryniu": {
      "name": "Łódź OSP Moryń",
      "readyAt": "22:00"
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "osp-olszanica",
+   "kind": "pieszy",
+   "name": "OSP Olszanica",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-144",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-19",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-OLSZANICA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-OLSZANICA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-OLSZANICA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "zapora-tlo-olszanica": {
+     "name": "OSP Olszanica",
+     "readyAt": "07:00"
+    },
+    "zapora-uherce": {
+     "name": "OSP Olszanica",
+     "readyAt": "06:17"
     }
    },
    "fictional": true
@@ -727,6 +985,122 @@
     "sniardwy": {
      "name": "Łódź PSP JRG Pisz",
      "readyAt": "17:20"
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-lesko",
+   "kind": "pieszy",
+   "name": "PSP JRG Lesko - zastęp",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-513",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-04",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-LESKO-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-LESKO-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "zapora-huzele": {
+     "name": "PSP JRG Lesko - zastęp",
+     "readyAt": "07:46"
+    },
+    "zapora-lesko": {
+     "name": "PSP JRG Lesko - zastęp",
+     "readyAt": "07:25"
+    },
+    "zapora-myczkowce": {
+     "name": "PSP JRG Lesko - zastęp",
+     "readyAt": "05:58"
+    },
+    "zapora-uherce": {
+     "name": "PSP JRG Lesko - zastęp",
+     "readyAt": "06:27"
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-lodz-sanok",
+   "kind": "lodz",
+   "name": "Łódź PSP JRG Sanok",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "PSP-483",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 684.8,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 653.4,
+    "lastMaintenance": "2026-09-02"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-21",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-LODZ-SANOK-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "PSP-LODZ-SANOK-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-LODZ-SANOK-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "zapora-huzele": {
+     "name": "Łódź PSP JRG Sanok",
+     "readyAt": "08:06"
+    },
+    "zapora-lesko": {
+     "name": "Łódź PSP JRG Sanok",
+     "readyAt": "07:45"
+    },
+    "zapora-zaluz": {
+     "name": "Łódź PSP JRG Sanok",
+     "readyAt": "08:59"
     }
    },
    "fictional": true
@@ -1035,6 +1409,59 @@
     "miedzyzdroje": {
      "name": "Skuter WOPR (kąpielisko Międzyzdroje)",
      "readyAt": "14:00"
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "wopr-solina",
+   "kind": "lodz",
+   "name": "Łódź WOPR Bieszczady (Polańczyk)",
+   "base": "Polańczyk",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "WOPR-980",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 732.5,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 675.2,
+    "lastMaintenance": "2026-09-25"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-16",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "WOPR-SOLINA-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "WOPR-SOLINA-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "zapora-myczkowce": {
+     "name": "Łódź WOPR Bieszczady (Polańczyk)",
+     "readyAt": "05:48"
+    },
+    "zapora-uherce": {
+     "name": "Łódź WOPR Bieszczady (Polańczyk)",
+     "readyAt": "06:07"
     }
    },
    "fictional": true
