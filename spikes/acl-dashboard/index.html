@@ -236,6 +236,14 @@ function render() {
   const usd = (m.budgets || []).reduce((s, b) => s + (b.usd || 0), 0);
   const lat = m.latency_us?._total_overhead || {};
   const st = m.selftest;
+  // split gateway latency: deterministic rules (µs) vs local guard models (ms), per audit record
+  const pct = (a, q) => { if (!a.length) return null; const b = a.slice().sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.floor(q * b.length))]; };
+  const isModel = k => k.startsWith("semantic") && k !== "semantic_heuristic";
+  const rAll = [], mAll = [];
+  audit.forEach(e => { const c = e.checks_us || {}; const ks = Object.keys(c); if (!ks.length) return;
+    rAll.push(ks.filter(k => !isModel(k)).reduce((s, k) => s + c[k], 0));
+    const mt = ks.filter(isModel).reduce((s, k) => s + c[k], 0); if (mt > 0) mAll.push(mt); });
+  const rules = {p50: pct(rAll, .5), p95: pct(rAll, .95)}, models = {p50: pct(mAll, .5), p95: pct(mAll, .95), n: mAll.length};
 
   // header badges
   const p = m.policy || {};
@@ -253,7 +261,8 @@ function render() {
     ["Blocked", fmt(dec.DENY || 0), `${m.interactions ? Math.round(100 * (dec.DENY || 0) / m.interactions) : 0}% of interactions`, "var(--deny)"],
     ["Redacted", fmt(dec.REDACT || 0), `${redactedVals} sensitive value(s) masked`, "var(--redact)"],
     ["Human approvals", fmt(approvals.length), `${approvals.filter(e => e.approved_by).length} approved`, "var(--approve)"],
-    ["Overhead p50", lat.p50 != null ? fmt(lat.p50) + " µs" : "–", lat.p95 != null ? `p95 ${fmt(lat.p95)} µs` : ""],
+    ["Rules overhead p50", rules.p50 != null ? fmt(rules.p50) + " µs" : "–", rules.p95 != null ? `p95 ${fmt(rules.p95)} µs · deterministic checks` : "deterministic checks", "var(--allow)"],
+    ["Model checks p50", models.p50 != null ? fmt(models.p50 / 1000) + " ms" : "–", models.n ? `p95 ${fmt(models.p95 / 1000)} ms · ${models.n} call(s) used a model` : "no model check yet"],
     ["Spend", "$" + usd.toFixed(4), `${fmt(tokens)} tokens`],
   ];
   $("kpis").innerHTML = kpis.map(([l, v, s, c]) => `<div class="kpi"><div class="label">${l}</div><div class="value" ${c ? `style="color:${c}"` : ""}>${v}</div><div class="sub">${s}</div></div>`).join("");
@@ -434,7 +443,7 @@ function renderVerdict(j, ms) {
     <div class="big"><span class="dec d-${esc(j.decision)}">${esc(LABELS[j.decision] || j.decision)}</span>
       ${j.final && j.final !== j.decision ? `→ <span class="dec d-${esc(j.final)}">${esc(LABELS[j.final] || j.final)}</span>` : ""}
       ${(j.guardrails || []).map(g => `<span class="chip">${esc(g)}</span>`).join("")} ${sem}
-      <span class="spacer"></span><span class="hint">gateway ${fmt(j.overhead_us)} µs · round-trip ${fmt(ms)} ms · policy <span class="mono">${esc(j.policy_version || "")}</span> · audit #${j.audit_seq ?? "–"}</span></div>
+      <span class="spacer"></span><span class="hint">rules ${fmt(checks.filter(([k]) => !k.startsWith("semantic")).reduce((s, c) => s + c[1], 0))} µs · models ${fmt(checks.filter(([k]) => k.startsWith("semantic")).reduce((s, c) => s + c[1], 0) / 1000)} ms · round-trip ${fmt(ms)} ms · policy <span class="mono">${esc(j.policy_version || "")}</span> · audit #${j.audit_seq ?? "–"}</span></div>
     ${j.semantic?.votes ? `<div class="votes"><span class="hint">Guard consensus: <b>${esc(j.semantic.outcome)}</b> · agreement ${Math.round(100 * (j.semantic.agreement || 0))}%</span>
       ${j.semantic.votes.map(v => `<div class="vote v-${esc(v.vote)}"><b>${esc(v.model.split("/").pop())}</b><span>${esc(v.vote)}</span><small>${v.p_unsafe != null ? "p " + (+v.p_unsafe).toFixed(2) + " · " : ""}${v.latency_ms != null ? v.latency_ms + " ms" : ""}${v.cached ? " · cached" : ""}${(v.category_names || []).length ? " · " + esc(v.category_names.join(", ")) : ""}${v.error ? " · " + esc(v.error) : ""}</small></div>`).join("")}</div>` : ""}
     ${(j.reasons || []).length ? `<ul>${j.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : `<div class="hint" style="margin-top:8px">No guardrail fired - passed every check.</div>`}
