@@ -565,17 +565,23 @@ function setFloat() {
   document.body.classList.toggle("float", store.role !== "ratownik" && (store.mode === "akcja" || store.mode === "edycja"));
   pushInsets();
 }
+// the same free area in one element's own coordinates (split view: each frame covers only half the screen)
+function insetsFor(el) {
+  const [T, R, B, L] = insets(), f = el && el.getBoundingClientRect();
+  if (!f || !f.width) return [T, R, B, L];
+  return [Math.max(0, T - f.top), Math.max(0, f.right - (innerWidth - R)), Math.max(0, f.bottom - (innerHeight - B)), Math.max(0, L - f.left)].map(Math.round);
+}
 let insetsKey = "";
 function pushInsets() {
-  const t = insets(), key = t.join(",");
-  if (mapReady) { const [T, R, B, L] = t; map.setPadding({ top: T, right: R, bottom: B, left: L }); }
+  const key = insets().join(",") + store.view;
+  if (mapReady) { const [T, R, B, L] = insetsFor($("map")); map.setPadding({ top: T, right: R, bottom: B, left: L }); }
   if (key === insetsKey) return; insetsKey = key;
-  for (const k in FRAMES) postTo(k, { type: "insets", insets: t });
+  for (const k in FRAMES) postTo(k, { type: "insets", insets: insetsFor(FRAMES[k].el) });
 }
 addEventListener("resize", () => setTimeout(pushInsets, 50));
 function frameURL(k) {
   const i = store.step - 1, sc = encodeURIComponent(store.scenario), ru = runURL(), po = encodeURIComponent(location.origin);
-  return frameURLBase(k, i, sc, ru, po) + "&insets=" + insets().join(",");
+  return frameURLBase(k, i, sc, ru, po) + "&insets=" + insetsFor(FRAMES[k].el).join(",");
 }
 function frameURLBase(k, i, sc, ru, po) {
   if (k === "3d") {
@@ -614,7 +620,7 @@ addEventListener("message", (e) => {
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
     if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
     for (const id of evOff) postTo(k, { type: "evidence", id, on: false });
-    postTo(k, { type: "insets", insets: insets() });
+    postTo(k, { type: "insets", insets: insetsFor(F.el) });
   }
   if (m.type === "cinema") { document.body.classList.toggle("cinema", !!m.on); pushInsets(); } // 3D Kino: panels step aside, full-frame shots
   if (m.type === "select" && (typeof m.segmentId === "string" || m.segmentId === null)) selectSeg(m.segmentId, k);
