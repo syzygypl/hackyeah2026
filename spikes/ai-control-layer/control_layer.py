@@ -247,6 +247,7 @@ class Session:
         self.usd = self.compute_ms = self.transferred = 0.0
         self.tainted_by = None
         self.fingerprints = {}
+        self.vault = {}  # token -> full value (IBANs from user prompts); the model only ever sees the token
 
 
 class Denied(Exception):
@@ -324,6 +325,7 @@ class ControlLayer:
             if self.policy is None:
                 raise Denied("fail_closed", "no valid policy loaded")
             name, rule = self._timed(ev, "tool_authz", self._resolve, tool, ev)
+            args = self._resolve_tokens(session, name, args, ev)
             self._timed(ev, "budget", self._budget, session, name, args, ev)
             self._timed(ev, "loop_detection", self._loop, session, name, args, ev)
             self._timed(ev, "attack_signatures", self._signatures, args, ev)  # known exploits first: most specific reason
@@ -379,7 +381,7 @@ class ControlLayer:
             output = {"error": "denied_by_control_layer", "guardrail": "fail_closed"}
         session.calls += 1
         ev["policy_version"] = self.store.version
-        ev["args"] = _map_strings(args, lambda s: redact(s)[0])
+        ev["args"] = _map_strings(args, lambda s: redact(self._detokenize(session, s))[0])  # audit never holds vault values
         ev["agent_reasoning"] = agent_reasoning
         ev["overhead_us"] = round((time.perf_counter_ns() - t0 - tool_ns) / 1000, 1)
         ev.update(tokens_total=session.tokens, usd_total=round(session.usd, 5), compute_ms_total=round(session.compute_ms, 1))
@@ -397,7 +399,15 @@ class ControlLayer:
                 raise Denied("fail_closed", "no valid policy loaded")
             self._timed(ev, "attack_signatures", self._signatures, {"text": text}, ev)
             sec, pii = self._c("secrets"), self._c("pii")
-            hits = self._timed(ev, "dlp_input", find_sensitive, text, pii.get("types", []) if pii else ())
+            ib = (pii or {}).get("iban") or {}
+            if pii and "iban" in pii.get("types", []) and ib.get("prompt_action", "redact") == "redact":
+                out, toks = self._tokenize_ibans(session, out)
+                if toks:
+                    ev["redactions"] += ["iban"] * len(toks)
+                    ev["guardrails"].append("pii")
+                    ev["reasons"].append(f"IBAN tokenized ({', '.join(toks)}): model sees a masked value, the gateway "
+                                         f"resolves it only inside {', '.join(ib.get('resolve_tools', ['transfer_funds']))}")
+            hits = self._timed(ev, "dlp_input", find_sensitive, out, pii.get("types", []) if pii else ())
             if sec and any(h[0] == "secret" for h in hits):
                 if sec.get("action") == "redact":
                     out, labels = redact(out)
@@ -434,6 +444,41 @@ class ControlLayer:
         ev.update(tokens_total=session.tokens, usd_total=round(session.usd, 5), compute_ms_total=round(session.compute_ms, 1))
         self._append(ev)
         return {"decision": ev["decision_final"], "output": out, "event": ev}
+
+    # -- IBAN tokenization (prompts) and resolution (payment tool calls only)
+    def _tokenize_ibans(self, session, text):
+        toks = []
+
+        def sub(m):
+            full = re.sub(r"\s", "", m.group(0)).upper()
+            tok = next((k for k, v in session.vault.items() if v == full), None)
+            if tok is None:
+                tok = f"IBAN_{sum(1 for k in session.vault if k.startswith('IBAN_')) + 1}"
+                session.vault[tok] = full
+            toks.append(tok)
+            return f"{{{{{tok}}}}} ({full[:2]}** **** ... {full[-4:]})"
+        return PII_PATTERNS["iban"].sub(sub, normalize_text(text)), toks
+
+    def _resolve_tokens(self, session, name, args, ev):
+        ib = ((self._c("pii") or {}).get("iban") or {})
+        if not session.vault or name not in ib.get("resolve_tools", ["transfer_funds"]):
+            return args  # anywhere else a token stays a token: no leak via email bodies, logs, other tools
+        used = []
+
+        def sub(m):
+            if m.group(1) in session.vault:
+                used.append(m.group(1))
+                return session.vault[m.group(1)]
+            return m.group(0)
+        args = _map_strings(args, lambda s: re.sub(r"\{\{\s*(IBAN_\d+)\s*\}\}", sub, s))
+        if used:
+            ev["reasons"].append(f"resolved {', '.join(used)} for {name}; payment checks run on the real value")
+        return args
+
+    def _detokenize(self, session, s):
+        for tok, full in session.vault.items():
+            s = s.replace(full, f"{{{{{tok}}}}}")
+        return s
 
     # -- pipeline stages
     def _resolve(self, tool, ev):

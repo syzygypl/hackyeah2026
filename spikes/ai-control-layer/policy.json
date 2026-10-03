@@ -72,6 +72,11 @@
       "_doc": "Deterministic. email, card_number (Luhn), pesel (checksum), iban. Inputs checked on egress tools only; outputs redacted for redact_output tools, or all tools if output_scope=all.",
       "enabled": true, "action": "block",
       "types": ["email", "card_number", "pesel", "iban"],
+      "iban": {
+        "_doc": "prompt_action: redact = IBANs in user prompts become a token {{IBAN_n}} plus a masked hint (PL** **** ... 1234); the full value stays in the session vault and is put back only inside resolve_tools, after which the normal payment checks run (beneficiary allowlist, four-eyes, judge). The model never sees the full IBAN. deny = block prompts containing an IBAN.",
+        "prompt_action": "redact",
+        "resolve_tools": ["transfer_funds"]
+      },
       "output_scope": "flagged_tools"
     },
     "attack_signatures": {

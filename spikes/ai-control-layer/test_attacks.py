@@ -257,6 +257,56 @@ class EncodingEvasion(unittest.TestCase):
         self.assertEqual(r["decision"], ALLOW, r["event"]["reasons"])
 
 
+class IbanTokens(unittest.TestCase):
+    """IBAN in a user prompt -> token + masked hint; resolved only inside transfer_funds, then normal payment checks."""
+
+    def _layer(self, **iban):
+        captured = []
+        layer, s, env = fresh(edit=(lambda p: p["controls"]["pii"]["iban"].update(iban)) if iban else None)
+        layer.tools = dict(TOOLS, transfer_funds=lambda to, amount, currency="EUR", reference="": captured.append(to) or {"status": "executed"},
+                           send_email=lambda to, subject, body: captured.append(body) or {"status": "sent"})
+        return layer, s, captured
+
+    def test_prompt_iban_redacted_to_token(self):
+        layer, s, _ = self._layer()
+        r = layer.check_prompt(s, "Pay invoice INV-2041 to DE89 3704 0044 0532 0130 00, 4200 EUR")
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertEqual(r["event"]["decision"], REDACT)
+        self.assertIn("{{IBAN_1}} (DE** **** ... 3000)", r["output"])
+        self.assertNotIn("DE89 3704", r["output"])
+        self.assertNotIn("DE89370400440532013000", json.dumps(r["event"]))
+        self.assertEqual(s.vault, {"IBAN_1": "DE89370400440532013000"})
+
+    def test_token_to_approved_beneficiary_allowed(self):
+        layer, s, captured = self._layer()
+        layer.check_prompt(s, "Pay invoice INV-2041 to DE89 3704 0044 0532 0130 00, 4200 EUR")
+        r = layer.call(s, "transfer_funds", {"to": "{{IBAN_1}}", "amount": 4200})
+        self.assertEqual(r["decision"], ALLOW, r["event"]["reasons"])
+        self.assertEqual(captured, ["DE89370400440532013000"])  # the tool got the real IBAN
+        self.assertEqual(r["event"]["args"]["to"], "{{IBAN_1}}")  # the audit did not
+
+    def test_token_to_unknown_beneficiary_denied(self):
+        layer, s, captured = self._layer()
+        layer.check_prompt(s, "Urgent: wire 500 EUR to PL61 1090 1014 0000 0712 1981 2874")
+        r = layer.call(s, "transfer_funds", {"to": "{{IBAN_1}}", "amount": 500})
+        self.assertEqual(r["decision"], DENY)
+        self.assertIn("business_rule", r["event"]["guardrails"])
+        self.assertEqual(captured, [])
+
+    def test_token_not_resolved_outside_payment_tool(self):
+        layer, s, captured = self._layer()
+        layer.check_prompt(s, "Pay to DE89 3704 0044 0532 0130 00")
+        r = layer.call(s, "send_email", {"to": "ops@bank.example", "subject": "iban", "body": "account {{IBAN_1}}"})
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertEqual(captured, ["account {{IBAN_1}}"])
+
+    def test_prompt_action_deny(self):
+        layer, s, _ = self._layer(prompt_action="deny")
+        r = layer.check_prompt(s, "Pay to DE89 3704 0044 0532 0130 00")
+        self.assertEqual(r["decision"], DENY)
+        self.assertIn("pii", r["event"]["guardrails"])
+
+
 class StatefulControls(unittest.TestCase):
     def test_indirect_injection_taints_session(self):
         layer, s, _ = fresh(approve=False)
@@ -783,7 +833,7 @@ def measure_overhead(n=5000):
     return {"p50": lat[n // 2], "p99": lat[int(n * 0.99)], "rps": int(n / wall)}
 
 
-GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow",
+GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization",
           "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
           "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache",
