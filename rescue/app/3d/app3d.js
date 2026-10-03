@@ -1550,7 +1550,9 @@ const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
 // the shell's panel top 3 ({type:'time', top:[ids]}, 7e2b7a9): when present it is the only source of the #1-#3 labels
 let TL_TOP = null, TL_TOPM = null, topDrawn = '';   // ids + the shell minute they belong to
 const topOfShell = () => TL_TOP.map((id) => segs.get(id)).filter(Boolean);
+const useShellTop = () => TL_TOP && ![...OFF].some((k) => k <= STEP);   // a signal switched off: own recomputed ranking, as 2D (7e2b7a9)
 function drawTop(ranked) {
+  if (useShellTop() && G.phase === 'off') ranked = topOfShell();   // also after a step / evidence redraw
   topDrawn = ranked.slice(0, 3).map((s) => s.id).join();
   disposeGroup(dyn.top);
   if (R.synthetic && G.phase === 'off') return;
@@ -1896,7 +1898,7 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
     if (!f) {
       let i = 0; R.steps.forEach((s, k) => { if (s.minute <= minute) i = k; });
       setStep(i, false, true);
-      if (TL_TOP && Math.abs(minute - TL_TOPM) <= 0.5) drawTop(topOfShell());
+      if (useShellTop() && Math.abs(minute - TL_TOPM) <= 0.5) drawTop(topOfShell());
       return;
     }
     if (f.step >= 0 && STEP !== f.step) setStep(f.step, false, true);
@@ -1904,9 +1906,9 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
     if (f.poaGrid?.length === R.rows * R.cols) showHeat(heatCanvasGrid(f.poaGrid), true);
     // top 3 = the shell panel's source: Historia ranks the minute's frame, Na żywo ranks the live step (shell tlSegments)
     if (TL_TOP && Math.abs(minute - TL_TOPM) > 0.5) TL_TOP = null;   // 3D moved the clock itself (Kino): own ranking
-    if (TL_TOP) drawTop(topOfShell());
-    else if (f.segments?.length && !TL_LIVE) drawTop(rankedOf(f.segments));
-    else if (TL_LIVE) { const OG = gridFor(STEP); drawTop(OG ? rankedOf(segPoa(OG)) : rankedOf(R.steps[STEP].segments)); }
+    if (useShellTop()) drawTop(topOfShell());
+    else if (f.segments?.length && !TL_LIVE && ![...OFF].some((k) => k <= STEP)) drawTop(rankedOf(f.segments));
+    else if (TL_LIVE || [...OFF].some((k) => k <= STEP)) { const OG = gridFor(STEP); drawTop(OG ? rankedOf(segPoa(OG)) : rankedOf(R.steps[STEP].segments)); }
     compose();
   },
   onStopCamera: () => { if (CINE.on && !CINE.inserting) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
@@ -2127,7 +2129,7 @@ addEventListener('message', (e) => {
     if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
     else if (m.type === 'time' && Number.isFinite(m.minute)) { if (typeof m.live === 'boolean') TL_LIVE = m.live; if (Array.isArray(m.top) && m.top.length) { TL_TOP = m.top.map(String); TL_TOPM = m.minute; }
       TL3D?.setTime(m.minute, m.t, true, m.frame, m.frameMinute);
-      if (TL_TOP && G.phase === 'off' && TL_TOP.join() !== topDrawn) { drawTop(topOfShell()); wake(); } }
+      if (useShellTop() && G.phase === 'off' && TL_TOP.join() !== topDrawn) { drawTop(topOfShell()); wake(); } }
     else if (m.type === 'fpp') { if (m.on === false) TL3D?.stopFpp(); else TL3D?.startFpp(m.actorId); }
     else if (m.type === 'actor' && (m.id === null || typeof m.id === 'string')) TL3D?.selectActor(m.id, false);
     else if (m.type === 'highlight' && typeof m.actor === 'string') {
