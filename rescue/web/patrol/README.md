@@ -32,4 +32,10 @@ exposing it is a decision for the team, hotspot only.
 
 `index.html?embed=1&team=<id>&api=<url>` hides the title and team picker (the shell fixes the team) and posts
 messages to the parent, same origin only: `{source: "rescuePatrol", type: "ready" | "report" | "queued" | "online", ...}`.
-`report` carries `{team, text, at, hints}`, `queued` `{team, text, at, queued}`, `online` `{online}`.
+`report` carries `{team, text, at, hints}`, `queued` `{team, text, at, queued}`, `online` `{online}`, `assigned` `{team, segmentId}`.
+
+Incoming (from the shell, same origin): `{type: "assign", segmentId, team?, by?}` sets the team's task (operator drag & drop);
+it wins over the plan from `run.json`, is kept on the phone and shown as "Przydział od operatora".
+
+Phones outside the shell poll `GET <api>/api/assignments` every 15 s, expected shape `{"<team>": {segmentId, by, at}}`
+(proposed for `rescue-server`; a 404 is ignored).

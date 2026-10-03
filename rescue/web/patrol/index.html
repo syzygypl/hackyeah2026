@@ -111,7 +111,26 @@
   const segById = Object.fromEntries(step.segments.map(s => [s.id, s]));
   const teamName = () => (teams.find(t => t.id === team) || {}).name || team;
   const shortTeam = () => teamName().replace(/\s*\(.*\)\s*/, "");
-  const assignment = () => (step.assignments || []).find(a => a.resourceId === team);
+  // Operator override (shell drag & drop or the server): {segmentId, at, by}; newer than the plan, wins.
+  let overrides = store.get("rescue-patrol-overrides", {});
+  const planned = () => (step.assignments || []).find(a => a.resourceId === team);
+  const assignment = () => {
+    const o = overrides[team];
+    if (o && segById[o.segmentId]) {
+      const s = segById[o.segmentId];
+      return { segmentId: s.id, segmentName: s.name, poa: s.poa, reason: `Przydział od operatora${o.by ? " (" + o.by + ")" : ""}${o.at ? ", " + o.at : ""}`, safety: [], fromOperator: true };
+    }
+    return planned();
+  };
+  function setOverride(t, segmentId, by, at) {
+    if (!segById[segmentId]) return false;
+    const cur = overrides[t];
+    if (cur && cur.segmentId === segmentId) return false;
+    overrides[t] = { segmentId, by: by || "", at: at || new Date().toTimeString().slice(0, 5) };
+    store.set("rescue-patrol-overrides", overrides);
+    if (t === team) { renderTask(); toast(`Nowe zadanie: ${segmentId} ${segById[segmentId].name}`); navigator.vibrate?.(200); }
+    return true;
+  }
 
   function renderTask() {
     const a = assignment(), r = teams.find(t => t.id === team);
@@ -120,8 +139,8 @@
     } else {
       $("task").innerHTML = `<h2>Twój segment</h2>
         <div class="task-seg">${esc(a.segmentId)} · ${esc(a.segmentName)}</div>
-        <div class="task-meta"><span>Prawdopodob.: <b>${Math.round(a.poa * 100)}%</b></span><span>Dojście: <b>${Math.round(a.travelMin)} min</b></span><span>Przeszukanie: <b>${Math.round(a.sweepMin)} min</b></span></div>
-        <div class="task-meta" style="margin-top:4px">${esc(a.reason)}</div>
+        <div class="task-meta"><span>Prawdopodob.: <b>${Math.round(a.poa * 100)}%</b></span>${a.travelMin != null ? `<span>Dojście: <b>${Math.round(a.travelMin)} min</b></span>` : ""}${a.sweepMin != null ? `<span>Przeszukanie: <b>${Math.round(a.sweepMin)} min</b></span>` : ""}</div>
+        <div class="task-meta" style="margin-top:4px">${a.fromOperator ? "<b>⇢ </b>" : ""}${esc(a.reason)}</div>
         ${(a.safety || []).map(f => `<span class="flag">⚠ ${esc(f)}</span>`).join(" ")}
         ${step.weather?.survival ? `<span class="flag warn">${esc(step.weather.survival.text)}</span>` : ""}`;
     }
@@ -255,6 +274,21 @@
         const st = val(f, "st"); if (st) report(`${who}: ${st}`);
       });
   };
+  // Incoming from the shell (same origin only): {type: "assign", segmentId, team?, by?}
+  window.addEventListener("message", ev => {
+    if (ev.origin !== location.origin || !ev.data || ev.data.type !== "assign") return;
+    if (setOverride(ev.data.team || team, ev.data.segmentId, ev.data.by || "operator")) tell("assigned", { team: ev.data.team || team, segmentId: ev.data.segmentId });
+  });
+  // Same assignment for phones outside the shell: GET <api>/api/assignments -> {"<team>": {segmentId, by, at}}; 404 = not available yet.
+  async function pollAssignments() {
+    try {
+      const r = await fetch(API + "/api/assignments", { headers: headers(), signal: AbortSignal.timeout(4000) });
+      if (!r.ok) return;
+      const all = await r.json();
+      for (const [t, a] of Object.entries(all || {})) if (a && a.segmentId) setOverride(t, a.segmentId, a.by, a.at);
+    } catch {}
+  }
+  setInterval(pollAssignments, 15000); pollAssignments();
   $("sendFree").onclick = () => { const t = $("free").value.trim(); if (!t) return; report(`${shortTeam()}: ${t}`); $("free").value = ""; };
   navigator.geolocation?.watchPosition(p => { window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`; }, () => {}, { enableHighAccuracy: true });
 </script>
