@@ -40,6 +40,10 @@ figcaption{font-size:var(--rl-fs-s);color:var(--rl-mute);margin-top:8px}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .card{background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);padding:18px}
 .card p:last-child{margin-bottom:0}
+.st{display:inline-block;margin:10px 6px 0 0;padding:3px 9px;border-radius:999px;font:600 var(--rl-fs-xs)/1.4 var(--rl-font)}
+.st.ok{background:var(--rl-ok);color:var(--rl-on-ok)}.st.wip{background:var(--rl-warn);color:var(--rl-ink)}.st.plan{background:var(--rl-panel-2);color:var(--rl-ink-2);border:1px solid var(--rl-line-strong)}
+.list-h{font-size:var(--rl-fs-l);margin:26px 0 10px}
+a.card.sit{display:block;text-decoration:none;color:var(--rl-ink)}a.card.sit:hover{border-color:var(--rl-accent)}a.card.sit .go{display:inline-block;margin-top:8px;color:var(--rl-accent);font-weight:600;font-size:var(--rl-fs-s)}
 .tag{display:inline-block;font:600 var(--rl-fs-xs)/1 var(--rl-mono);text-transform:uppercase;letter-spacing:.04em;color:var(--rl-accent);margin-bottom:8px}
 .proof{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0}
 .num{font:700 clamp(34px,6vw,52px)/1 var(--rl-font-num);color:var(--rl-ink)}
@@ -104,13 +108,36 @@ footer p{margin-bottom:8px}
     <div class="wrap">
       <h2>Problem pierwszych godzin</h2>
       <p class="lead">Zgłoszenie przychodzi późno, ludzi jest mało, teren duży, pogoda się psuje. Kierownik akcji układa w głowie dziesiątki sygnałów: plan wycieczki, ostatni kontakt, logowanie telefonu, świadków, przeszukane już sektory. Rescue Locator zbiera je w jednym miejscu i liczy, które fragmenty terenu mają największą wagę.</p>
-      <div class="grid" style="margin-top:18px">
-        <div class="card"><span class="tag">Mapa</span><h3>Waga mapy z zachowań, terenu i śladów</h3><p>Pierścienie odległości wg statystyk zaginięć (Koester / ISRID) dla danego typu osoby, trudność terenu z modelu wysokości, szlaki i potoki. Każdy ślad ma wagę: wiarygodność źródła, dokładność, czas, potwierdzenia.</p></div>
-        <div class="card"><span class="tag">Oś czasu</span><h3>Trasy zespołów i pole widzenia</h3><p>Pozycje GPS co kilka minut, szacowana trasa między nimi i pole widzenia każdej jednostki (pieszo, pies, dron, śmigłowiec, łódź). Z tego rośnie przeszukany obszar - i spada waga tam, gdzie już patrzono.</p></div>
-        <div class="card"><span class="tag">Na żywo</span><h3>Telefony ratowników w akcji</h3><p>Zespół dołącza kodem QR, wysyła meldunki, ślady i pozycję. Operator przydziela sektory, widzi stan zespołów (zmęczenie, bateria drona, paliwo) i dziennik każdej jednostki.</p></div>
-        <div class="card"><span class="tag">Centrum</span><h3>Kilka akcji naraz</h3><p>Wszystkie trwające akcje na jednej mapie i wspólna pula zespołów. Doradca podpowiada, gdy kilka zgłoszeń może mieć wspólną przyczynę (np. fala po awarii zapory).</p></div>
-        <div class="card"><span class="tag">Ćwiczenia</span><h3>Trening na scenariuszach</h3><p>Przejmij akcję w połowie, podejmuj decyzje i porównaj je z silnikiem, heurystyką eksperta i podejściem naiwnym.</p></div>
-        <div class="card"><span class="tag">Teren</span><h3>Działa offline</h3><p>Cała aplikacja uruchamia się z laptopa w bazie, bez internetu, z lokalnym modelem językowym do meldunków. Wersja w chmurze służy do pokazu.</p></div>
+      <h3 class="list-h">Możliwe funkcje</h3>
+      <div class="grid">
+        <div class="card"><h3>Waga mapy z poszlak</h3><p>Statystyka zachowań zaginionych (Koester / ISRID), teren z modelu wysokości, szlaki i potoki. Każda poszlaka ma wagę: wiarygodność źródła, dokładność, czas i potwierdzenia.</p><span class="st ok">działa w pokazie</span></div>
+        <div class="card"><h3>Oś czasu i pole widzenia</h3><p>Trasy zespołów z GPS, szacowana droga między pozycjami i to, co widzi każda jednostka - także dron z kamerą termowizyjną. Z tego rośnie przeszukany obszar.</p><span class="st ok">działa w pokazie</span></div>
+        <div class="card"><h3>Na żywo, Zasoby, dziennik</h3><p>Zespół dołącza kodem QR, wysyła meldunki i ślady. Operator widzi stan zespołów (zmęczenie, bateria drona, paliwo) i dziennik każdej jednostki.</p><span class="st ok">działa w pokazie</span></div>
+        <div class="card"><h3>Centrum i Doradca zagrożeń</h3><p>Kilka akcji na jednej mapie i wspólna pula zespołów. Doradca podpowiada wspólną przyczynę zgłoszeń, np. falę po przerwaniu zapory na Solinie.</p><span class="st ok">działa w pokazie</span></div>
+        <div class="card"><h3>Ćwiczenia</h3><p>Przejmij akcję w połowie, wysyłaj zespoły i porównaj decyzje z silnikiem, heurystyką eksperta i podejściem naiwnym.</p><span class="st ok">działa w pokazie</span></div>
+        <div class="card"><h3>Tryb Auto</h3><p>Zdarzenia wpisywane zwykłym językiem, jak w czacie; aplikacja sama dobiera pogodę i dostępne zespoły.</p><span class="st wip">w budowie</span></div>
+        <div class="card"><h3>Analiza zdjęcia</h3><p>Zdjęcie od zaginionego: lokalizacja z danych EXIF, a bez nich zawężenie mapy do miejsc, z których mogło być zrobione.</p><span class="st wip">w budowie</span></div>
+      </div>
+      <h3 class="list-h">Integracje</h3>
+      <div class="grid">
+        <div class="card"><h3>GPS z telefonów ratowników</h3><p>Telefon patrolu wysyła pozycję co kilka minut, także z kolejką offline.</p><span class="st ok">działa w pokazie</span></div>
+        <div class="card"><h3>Mapy i teren</h3><p>OpenStreetMap i Copernicus DEM - działa. Ortofotomapa i model terenu GUGiK - planowane.</p><span class="st ok">działa w pokazie</span><span class="st plan">planowane</span></div>
+        <div class="card"><h3>Aplikacja Ratunek</h3><p>Ping GPS z telefonu zaginionego jako poszlaka na mapie.</p><span class="st wip">w pokazie symulowane</span></div>
+        <div class="card"><h3>Trackery GPS / APRS zespołów</h3><p>Pozycje z urządzeń zespołów bez telefonu.</p><span class="st plan">planowane</span></div>
+        <div class="card"><h3>Dron: telemetria i obraz</h3><p>Bateria, pozycja i podgląd kamery termowizyjnej z drona.</p><span class="st plan">planowane</span></div>
+        <div class="card"><h3>112: lokalizacja AML i SMS</h3><p>Lokalizacja telefonu z połączenia alarmowego jako poszlaka z dokładnością.</p><span class="st plan">planowane</span></div>
+        <div class="card"><h3>IMGW: pogoda i ostrzeżenia</h3><p>Dziś pogoda w scenariuszach jest wpisana ręcznie.</p><span class="st plan">planowane</span></div>
+        <div class="card"><h3>Raporty do CAD / systemu 112</h3><p>Eksport przebiegu akcji i decyzji.</p><span class="st plan">planowane</span></div>
+      </div>
+      <h3 class="list-h">Sytuacje</h3>
+      <div class="grid">
+        <a class="card sit" href="../?role=operator&amp;time=hist&amp;sc=zawrat"><h3>Zaginiony turysta w Tatrach</h3><p>Mgła, wiatr, ostatni sygnał telefonu pod Zawratem.</p><span class="go">Otwórz w aplikacji</span></a>
+        <a class="card sit" href="../?role=operator&amp;time=hist&amp;sc=rodzina-dziecko-las"><h3>Dziecko w lesie</h3><p>Rodzina z telefonami pomaga ratownikom nad Karpaczem.</p><span class="go">Otwórz w aplikacji</span></a>
+        <a class="card sit" href="../?role=operator&amp;time=hist&amp;sc=bieszczady-wetlinska"><h3>Grzybiarz</h3><p>Buczyna nad Przełęczą Wyżną w Bieszczadach.</p><span class="go">Otwórz w aplikacji</span></a>
+        <a class="card sit" href="../?role=operator&amp;time=hist&amp;sc=krakow-nowa-huta"><h3>Osoba z demencją</h3><p>Upał, miasto - Kraków, Nowa Huta.</p><span class="go">Otwórz w aplikacji</span></a>
+        <a class="card sit" href="../centrum.html"><h3>Powódź po przerwaniu zapory</h3><p>Kilka akcji naraz w dolinie Sanu, Doradca łączy je w jedną przyczynę.</p><span class="go">Otwórz w aplikacji</span></a>
+        <a class="card sit" href="../?role=operator&amp;time=hist&amp;sc=karkonosze-sniezka"><h3>Zamieć w Karkonoszach</h3><p>Turysta w okolicy Śnieżki i Kotła Łomniczki. Lawina - bez scenariusza (planowane).</p><span class="go">Otwórz w aplikacji</span></a>
+        <a class="card sit" href="../?role=operator&amp;time=hist&amp;sc=sniardwy"><h3>Zaginiony na wodzie</h3><p>Żeglarz na Śniardwach, pływak przy Międzyzdrojach.</p><span class="go">Otwórz w aplikacji</span></a>
       </div>
       <figure style="margin-top:22px"><img class="shot" src="img/12-os-czasu.jpg" alt="Oś czasu w 3D: ślady GPS zespołów, okręgi dokładności i narastający przeszukany obszar w minucie 100 akcji" width="1400" height="787" loading="lazy"><figcaption>Oś czasu: trasy zespołów z GPS, dokładność pozycji i przeszukany obszar w danej minucie akcji (scenariusz fikcyjny).</figcaption></figure>
     </div>
@@ -216,6 +243,7 @@ footer p{margin-bottom:8px}
       <figure class="phone"><img class="shot" src="img/09a-widzialem-karta.jpg" alt="Strona Widziałem z pokazu: karta fikcyjnej osoby zaginionej, przycisk Widziałem tę osobę i Zadzwoń 112" width="600" height="1298" loading="lazy"><figcaption>Strona "Widziałem" z pokazu (osoba fikcyjna).</figcaption></figure>
       <div>
         <h2>Czym jest Rescue Locator</h2>
+        <p class="small muted">Pomaga ratownikom m.in. gdy zgubi się dziecko w lesie, senior z demencją w mieście, turysta we mgle w górach albo ktoś na wodzie.</p>
         <p>To narzędzie dla ratowników: podpowiada, gdzie szukać najpierw, na podstawie statystyk, terenu i śladów. Szukają zawsze ratownicy - aplikacja nikogo sama nie znajdzie i nie zastępuje telefonu na 112.</p>
         <p class="muted">Prototyp z hackathonu HackYeah 2026. Wszystkie akcje w pokazie są fikcyjne.</p>
         <div class="btns"><a class="btn" href="?dla=sar">Wersja dla ratowników</a></div>
