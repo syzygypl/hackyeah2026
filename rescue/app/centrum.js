@@ -12,7 +12,8 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const areaTxt = (a) => (+a || 0).toFixed(1).replace(".", ",") + "%";
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const POLL_MS = 10000;   // 10 s: /api/incidents + /api/teams per tick (perf round 3, wydajnosc.md)
-const openURL = (sc) => `./?role=operator&mode=akcja&sc=${encodeURIComponent(sc)}`;
+// the card shows the live run (cursor time, e.g. "scenariusz 19:45"), so open Na żywo: the same moment and top 3 (demo review 2)
+const openURL = (sc) => `./?role=operator&mode=akcja&time=live&sc=${encodeURIComponent(sc)}`;
 function toast(t, ms = 3000) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = "none", ms); }
 
 // ---------- transport (PIN like app.js: loopback needs none)
@@ -336,7 +337,7 @@ function fitAll() {
   if (!pts.length || pts.length < Math.min(incidents.length, 2)) return;
   const lons = pts.map((p) => p[1]), lats = pts.map((p) => p[0]);
   // narrow: labels sit right of their dot, so keep room on the right or the eastern names (Bieszczady, Kraków) are cut off
-  const wide = innerWidth > 900, pad = wide ? { left: 400 + 40, right: 300 + 160, top: 100, bottom: 40 } : { left: 24, right: Math.min(150, innerWidth * 0.35), top: 30, bottom: 30 };
+  const wide = innerWidth > 900, pad = wide ? { left: 400 + 40, right: 300 + 160, top: 100, bottom: 130 } : { left: 24, right: Math.min(150, innerWidth * 0.35), top: 30, bottom: 30 };
   map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: pad, maxZoom: 9, duration: 0 });
   fitted = pts.length >= incidents.length;
 }
@@ -358,7 +359,7 @@ let adv = null, advSel = 0, advOpen = true, advSig = "", advLlmAsked = false, ad
 const advTowns = [];
 const num2 = (v) => (Math.round((v || 0) * 100) / 100).toFixed(2).replace(".", ",");
 const LEVEL = { alarm: "ALARM", ostrzezenie: "OSTRZEŻENIE", obserwacja: "DO OBSERWACJI" };
-try { advOpen = localStorage.getItem("rescue-advisor-open") !== "0"; } catch (e) {}
+try { advOpen = localStorage.getItem("rescue-advisor-open") === "1"; } catch (e) { advOpen = false; }   // demo review 3: starts as a slim bar, never over the incident dots
 async function advTick() {
   if (advBusy || Date.now() < advMiss) return; advBusy = true;
   try {
@@ -387,20 +388,19 @@ function advRender() {
   if (!hs.length) {
     el.innerHTML = head + (advOpen ? `<p class="help">${esc(adv.summary)}</p><p class="help mono">${esc(adv.method || "")}</p>` : "");
   } else {
-    const tabs = hs.length > 1 ? `<div class="advtabs">${hs.map((x, i) => `<button type="button" data-i="${i}" class="${i === advSel ? "on" : ""}">${esc(x.id)} · ${num2(x.score)}</button>`).join("")}</div>` : "";
+    const tabs = hs.length > 1 ? `<div class="advtabs">${hs.map((x, i) => `<button type="button" data-i="${i}" class="${i === advSel ? "on" : ""}">${esc(x.id)}</button>`).join("")}</div>` : "";
     const name = (sc) => { const x = incidents.find((i) => i.sc === sc); return x ? short(x) : sc; };
-    const bar = h.evidence.map((e) => `<i style="flex:${e.contribution}" title="${esc(e.id)} ${esc(e.label)}: ${num2(e.weight)} × ${num2(e.value)} = ${num2(e.contribution)}"></i>`).join("");
+    const bar = h.evidence.map((e) => `<i style="flex:${e.contribution}" title="${esc(e.id)} ${esc(e.label)}"></i>`).join("");
     const narr = (advNarrSig === advSig && advNarr) || adv.narrative || {};   // the model's text only for the state it was written for
     const by = narr.by && narr.by !== "rules" ? `model (${esc(narr.by === "llm-openai" ? "chmura" : "lokalny")})` : "reguły";
     const body = `
-      <div class="advtop"><div><div class="kind">${esc(h.kindLabel)}</div><h3>${esc(h.title)}</h3>
+      <div class="advtop"><div><div class="kind" title="Dla operatora: wynik ${num2(h.score)} (0-1); ${esc(h.explain)}">${esc(h.kindLabel)}</div><h3>${esc(h.title)}</h3>
         ${h.altSources && h.altSources.length ? `<div class="mute alt">albo: ${h.altSources.map((s) => esc(s.name)).join(", ")} - zgłoszenia leżą poniżej obu, z samych zgłoszeń nie da się ich rozróżnić</div>` : ""}</div>
-        <div class="score" title="${esc(h.explain)}"><b>${num2(h.score)}</b><span>wynik 0-1</span></div></div>
+        </div>
       <button class="advfit" type="button">Pokaż na mapie</button>
       <div class="sbar" aria-label="Skład wyniku">${bar}</div>
       <div class="cols">
-        <section><h4>Dlaczego (dowody)</h4><ol class="ev">${h.evidence.map((e) => `<li><span class="eid mono">${esc(e.id)}</span><span><b>${esc(e.label)}</b> ${esc(e.text)}</span><span class="mono c">+${num2(e.contribution)}</span></li>`).join("")}</ol>
-          <div class="mono expl">${esc(h.explain)}</div>
+        <section><h4>Dlaczego (dowody)</h4><ol class="ev">${h.evidence.map((e) => `<li><span class="eid mono">${esc(e.id)}</span><span><b>${esc(e.label)}</b> ${esc(e.text)}</span></li>`).join("")}</ol>
           <h4>Powiązane akcje <span class="mute">(${h.incidents.length})</span></h4><div class="chips">${h.incidents.map((sc) => `<a class="chip adv" data-sc="${esc(sc)}" href="${openURL(sc)}">${esc(name(sc))}</a>`).join("")}</div>
           ${h.excluded && h.excluded.length ? `<h4>Nie powiązano</h4><ul class="exc">${h.excluded.map((x) => `<li data-sc="${esc(x.sc)}"><b>${esc(name(x.sc))}</b> - ${esc(x.reason)}</li>`).join("")}</ul>` : ""}</section>
         <section>${h.predicted ? `<h4>Prognoza</h4><p class="pred">${esc(h.predicted.text)}</p>${(h.predicted.towns || []).length ? `<table class="eta"><tr><th>Miejscowość</th><th>km rzeki</th><th>fala ok.</th><th>za</th></tr>${h.predicted.towns.map((t) => `<tr class="${t.kind === "town" ? "town" : ""}"><td>${esc(t.name)}</td><td class="mono">${String(t.km).replace(".", ",")}</td><td class="mono">${esc(t.eta)}</td><td class="mono">${t.inMin} min</td></tr>`).join("")}</table><div class="help">Czas od ostatniego zgłoszenia (${esc(h.predicted.from || "")}); prędkość fali ${String(h.predicted.speedMs || "").replace(".", ",")} m/s${h.wave && !h.wave.fitted ? " (domyślna, nie dopasowana)" : " (dopasowana do zgłoszeń)"}.</div>` : ""}` : ""}
@@ -409,12 +409,13 @@ function advRender() {
       <section class="narr"><h4>Dla operatora <span class="mute">${by}</span></h4><p>${esc(narr.summary || "")}</p>
         ${(narr.questions || []).length ? `<div class="qs"><b>Zapytaj:</b><ul>${narr.questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul></div>` : ""}
         ${narr.note ? `<div class="help">${esc(narr.note)}</div>` : ""}<button class="advllm" type="button" ${advLlmBusy ? "disabled" : ""}>${advLlmBusy ? "Model pisze..." : "Zapytaj model ponownie"}</button><div class="help">To hipoteza do sprawdzenia, nie potwierdzenie. Decyzja należy do kierownika akcji.</div></section>`;
-    el.innerHTML = head + (advOpen ? tabs + body : `<p class="help one">${esc(h.title)} · wynik ${num2(h.score)} · ${h.incidents.length} akcji</p>`);
+    el.innerHTML = head + (advOpen ? tabs + body : `<p class="help one">${esc(h.title)} · ${h.incidents.length} akcji · <button class="advt2" type="button">Pokaż szczegóły</button></p>`);
     el.querySelectorAll(".advtabs button").forEach((b) => b.onclick = () => { advSel = +b.dataset.i; advRender(); advFit(); });
     el.querySelectorAll("[data-sc]").forEach((c) => { c.onmouseenter = () => setHl(c.dataset.sc); c.onmouseleave = () => setHl(null); });
     const fitB = el.querySelector(".advfit"), llmB = el.querySelector(".advllm");   // both absent while the panel is collapsed (Zwiń)
     if (fitB) fitB.onclick = advFit; if (llmB) llmB.onclick = advLlm;
   }
+  const t2 = el.querySelector(".advt2"); if (t2) t2.onclick = () => el.querySelector(".advt").click();
   el.querySelector(".advt").onclick = () => { advOpen = !advOpen; try { localStorage.setItem("rescue-advisor-open", advOpen ? "1" : "0"); } catch (e) {} advRender(); };
   advApply(); advMap();
 }

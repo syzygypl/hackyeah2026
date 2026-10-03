@@ -178,3 +178,5 @@ body.dragging .grp{border-color:var(--rl-line-strong)}
 .advpin.src .t{border-color:var(--rl-accent);color:var(--rl-accent)}
 @media (max-width:1200px){#advisor .cols{grid-template-columns:1fr}}
 @media (max-width:900px){#advisor{position:static;margin:var(--gap);max-height:none}}
+#advisor .advt2{font:inherit;font-size:var(--rl-fs-xs);background:none;border:0;color:var(--rl-accent);text-decoration:underline;cursor:pointer;padding:0}
+#advisor.closed{padding:6px 14px 8px}
