@@ -7,12 +7,12 @@ Drop-in integration: any Ollama client (the official SDKs, LangChain, a hand-wri
 ```sh
 python3 spikes/acl-ollama-proxy/proxy.py --extra-model qwen3:4b-instruct-2507-q4_K_M@0edcdef34593   # :11500
 python3 spikes/acl-agent/agent.py --via-proxy --scenario all       # stock Ollama loop, tools run in the agent
-cd spikes/acl-ollama-proxy && python3 -m unittest -v test_proxy    # 7 tests, fake Ollama, ~5 s
+cd spikes/acl-ollama-proxy && python3 -m unittest -v test_proxy    # 10 tests, fake Ollama, ~7 s
 curl -s localhost:11500/acl/metrics ; curl -s localhost:11500/acl/audit
 ```
 
 - `--extra-model NAME@DIGEST`: the agent's model isn't in the policy's `models.allowed` (that list covers the guard models and `llm_complete`). This adds it to a temp copy of the policy, allowlisted + digest-pinned. The copy is redone whenever `policy.json` changes, so live edits still apply. Better long term: add it to `policy.json` itself (owner: 9c).
-- Headers: `X-ACL-Session` (default `ollama-proxy`) picks the budget/taint session; `X-ACL-Approved-By: <name>` simulates a human approving.
+- Headers: `X-ACL-Session` (default `ollama-proxy`) picks the budget/taint session; `X-ACL-Approval-Id: <id>` releases a held call an admin approved (see Approvals). A caller-supplied approver (header or body) is ignored.
 
 ## What happens to one `/api/chat` request
 
@@ -28,7 +28,14 @@ curl -s localhost:11500/acl/metrics ; curl -s localhost:11500/acl/audit
 
 Every decision is in the response under `acl` (and in the hash-chained audit at `/acl/audit`). `/api/tags` and `/api/version` pass through. Every other endpoint (e.g. `/api/generate`) returns 403: fail closed, nothing ungoverned.
 
-**Deviation from the assign:** approval-required tool calls are stripped, not "returned flagged". A stock client doesn't know the flag and would just execute the call. The flag is still in `acl.decisions`, and approving means resending with `X-ACL-Approved-By`.
+**Deviation from the assign:** approval-required tool calls are stripped, not "returned flagged". A stock client doesn't know the flag and would just execute the call.
+
+## Approvals (F6: a caller can't approve itself)
+
+- A held tool call is stripped. Its decision in `acl.decisions` carries a gateway-style `approval_id`, and the `content` note says how to approve.
+- Only an admin approves, with `POST /v1/approvals/{id}` and `Authorization: Bearer $ACL_ADMIN_TOKEN` (`GET /v1/approvals` lists the pending ones). The client then re-sends the request with `X-ACL-Approval-Id: <id>`. The proxy releases **exactly the stored call** (the model isn't asked again), bound to session + tool + args. Single use, 10 min TTL; a replay, another session or a still-pending id gets 403.
+- No logic copied: the proxy imports `server.py` read-only. It uses the gateway's `approver`, `APPROVALS` store and `PENDING_APPROVER`, and serves `/v1/approvals*` with the gateway's own `Handler` code (same token check, same audit entries, written into the proxy's hash chain). `PUT /v1/policy` is refused on the proxy port.
+- **Limit:** the store is in-process, so approve proxy-held calls on the proxy's port (11500), not on the gateway's 8787. One store for both processes needs a hook in `server.py` (owner 9c): a shared approval store, e.g. a file or sqlite behind `APPROVALS`, or the proxy registering and consuming approvals through gateway endpoints.
 
 ## Tests (`test_proxy.py`)
 
@@ -37,7 +44,8 @@ Fake Ollama + a temp copy of the real policy with the heuristic semantic backend
 - disallowed model 403, never forwarded
 - digest mismatch 403
 - jailbreak prompt 403, never forwarded
-- **injected tool output**: the poisoned invoice taints the session and is marked UNTRUSTED. The hijacked model's `transfer_funds` 95k + `send_email` evil-mail.ru are both stripped. A later legit 4200 transfer needs approval, and goes through with `X-ACL-Approved-By`.
+- **injected tool output**: the poisoned invoice taints the session and is marked UNTRUSTED. The hijacked model's `transfer_funds` 95k + `send_email` evil-mail.ru are both stripped. A later legit 4200 transfer needs approval and gets an `approval_id`.
+- **approvals**: self-declared `X-ACL-Approved-By` / body `approved_by` ignored; pending id, wrong token (401), approve via `/v1/approvals/{id}`, then release of the stored call without asking the model again; replay and another session are 403.
 - budget exhaustion: the 4th call is 403 once `max_tokens` is spent
 - ungoverned endpoint refused
 

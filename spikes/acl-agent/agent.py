@@ -3,7 +3,8 @@ through the AI Control Layer gateway. The agent never executes a tool itself.
 
   python3 agent.py --scenario injection          # or: benign, approval, jailbreak, all
   python3 agent.py --task "Read invoice INV-2041 and pay it"
-  python3 agent.py --scenario approval --approve marcin   # simulate the human clicking approve
+  python3 agent.py --scenario approval --approve        # demo: approve as admin (ACL_ADMIN_TOKEN from env)
+  python3 agent.py --scenario approval --session s1 --approval-id <id>   # re-send with an id an admin approved
 
 Model: --model, else the first chat model found in Ollama (qwen3:4b-instruct..., then llama3.x).
 No chat model pulled: falls back to a scripted model that emits the tool calls a hijacked agent would.
@@ -110,6 +111,40 @@ def ollama_chat(model, messages):
     return msg, calls
 
 
+class Approvals:
+    """The agent can never approve itself. A held call returns an approval_id; an admin approves it at
+    POST <url>/v1/approvals/{id} with the bearer token, then the agent re-sends the identical call with the id.
+    --approve does the admin step for the demo (token from ACL_ADMIN_TOKEN), --approval-id uses an id approved
+    out of band (same --session)."""
+
+    def __init__(self, admin=False, given=None):
+        self.admin, self.given = admin, given
+        self.token = os.environ.get("ACL_ADMIN_TOKEN", "")
+
+    def resolve(self, approval_id, base_url):
+        """-> approval id to re-send with, or None (instructions printed)."""
+        if self.given:
+            given, self.given = self.given, None  # single use
+            print(f"      re-sending with --approval-id {given}")
+            return given
+        if not approval_id:
+            return None
+        print(f"      {C.get('REQUIRE_APPROVAL', '')}held for approval{END}: approval_id {BOLD}{approval_id}{END} - an admin approves with:")
+        print(f"      {DIM}curl -XPOST {base_url}/v1/approvals/{approval_id} -H \"Authorization: Bearer $ACL_ADMIN_TOKEN\" "
+              f"-d '{{\"decision\":\"approve\"}}'{END}")
+        if not self.admin:
+            return None
+        if not self.token:
+            print("      --approve needs ACL_ADMIN_TOKEN in the environment (the gateway's admin token)")
+            return None
+        r = ControlLayerClient(url=base_url).approve(approval_id, self.token)
+        if r.get("error"):
+            print(f"      admin approval failed: {r['error']}")
+            return None
+        print(f"      admin ({r.get('decided_by')}) approved {approval_id} via POST /v1/approvals")
+        return approval_id
+
+
 def run(task, acl, model, scripted, approver=None, max_steps=8):
     t = {"model": 0, "gateway": 0, "gw_calls": 0}
 
@@ -165,8 +200,10 @@ def _run(task, acl, model, scripted, approver, max_steps, gw, t):
             r = gw(acl.call_tool, name, args)
             print(f"      gateway {badge(r)} {DIM}{short(r.get('reasons'), 200)}{END}")
             if r.get("decision") == "REQUIRE_APPROVAL" and r.get("final") == "DENY" and approver:
-                r = gw(acl.call_tool, name, args, approved_by=approver)
-                print(f"      human '{approver}' approves -> gateway {badge(r)}")
+                aid = approver.resolve(r.get("approval_id"), acl.url)
+                if aid:
+                    r = gw(acl.call_tool, name, args, approval_id=aid)
+                    print(f"      re-sent with approval_id -> gateway {badge(r)} {DIM}{short(r.get('reasons'), 160)}{END}")
             print(f"      result: {short(r.get('output'))}")
             messages.append({"role": "tool", "tool_name": name,
                              "content": json.dumps(r.get("output"), ensure_ascii=False, default=str)})
@@ -182,27 +219,26 @@ def run_via_proxy(task, proxy_url, session, model, approver=None, max_steps=8):
     print(f"{DIM}model: {model} via proxy {proxy_url} | session: {session} | tools run locally in the agent{END}")
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": task}]
     headers = {"Content-Type": "application/json", "X-ACL-Session": session}
-    if approver:
-        headers["X-ACL-Approved-By"] = approver
     t = {"model+proxy": 0.0}
     for step in range(1, max_steps + 1):
         body = {"model": model, "messages": messages, "tools": OLLAMA_TOOLS, "stream": False,
                 "options": {"temperature": 0}, "keep_alive": "30m"}
         t0 = time.time()
-        try:
-            with urllib.request.urlopen(urllib.request.Request(proxy_url + "/api/chat", json.dumps(body).encode(),
-                                                               headers), timeout=300) as r:
-                resp = json.load(r)
-        except urllib.error.HTTPError as e:
-            print(f"  [{step}] proxy refused {C.get('DENY', '')}{BOLD}HTTP {e.code}{END}: {short(json.load(e).get('error'), 300)}")
+        resp = _proxy_chat(proxy_url, body, headers, step)
+        if resp is None:
             return
         t["model+proxy"] += time.time() - t0
+        held = _print_decisions(resp)
+        if held and approver:
+            # identical request + X-ACL-Approval-Id: the proxy releases exactly the call the admin approved
+            aid = approver.resolve(held, proxy_url)
+            if aid:
+                released = _proxy_chat(proxy_url, body, dict(headers, **{"X-ACL-Approval-Id": aid}), step)
+                if released is not None:
+                    _print_decisions(released)
+                    calls = released["message"].get("tool_calls") or []
+                    resp["message"]["tool_calls"] = (resp["message"].get("tool_calls") or []) + calls
         msg = resp["message"]
-        for d in resp.get("acl", {}).get("decisions", []):
-            if d["check"] != "model" and (d["decision"] != "ALLOW" or d["check"] == "tool_call"):
-                label = d["decision"] if d.get("final", d["decision"]) == d["decision"] else f"{d['decision']} -> {d['final']}"
-                print(f"      {DIM}proxy:{END} {d['check']} {d.get('tool') or ''} "
-                      f"{C.get(d.get('final', d['decision']), '')}{BOLD}{label}{END} {DIM}{short(d['reasons'], 160)}{END}")
         messages.append(msg)
         calls = msg.get("tool_calls") or []
         if not calls:
@@ -218,17 +254,43 @@ def run_via_proxy(task, proxy_url, session, model, approver=None, max_steps=8):
           f"model compute {acl.get('compute_ms')} ms | tainted by {acl.get('tainted_by')}{END}")
 
 
+def _proxy_chat(proxy_url, body, headers, step):
+    try:
+        with urllib.request.urlopen(urllib.request.Request(proxy_url + "/api/chat", json.dumps(body).encode(),
+                                                           headers), timeout=300) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        print(f"  [{step}] proxy refused {C.get('DENY', '')}{BOLD}HTTP {e.code}{END}: {short(json.load(e).get('error'), 300)}")
+        return None
+
+
+def _print_decisions(resp):
+    """Print the proxy's decisions; return the approval_id of a held tool call, if any."""
+    held = None
+    for d in resp.get("acl", {}).get("decisions", []):
+        if d["check"] != "model" and (d["decision"] != "ALLOW" or d["check"] == "tool_call"):
+            label = d["decision"] if d.get("final", d["decision"]) == d["decision"] else f"{d['decision']} -> {d['final']}"
+            print(f"      {DIM}proxy:{END} {d['check']} {d.get('tool') or ''} "
+                  f"{C.get(d.get('final', d['decision']), '')}{BOLD}{label}{END} {DIM}{short(d['reasons'], 160)}{END}")
+        held = held or d.get("approval_id")
+    return held
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--scenario", choices=list(SCENARIOS) + ["all"], default="injection")
     ap.add_argument("--task", help="free-form task instead of a scenario")
     ap.add_argument("--model", help="Ollama model name (default: auto-detect)")
     ap.add_argument("--scripted", action="store_true", help="force the scripted model, even if Ollama has one")
-    ap.add_argument("--approve", metavar="NAME", help="simulate a human approving REQUIRE_APPROVAL calls")
+    ap.add_argument("--approve", action="store_true",
+                    help="demo: approve held calls as admin via POST /v1/approvals/{id} (ACL_ADMIN_TOKEN from env)")
+    ap.add_argument("--approval-id", help="re-send the first held call with this admin-approved id (use the same --session)")
+    ap.add_argument("--session", help="fixed session name (default: per run), needed for --approval-id")
     ap.add_argument("--gateway", default=os.environ.get("ACL_URL", "http://127.0.0.1:8787"))
     ap.add_argument("--via-proxy", nargs="?", const="http://127.0.0.1:11500", metavar="URL",
                     help="stock Ollama loop through the control-layer Ollama proxy (spikes/acl-ollama-proxy), no gateway SDK")
     a = ap.parse_args()
+    approvals = Approvals(a.approve, a.approval_id)  # always: a held call prints its approval_id + the admin curl
 
     if a.via_proxy:
         model = a.model or pick_model(None)
@@ -238,7 +300,7 @@ def main():
         tasks = [("task", a.task)] if a.task else [(n, SCENARIOS[n]["task"]) for n in (SCENARIOS if a.scenario == "all" else [a.scenario])]
         for name, task in tasks:
             print(f"\n{BOLD}=== {name} (via proxy) ==={END}")
-            run_via_proxy(task, a.via_proxy.rstrip("/"), f"proxy-{name}-{run_id}", model, a.approve)
+            run_via_proxy(task, a.via_proxy.rstrip("/"), a.session or f"proxy-{name}-{run_id}", model, approvals)
         return
 
     model = None if a.scripted else pick_model(a.model)
@@ -251,11 +313,11 @@ def main():
 
     run_id = time.strftime("%H%M%S")
     if a.task:
-        return run(a.task, ControlLayerClient(f"agent-{run_id}", a.gateway), model, ["Done."], a.approve)
+        return run(a.task, ControlLayerClient(a.session or f"agent-{run_id}", a.gateway), model, ["Done."], approvals)
     for name in (SCENARIOS if a.scenario == "all" else [a.scenario]):
         s = SCENARIOS[name]
         print(f"\n{BOLD}=== scenario: {name} ==={END}")
-        run(s["task"], ControlLayerClient(f"agent-{name}-{run_id}", a.gateway), model, s["scripted"], a.approve)
+        run(s["task"], ControlLayerClient(a.session or f"agent-{name}-{run_id}", a.gateway), model, s["scripted"], approvals)
 
 
 if __name__ == "__main__":

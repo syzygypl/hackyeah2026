@@ -53,10 +53,12 @@ class FakeOllama:
         self.url = f"http://127.0.0.1:{self.server.server_port}"
 
 
-def call(url, body, session="t", approved_by=None):
-    h = {"Content-Type": "application/json", "X-ACL-Session": session}
-    if approved_by:
-        h["X-ACL-Approved-By"] = approved_by
+TOKEN = "test-admin-token"
+os.environ["ACL_ADMIN_TOKEN"] = TOKEN
+
+
+def call(url, body, session="t", headers=None):
+    h = {"Content-Type": "application/json", "X-ACL-Session": session, **(headers or {})}
     req = urllib.request.Request(url + "/api/chat", json.dumps(dict(body, stream=False)).encode(), h)
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
@@ -148,11 +150,60 @@ class ProxyTests(unittest.TestCase):
         code, r = self.chat(history + [{"role": "user", "content": "Pay the 4200 EUR then."}], session="inj")
         self.assertNotIn("tool_calls", r["message"])
         self.assertIn("needs human approval", r["message"]["content"])
-        # ... and goes through with an approver
-        self.ollama.replies = [tool_call("transfer_funds", {"to": "DE89 3704 0044 0532 0130 00", "amount": 4200})]
-        code, r = self.chat(history + [{"role": "user", "content": "Pay the 4200 EUR, approved."}], session="inj",
-                            approved_by="marcin")
-        self.assertEqual(r["message"]["tool_calls"][0]["function"]["name"], "transfer_funds")
+        held = [d for d in r["acl"]["decisions"] if d.get("approval_id")]
+        self.assertEqual(len(held), 1, "a held call carries a gateway-style approval_id")
+
+    # -- F6: approvals only via the admin endpoint, payload-bound, single use
+    def hold_transfer(self, session="ap", extra_headers=None, body_extra=None):
+        self.ollama.replies = [tool_call("transfer_funds", {"to": "DE89 3704 0044 0532 0130 00", "amount": 15000})]
+        body = {"model": MODEL, "messages": [{"role": "user", "content": "Pay Acme the 15000 EUR prepayment."}]}
+        code, r = call(self.url, dict(body, **(body_extra or {})), session=session, headers=extra_headers)
+        self.assertEqual(code, 200)
+        self.assertNotIn("tool_calls", r["message"], "four-eyes call must be stripped")
+        return body, [d["approval_id"] for d in r["acl"]["decisions"] if d.get("approval_id")][0]
+
+    def admin(self, aid, token=TOKEN, decision="approve"):
+        req = urllib.request.Request(f"{self.url}/v1/approvals/{aid}", json.dumps({"decision": decision}).encode(),
+                                     {"Content-Type": "application/json", "Authorization": f"Bearer {token}"})
+        try:
+            with urllib.request.urlopen(req, timeout=5) as r:
+                return r.status, json.load(r)
+        except urllib.error.HTTPError as e:
+            return e.code, json.load(e)
+
+    def test_self_declared_approver_ignored(self):
+        self.hold_transfer(extra_headers={"X-ACL-Approved-By": "marcin"}, body_extra={"approved_by": "marcin"})
+
+    def test_approve_via_endpoint_then_release(self):
+        body, aid = self.hold_transfer()
+        code, _ = call(self.url, body, session="ap", headers={"X-ACL-Approval-Id": aid})
+        self.assertEqual(code, 403, "still pending: presenting the id alone approves nothing")
+        self.assertEqual(self.admin(aid, token="wrong")[0], 401)
+        self.assertEqual(self.admin(aid)[0], 200)
+        n = len(self.ollama.forwarded)
+        code, r = call(self.url, body, session="ap", headers={"X-ACL-Approval-Id": aid})
+        self.assertEqual(code, 200)
+        c = r["message"]["tool_calls"][0]["function"]
+        self.assertEqual((c["name"], c["arguments"]["amount"]), ("transfer_funds", 15000))
+        self.assertEqual(len(self.ollama.forwarded), n, "release returns the stored call, the model is not asked again")
+        audit = [e for e in self.proxy.layer.audit_snapshot() if e["kind"].startswith("approval_")]
+        self.assertTrue(audit, "the admin decision is in the proxy's audit chain")
+
+    def test_replay_and_other_session_denied(self):
+        with open(self.policy) as f:
+            p = json.load(f)
+        p["controls"]["payments"]["session_cap"] = 10**9  # so the replay hits the approval check, not the cap
+        with open(self.policy, "w") as f:
+            json.dump(p, f)
+        os.utime(self.policy, ns=(2, 2))
+        body, aid = self.hold_transfer()
+        self.admin(aid)
+        code, r = call(self.url, body, session="other", headers={"X-ACL-Approval-Id": aid})
+        self.assertEqual(code, 403, "approval is bound to the session it was held in")
+        self.assertEqual(call(self.url, body, session="ap", headers={"X-ACL-Approval-Id": aid})[0], 200)
+        code, r = call(self.url, body, session="ap", headers={"X-ACL-Approval-Id": aid})
+        self.assertEqual(code, 403)
+        self.assertIn("replay", r["error"])
 
     def test_budget_exhaustion(self):
         with open(self.policy) as f:
