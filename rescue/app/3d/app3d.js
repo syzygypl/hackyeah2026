@@ -19,15 +19,15 @@ import { FX, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel sha
 const Q = new URLSearchParams(location.search);
 const SCENS = {
   zawrat: { name: 'Zawrat', run: '../../out/run.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg' },
-  'morskie-oko': { name: 'Morskie Oko', run: '../../out/morskie-oko.run.json', ortho: 'data/morskie-oko-ortho.jpg' },
-  kasprowy: { name: 'Kasprowy', run: '../../out/kasprowy.run.json', ortho: 'data/kasprowy-ortho.jpg' },
+  'morskie-oko': { name: 'Morskie Oko', run: '../../out/morskie-oko.run.json', ortho: 'data/morskie-oko-ortho.jpg', demWide: 'data/morskie-oko-dem-wide.json' },
+  kasprowy: { name: 'Kasprowy', run: '../../out/kasprowy.run.json', ortho: 'data/kasprowy-ortho.jpg', demWide: 'data/kasprowy-dem-wide.json' },
   'blind-01': { name: 'Test na ślepo: runda 1 (replay)', run: '../../out/blind-01-replay.run.json', scenario: '../../scenarios/blind-01-replay.json',
     terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg', reveal: '../../blindtest/blind-01.reveal.json' },
 };
 // Regions outside the Tatras: any scenario with tools/terrain/data/<sc>-dem.json opens on its own (narrow) DEM, without
 // the wide backdrop or aerial photo. Blind tests only through their SCENS entries.
 const REGIONS = { 'bieszczady-wetlinska': 'Bieszczady - Połonina Wetlińska', 'karkonosze-sniezka': 'Karkonosze - Śnieżka', sniardwy: 'Śniardwy', morzycko: 'Morzycko', miedzyzdroje: 'Międzyzdroje (Bałtyk)' };
-const addScen = (id) => { if (!SCENS[id] && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id)) SCENS[id] = { name: REGIONS[id] || id, run: `../../out/${id}.run.json`, region: true, ortho: `data/${id}-ortho.jpg` }; };
+const addScen = (id) => { if (!SCENS[id] && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id)) SCENS[id] = { name: REGIONS[id] || id, run: `../../out/${id}.run.json`, region: true, ortho: `data/${id}-ortho.jpg`, demWide: `data/${id}-dem-wide.json` }; };
 SCENS['blind-01-replay'] = SCENS['blind-01']; // the shell's id for the round 1 replay
 if (Q.get('sc')) addScen(Q.get('sc'));
 const SC = SCENS[Q.get('sc')] ? Q.get('sc') : 'zawrat';
@@ -126,11 +126,12 @@ const loadRun = async () => {
     throw e;
   }
 };
-let R, SCN, TER, DEM, REV, DEM_FULL, FLAT = false;
+let R, SCN, TER, DEM, REV, DEM_FULL, FLAT = false, WIDE = false, OSM3D = null;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
-  [R, SCN, TER, DEM, REV] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
-    (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => d || getJSON(P.dem, true)), P.reveal ? getJSON(P.reveal, true) : null]);
+  [R, SCN, TER, DEM, REV, OSM3D] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
+    (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => { WIDE = !!d; return d || getJSON(P.dem, true); }), P.reveal ? getJSON(P.reveal, true) : null,
+    getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-osm3d.json`, true)]); // buildings, roads, land cover (make_osm3d.py)
   if (!R && SCN) R = synthRun(SCN);
   // no elevation model for this scenario (e.g. a new one from the Studio): flat ground at 1000 m over the run's bbox, so
   // the probability map, signals, teams and the blind test still work; a note says the relief is missing
@@ -184,6 +185,46 @@ function isWater(la, lo) {
   return LOW && elevM(la, lo) <= 0.3;
 }
 const hAt = (lat, lon) => ((elevM(lat, lon) - zMin) * EX) / 1000;
+
+// ---------- OSM land cover (data/<sc>-osm3d.json from make_osm3d.py; (c) OpenStreetMap contributors, ODbL) ----------
+// rings are delta-encoded 1e-5 degree integers; land classes are rasterised once (1024 px) for landAt / leafAt, which the
+// forest block uses for tree placement and species (contract with it: the class names below, 'water' from isWater)
+const dec = (a) => { const o = new Array(a.length); let la = 0, lo = 0; for (let i = 0; i < a.length; i += 2) { la += a[i]; lo += a[i + 1]; o[i] = la / 1e5; o[i + 1] = lo / 1e5; } return o; };
+const LAND_CLS = ['forest', 'wood', 'scrub', 'heath', 'meadow', 'grass', 'farmland', 'orchard', 'residential', 'industrial', 'park', 'cemetery', 'beach', 'sand', 'wetland', 'rock'];
+const OSM = OSM3D && OSM3D.v === 2 ? {
+  bounds: OSM3D.bounds,
+  land: (OSM3D.l || []).map(([c, leaf, outer, inner]) => ({ c, leaf, outer: outer.map(dec), inner: (inner || []).map(dec) })),
+  roads: (OSM3D.r || []).map(([c, l]) => ({ c, l: dec(l) })),
+  bld: (OSM3D.b || []).map(([h, k, r]) => ({ h, k, r: dec(r) })),
+} : null;
+if (OSM) for (const L of OSM.land) { let a = 0; const r = L.outer[0]; for (let i = 0; i + 3 < r.length; i += 2) a += r[i + 1] * r[i + 2] - r[i + 3] * r[i]; L.area = Math.abs(a); }
+const LG = (() => {
+  if (!OSM || !OSM.land.length) return null;
+  const [s, w, n, e] = OSM.bounds, W = 1024, H = Math.max(64, Math.round((W * (n - s)) / ((e - w) * KX)));
+  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d', { willReadFrequently: true }); g.imageSmoothingEnabled = false; return g; };
+  const gc = mk(), gl = mk();
+  const ring = (g, r) => { for (let i = 0; i < r.length; i += 2) { const x = ((r[i + 1] - w) / (e - w)) * W, y = ((n - r[i]) / (n - s)) * H; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); };
+  // big areas first, so a park inside a residential area or a meadow inside a forest wins
+  for (const L of [...OSM.land].sort((a, b) => b.area - a.area)) {
+    const k = LAND_CLS.indexOf(L.c); if (k < 0) continue;
+    for (const g of [gc, gl]) { g.beginPath(); L.outer.forEach((r) => ring(g, r)); L.inner.forEach((r) => ring(g, r)); }
+    gc.fillStyle = `rgb(${(k + 1) * 15},0,0)`; gc.fill('evenodd');
+    gl.fillStyle = `rgb(${{ broad: 60, needle: 120, mixed: 180 }[L.leaf] || 0},0,0)`; gl.fill('evenodd');
+  }
+  return { s, w, n, e, W, H, c: gc.getImageData(0, 0, W, H).data, l: gl.getImageData(0, 0, W, H).data };
+})();
+const lgAt = (la, lo, buf) => {
+  if (!LG || la > LG.n || la < LG.s || lo < LG.w || lo > LG.e) return -1;
+  const x = Math.min(LG.W - 1, Math.floor(((lo - LG.w) / (LG.e - LG.w)) * LG.W)), y = Math.min(LG.H - 1, Math.floor(((LG.n - la) / (LG.n - LG.s)) * LG.H));
+  return buf[(y * LG.W + x) * 4];
+};
+function landAt(la, lo) {
+  if (isWater(la, lo)) return 'water';
+  const v = lgAt(la, lo, LG ? LG.c : null); return v > 0 ? LAND_CLS[Math.round(v / 15) - 1] || null : null;
+}
+function leafAt(la, lo) {
+  const v = lgAt(la, lo, LG ? LG.l : null); return v > 0 ? ['broad', 'needle', 'mixed'][Math.round(v / 60) - 1] || null : null;
+}
 const v3 = (lat, lon, lift = 0) => new THREE.Vector3(toX(lon), hAt(lat, lon) + lift, toZ(lat));
 
 // run grid helpers
@@ -358,6 +399,32 @@ const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; base
     d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2]; d[i * 4 + 3] = 255;
   }
   g.putImageData(img, 0, 0);
+  if (OSM) paintOSM(g);
+}
+// land cover tints, building footprints and roads on the base texture (about 3 m per pixel, so streets read crisply)
+function paintOSM(g) {
+  const P = (la, lo) => [((lo - DEM.lon0) / stLon) * TS, ((DEM.lat0 - la) / stLat) * TS];
+  const path = (r, close) => { for (let i = 0; i < r.length; i += 2) { const [x, y] = P(r[i], r[i + 1]); i ? g.lineTo(x, y) : g.moveTo(x, y); } if (close) g.closePath(); };
+  const TINT = { forest: 'rgba(44,88,46,.42)', wood: 'rgba(52,96,50,.42)', scrub: 'rgba(98,118,66,.38)', heath: 'rgba(150,132,92,.32)', meadow: 'rgba(158,186,104,.38)',
+    grass: 'rgba(150,190,110,.4)', farmland: 'rgba(222,206,146,.55)', orchard: 'rgba(136,170,92,.45)', residential: 'rgba(214,204,190,.72)', industrial: 'rgba(200,194,204,.75)',
+    park: 'rgba(120,172,96,.55)', cemetery: 'rgba(146,164,126,.6)', beach: 'rgba(236,218,172,.85)', sand: 'rgba(226,206,160,.75)', wetland: 'rgba(116,150,140,.5)', rock: 'rgba(176,170,162,.35)' };
+  g.save();
+  for (const L of [...OSM.land].sort((a, b) => b.area - a.area)) {
+    const f = TINT[L.c]; if (!f) continue;
+    g.beginPath(); L.outer.forEach((r) => path(r, true)); L.inner.forEach((r) => path(r, true)); g.fillStyle = f; g.fill('evenodd');
+    if (L.c === 'farmland' && L.area > 2e-7) { g.save(); g.clip('evenodd'); g.strokeStyle = 'rgba(150,130,80,.18)'; g.lineWidth = 1; const [x0, y0] = P(L.outer[0][0], L.outer[0][1]); for (let k = -400; k < 400; k += 5) { g.beginPath(); g.moveTo(x0 + k, y0 - 400); g.lineTo(x0 + k + 160, y0 + 400); g.stroke(); } g.restore(); }
+  }
+  g.fillStyle = 'rgba(120,108,100,.85)';
+  for (const b of OSM.bld) { g.beginPath(); path(b.r, true); g.fill(); }
+  const px = TS / (stLon * KX * KM * 1000) * 1; // texture px per metre
+  const ROAD = { major: [11, '#f4f1ea', '#8d7f6c'], minor: [7, '#fbfaf6', '#a59a88'], service: [4, '#f2efe8', null], track: [3, '#9a8462', null], rail: [3, '#4a4a4a', null] };
+  for (const pass of [0, 1]) for (const r of OSM.roads) {
+    const [wm, fill, casing] = ROAD[r.c] || ROAD.minor; if (pass === 0 && !casing) continue;
+    g.beginPath(); path(r.l, false); g.lineCap = 'round'; g.lineJoin = 'round';
+    g.lineWidth = Math.max(1, wm * px) + (pass === 0 ? 2 : 0); g.strokeStyle = pass === 0 ? casing : fill;
+    g.setLineDash(r.c === 'track' ? [4, 4] : r.c === 'rail' ? [6, 4] : []); g.stroke();
+  }
+  g.setLineDash([]); g.restore();
 }
 const compCanvas = document.createElement('canvas'); compCanvas.width = TW; compCanvas.height = TH;
 const compTex = new THREE.CanvasTexture(compCanvas); compTex.colorSpace = THREE.SRGBColorSpace; compTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -527,7 +594,7 @@ let SHOW_DIFF = false, diffCanvas = null;
 // aerial photo layer (button "Zdjęcie"): Sentinel-2 cloudless 2016 resampled onto the wide DEM grid by data/make_ortho.py,
 // drawn instead of the topo base, so the searched wash, the difficulty layer and the shader heat stay on top
 const ORTHO = { on: false, canvas: null };
-if (SCENS[SC].ortho && (!SCENS[SC].demWide || DEM_FULL.cols > 600)) { // zawrat's photo matches the wide cut only
+if (SCENS[SC].ortho && (!SCENS[SC].demWide || WIDE)) { // the photo is made for the wide cut
   const img = new Image();
   img.onload = () => {
     const c = document.createElement('canvas'); c.width = TW; c.height = TH;
@@ -774,6 +841,42 @@ const forest = new THREE.Group(); scene.add(forest);
     m.name = k; m.receiveShadow = true; m.castShadow = false; forest.add(m);
   }
 }
+// ---------- buildings: one merged mesh, footprints from OSM extruded to their height (levels x 3 m, or by type) ----------
+const buildings = (() => {
+  if (!OSM || !OSM.bld.length) return null;
+  const pos = [], col = [], c = new THREE.Color();
+  const roofCol = (k) => (/^(house|detached|semidetached_house|terrace|bungalow|cabin|hut|farm|farm_auxiliary|barn)$/.test(k || '') ? [0.66, 0.3, 0.22]
+    : /^(church|chapel|cathedral)$/.test(k || '') ? [0.33, 0.43, 0.4] : /^(industrial|warehouse|garage|garages|retail|commercial)$/.test(k || '') ? [0.6, 0.62, 0.64] : [0.5, 0.48, 0.47]);
+  let seed = 4242; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (const b of OSM.bld) {
+    const r = b.r, n = r.length / 2 - (r[0] === r[r.length - 2] && r[1] === r[r.length - 1] ? 1 : 0); if (n < 3) continue;
+    const xs = [], zs = []; let base = Infinity, inside_ = true;
+    for (let i = 0; i < n; i++) { const la = r[2 * i], lo = r[2 * i + 1]; if (la > latN || la < latS || lo < lonW || lo > lonE || isWater(la, lo)) { inside_ = false; break; } xs.push(toX(lo)); zs.push(toZ(la)); base = Math.min(base, hAt(la, lo)); }
+    if (!inside_) continue;
+    let A = 0; for (let i = 0; i < n; i++) { const j = (i + 1) % n; A += xs[i] * zs[j] - xs[j] * zs[i]; }
+    if (A > 0) { xs.reverse(); zs.reverse(); } // outward wall normals
+    const top = base + (b.h * EX) / 1000, y0 = base - 0.002;
+    const wv = 0.8 + rnd() * 0.12, wall = [wv, wv * 0.97, wv * 0.92], roof = roofCol(b.k).map((v) => v * (0.9 + rnd() * 0.2));
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      pos.push(xs[i], y0, zs[i], xs[j], y0, zs[j], xs[j], top, zs[j], xs[i], y0, zs[i], xs[j], top, zs[j], xs[i], top, zs[i]);
+      for (let k = 0; k < 6; k++) col.push(...wall);
+    }
+    const tri = THREE.ShapeUtils.triangulateShape(xs.map((x, i) => new THREE.Vector2(x, zs[i])), []);
+    for (const [a, bb, cc] of tri) {
+      const up = (zs[bb] - zs[a]) * (xs[cc] - xs[a]) - (xs[bb] - xs[a]) * (zs[cc] - zs[a]) > 0;
+      const [p, q] = up ? [bb, cc] : [cc, bb];
+      pos.push(xs[a], top, zs[a], xs[p], top, zs[p], xs[q], top, zs[q]);
+      for (let k = 0; k < 3; k++) col.push(...roof);
+    }
+  }
+  if (!pos.length) return null;
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }));
+  m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  return m;
+})();
 const foundPin = foundAt ? pin(foundAt[0], foundAt[1], '#2d6a4f', 0.42, 'ZNALEZIONO · ' + esc(foundEv?.at || ''), 'found', 0.026) : null;
 if (foundPin) { foundPin.visible = false; scene.add(foundPin); }
 // blind test reveal: the hider's true spot, published with the salt after the round
