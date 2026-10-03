@@ -169,3 +169,36 @@ Unchanged; every successful write now also appends a `dispatch` event to the fee
 ```
 
 Feed sources: `POST /api/clue`, `POST /api/assignments`, `POST /story/assign`, `POST /report` (non-duplicate; team from `X-Rescue-Team`). Client rule: when `seq` grows, refetch `GET /api/run/<sc>` (map, ranking) and use `assignments` for "Moje zadanie" / team plan. Show a "LIVE" indicator while polling succeeds and the last ~8 events (who, what, when) as a feed.
+
+### Several incidents at once: optional `sc` (scenario id = incident id)
+
+Every live route takes an optional `sc` (JSON body field `sc`, or `?sc=` in the URL; body wins). Without `sc` everything behaves exactly as above (old clients keep working).
+
+- `POST /api/clue {..., sc}`: the clue is stored for that incident only (`out/live-<sc>.json`) and folded only into `GET /api/run/<sc>`. Without `sc` it goes to the shared live file and is folded into every scenario (as `/report` does today).
+- `POST /api/assignments {team, segmentId, sc}` / `POST /story/assign {resourceId, segmentId, scenario|sc}`: the assignment is stored with `scenario: sc`. `GET /api/assignments?sc=<sc>` returns only assignments of that incident plus ones without a scenario; without `?sc` all of them (as today). Dispatching a roster team to a segment of `sc` also attaches it to `sc` (see roster below).
+- Feed events carry `sc` when they belong to one incident. `GET /api/live?sc=<sc>&since=<seq>` returns events of that incident plus events without `sc` (phone `/report`s, which apply to every scenario); `seq` is then the highest seq among those events (it still only grows). `assignments` is filtered the same way.
+
+### `GET /api/incidents` - all incidents on one screen (poll every 5 s)
+
+```jsonc
+[ { "sc": "zawrat",
+    "title": "zaginiony turysta",                 // incident text before " - ", lower-cased first letter, "(scenariusz fikcyjny)" dropped
+    "place": "Dolina Pięciu Stawów / Zawrat",      // incident text after " - "
+    "live": true,                                  // anything happened for this sc since server start (clue, dispatch, roster move)
+    "seq": 14, "lastEventAt": "2026-10-04T09:12:03Z",   // per-sc feed seq / time of its last event (null if none)
+    "top3": [ { "segmentId": "S7", "name": "Kozia Dolinka", "weight": 0.31 } ],   // last step of the run, "waga mapy" (POA), 0..1
+    "teams": { "assigned": 2, "total": 5 },        // assigned = teams with a segment in this incident; total = teams the planner uses for it
+    "found": false } ]                             // the run has a ZNALEZIONO / Found step
+```
+
+Blind-test scenarios are never listed. Runs are cached per (sc, live version), so polling does not re-run the engine unless something changed; the first call after start computes each scenario once.
+
+### Shared team roster across incidents
+
+- `GET /api/teams` -> `[{ "id": "gopr-a", "name": "Patrol GOPR A", "kind": "pieszy", "base": [lat, lon], "sc": "kasprowy" | null, "segmentId": "S3" | null, "status": "wolny" | "w drodze" | "w akcji", "home": ["bieszczady-wetlinska", "kasprowy", ...] }]`
+  - seeded from the `resources` of all scenario files, deduped by `id` (first file wins for name/base); `home` = scenarios whose file defines the team.
+  - `kind` from the resource type: ground -> pieszy, dog -> pies, drone -> dron, heli -> smiglowiec, boat -> lodz, diver -> nurkowie (other types pass through).
+  - `status`: `wolny` = not attached (`sc: null`); `w drodze` = attached to an incident, no segment yet; `w akcji` = attached and assigned to a segment of that incident.
+- `POST /api/teams/assign { team, sc | null, by? }` -> the updated roster (same as GET). Moves the team to incident `sc` (or releases it with `null`); a team is attached to at most one incident, so moving it detaches it from the previous one and clears its segment there. Each move adds a `dispatch` feed event (`title` e.g. "gopr-a -> kasprowy" / "gopr-a zwolniony") on the old and on the new incident. 400 for an unknown team or scenario.
+- Planner: an incident whose roster was never touched (no team attached to it or moved away from it) plans with its own scenario-file teams, exactly as today. Once touched, `GET /api/run/<sc>` plans only with the roster teams attached to `sc` (resource objects from the team's home file, `base`/`readyAt` kept).
+- In memory like the assignments: a server restart resets the roster to untouched.
