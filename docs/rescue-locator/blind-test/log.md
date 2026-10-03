@@ -22,7 +22,7 @@ Pełne zasady AI Marcina z 14:35.
 |---|---|---|
 | Chowający | AI Marcina | Wybiera tajne miejsce i historię zachowania (np. zejście ze szlaku we mgle, upadek, zabłądzenie). Miejsca nie są losowane z pierścieni Koestera: generator nie używa żadnych parametrów silnika. Wybiera je jak prawdziwe błędy turystów, czasem "złośliwie", poza strefą 50%. |
 | Sędzia | AI Marcina (ta sama rola co chowający) | Odpowiada na każdy patrol tak, jak odpowiedziałby teren: "nic" albo "ślad / znaleziony", z prawdopodobieństwem wykrycia (POD) dla prawdziwego segmentu. Odpowiedzi wracają jako live-events, więc po każdym "nic" silnik przelicza plan. |
-| Szukający | silnik + AI Mateusza + AI Denisa | Uruchamiają aplikację na samych wskazówkach i wysyłają patrole do segmentów. Autorzy silnika nie zaglądają do generatora ani do prawdy przed odsłonięciem. |
+| Szukający | silnik + AI Mateusza + AI Denisa (w blind-01 także AI Michała) | Uruchamiają aplikację na samych wskazówkach i wysyłają patrole do segmentów. Autorzy silnika nie zaglądają do generatora ani do prawdy przed odsłonięciem. |
 
 **Wskazówki: tylko realistyczne i zaszumione**, takie, które naprawdę by istniały:
 - plan wycieczki od rodziny, który różni się od faktycznej trasy,
@@ -50,11 +50,17 @@ Bez pingu GPS.
 
 ## Runda blind-01
 
-*Szablon. Uzupełniane na żywo z wątku.*
+*Uzupełniane na żywo z wątku.*
 
-- **Zobowiązanie (SHA-256):** `...` (opublikowane o ...)
+- **Start:** 14:40, sędzia AI Marcina.
+- **Zobowiązanie (SHA-256):** `fdd079df019d7bf044c1d5892802245ec085200dc7b6a2fe10c45baf8895b474`, liczone z `{"round","at","salt"}`. Opublikowane 14:40.
 - **Commity:** b628d8a, 291a655 (teren OSM + DEM, obszar jak zawrat)
-- **Kategoria zaginionego:** ... (tylko to, co jest w scenariuszu bez prawdy; historia zachowania dopiero po odsłonięciu)
+- **Sprawa:** Ewa K. (osoba fikcyjna), 34 lata, sama, dobra kondycja. Zgłoszenie od partnera o 18:15. Planowana pętla Palenica - Roztoka (...). Bez GPS.
+- **Szukający:** AI Mateusza, AI Denisa, AI Michała.
+- **Format patrolu:** `[AI ...] ASSIGN-PATROL: <zespół> -> <segmenty>, start HH:MM, POD 0.x`. Zespoły i ich gotowość wynikają z zasobów w scenariuszu.
+- **Odpowiedź sędziego:** "nic" albo ZNALEZIONO.
+- **Koniec rundy:** przy ZNALEZIONO albo po 6 h czasu scenariusza (01:00). Potem sól i `reveal.py`: sprawdzenie hasha i metryki.
+- **Uwaga sędziego o uczciwości:** miejsce wybrane jako realistyczny błąd turysty, nie z pierścieni Koestera.
 
 ### Wskazówki
 
