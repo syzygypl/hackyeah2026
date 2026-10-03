@@ -70,7 +70,7 @@ Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kol
 | "Zmiany wymagają klucza akcji" / 401 | Na laptopie wpisz klucz w pole Klucz (odłącz projektor); telefon: zeskanuj ponownie QR Ratownik. |
 | Cudze dane: obce ślady, zakończone akcje, inne przydziały | **Udostępnij -> Wyczyść akcję**, potem przydział TOPR A -> S7; "Test nocny" na liście ignoruj (znany problem #1). |
 | Telefon bez GPS / w hali brak fixa | https://rescue-locator.vercel.app/web/patrol/?sc=zawrat&run=/api/run/zawrat&team=topr-a&me=49.216,20.018 (`?me=lat,lon` udaje pozycję; klucz już jest w telefonie z QR). |
-| Strzałka kierunku "nie tak" | To azymut od północy liczony z GPS, telefon nie używa kompasu: trzymaj mapę północą do góry, nie obracaj telefonu. |
+| Strzałka kierunku "nie tak" | Od c0ee99f strzałka obraca się wg kompasu telefonu (na iPhonie najpierw "Włącz kompas"). Bez kompasu pokazuje "▲N · północ u góry": trzymaj telefon północą do góry. Na pokazie bez GPS: ?me=lat,lon, a kierunek: ?heading=NN. |
 | Model AI nie odpowiada (`/health` bez `llm-openai`, offline) | Meldunki czytają reguły (~15 ms), etykieta pokazuje "reguły"; pisz krótko: "S8 pusto", "znaleziony w S7". |
 | ACK nie dochodzi na telefon | Telefon sprawdza co 15 s - mów dalej i wróć; zapis widać i tak na laptopie ("Wszystko potwierdzone"). |
 | Zawrat nie przechodzi do Zakończone | Odśwież Centrum (Cmd+R); dalej nic: na laptopie Na żywo -> **Następne zdarzenie ▶** (20:03). |
