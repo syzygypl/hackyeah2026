@@ -74,6 +74,10 @@
   dialog::backdrop { background: rgba(0,0,0,.55); }
   .muted { color: var(--rl-mute); font-size: 13px; }
   .maplibregl-ctrl-attrib { font-size: 10px; }
+  #ended { position: fixed; inset: auto 12px calc(12px + env(safe-area-inset-bottom)) 12px; z-index: 20; display: grid; gap: 6px; padding: 16px;
+    background: var(--rl-ok); color: var(--rl-on-ok); border-radius: var(--rl-radius-l); box-shadow: var(--rl-shadow); font-size: 16px; }
+  #ended b { font-size: 22px; }
+  #ended button { background: var(--rl-card); color: var(--rl-ink); min-height: 52px; }
   body.embed header h1, body.embed header select { display: none; }
   body.embed header { justify-content: flex-end; padding: 6px 12px; }
   @media (min-width: 700px) { #sheet { max-width: 640px; width: 100%; margin: -18px auto 0; } }
@@ -123,6 +127,7 @@
   const qs = new URLSearchParams(location.search);
   const API = qs.get("api") || (location.protocol.startsWith("http") ? location.origin : "http://127.0.0.1:8780");   // the rescue-server that serves this page
   const RUN = qs.get("run") || "../../out/run.json";
+  const SCN = (RUN.match(/\/api\/run\/([\w-]+)/) || [])[1] || qs.get("sc") || undefined;   // this phone's incident (its reports go only there)
   const EMBED = qs.get("embed") === "1";
   if (EMBED) document.body.classList.add("embed");
   const tell = (type, data) => { if (EMBED && parent !== window) parent.postMessage({ source: "rescuePatrol", type, ...data }, location.origin); };
@@ -280,7 +285,7 @@
     return h;
   };
   async function post(text, at, retried, id) {
-    const r = await fetch(API + "/report", { method: "POST", headers: headers(), body: JSON.stringify({ text, at, id: id && clientId + "-" + id }), signal: AbortSignal.timeout(20000) });   // id: server drops a resend of a report that timed out but arrived
+    const r = await fetch(API + "/report", { method: "POST", headers: headers(), body: JSON.stringify({ text, at, id: id && clientId + "-" + id, sc: SCN }), signal: AbortSignal.timeout(20000) });   // id: server drops a resend of a report that timed out but arrived
     if ((r.status === 401 || r.status === 403) && !retried) {
       const pin = prompt("Klucz akcji (od kierownika akcji):");
       if (pin) { store.set("rescue-pin", pin.trim()); return post(text, at, true, id); }
@@ -381,6 +386,26 @@
     } catch {}
   }
   setInterval(pollAssignments, 15000); pollAssignments();
+  // Incident ended (live ZNALEZIONO, GET /api/incidents ended/found): tell the team to stop and return
+  const SC = SCN || "zawrat";
+  let endedShown = false;
+  async function pollEnded() {
+    if (endedShown) return;
+    try {
+      const r = await fetch(API + "/api/incidents", { headers: headers(), signal: AbortSignal.timeout(5000) });
+      if (!r.ok) return;
+      const x = (await r.json()).find((i) => i.sc === SC);
+      if (!x || !(x.ended ?? x.found)) return;
+      endedShown = true;
+      const b = document.createElement("div"); b.id = "ended"; b.setAttribute("role", "alert");
+      b.innerHTML = `<b>Akcja zakończona</b><span>Osoba odnaleziona. Przerwijcie przeszukiwanie i wracajcie do bazy.</span><button type="button">OK</button>`;
+      b.querySelector("button").onclick = () => b.remove();
+      document.body.appendChild(b);
+      navigator.vibrate?.([300, 150, 300]);
+      tell("ended", { team, sc: SC });
+    } catch {}
+  }
+  setInterval(pollEnded, 20000); pollEnded();
   $("sendFree").onclick = () => { const t = $("free").value.trim(); if (!t) return; report(`${shortTeam()}: ${t}`); $("free").value = ""; $("more").close(); };
   navigator.geolocation?.watchPosition(p => {
     window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;

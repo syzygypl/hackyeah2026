@@ -283,7 +283,8 @@ actor LiveFeed {
 }
 let liveFeed = LiveFeed()
 let clueTypes: [String: (label: String, strength: String)] = ["odziez": ("Odzież", "strong"), "slad": ("Ślad", "medium"), "swiadek": ("Świadek", "weak"),
-                                                               "telefon": ("Sygnał telefonu", "medium"), "znalezisko": ("Znalezisko", "strong")]
+                                                               "telefon": ("Sygnał telefonu", "medium"), "znalezisko": ("Znalezisko", "strong"),
+                                                               "znaleziono": ("ZNALEZIONO", "strong")]   // operator marks the find on the map: ends the incident
 func shortClean(_ v: Any?, _ n: Int) -> String? {
     (v as? String).map { String($0.trimmingCharacters(in: .whitespacesAndNewlines).prefix(n)) }.flatMap { $0.isEmpty ? nil : $0 }
 }
@@ -319,6 +320,13 @@ actor Roster {
     func list() -> [RosterTeam] { teams }
     func team(_ id: String) -> RosterTeam? { teams.first { $0.id == id } }
     func isTouched(_ sc: String) -> Bool { touched.contains(sc) }
+    /// ended incident (live ZNALEZIONO): every team on it goes back to the free pool; returns the released ids
+    func release(_ sc: String) -> [String] {
+        var ids: [String] = []
+        for i in teams.indices where teams[i].sc == sc { teams[i].sc = nil; ids.append(teams[i].id) }
+        if !ids.isEmpty { version += 1 }
+        return ids
+    }
     /// moves a team to sc (nil = release); returns the previous incident
     func move(_ id: String, to sc: String?) -> String? {
         guard let i = teams.firstIndex(where: { $0.id == id }) else { return nil }
@@ -460,6 +468,9 @@ actor IncidentCache {
     func put(_ k: String, _ v: Data) { if c.count > 200 { c.removeAll() }; c[k] = v }
 }
 let incidentCache = IncidentCache()
+/// incidents already closed after a live find (once per server run: release teams + one "found" feed event)
+actor EndedIncidents { var done: Set<String> = []; func mark(_ sc: String) -> Bool { done.insert(sc).inserted } }
+let endedIncidents = EndedIncidents()
 /// size+mtime of scenarios/<sc>.json and its terrain: a story re-saved in Studio or pulled by tools/sync-stories.sh invalidates the caches
 func scenarioStamp(_ sc: String) -> String {
     ["\(sc).json", "\(sc)-terrain.json"].map { f -> String in
@@ -485,7 +496,8 @@ func incidentsData() async -> Data {
             let title = parts[0].prefix(1).lowercased() + parts[0].dropFirst()
             let b: [String: Any] = ["title": title, "place": parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc,
                                     "top3": segs.prefix(3).map { ["segmentId": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0] },
-                                    "found": steps.contains(where: isFind), "replayFound": cut < all.count, "at": last["t"] ?? "",
+                                    "found": steps.contains(where: isFind) || all.contains { isFind($0) && ($0["label"] as? String ?? "").contains("(meldunek)") },   // a live find counts even after the replay's scripted one
+                                    "replayFound": cut < all.count, "at": last["t"] ?? "",
                                     "total": ((last["resources"] as? [Any]) ?? []).count]
             base = try? JSONSerialization.data(withJSONObject: b)
             if let base { await incidentCache.put(key, base) }
@@ -498,6 +510,17 @@ func incidentsData() async -> Data {
         o["live"] = lastEv != nil || touched
         o["seq"] = lastEv?.seq ?? 0
         o["lastEventAt"] = lastEv?.t ?? NSNull()
+        // current vs ended: a live ZNALEZIONO ends the incident; the first time, its teams are released and everyone is told
+        let ended = (o["found"] as? Bool) == true
+        o["ended"] = ended
+        if ended, await endedIncidents.mark(sc) {
+            let freed = await roster.release(sc)
+            for id in freed { _ = await studio.assign((try? JSONSerialization.data(withJSONObject: ["resourceId": id])) ?? Data()) }
+            let place = o["place"] as? String ?? sc
+            var m = LiveFeedEvent(kind: "found", by: "system", title: "Akcja zakończona: \(place) - osoba odnaleziona" + (freed.isEmpty ? "" : ", zespoły wolne: \(freed.joined(separator: ", "))"))
+            m.sc = sc
+            _ = await liveFeed.add(m)
+        }
         o["teams"] = ["assigned": asg.filter { $0["scenario"] as? String == sc }.count, "total": o["total"] ?? 0]
         o["total"] = nil
         out.append(o)
@@ -599,19 +622,22 @@ func route(_ q: Req) async -> Data {
         var text = ct.hasPrefix("text/plain") ? (String(data: q.body, encoding: .utf8) ?? "") : ""
         var at: String? = nil
         var clientId: String? = nil
+        var reportSc = scParam(q)   // ?sc= (or JSON "sc"): the report belongs to one incident; without it, to all (as before)
         if ct.hasPrefix("application/json") {
             guard let o = try? JSONSerialization.jsonObject(with: q.body) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
             text = o["text"] as? String ?? ""
             at = (o["at"] as? String).flatMap { $0.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil ? $0 : nil }
             if let id = (o["id"] as? String) ?? (o["id"] as? NSNumber).map({ "\($0)" }), !id.isEmpty { clientId = String(id.prefix(100)) }
+            reportSc = scParam(q, o)
         }
+        if let sc = reportSc, !scenarioNames().contains(sc) { reportSc = nil }
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return jsonErr("400 Bad Request", "empty text") }
         guard text.count <= maxText else { Metrics.shared.inc("reports_rejected_total", ["reason": "size"]); return jsonErr("413 Payload Too Large", "text over \(maxText) chars") }
         // idempotent: a phone that timed out resends the same client id - stored once, the second answer says duplicate
         let r = await parser.parse(text, at: at)
         do {
-            guard try await store.appendReport(r, clientId: clientId, sc: nil) else { return duplicateReport() }
+            guard try await store.appendReport(r, clientId: clientId, sc: reportSc) else { return duplicateReport() }
         } catch { print("[report] store failed: \(error)"); return jsonErr("500 Internal Server Error", "write failed") }
         Metrics.shared.set("live_events_total", [:], Double(await store.reportCount(sc: nil)))
         let team = Metrics.clean(q.headers["x-rescue-team"]), cid = Metrics.shared.clientId(headers: q.headers, peer: q.peer)

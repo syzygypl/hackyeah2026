@@ -46,7 +46,7 @@ async function loadIncidents() {
   return fallbackIncidents();
 }
 function normIncident(x) {
-  return { sc: x.sc, title: x.title || "", place: x.place || x.sc, live: !!x.live, found: !!x.found, replayFound: !!x.replayFound, mode: x.mode || null, lastEventAt: x.lastEventAt || null,
+  return { sc: x.sc, title: x.title || "", place: x.place || x.sc, live: !!x.live, found: !!(x.ended ?? x.found), replayFound: !!x.replayFound, mode: x.mode || null, lastEventAt: x.lastEventAt || null,
     lastClock: x.at || x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0 })), teams: x.teams || null, pending: false };
 }
 // fallback: /api/scenarios (every 60 s) + one /api/run/<sc> at a time (first engine run can take ~15 s), summarized and cached
@@ -152,7 +152,7 @@ const SHORT = { zawrat: "Zawrat", "morskie-oko": "Morskie Oko", kasprowy: "Kaspr
   sniardwy: "Śniardwy", morzycko: "Morzycko", miedzyzdroje: "Międzyzdroje", mamry: "Mamry", krakow: "Kraków", "krakow-nowa-huta": "Kraków - Nowa Huta", "night-test": "Test nocny" };
 const short = (x) => SHORT[x.sc] || (x.place && x.place !== x.sc ? x.place.split(/[,/]/)[0].trim() : x.sc);
 const longText = (x) => [x.title, x.place !== x.sc ? x.place : ""].filter(Boolean).join(" - ");
-const modeOf = (x) => x.live ? "live" : x.found ? "found" : x.mode === "plan" ? "plan" : "replay";
+const modeOf = (x) => x.found ? "found" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident
 const BADGE = { live: "LIVE", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE" };
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); };
 function sortIncidents(a) {
@@ -161,14 +161,15 @@ function sortIncidents(a) {
 function render() {
   if (!dragging) { renderCards(); renderTeams(); }
   renderMarkers();
-  const nLive = incidents.filter((x) => x.live).length;
-  $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
+  const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
+  $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
   $("src").textContent = (has.incidents ? "/api/incidents" : "/api/scenarios + /api/run (zapas)") + " · " + (has.teams ? "/api/teams" : "zespoły: makieta w pamięci");
   $("src").title = has.incidents ? "Źródło: GET /api/incidents" : "Serwer nie ma jeszcze /api/incidents - dane z /api/scenarios i /api/run/<sc>. Zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce (do czasu /api/teams)");
 }
 function renderCards() {
-  const list = sortIncidents(incidents);
-  $("cards").innerHTML = list.map((x) => {
+  // current incidents first, ended ones (person found) below under their own heading
+  const all = sortIncidents(incidents), cur = all.filter((x) => !x.found), done = all.filter((x) => x.found);
+  const card = (x) => {
     const m = modeOf(x), mine = teams.filter((t) => t.sc === x.sc);
     const when = x.lastEventAt ? `ost. zdarzenie ${hhmm(x.lastEventAt)}` : x.lastClock ? `scenariusz ${esc(x.lastClock)}` : "";
     const rf = x.replayFound && !x.found ? `<span class="mute" title="Plik scenariusza kończy się odnalezieniem; tu pokazujemy moment przed nim">odtworzenie z odnalezieniem</span>` : "";
@@ -180,7 +181,9 @@ function renderCards() {
       <div class="cteams">${x.teams ? `Zespoły z sektorem: <span class="n">${x.teams.assigned}/${x.teams.total}</span>` : ""}
         ${mine.map((t) => `<span class="chip" title="${esc(t.name)} · ${esc(t.status)}">${esc(t.id)}</span>`).join("")}</div>
       <div class="drophint">Upuść tutaj, aby dołączyć zespół do tej akcji</div></article>`;
-  }).join("") || `<div class="help">Brak akcji na serwerze.</div>`;
+  };
+  $("cards").innerHTML = (all.length ? `<h2 class="cgrp">Trwające <span class="cnt">${cur.length}</span></h2>${cur.map(card).join("") || `<div class="help">Brak trwających akcji.</div>`}`
+    + (done.length ? `<h2 class="cgrp done">Zakończone <span class="cnt">${done.length}</span></h2>${done.map(card).join("")}` : "") : `<div class="help">Brak akcji na serwerze.</div>`);
   $("cards").querySelectorAll(".card").forEach((el) => {
     el.onclick = (e) => { if (!e.target.closest("a")) location.href = openURL(el.dataset.sc); };
     el.onmouseenter = () => setHl(el.dataset.sc); el.onmouseleave = () => setHl(null);
@@ -305,12 +308,22 @@ function fitAll() {
   fitted = pts.length >= incidents.length;
 }
 
+// an incident just ended (live ZNALEZIONO): banner for the operator, the server already released its teams
+function announceEnded(x) {
+  let el = document.getElementById("endedBanner");
+  if (!el) { el = document.createElement("div"); el.id = "endedBanner"; el.setAttribute("role", "alert"); document.body.appendChild(el); el.onclick = () => el.remove(); }
+  el.innerHTML = `<b>Akcja zakończona: ${esc(short(x))}</b> - osoba odnaleziona${x.lastEventAt ? " o " + hhmm(x.lastEventAt) : ""}. Zespoły wróciły do puli wolnych. <span class="mute">(kliknij, aby zamknąć)</span>`;
+  try { if ("Notification" in window && Notification.permission === "granted") new Notification("Akcja zakończona: " + short(x), { body: "Osoba odnaleziona. Zespoły wolne." }); } catch (e) {}
+}
+
 // ---------- loop: every 5 s, never overlapping
 let busy = false;
 async function tick() {
   if (busy) return; busy = true;
   try {
+    const wasFound = new Set(incidents.filter((x) => x.found).map((x) => x.sc)), first = !incidents.length;
     incidents = await loadIncidents();
+    if (!first) for (const x of incidents) if (x.found && !wasFound.has(x.sc)) announceEnded(x);
     await Promise.all(incidents.map((x) => loadMeta(x.sc)));
     teams = await loadTeams(incidents.map((x) => x.sc));
     render();
