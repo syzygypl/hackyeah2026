@@ -1317,7 +1317,8 @@
   }
   async function pollLive(first) {
     try {
-      const r = await fetch(CFG.live, { cache: 'no-cache', headers: pinHeaders(CFG.live) });
+      const r = first && S.livePre ? await S.livePre : await fetch(CFG.live, { cache: 'no-cache', headers: pinHeaders(CFG.live) });
+      if (first) S.livePre = null;
       const now = new Date().toTimeString().slice(0, 8);
       if (r.status === 401) { S.liveStatus = 'Meldunki wymagają klucza akcji: wpisz klucz w polu niżej albo otwórz link „Udostępnij”.'; }
       else if (!r.ok) { S.liveStatus = `Brak pliku ${CFG.live.split('/').pop()} - czekam (${now})`; }
@@ -1360,17 +1361,26 @@
 
   /* ---------- basemap (optional, local PMTiles) ---------- */
   // 1) basemap/basemap.js (module API: loadBasemap + offlineStyle, in-memory PMTiles), 2) basemap/style.json, 3) none.
+  const basemapDir = () => (CFG.basemap.endsWith('/') ? CFG.basemap : CFG.basemap.replace(/[^/]*$/, ''));
+  // basemap.js module (HEAD, then import): started once at boot next to the data (perf), awaited by loadBasemapStyle
+  function basemapModule() {
+    if (!S.bmMod) {
+      const dir = basemapDir();
+      S.bmMod = (async () => ((await fetch(dir + 'basemap.js', { method: 'HEAD', cache: 'no-cache' })).ok ? import(new URL(dir + 'basemap.js', location.href).href) : null))();
+      S.bmMod.catch(() => {});
+    }
+    return S.bmMod;
+  }
   async function loadBasemapStyle(useML) {
     if (CFG.basemap === 'none' || !useML) return null;
-    const dir = CFG.basemap.endsWith('/') ? CFG.basemap : CFG.basemap.replace(/[^/]*$/, '');
+    const dir = basemapDir();
     try {
-      const head = await fetch(dir + 'basemap.js', { method: 'HEAD', cache: 'no-cache' });
-      if (head.ok) {
-        const mod = await import(new URL(dir + 'basemap.js', location.href).href);
+      const mod = await basemapModule();
+      if (mod) {
         const file = SC.basemapFile && (!CUSTOM_RUN || Q.get('sc') === SC.id) ? SC.basemapFile : undefined;   // regional PMTiles outside the Tatras (?sc= also with ?run=)
         const fileFor = file || (mod.regionFor && S.M && S.M.bbox ? (mod.regionFor(S.M.bbox) || {}).file : undefined);   // Studio / new action: pick the region from the run's bbox
-        await mod.loadBasemap(window.maplibregl, fileFor);
-        const hillshade = mod.hillshadeFor ? await mod.hillshadeFor(S.M && S.M.bbox) : null;   // soft DEM relief (basemap/hillshade/)
+        // PMTiles header and the hillshade index in parallel (perf: two round trips one after another before)
+        const [, hillshade] = await Promise.all([mod.loadBasemap(window.maplibregl, fileFor), mod.hillshadeFor ? mod.hillshadeFor(S.M && S.M.bbox) : null]);   // soft DEM relief (basemap/hillshade/)
         const style = mod.offlineStyle(fileFor ? { flavor: CFG.flavor, file: fileFor, hillshade } : { flavor: CFG.flavor, hillshade });
         if (style && style.layers) { S.basemapSrc = dir + 'basemap.js'; return style; }
       }
@@ -1443,6 +1453,12 @@
     wire();
     initScenarioSwitcher();
     initLive();
+    // boot data in parallel, not one after another (perf: each was a round trip to the server before the map could start):
+    // scenario, terrain, DEM and the first field reports start now, next to the run; the code below awaits them where it used them
+    const terrainURL = CFG.terrain || CFG.scenario.replace(/\.json$/, '-terrain.json');
+    const pre = { scen: fetchJSON(CFG.scenario, true), terrain: fetchJSON(terrainURL, true), dem: fetchJSON(CFG.dem, true) };
+    S.livePre = fetch(CFG.live, { cache: 'no-cache', headers: pinHeaders(CFG.live) }); S.livePre.catch(() => {});
+    if (CFG.basemap !== 'none' && CFG.renderer !== 'canvas' && !window.__mlFailed && window.maplibregl) basemapModule();
     let R;
     if (Q.has('runInline')) {
       try { R = JSON.parse(sessionStorage.getItem('rescue2d-run')); } catch (e) { R = null; }
@@ -1455,26 +1471,26 @@
     }
     const errs = checkRun(R);
     if (errs.length) return fatal('run.json nie spełnia kontraktu rescue-run/1: ' + errs.join('; '));
-    const scen = await fetchJSON(CFG.scenario, true);
+    const scen = await pre.scen;
     // The engine may widen its grid beyond the scenario bbox (by design), so the scenario is usable when its bbox lies
     // inside the run's bbox; overlays are drawn in lat/lon, independent of the grid.
     const eps = 1e-6, sb = scen && scen.bbox;
     const sameBox = !!(sb && sb.south >= R.bbox.south - eps && sb.north <= R.bbox.north + eps && sb.west >= R.bbox.west - eps && sb.east <= R.bbox.east + eps);
     if (scen && !sameBox) warn('bbox scenariusza wychodzi poza bbox run.json - pomijam warstwy scenariusza');
     const scenOK = sameBox ? scen : null;
-    const terrainURL = CFG.terrain || CFG.scenario.replace(/\.json$/, '-terrain.json');
-    const terrain = scenOK ? await fetchJSON(terrainURL, true) : null;
+    const terrain = scenOK ? await pre.terrain : null;
     const M = buildModel(R, scenOK, terrain);
     S.M = M;
     DIAG.info = { steps: M.hints.length, cells: M.N, segments: M.segList.length, scenario: !!scenOK, terrain: terrain ? terrainURL : (scenOK && scenOK.terrain ? 'scenario' : null) };
 
-    // backgrounds
-    const dem = await fetchJSON(CFG.dem, true);
+    // backgrounds (the basemap's requests go out first, the relief is computed while they travel)
+    const useML = CFG.renderer !== 'canvas' && !window.__mlFailed && !!window.maplibregl && webglOK();
+    const baseStyleP = loadBasemapStyle(useML);
+    const dem = await pre.dem;
     let relief = null;
     try { relief = dem && dem.z ? reliefFromDEM(dem) : reliefFromSlope(M); } catch (e) { warn('relief: ' + e.message); }
     if (!relief) relief = reliefFromSlope(M);
-    const useML = CFG.renderer !== 'canvas' && !window.__mlFailed && !!window.maplibregl && webglOK();
-    const baseStyle = await loadBasemapStyle(useML);
+    const baseStyle = await baseStyleP;
     S.bases = [baseStyle ? 'map' : null, relief ? 'relief' : null, CFG.tiles ? 'topo' : null, CFG.tiles ? 'osm' : null, 'none'].filter(Boolean);
     const want = Q.get('base');
     S.base = want && S.bases.includes(want) ? want : S.bases[0];
