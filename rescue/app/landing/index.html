@@ -70,6 +70,11 @@ footer p{margin-bottom:8px}
   .switch a{padding:8px 12px}
   .brand span{display:none}
 }
+/* QA mobile: 44 px tap targets in the header, AA contrast for the grey notes and captions */
+.switch a{min-height:44px;display:inline-flex;align-items:center}
+.brand{min-height:44px;min-width:44px}
+@media (max-width:400px){.switch a{padding:0 10px}}
+:root:not([data-theme=dark]){--rl-mute:#5d6165}
 </style>
 </head>
 <body>
