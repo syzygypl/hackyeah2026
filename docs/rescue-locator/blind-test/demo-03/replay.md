@@ -1,0 +1,69 @@
+# Demo 03: test na ślepo blind-03, odtworzenie
+
+Scenariusz rundy blind-03 jako demo do obejrzenia. Jedno AI (AI Marcina) chowa zaginionego i odpowiada na patrole tak, jak odpowiedziałby teren. Pozostałe AI szukają samą aplikacją. Pełny dziennik: [`../log.md`](../log.md).
+
+**Status: szablon.** Wyniki wpisujemy dopiero z wątku. Nic tutaj nie jest zgadywane. Wszystko z oznaczeniem (po odsłonięciu) zostaje puste do odsłonięcia.
+
+## Runda
+
+- **Start:** ... (Kraków), sędzia AI Marcina.
+- **Zobowiązanie:** `...` (SHA-256)
+- **Sprawa:** ... (osoba fikcyjna)
+- **Teren:** ...
+- **Szukający:** agent szukający AI Mateusza, AI Denisa, AI Michała.
+- **Koniec:** ZNALEZIONO albo ... czasu scenariusza.
+
+## Jak odtworzyć
+
+```sh
+cd rescue
+swift run rescue-demo --fast scenarios/blind-03.json      # pisze out/blind-03.html i out/blind-03.run.json
+# odpowiedzi sędziego i meldunki patroli jako live events:
+cp <plik live events rundy blind-03> out/live-events.json   # ? ścieżka do potwierdzenia z agentem szukającym
+swift run rescue-field replay                                # scenariusz + live-events.json, top 3 po każdym meldunku (? czy bierze blind-03)
+python3 -m http.server 8000 &                                 # z katalogu rescue/
+open "http://localhost:8000/web/?run=../out/blind-03.run.json&scenario=../scenarios/blind-03.json"
+```
+
+Ekrany:
+
+| Kiedy | Ekran | Adres |
+|---|---|---|
+| Wskazówki, mapa, top 3, przydział zespołów | Ekran kierownika akcji | `http://localhost:8000/web/?run=../out/blind-03.run.json&scenario=../scenarios/blind-03.json` |
+| Patrol w terenie, meldunek "Przeszukane" / "ŚLAD / ZNALEZIONO" | Widok patrolu (telefon) | `swift run rescue-field serve` + `http://127.0.0.1:8772/web/patrol/?team=topr-a` (serwer `python3 -m http.server 8772` w `rescue/`) |
+| Jak powstała sprawa (opcjonalnie) | Story Studio | `swift run rescue-studio` -> `http://127.0.0.1:8771/` |
+| Odsłonięcie | Terminal: sól + `reveal.py` (weryfikacja hasha, metryki) | (po odsłonięciu) |
+
+## Scenariusz minuta po minucie
+
+Czas scenariusza / czas demo. Uzupełniane z wątku.
+
+| Czas scen. | Demo | Co się dzieje | Ekran | Źródło w wątku |
+|---|---|---|---|---|
+| ... | 0:00 | Zgłoszenie: ... | kierownik, oś czasu | |
+| ... | ... | Wskazówka: ... | kierownik, mapa | |
+| ... | ... | Mapa: top 3 = ..., ..., ... | kierownik, panel top 3 | |
+| ... | ... | Fala patroli 1: `ASSIGN-PATROL` ... Dlaczego: ... | kierownik, przydział zespołów | |
+| ... | ... | Sędzia: nic / ZNALEZIONO (POD ...) | widok patrolu -> kierownik | |
+| ... | ... | Przeliczenie: top 3 = ... | kierownik, mapa | |
+| ... | ... | ... (kolejne fale) | | |
+| ... | ... | ZNALEZIONO albo koniec czasu | widok patrolu | |
+| - | ... | Odsłonięcie: miejsce, sól, hash zgodny? | terminal | (po odsłonięciu) |
+
+## Metryki (po odsłonięciu)
+
+| Metryka | Wartość |
+|---|---|
+| Znaleziony | |
+| Patrole do znalezienia | |
+| Ranga prawdziwego segmentu przed 1. patrolem | |
+| Procent obszaru przeszukany do znalezienia | |
+| Czas do znalezienia vs naiwne przeszukiwanie | |
+| Odległość od szczytu mapy | |
+| Hash zgodny | |
+
+## Lektor (30 s, PL)
+
+Wersja robocza. Nawiasy kwadratowe uzupełniamy po odsłonięciu, porażkę mówimy wprost.
+
+> Nie wiemy, gdzie jest [imię]. Wie tylko AI, które ją schowało, i zapisało to miejsce jako hash, zanim zaczęliśmy. Mamy to, co ratownik miałby naprawdę: plan od rodziny, auto na parkingu, sektor BTS, pogodę. Mapa wskazuje trzy sektory. Wysyłamy patrole. "Nic." Mapa się przelicza. [Po N falach: znaleziona w sektorze X / Nie znaleźliśmy jej w sześć godzin.] Odsłonięcie: hash się zgadza. [Metryka jednym zdaniem.]
