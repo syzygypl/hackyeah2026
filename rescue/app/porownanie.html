@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rescue Locator - Co zmienia jedna relacja</title>
+<meta name="description" content="Ta sama akcja na Zawracie policzona dwa razy: bez relacji i z relacją turystki, która widziała zaginionego na szlaku.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="porownanie.css">
+</head>
+<body>
+<header>
+  <h1><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator <span class="sub">Co zmienia jedna relacja</span></h1>
+  <span style="flex:1"></span>
+  <a href="start.html" class="back">Strona startowa</a>
+</header>
+
+<main class="wrap">
+  <section class="intro">
+    <h2 class="lead">Jedna relacja świadka, dwie różne akcje</h2>
+    <p>Ta sama akcja, ten sam silnik, ta sama chwila: <b>sobota 19:22, Zawrat, mgła i zmrok</b>. Tomasz W. (58 lat) nie wrócił z wycieczki Dolina Pięciu Stawów - Zawrat. Wiadomo: plan od żony, auto na parkingu, ostatni sygnał telefonu o 14:12 (promień 1,2 km), przeszukane sektory bez wyniku. Jedyna różnica między mapami poniżej to <b>jedna relacja turystki</b>.</p>
+  </section>
+
+  <section class="witness" id="witness" aria-live="polite">
+    <div class="wq">
+      <div class="wh"><span class="tag">Telefon na 112, 19:22</span> <span class="mute small">turystka, osoba fikcyjna</span></div>
+      <blockquote>„Usłyszałam apel TOPR w radiu. Około 14:35 schodziłam z Zawratu do Pięciu Stawów, szłam od Hali Gąsienicowej. Na zakosach niebieskiego szlaku, jakieś 15 minut poniżej przełęczy, minęłam starszego mężczyznę w czerwonej kurtce. Szedł sam, pod górę, w stronę Zawratu. Mgła dopiero zaczynała schodzić.”</blockquote>
+      <div class="wdata mute small">Silnik dostaje: <b>godzina 14:35</b> · <b>miejsce</b>: zakosy niebieskiego szlaku ok. 450 m poniżej przełęczy (promień 300 m) · <b>kierunek</b>: w górę, na Zawrat</div>
+    </div>
+    <div class="wbtn">
+      <button id="toggle" class="primary big" disabled>Dodaj relację</button>
+      <span id="status" class="mute small">Liczę obie mapy...</span>
+    </div>
+  </section>
+
+  <section class="cols">
+    <article class="col" id="colA">
+      <h3 class="ch">Bez relacji</h3>
+      <div class="mapbox"><iframe id="mapA" title="Mapa bez relacji"></iframe><div class="busy" id="busyA">Wczytuję mapę...</div></div>
+      <div class="lbl">Gdzie szukać najpierw <span class="area" id="areaA"></span></div>
+      <ol class="top3" id="topA"></ol>
+      <div class="lbl">Dokąd idą zespoły</div>
+      <ul class="teams" id="teamsA"></ul>
+    </article>
+    <article class="col" id="colB">
+      <h3 class="ch">Z relacją turystki <span class="pill" id="pillB">jeszcze bez relacji</span></h3>
+      <div class="mapbox"><iframe id="mapB" title="Mapa z relacją turystki"></iframe><div class="busy" id="busyB">Wczytuję mapę...</div><div class="flash" id="flashB"></div></div>
+      <div class="lbl">Gdzie szukać najpierw <span class="area" id="areaB"></span></div>
+      <ol class="top3" id="topB"></ol>
+      <div class="lbl">Dokąd idą zespoły</div>
+      <ul class="teams" id="teamsB"></ul>
+    </article>
+  </section>
+
+  <section class="panel why" id="why" hidden>
+    <h3>Dlaczego mapa się przesunęła</h3>
+    <ul id="whyList"></ul>
+  </section>
+
+  <p class="mute small" id="source"></p>
+  <p class="mute small">Kolejność sektorów to kolejność przeszukiwania (waga mapy), nie szansa znalezienia. „% obszaru” mówi, jaką część całego obszaru poszukiwań zajmuje sektor. Decyzję zawsze podejmuje kierownik akcji.</p>
+
+  <footer class="foot">
+    <p>Wszystkie scenariusze i osoby są fikcyjne, także turystka i jej relacja. Decyzję zawsze podejmuje kierownik akcji.</p>
+    <p>Dane: mapa i obiekty <a href="https://www.openstreetmap.org/copyright" rel="noopener">© OpenStreetMap</a> (ODbL), wysokości Copernicus DEM (© DLR, Airbus, ESA), zdjęcia <a href="https://cloudless.eox.at" rel="noopener">Sentinel-2 cloudless</a> EOX (CC BY 4.0).</p>
+    <p><a href="https://github.com/syzygypl/hackyeah2026" rel="noopener">Kod na GitHubie</a> · HackYeah 2026</p>
+  </footer>
+</main>
+<script src="porownanie.js" defer></script>
+</body>
+</html>
