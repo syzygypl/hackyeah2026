@@ -59,6 +59,7 @@ public func runJSONObject(scenario s: Scenario, grid: ProbabilityGrid, hints: [L
     }
     let doc: [String: Any] = [
         "schema": "rescue-run/1",
+        "features": (s.features ?? [:]).filter { $0.value }.keys.sorted(),
         "incident": s.incident, "date": s.date,
         "bbox": ["south": s.bbox.south, "west": s.bbox.west, "north": s.bbox.north, "east": s.bbox.east],
         "cellM": s.cellM, "rows": grid.rows, "cols": grid.cols,

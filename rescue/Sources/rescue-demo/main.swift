@@ -4,7 +4,7 @@ import RescueKit
 // Usage: swift run rescue-demo [scenario.json] [--fast]
 let pkgDir = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 let args = CommandLine.arguments.dropFirst()
-let scenarioPath = args.first { !$0.hasPrefix("--") } ?? pkgDir.appendingPathComponent("scenarios/zawrat.json").path
+let scenarioPath = args.enumerated().first { i, a in !a.hasPrefix("--") && (i == 0 || args[args.index(args.startIndex, offsetBy: i - 1)] != "--features") }?.element ?? pkgDir.appendingPathComponent("scenarios/zawrat.json").path
 var scenario = try Scenario.load(scenarioPath)
 // Optional precomputed terrain (OSM + DEM) next to the scenario: <name>-terrain.json, same shape as scenario.terrain
 let terrainPath = URL(fileURLWithPath: scenarioPath).deletingLastPathComponent()
@@ -20,6 +20,9 @@ if FileManager.default.fileExists(atPath: terrainPath) {
     print("Terrain: scenario's own terrain (\(scenario.terrain.trails.count) trails\(scenario.terrain.trails.isEmpty ? ", FLAT" : "")). For real terrain: python3 rescue/tools/terrain/osm_terrain.py --scenario \(scenarioPath)")
 }
 scenario.applyEpilogue(args.contains("--epilogue") ? true : nil)
+// --features traceWindow,podModel | all  (engine flags after rescue-engine-v2.1; default = frozen v2.1)
+if let i = CommandLine.arguments.firstIndex(of: "--features"), i + 1 < CommandLine.arguments.count { scenario.enable(CommandLine.arguments[i + 1]) }
+if let f = scenario.features, f.values.contains(true) { print("Features: \(f.filter { $0.value }.keys.sorted().joined(separator: ", "))") }
 // Evidence outside the grid gets 0 POA by construction: grow the grid to cover it (unless fixedBbox), and report.
 let coverage = applyCoverage(&scenario)
 for it in (coverage["items"] as? [[String: Any]]) ?? [] where ((it["outsidePctBefore"] as? Double) ?? 0) > 0 {

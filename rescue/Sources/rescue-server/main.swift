@@ -115,7 +115,7 @@ func liveEvents(segments: Set<String>, seeds: [String: [Double]]) -> [[String: A
 }
 
 /// Loads scenarios/<name>.json + <name>-terrain.json, folds live reports in, runs the engine.
-func runScenario(_ name: String, live: Bool) async -> Data? {
+func runScenario(_ name: String, live: Bool, features: String? = nil) async -> Data? {
     let path = scenariosDir.appendingPathComponent("\(name).json")
     guard var d = (try? Data(contentsOf: path)).flatMap({ try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }) else { return nil }
     if let t = (try? Data(contentsOf: scenariosDir.appendingPathComponent("\(name)-terrain.json"))).flatMap({ try? JSONSerialization.jsonObject(with: $0) }) { d["terrain"] = t }
@@ -127,7 +127,8 @@ func runScenario(_ name: String, live: Bool) async -> Data? {
         nLive = ev.count
         d["events"] = ((d["events"] as? [[String: Any]]) ?? []) + ev
     }
-    guard let data = try? JSONSerialization.data(withJSONObject: d), let s = try? JSONDecoder().decode(Scenario.self, from: data) else { return nil }
+    guard let data = try? JSONSerialization.data(withJSONObject: d), var s = try? JSONDecoder().decode(Scenario.self, from: data) else { return nil }
+    s.enable(features)
     var doc = (try? JSONSerialization.jsonObject(with: await StoryPipeline.runData(s))) as? [String: Any] ?? [:]
     doc["scenario"] = name
     doc["liveEventsFolded"] = nLive
@@ -202,7 +203,8 @@ func handle(_ q: Req) async -> Data {
         }
         return response("200 OK", json, try! JSONSerialization.data(withJSONObject: ["scenarios": list], options: [.sortedKeys]))
     case ("POST", "/api/run"):
-        guard let s = try? JSONDecoder().decode(Scenario.self, from: q.body) else { return jsonErr("400 Bad Request", "body is not a scenario (see scenarios/*.json)") }
+        guard var s = try? JSONDecoder().decode(Scenario.self, from: q.body) else { return jsonErr("400 Bad Request", "body is not a scenario (see scenarios/*.json)") }
+        s.enable(q.query["features"])
         return response("200 OK", json, await StoryPipeline.runData(s))
     case ("POST", "/story/assessment"):
         let step = ((try? JSONSerialization.jsonObject(with: q.body)) as? [String: Any])?["step"] as? Int
@@ -267,7 +269,7 @@ func handle(_ q: Req) async -> Data {
         if q.method == "GET", q.path.hasPrefix("/api/run/") {
             let name = String(q.path.dropFirst("/api/run/".count))
             guard validName(name) else { return jsonErr("400 Bad Request", "bad scenario name") }
-            guard let d = await runScenario(name, live: q.query["live"] != "0") else { return jsonErr("404 Not Found", "no scenario \(name)") }
+            guard let d = await runScenario(name, live: q.query["live"] != "0", features: q.query["features"]) else { return jsonErr("404 Not Found", "no scenario \(name)") }
             return response("200 OK", json, d)
         }
         if q.method == "GET", q.path.hasPrefix("/api/assessment/") {

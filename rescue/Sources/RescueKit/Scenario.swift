@@ -108,6 +108,18 @@ public struct Scenario: Codable, Sendable {
     /// true = add the "lost the trail in fog" layer (LostTrailProvider). Off by default: on our 3 scenarios with a known
     /// find spot it made the map slightly worse (see README), so it is an opt-in hypothesis until validated.
     public var lostTrail: Bool? = nil
+    /// Engine feature flags (backlog after rescue-engine-v2.1). Absent / false = frozen v2.1 behaviour.
+    /// traceWindow, eventsBeforeStart, podModel, availabilityWindows, hypothermiaModel, behaviourLayers
+    public var features: [String: Bool]? = nil
+    public static let allFeatures = ["traceWindow", "eventsBeforeStart", "podModel", "availabilityWindows", "hypothermiaModel", "behaviourLayers"]
+    public func has(_ f: String) -> Bool { features?[f] == true }
+    /// Applies a run option like "traceWindow,podModel" or "all" (adds to the scenario's own flags).
+    public mutating func enable(_ list: String?) {
+        guard let list, !list.isEmpty else { return }
+        var f = features ?? [:]
+        for k in (list == "all" ? Scenario.allFeatures : list.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }) { f[k] = true }
+        features = f
+    }
     /// true = never auto-expand the grid to cover evidence (only warn).
     public var fixedBbox: Bool? = nil
     /// Set when the grid was auto-expanded: the scenario's own bbox.

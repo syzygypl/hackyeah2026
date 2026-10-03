@@ -68,7 +68,8 @@ def evaluate(name, run=True):
     outs = [os.path.join(OUT, f) for f in (name + ".html", name + ".run.json")] if name != "zawrat" else []
     saved = {f: open(f, "rb").read() for f in outs if os.path.exists(f)}
     if run:
-        p = subprocess.run(["swift", "run", "-c", "debug", "rescue-demo", path, "--fast"], cwd=PKG, capture_output=True, text=True)
+        extra = ["--features", FEATURES] if FEATURES else []
+        p = subprocess.run(["swift", "run", "-c", "debug", "rescue-demo", path, "--fast"] + extra, cwd=PKG, capture_output=True, text=True)
         if p.returncode != 0:
             return {"name": name, "error": p.stderr[-400:]}
     rj = os.path.join(OUT, "run.json" if name == "zawrat" else name + ".run.json")
@@ -90,8 +91,15 @@ def evaluate(name, run=True):
     return out
 
 
+FEATURES = None
+
+
 def main():
+    global FEATURES
     run = "--no-run" not in sys.argv
+    if "--features" in sys.argv:   # e.g. --features all  -> compare against the frozen v2.1 default
+        FEATURES = sys.argv[sys.argv.index("--features") + 1]
+        print(f"features: {FEATURES}")
     # blind rounds that are still running are never evaluated (round fairness); blind-02 explicitly excluded
     names = sorted(f[:-5] for f in os.listdir(SCN) if f.endswith(".json") and not f.endswith("-terrain.json")
                    and not f.startswith("blind-02"))
