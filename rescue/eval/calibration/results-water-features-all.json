@@ -1,0 +1,10001 @@
+{
+ "schema": "rescue-eval/1",
+ "generated": "2026-10-03T16:34",
+ "engine": "6f11fb8",
+ "engineFeatures": "all",
+ "simRun": "v3-sniardwy+v3-morzycko+v3-miedzyzdroje",
+ "region": "miedzyzdroje+morzycko+sniardwy",
+ "n": 600,
+ "note": "Simulated cases (AI Michała, rescue/eval/sim), scoring calibrate.py (AI Denisa). Main metric: % of area searched in POA order before the true cell. Simulator and engine are the same AI family: an independent check, not real incidents.",
+ "methods": {
+  "engine": {
+   "topk": {
+    "1": 0.5783,
+    "3": 0.8983,
+    "5": 0.97
+   },
+   "areaToFind": {
+    "bins": [
+     0,
+     5,
+     10,
+     20,
+     40,
+     70,
+     100
+    ],
+    "counts": [
+     523,
+     47,
+     19,
+     10,
+     1,
+     0
+    ],
+    "median": 0.97,
+    "p75": 2.26,
+    "p90": 6.01,
+    "mean": 2.46
+   },
+   "brier": 0.5435,
+   "calibration": [
+    {
+     "p": 0.05,
+     "observed": 0.0125,
+     "n": 7415,
+     "predicted": 0.0068
+    },
+    {
+     "p": 0.15,
+     "observed": 0.2136,
+     "n": 309,
+     "predicted": 0.1419
+    },
+    {
+     "p": 0.25,
+     "observed": 0.2951,
+     "n": 183,
+     "predicted": 0.2486
+    },
+    {
+     "p": 0.35,
+     "observed": 0.331,
+     "n": 142,
+     "predicted": 0.3466
+    },
+    {
+     "p": 0.45,
+     "observed": 0.3708,
+     "n": 89,
+     "predicted": 0.448
+    },
+    {
+     "p": 0.55,
+     "observed": 0.4267,
+     "n": 75,
+     "predicted": 0.5479
+    },
+    {
+     "p": 0.65,
+     "observed": 0.5195,
+     "n": 77,
+     "predicted": 0.6461
+    },
+    {
+     "p": 0.75,
+     "observed": 0.5,
+     "n": 56,
+     "predicted": 0.7558
+    },
+    {
+     "p": 0.85,
+     "observed": 0.5676,
+     "n": 74,
+     "predicted": 0.8552
+    },
+    {
+     "p": 0.95,
+     "observed": 0.9167,
+     "n": 180,
+     "predicted": 0.9694
+    }
+   ]
+  },
+  "expert": {
+   "topk": {
+    "1": 0.4017,
+    "3": 0.6483,
+    "5": 0.7633
+   },
+   "areaToFind": {
+    "bins": [
+     0,
+     5,
+     10,
+     20,
+     40,
+     70,
+     100
+    ],
+    "counts": [
+     321,
+     95,
+     113,
+     46,
+     16,
+     9
+    ],
+    "median": 4.13,
+    "p75": 11.3,
+    "p90": 21.81,
+    "mean": 9.33
+   }
+  },
+  "naive": {
+   "topk": {
+    "1": 0.5217,
+    "3": 0.8117,
+    "5": 0.915
+   },
+   "areaToFind": {
+    "bins": [
+     0,
+     5,
+     10,
+     20,
+     40,
+     70,
+     100
+    ],
+    "counts": [
+     477,
+     53,
+     41,
+     21,
+     5,
+     3
+    ],
+    "median": 1.09,
+    "p75": 3.89,
+    "p90": 11.38,
+    "mean": 4.4
+   }
+  }
+ },
+ "byCategory": [
+  {
+   "category": "angler",
+   "n": 113,
+   "top3": {
+    "engine": 0.8673,
+    "expert": 0.708,
+    "naive": 0.8319
+   },
+   "areaMedian": {
+    "engine": 0.69,
+    "expert": 1.87,
+    "naive": 0.5
+   }
+  },
+  {
+   "category": "boater",
+   "n": 263,
+   "top3": {
+    "engine": 0.8327,
+    "expert": 0.4715,
+    "naive": 0.6578
+   },
+   "areaMedian": {
+    "engine": 1.41,
+    "expert": 9.28,
+    "naive": 3.66
+   }
+  },
+  {
+   "category": "swimmer",
+   "n": 224,
+   "top3": {
+    "engine": 0.9911,
+    "expert": 0.8259,
+    "naive": 0.9821
+   },
+   "areaMedian": {
+    "engine": 0.78,
+    "expert": 1.4,
+    "naive": 0.58
+   }
+  }
+ ],
+ "byMisleading": [
+  {
+   "misleading": 0,
+   "n": 208,
+   "top3": {
+    "engine": 0.9231,
+    "expert": 0.7692,
+    "naive": 0.8413
+   }
+  },
+  {
+   "misleading": 1,
+   "n": 242,
+   "top3": {
+    "engine": 0.9174,
+    "expert": 0.6446,
+    "naive": 0.8388
+   }
+  },
+  {
+   "misleading": 2,
+   "n": 126,
+   "top3": {
+    "engine": 0.8254,
+    "expert": 0.4841,
+    "naive": 0.7222
+   }
+  },
+  {
+   "misleading": 3,
+   "n": 20,
+   "top3": {
+    "engine": 0.9,
+    "expert": 0.55,
+    "naive": 0.75
+   }
+  },
+  {
+   "misleading": 4,
+   "n": 4,
+   "top3": {
+    "engine": 0.75,
+    "expert": 0.25,
+    "naive": 0.75
+   }
+  }
+ ],
+ "byRegion": [
+  {
+   "run": "v3-sniardwy",
+   "n": 200,
+   "top3": {
+    "engine": 0.94,
+    "expert": 0.735,
+    "naive": 0.87
+   },
+   "areaMedian": {
+    "engine": 1.16,
+    "expert": 7.97,
+    "naive": 1.07
+   }
+  },
+  {
+   "run": "v3-morzycko",
+   "n": 200,
+   "top3": {
+    "engine": 0.855,
+    "expert": 0.535,
+    "naive": 0.705
+   },
+   "areaMedian": {
+    "engine": 1.04,
+    "expert": 3.87,
+    "naive": 1.36
+   }
+  },
+  {
+   "run": "v3-miedzyzdroje",
+   "n": 200,
+   "top3": {
+    "engine": 0.9,
+    "expert": 0.675,
+    "naive": 0.86
+   },
+   "areaMedian": {
+    "engine": 0.77,
+    "expert": 4.29,
+    "naive": 0.91
+   }
+  }
+ ],
+ "dropped": [],
+ "cases": [
+  {
+   "case": "v3-sniardwy/case-0001",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 13.917,
+    "expert": 18.694,
+    "naive": 20.833
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0002",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.933,
+    "expert": 0.111,
+    "naive": 0.444
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0003",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.124,
+    "expert": 1.866,
+    "naive": 0.274
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0004",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 10,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.278,
+    "expert": 15.714,
+    "naive": 4.756
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0005",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 6,
+    "expert": 12,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 12.524,
+    "expert": 30.167,
+    "naive": 19.095
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0006",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 9,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 39.389,
+    "expert": 74.111,
+    "naive": 10.806
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0007",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.556,
+    "expert": 0.361,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0008",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 1.028,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0009",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 2.139,
+    "expert": 10.222,
+    "naive": 8.806
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0010",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.187,
+    "expert": 0.48,
+    "naive": 0.455
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0011",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.523,
+    "expert": 11.171,
+    "naive": 4.662
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0012",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.167,
+    "expert": 8.833,
+    "naive": 0.972
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0013",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 6,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.289,
+    "expert": 1.473,
+    "naive": 0.438
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0014",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.201,
+    "expert": 0.893,
+    "naive": 1.295
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0015",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.889,
+    "expert": 10.806,
+    "naive": 3.111
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0016",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 5.639,
+    "expert": 27.0,
+    "naive": 19.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0017",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.278,
+    "expert": 0.611,
+    "naive": 1.083
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0018",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 10.467,
+    "expert": 13.322,
+    "naive": 27.638
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0019",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.528,
+    "expert": 13.194,
+    "naive": 4.389
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0020",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.632,
+    "expert": 12.094,
+    "naive": 9.662
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0021",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.083,
+    "expert": 2.444,
+    "naive": 0.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0022",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.25,
+    "expert": 2.361,
+    "naive": 0.639
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0023",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 7.399,
+    "expert": 10.907,
+    "naive": 10.726
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0024",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.778,
+    "expert": 0.333,
+    "naive": 0.917
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0025",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 10.639,
+    "expert": 70.556,
+    "naive": 24.667
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0026",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.194,
+    "expert": 0.389,
+    "naive": 0.111
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0027",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.75,
+    "expert": 9.333,
+    "naive": 1.75
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0028",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.48,
+    "expert": 1.389,
+    "naive": 0.303
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0029",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.25,
+    "expert": 1.194,
+    "naive": 0.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0030",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.611,
+    "expert": 1.167,
+    "naive": 0.806
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0031",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 17.028,
+    "expert": 17.639,
+    "naive": 9.472
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0032",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.174,
+    "expert": 81.816,
+    "naive": 2.786
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0033",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.564,
+    "expert": 7.941,
+    "naive": 1.936
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0034",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 2.167,
+    "expert": 24.0,
+    "naive": 17.833
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0035",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.306,
+    "expert": 39.306,
+    "naive": 1.972
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0036",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.441,
+    "expert": 0.676,
+    "naive": 0.923
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0037",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.556,
+    "expert": 1.972,
+    "naive": 0.028
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0038",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.944,
+    "expert": 8.864,
+    "naive": 1.49
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0039",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 6.917,
+    "expert": 50.083,
+    "naive": 9.861
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0040",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.909,
+    "expert": 21.692,
+    "naive": 10.278
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0041",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 8.444,
+    "expert": 33.167,
+    "naive": 26.417
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0042",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.278,
+    "expert": 1.25,
+    "naive": 0.778
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0043",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.222,
+    "expert": 10.778,
+    "naive": 1.833
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0044",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.08,
+    "expert": 0.1,
+    "naive": 0.06
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0045",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.272,
+    "expert": 0.34,
+    "naive": 0.476
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0046",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.972,
+    "expert": 0.944,
+    "naive": 0.528
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0047",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 4,
+   "rank": {
+    "engine": 4,
+    "expert": 8,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 2.492,
+    "expert": 23.148,
+    "naive": 5.027
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0048",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 10.861,
+    "naive": 3.639
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0049",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.333,
+    "expert": 11.278,
+    "naive": 2.0
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0050",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.694,
+    "expert": 10.806,
+    "naive": 3.056
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0051",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.333,
+    "expert": 1.472,
+    "naive": 0.361
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0052",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 6.171,
+    "expert": 29.842,
+    "naive": 18.356
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0053",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.28,
+    "expert": 0.327,
+    "naive": 0.163
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0054",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.019,
+    "expert": 10.088,
+    "naive": 3.739
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0055",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.194,
+    "expert": 0.778,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0056",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.207,
+    "expert": 9.808,
+    "naive": 4.54
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0057",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.025,
+    "expert": 0.149,
+    "naive": 0.174
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0058",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.306,
+    "expert": 16.083,
+    "naive": 7.583
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0059",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.25,
+    "expert": 0.722,
+    "naive": 1.472
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0060",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.337,
+    "expert": 1.671,
+    "naive": 0.267
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0061",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.153,
+    "expert": 1.158,
+    "naive": 0.175
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0062",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.306,
+    "expert": 0.5,
+    "naive": 0.389
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0063",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.27,
+    "expert": 0.816,
+    "naive": 0.408
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0064",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 4.5,
+    "expert": 10.25,
+    "naive": 2.5
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0065",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.389,
+    "expert": 0.694,
+    "naive": 0.357
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0066",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.417,
+    "expert": 0.694,
+    "naive": 0.806
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0067",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 6.0,
+    "expert": 10.222,
+    "naive": 1.528
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0068",
+   "category": "swimmer",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.361,
+    "expert": 0.722,
+    "naive": 0.028
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0069",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.289,
+    "expert": 0.4,
+    "naive": 0.333
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0070",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.306,
+    "expert": 11.361,
+    "naive": 4.472
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0071",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 5.528,
+    "expert": 19.778,
+    "naive": 13.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0072",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 9,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 5.227,
+    "expert": 23.813,
+    "naive": 14.369
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0073",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 3.056,
+    "expert": 52.083,
+    "naive": 0.806
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0074",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.368,
+    "expert": 7.985,
+    "naive": 1.095
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0075",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.722,
+    "expert": 1.194,
+    "naive": 1.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0076",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.833,
+    "expert": 9.194,
+    "naive": 0.861
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0077",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 8,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 10.27,
+    "expert": 18.382,
+    "naive": 32.448
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0078",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.222,
+    "expert": 0.528,
+    "naive": 0.028
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0079",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 0.694,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0080",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.389,
+    "expert": 0.972,
+    "naive": 0.444
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0081",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 12.361,
+    "naive": 5.194
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0082",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.045,
+    "expert": 0.224,
+    "naive": 0.299
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0083",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.622,
+    "expert": 1.043,
+    "naive": 0.091
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0084",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.333,
+    "expert": 14.306,
+    "naive": 5.0
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0085",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 12.0,
+    "expert": 24.167,
+    "naive": 21.583
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0086",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.045,
+    "expert": 10.622,
+    "naive": 3.806
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0087",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 4.789,
+    "expert": 4.282,
+    "naive": 2.066
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0088",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 13.694,
+    "naive": 1.5
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0089",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 4.113,
+    "expert": 11.505,
+    "naive": 6.677
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0090",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 6,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 4.154,
+    "expert": 14.712,
+    "naive": 14.834
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0091",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.75,
+    "expert": 9.278,
+    "naive": 1.722
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0092",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 7.696,
+    "expert": 13.922,
+    "naive": 9.559
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0093",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.861,
+    "expert": 9.583,
+    "naive": 1.056
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0094",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 13,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 2.889,
+    "expert": 61.556,
+    "naive": 11.361
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0095",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 12,
+    "expert": 15,
+    "naive": 14
+   },
+   "areaPctToFind": {
+    "engine": 41.182,
+    "expert": 86.253,
+    "naive": 87.383
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0096",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.889,
+    "expert": 0.111,
+    "naive": 0.639
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0097",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.75,
+    "expert": 0.861,
+    "naive": 0.556
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0098",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.361,
+    "expert": 9.028,
+    "naive": 0.861
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0099",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 10,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.083,
+    "expert": 10.306,
+    "naive": 3.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0100",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 5.278,
+    "expert": 90.972,
+    "naive": 1.0
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0101",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 2.111,
+    "naive": 0.667
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0102",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.536,
+    "expert": 0.119,
+    "naive": 0.298
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0103",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 14,
+    "naive": 14
+   },
+   "areaPctToFind": {
+    "engine": 30.0,
+    "expert": 61.045,
+    "naive": 63.607
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0104",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.632,
+    "expert": 19.398,
+    "naive": 4.705
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0105",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.11,
+    "expert": 0.68,
+    "naive": 0.658
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0106",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.444,
+    "expert": 0.139,
+    "naive": 0.111
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0107",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.806,
+    "expert": 1.306,
+    "naive": 1.722
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0108",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.833,
+    "expert": 0.333,
+    "naive": 1.0
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0109",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.145,
+    "expert": 0.339,
+    "naive": 0.291
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0110",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.639,
+    "expert": 0.139,
+    "naive": 0.222
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0111",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.15,
+    "expert": 0.171,
+    "naive": 0.343
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0112",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.417,
+    "expert": 1.528,
+    "naive": 0.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0113",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.228,
+    "expert": 0.704,
+    "naive": 0.381
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0114",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.611,
+    "expert": 0.917,
+    "naive": 1.472
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0115",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.361,
+    "expert": 2.111,
+    "naive": 0.611
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0116",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 5,
+    "expert": 5,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 9.5,
+    "expert": 31.694,
+    "naive": 29.139
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0117",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.5,
+    "expert": 9.944,
+    "naive": 1.028
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0118",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 6.389,
+    "expert": 10.278,
+    "naive": 1.75
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0119",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.845,
+    "expert": 9.635,
+    "naive": 7.747
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0120",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.037,
+    "expert": 0.387,
+    "naive": 0.018
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0121",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.472,
+    "expert": 0.833,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0122",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.278,
+    "expert": 0.806,
+    "naive": 0.778
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0123",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 19.889,
+    "expert": 18.667,
+    "naive": 31.917
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0124",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.572,
+    "expert": 9.701,
+    "naive": 0.572
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0125",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.668,
+    "expert": 1.493,
+    "naive": 0.201
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0126",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.387,
+    "expert": 0.264,
+    "naive": 0.299
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0127",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.788,
+    "expert": 20.822,
+    "naive": 4.44
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0128",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 8.25,
+    "expert": 19.806,
+    "naive": 12.361
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0129",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 8,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.167,
+    "expert": 9.972,
+    "naive": 4.806
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0130",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.941,
+    "expert": 15.815,
+    "naive": 0.829
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0131",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 2.083,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0132",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.391,
+    "expert": 1.884,
+    "naive": 0.44
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0133",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.528,
+    "expert": 9.0,
+    "naive": 0.889
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0134",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.61,
+    "expert": 11.424,
+    "naive": 2.391
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0135",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 5.5,
+    "expert": 19.861,
+    "naive": 12.5
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0136",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.583,
+    "expert": 22.861,
+    "naive": 9.778
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0137",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 5.861,
+    "expert": 12.75,
+    "naive": 6.694
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0138",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.444,
+    "naive": 1.333
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0139",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.496,
+    "expert": 1.41,
+    "naive": 0.321
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0140",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.972,
+    "expert": 2.361,
+    "naive": 0.556
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0141",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.323,
+    "expert": 7.957,
+    "naive": 0.473
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0142",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.306,
+    "expert": 0.278,
+    "naive": 0.583
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0143",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 8.205,
+    "expert": 24.058,
+    "naive": 13.712
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0144",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.917,
+    "expert": 9.917,
+    "naive": 3.583
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0145",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.019,
+    "expert": 0.039,
+    "naive": 0.058
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0146",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.474,
+    "expert": 1.613,
+    "naive": 0.285
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0147",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.084,
+    "expert": 0.568,
+    "naive": 0.084
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0148",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 4.429,
+    "expert": 0.685,
+    "naive": 10.982
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0149",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 10,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 13.038,
+    "expert": 33.186,
+    "naive": 23.966
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0150",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.581,
+    "expert": 0.657,
+    "naive": 0.884
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0151",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 3.611,
+    "expert": 10.444,
+    "naive": 1.583
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0152",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 6.417,
+    "expert": 20.5,
+    "naive": 14.056
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0153",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.333,
+    "expert": 0.778,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0154",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.111,
+    "expert": 2.139,
+    "naive": 0.222
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0155",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.087,
+    "expert": 0.087,
+    "naive": 0.065
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0156",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.056,
+    "expert": 29.0,
+    "naive": 0.889
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0157",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 6,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 31.472,
+    "expert": 42.083,
+    "naive": 33.361
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0158",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.203,
+    "expert": 10.662,
+    "naive": 3.708
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0159",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.222,
+    "naive": 0.444
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0160",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 0.056,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0161",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.139,
+    "expert": 0.694,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0162",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.048,
+    "expert": 0.241,
+    "naive": 0.651
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0163",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 5.643,
+    "expert": 28.432,
+    "naive": 12.245
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0164",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.917,
+    "expert": 0.917,
+    "naive": 1.056
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0165",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 8,
+    "expert": 9,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 23.992,
+    "expert": 50.229,
+    "naive": 19.605
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0166",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 5,
+    "expert": 5,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 6.278,
+    "expert": 20.083,
+    "naive": 17.028
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0167",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.134,
+    "expert": 0.096,
+    "naive": 0.096
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0168",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 3.831,
+    "expert": 26.342,
+    "naive": 9.848
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0169",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.778,
+    "expert": 9.194,
+    "naive": 3.25
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0170",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.667,
+    "expert": 9.556,
+    "naive": 1.028
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0171",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.487,
+    "expert": 0.387,
+    "naive": 0.062
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0172",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.709,
+    "expert": 0.577,
+    "naive": 1.581
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0173",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.473,
+    "expert": 9.846,
+    "naive": 1.978
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0174",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.073,
+    "expert": 0.367,
+    "naive": 0.049
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0175",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.047,
+    "expert": 1.726,
+    "naive": 0.28
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0176",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.917,
+    "expert": 10.083,
+    "naive": 3.222
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0177",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.944,
+    "expert": 9.278,
+    "naive": 0.667
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0178",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.323,
+    "expert": 1.194,
+    "naive": 0.373
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0179",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 4.977,
+    "expert": 1.351,
+    "naive": 0.495
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0180",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.078,
+    "expert": 0.76,
+    "naive": 0.245
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0181",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.798,
+    "expert": 0.188,
+    "naive": 0.61
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0182",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 0.083,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0183",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 0.194,
+    "naive": 0.5
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0184",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 0.333,
+    "naive": 1.111
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0185",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.65,
+    "expert": 19.828,
+    "naive": 2.336
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0186",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.11,
+    "expert": 0.356,
+    "naive": 0.041
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0187",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.778,
+    "expert": 0.556,
+    "naive": 1.361
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0188",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.222,
+    "expert": 0.972,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0189",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 6.833,
+    "expert": 24.0,
+    "naive": 14.444
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0190",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 10,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.764,
+    "expert": 10.856,
+    "naive": 12.662
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0191",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 4.5,
+    "expert": 13.306,
+    "naive": 5.194
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0192",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.639,
+    "expert": 11.167,
+    "naive": 1.639
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0193",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.111,
+    "expert": 8.434,
+    "naive": 1.742
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0194",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.152,
+    "expert": 14.697,
+    "naive": 2.424
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0195",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 2.75,
+    "expert": 13.556,
+    "naive": 9.667
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0196",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 0.333,
+    "naive": 0.694
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0197",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.417,
+    "expert": 0.583,
+    "naive": 0.333
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0198",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.192,
+    "expert": 1.218,
+    "naive": 0.043
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0199",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.694,
+    "expert": 9.75,
+    "naive": 4.389
+   }
+  },
+  {
+   "case": "v3-sniardwy/case-0200",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.806,
+    "expert": 13.25,
+    "naive": 5.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0001",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.111,
+    "expert": 4.917,
+    "naive": 3.306
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0002",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.778,
+    "expert": 0.528,
+    "naive": 0.917
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0003",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.25,
+    "expert": 0.028,
+    "naive": 0.722
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0004",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.528,
+    "expert": 0.306,
+    "naive": 1.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0005",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 10,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.584,
+    "expert": 2.661,
+    "naive": 0.108
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0006",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.037,
+    "expert": 1.833,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0007",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 18.333,
+    "naive": 1.333
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0008",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.111,
+    "expert": 0.639,
+    "naive": 0.944
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0009",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 0.972,
+    "naive": 2.111
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0010",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 6,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 3.333,
+    "naive": 0.222
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0011",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 8,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 8.472,
+    "expert": 12.444,
+    "naive": 6.778
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0012",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 0.028,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0013",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 8
+   },
+   "areaPctToFind": {
+    "engine": 1.0,
+    "expert": 1.556,
+    "naive": 6.611
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0014",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.224,
+    "expert": 0.124,
+    "naive": 0.348
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0015",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.472,
+    "expert": 16.889,
+    "naive": 0.833
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0016",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 7,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.861,
+    "expert": 3.806,
+    "naive": 0.444
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0017",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.807,
+    "expert": 1.18,
+    "naive": 0.745
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0018",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 0.417,
+    "expert": 17.111,
+    "naive": 2.278
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0019",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.0,
+    "expert": 1.417,
+    "naive": 1.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0020",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.333,
+    "expert": 0.667,
+    "naive": 2.139
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0021",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 8,
+    "naive": 9
+   },
+   "areaPctToFind": {
+    "engine": 6.889,
+    "expert": 3.889,
+    "naive": 16.917
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0022",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 0.222,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0023",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 7.833,
+    "naive": 1.5
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0024",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 6,
+    "expert": 9,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 7.778,
+    "expert": 7.889,
+    "naive": 7.139
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0025",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.353,
+    "expert": 0.265,
+    "naive": 0.159
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0026",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.549,
+    "expert": 3.887,
+    "naive": 1.054
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0027",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.194,
+    "expert": 5.806,
+    "naive": 1.333
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0028",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.722,
+    "expert": 5.222,
+    "naive": 3.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0029",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 1.319,
+    "naive": 0.486
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0030",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.306,
+    "expert": 2.0,
+    "naive": 2.806
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0031",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 7.75,
+    "expert": 5.944,
+    "naive": 1.694
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0032",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.956,
+    "expert": 3.824,
+    "naive": 1.275
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0033",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 6,
+    "expert": 11,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 2.444,
+    "expert": 10.139,
+    "naive": 15.167
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0034",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.896,
+    "expert": 2.935,
+    "naive": 0.174
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0035",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 10,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 2.167,
+    "expert": 9.083,
+    "naive": 4.278
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0036",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 10,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 1.917,
+    "expert": 19.333,
+    "naive": 5.5
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0037",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.256,
+    "naive": 0.192
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0038",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 9,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 3.167,
+    "expert": 7.417,
+    "naive": 12.361
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0039",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 8,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 2.361,
+    "expert": 4.694,
+    "naive": 8.111
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0040",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 2.028,
+    "expert": 6.417,
+    "naive": 8.806
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0041",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 7,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.778,
+    "expert": 19.028,
+    "naive": 1.917
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0042",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 5,
+    "expert": 11,
+    "naive": 8
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 7.583,
+    "naive": 10.833
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0043",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.735,
+    "expert": 2.99,
+    "naive": 0.98
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0044",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 11,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 8.944,
+    "naive": 2.389
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0045",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.667,
+    "expert": 3.861,
+    "naive": 0.5
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0046",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.75,
+    "expert": 4.556,
+    "naive": 0.167
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0047",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 0.889,
+    "naive": 0.944
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0048",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.056,
+    "expert": 5.5,
+    "naive": 1.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0049",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.222,
+    "expert": 0.083,
+    "naive": 0.5
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0050",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.722,
+    "expert": 0.194,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0051",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.333,
+    "expert": 16.889,
+    "naive": 1.944
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0052",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 10,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 2.861,
+    "expert": 17.917,
+    "naive": 5.667
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0053",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 10,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 2.556,
+    "expert": 6.889,
+    "naive": 5.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0054",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.261,
+    "expert": 0.118,
+    "naive": 0.711
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0055",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.056,
+    "expert": 1.694,
+    "naive": 1.0
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0056",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.738,
+    "expert": 1.095,
+    "naive": 0.667
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0057",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.25,
+    "expert": 5.139,
+    "naive": 1.528
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0058",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.694,
+    "expert": 17.111,
+    "naive": 0.972
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0059",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.222,
+    "expert": 0.278,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0060",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.139,
+    "expert": 0.333,
+    "naive": 0.833
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0061",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 0.25,
+    "naive": 0.139
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0062",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.444,
+    "expert": 0.861,
+    "naive": 1.861
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0063",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.5,
+    "expert": 1.361,
+    "naive": 0.722
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0064",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.023,
+    "expert": 0.047,
+    "naive": 0.07
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0065",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.354,
+    "expert": 5.0,
+    "naive": 1.354
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0066",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.167,
+    "expert": 17.389,
+    "naive": 0.861
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0067",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 8.972,
+    "expert": 17.0,
+    "naive": 6.222
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0068",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 12,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 7.639,
+    "naive": 2.361
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0069",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.083,
+    "expert": 1.5,
+    "naive": 0.583
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0070",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.806,
+    "expert": 0.167,
+    "naive": 0.639
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0071",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.094,
+    "expert": 1.051,
+    "naive": 0.322
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0072",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.056,
+    "expert": 0.722,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0073",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.429,
+    "expert": 4.318,
+    "naive": 4.141
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0074",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 10,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 0.806,
+    "expert": 4.472,
+    "naive": 1.861
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0075",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 3.444,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0076",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.722,
+    "expert": 18.028,
+    "naive": 0.944
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0077",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.611,
+    "expert": 18.0,
+    "naive": 1.194
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0078",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 0.306,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0079",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 7,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 9.306,
+    "expert": 20.194,
+    "naive": 8.667
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0080",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.139,
+    "expert": 3.333,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0081",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 7,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 19.111,
+    "naive": 2.694
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0082",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.615,
+    "expert": 0.218,
+    "naive": 0.952
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0083",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 8,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 1.056,
+    "expert": 6.806,
+    "naive": 7.361
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0084",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.778,
+    "expert": 4.917,
+    "naive": 3.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0085",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 12,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 2.25,
+    "expert": 19.444,
+    "naive": 10.778
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0086",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.639,
+    "expert": 18.917,
+    "naive": 3.667
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0087",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.0,
+    "expert": 6.028,
+    "naive": 3.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0088",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.472,
+    "expert": 0.917,
+    "naive": 1.361
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0089",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 3.028,
+    "expert": 17.556,
+    "naive": 0.889
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0090",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 12,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 14.521,
+    "expert": 57.123,
+    "naive": 10.023
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0091",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 0.516,
+    "expert": 8.279,
+    "naive": 5.936
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0092",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.186,
+    "expert": 3.437,
+    "naive": 0.228
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0093",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.611,
+    "expert": 3.0,
+    "naive": 0.417
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0094",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 4,
+    "expert": 13,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 8.139,
+    "expert": 32.444,
+    "naive": 3.889
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0095",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 5,
+    "expert": 9,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 1.888,
+    "expert": 30.328,
+    "naive": 4.421
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0096",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 2,
+    "expert": 7,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.096,
+    "expert": 3.402,
+    "naive": 0.068
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0097",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 2.361,
+    "expert": 6.222,
+    "naive": 4.722
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0098",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 3.917,
+    "expert": 4.75,
+    "naive": 5.917
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0099",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 6,
+    "expert": 10,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 2.056,
+    "expert": 8.417,
+    "naive": 4.528
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0100",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.472,
+    "expert": 0.944,
+    "naive": 2.389
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0101",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 1.639,
+    "naive": 0.806
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0102",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 0.472,
+    "expert": 2.667,
+    "naive": 5.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0103",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 5,
+    "naive": 11
+   },
+   "areaPctToFind": {
+    "engine": 3.211,
+    "expert": 17.413,
+    "naive": 10.606
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0104",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 5.028,
+    "expert": 17.028,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0105",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 0.083,
+    "naive": 0.139
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0106",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.917,
+    "expert": 19.167,
+    "naive": 1.889
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0107",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.528,
+    "expert": 1.472,
+    "naive": 1.611
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0108",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 7,
+    "expert": 12,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 4.083,
+    "expert": 5.639,
+    "naive": 7.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0109",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.167,
+    "expert": 1.389,
+    "naive": 2.194
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0110",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 4,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.889,
+    "expert": 29.083,
+    "naive": 1.611
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0111",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.25,
+    "expert": 4.167,
+    "naive": 2.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0112",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.361,
+    "expert": 0.944,
+    "naive": 1.806
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0113",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.75,
+    "expert": 5.028,
+    "naive": 3.694
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0114",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 5,
+    "expert": 8,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 5.444,
+    "expert": 7.167,
+    "naive": 10.111
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0115",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.177,
+    "expert": 4.091,
+    "naive": 0.455
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0116",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 5.583,
+    "expert": 17.389,
+    "naive": 0.889
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0117",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 12,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 0.883,
+    "expert": 4.267,
+    "naive": 7.715
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0118",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 5.108,
+    "expert": 3.399,
+    "naive": 1.747
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0119",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.417,
+    "expert": 1.306,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0120",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.556,
+    "expert": 0.639,
+    "naive": 0.611
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0121",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 11,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.694,
+    "expert": 13.694,
+    "naive": 4.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0122",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.667,
+    "expert": 0.778,
+    "naive": 0.528
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0123",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 10,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 4.0,
+    "expert": 5.833,
+    "naive": 9.472
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0124",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 0.778,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0125",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 5,
+    "expert": 11,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 7.111,
+    "expert": 6.611,
+    "naive": 7.417
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0126",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 4.306,
+    "expert": 3.639,
+    "naive": 2.194
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0127",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.722,
+    "expert": 21.556,
+    "naive": 1.5
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0128",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.917,
+    "expert": 0.222,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0129",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 4,
+   "rank": {
+    "engine": 3,
+    "expert": 14,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.889,
+    "expert": 41.944,
+    "naive": 3.639
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0130",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 10,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 14.417,
+    "expert": 20.806,
+    "naive": 6.917
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0131",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.417,
+    "expert": 0.25,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0132",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.274,
+    "expert": 0.348,
+    "naive": 0.174
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0133",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.99,
+    "expert": 3.406,
+    "naive": 0.411
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0134",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.167,
+    "expert": 0.167,
+    "naive": 1.75
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0135",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.806,
+    "expert": 1.167,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0136",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 12,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.889,
+    "expert": 11.361,
+    "naive": 6.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0137",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 10,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 0.611,
+    "expert": 7.333,
+    "naive": 7.972
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0138",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 11,
+    "naive": 8
+   },
+   "areaPctToFind": {
+    "engine": 7.222,
+    "expert": 13.25,
+    "naive": 11.611
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0139",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.278,
+    "expert": 1.417,
+    "naive": 0.389
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0140",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.778,
+    "expert": 1.611,
+    "naive": 0.389
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0141",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.25,
+    "expert": 2.75,
+    "naive": 0.222
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0142",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.167,
+    "expert": 0.306,
+    "naive": 0.333
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0143",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.075,
+    "expert": 0.05,
+    "naive": 0.075
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0144",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 6,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.639,
+    "expert": 1.5,
+    "naive": 1.5
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0145",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.167,
+    "expert": 2.944,
+    "naive": 0.167
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0146",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 12,
+    "naive": 8
+   },
+   "areaPctToFind": {
+    "engine": 7.25,
+    "expert": 5.889,
+    "naive": 8.667
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0147",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 10,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.417,
+    "expert": 4.472,
+    "naive": 0.944
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0148",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 2,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 7.083,
+    "expert": 19.278,
+    "naive": 2.139
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0149",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.333,
+    "expert": 2.533,
+    "naive": 1.0
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0150",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 1.194,
+    "expert": 4.667,
+    "naive": 4.361
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0151",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.048,
+    "expert": 0.357,
+    "naive": 0.048
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0152",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.028,
+    "expert": 0.194,
+    "naive": 0.222
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0153",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.333,
+    "expert": 3.972,
+    "naive": 0.167
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0154",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 2.583,
+    "expert": 7.361,
+    "naive": 4.444
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0155",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.361,
+    "expert": 18.917,
+    "naive": 1.806
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0156",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.111,
+    "expert": 17.389,
+    "naive": 2.778
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0157",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.667,
+    "expert": 0.389,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0158",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 7.0,
+    "expert": 20.111,
+    "naive": 3.583
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0159",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.5,
+    "expert": 1.278,
+    "naive": 0.417
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0160",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.472,
+    "expert": 4.583,
+    "naive": 2.667
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0161",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.556,
+    "expert": 2.556,
+    "naive": 1.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0162",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.758,
+    "expert": 1.717,
+    "naive": 0.045
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0163",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.569,
+    "expert": 2.693,
+    "naive": 0.328
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0164",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 5,
+    "expert": 8,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 2.75,
+    "expert": 2.556,
+    "naive": 5.389
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0165",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.972,
+    "expert": 1.028,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0166",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.639,
+    "expert": 3.444,
+    "naive": 2.167
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0167",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 13,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 9.25,
+    "naive": 1.389
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0168",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 1.528,
+    "naive": 0.806
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0169",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.528,
+    "expert": 1.139,
+    "naive": 1.472
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0170",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 7,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.056,
+    "expert": 3.694,
+    "naive": 0.194
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0171",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 7,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 5.528,
+    "expert": 7.056,
+    "naive": 0.944
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0172",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.139,
+    "expert": 0.056,
+    "naive": 0.25
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0173",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 8,
+    "expert": 8,
+    "naive": 13
+   },
+   "areaPctToFind": {
+    "engine": 11.889,
+    "expert": 10.028,
+    "naive": 31.833
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0174",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 5,
+    "expert": 3,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 5.147,
+    "expert": 38.117,
+    "naive": 6.309
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0175",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 4,
+   "rank": {
+    "engine": 1,
+    "expert": 7,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.472,
+    "expert": 2.611,
+    "naive": 1.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0176",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.472,
+    "expert": 0.139,
+    "naive": 0.75
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0177",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 6,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.5,
+    "expert": 2.5,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0178",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 9,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 1.337,
+    "expert": 3.632,
+    "naive": 2.072
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0179",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.25,
+    "expert": 1.083,
+    "naive": 0.861
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0180",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 0.639,
+    "naive": 0.222
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0181",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.889,
+    "expert": 17.75,
+    "naive": 2.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0182",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 0.333,
+    "expert": 8.528,
+    "naive": 7.5
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0183",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.444,
+    "expert": 0.167,
+    "naive": 0.111
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0184",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.407,
+    "expert": 15.996,
+    "naive": 2.359
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0185",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 8,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 6.917,
+    "expert": 8.861,
+    "naive": 2.694
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0186",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 10,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 6.167,
+    "naive": 2.611
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0187",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 9,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.861,
+    "expert": 18.194,
+    "naive": 4.167
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0188",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 10,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.472,
+    "expert": 5.472,
+    "naive": 3.556
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0189",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 0.167,
+    "naive": 0.111
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0190",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 3.639,
+    "expert": 6.972,
+    "naive": 13.889
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0191",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.083,
+    "expert": 17.806,
+    "naive": 1.028
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0192",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.389,
+    "expert": 18.5,
+    "naive": 4.25
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0193",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 0.083,
+    "naive": 1.056
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0194",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 10,
+    "expert": 7,
+    "naive": 10
+   },
+   "areaPctToFind": {
+    "engine": 12.917,
+    "expert": 7.917,
+    "naive": 25.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0195",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 10,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 6.306,
+    "expert": 7.389,
+    "naive": 8.111
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0196",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 7,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.167,
+    "expert": 5.972,
+    "naive": 3.306
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0197",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 11.361,
+    "expert": 5.611,
+    "naive": 2.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0198",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.361,
+    "expert": 19.056,
+    "naive": 1.083
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0199",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.118,
+    "expert": 0.118,
+    "naive": 0.118
+   }
+  },
+  {
+   "case": "v3-morzycko/case-0200",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 1.667,
+    "expert": 3.333,
+    "naive": 5.556
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0001",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 8,
+    "expert": 14,
+    "naive": 11
+   },
+   "areaPctToFind": {
+    "engine": 28.646,
+    "expert": 44.138,
+    "naive": 47.019
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0002",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 0.361,
+    "naive": 0.056
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0003",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.328,
+    "expert": 0.429,
+    "naive": 0.884
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0004",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.098,
+    "expert": 0.735,
+    "naive": 7.059
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0005",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.194,
+    "expert": 0.306,
+    "naive": 1.25
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0006",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.25,
+    "expert": 5.972,
+    "naive": 0.583
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0007",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 11,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 10.343,
+    "expert": 20.524,
+    "naive": 11.855
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0008",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.0,
+    "expert": 21.417,
+    "naive": 2.944
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0009",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.11,
+    "expert": 0.073,
+    "naive": 0.824
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0010",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.573,
+    "expert": 0.446,
+    "naive": 0.297
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0011",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.889,
+    "expert": 1.25,
+    "naive": 2.639
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0012",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.694,
+    "expert": 11.5,
+    "naive": 3.333
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0013",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 4.431,
+    "expert": 36.894,
+    "naive": 32.16
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0014",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.667,
+    "expert": 1.083,
+    "naive": 0.5
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0015",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.167,
+    "naive": 0.611
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0016",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 2.333,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0017",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.083,
+    "expert": 12.5,
+    "naive": 1.944
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0018",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.833,
+    "expert": 2.333,
+    "naive": 0.889
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0019",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 0.139,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0020",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.889,
+    "expert": 10.833,
+    "naive": 2.056
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0021",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.025,
+    "expert": 9.176,
+    "naive": 2.026
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0022",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.194,
+    "expert": 0.611,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0023",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 0.056,
+    "naive": 0.528
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0024",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 13,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.917,
+    "expert": 51.062,
+    "naive": 15.062
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0025",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 6,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 3.861,
+    "expert": 1.25,
+    "naive": 3.389
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0026",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 4.444,
+    "expert": 17.083,
+    "naive": 14.333
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0027",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 6,
+    "expert": 8,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 26.889,
+    "expert": 26.417,
+    "naive": 19.0
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0028",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 5.528,
+    "expert": 4.306,
+    "naive": 4.0
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0029",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.455,
+    "expert": 8.434,
+    "naive": 0.631
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0030",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 14,
+    "expert": 10,
+    "naive": 14
+   },
+   "areaPctToFind": {
+    "engine": 20.983,
+    "expert": 39.423,
+    "naive": 40.0
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0031",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 34.944,
+    "expert": 35.806,
+    "naive": 36.306
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0032",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.227,
+    "expert": 0.606,
+    "naive": 6.01
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0033",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 3.111,
+    "expert": 1.278,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0034",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.986,
+    "expert": 1.362,
+    "naive": 0.61
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0035",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.343,
+    "expert": 0.245,
+    "naive": 0.711
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0036",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 9,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.139,
+    "expert": 16.306,
+    "naive": 2.528
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0037",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.324,
+    "expert": 25.662,
+    "naive": 13.775
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0038",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.821,
+    "expert": 0.348,
+    "naive": 0.647
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0039",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 8,
+    "expert": 2,
+    "naive": 9
+   },
+   "areaPctToFind": {
+    "engine": 13.722,
+    "expert": 4.833,
+    "naive": 22.222
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0040",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.556,
+    "expert": 6.688,
+    "naive": 0.534
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0041",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.147,
+    "expert": 3.47,
+    "naive": 0.122
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0042",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.028,
+    "expert": 5.75,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0043",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.806,
+    "expert": 0.611,
+    "naive": 1.75
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0044",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.532,
+    "expert": 25.995,
+    "naive": 0.671
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0045",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.056,
+    "expert": 11.083,
+    "naive": 1.5
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0046",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.707,
+    "expert": 1.591,
+    "naive": 0.581
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0047",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.167,
+    "expert": 0.722,
+    "naive": 0.028
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0048",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.361,
+    "expert": 1.583,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0049",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.417,
+    "expert": 0.75,
+    "naive": 0.194
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0050",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.644,
+    "expert": 7.356,
+    "naive": 0.889
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0051",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.338,
+    "expert": 2.029,
+    "naive": 0.097
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0052",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 9,
+    "expert": 11,
+    "naive": 8
+   },
+   "areaPctToFind": {
+    "engine": 10.034,
+    "expert": 3.477,
+    "naive": 9.531
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0053",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 7,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.25,
+    "expert": 7.528,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0054",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.528,
+    "expert": 3.139,
+    "naive": 0.528
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0055",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.361,
+    "expert": 0.917,
+    "naive": 1.333
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0056",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 3.111,
+    "expert": 6.139,
+    "naive": 5.306
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0057",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.833,
+    "expert": 11.028,
+    "naive": 3.75
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0058",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.444,
+    "expert": 1.0,
+    "naive": 1.278
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0059",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.472,
+    "expert": 1.083,
+    "naive": 0.833
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0060",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.376,
+    "expert": 1.033,
+    "naive": 0.775
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0061",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 0.306,
+    "naive": 0.194
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0062",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.351,
+    "expert": 4.573,
+    "naive": 0.823
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0063",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.212,
+    "expert": 0.909,
+    "naive": 0.076
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0064",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.5,
+    "expert": 1.056,
+    "naive": 0.667
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0065",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 4,
+    "expert": 6,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 2.556,
+    "expert": 13.528,
+    "naive": 7.806
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0066",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.349,
+    "expert": 0.771,
+    "naive": 0.275
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0067",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.556,
+    "expert": 0.972,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0068",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 7,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 4.472,
+    "expert": 23.472,
+    "naive": 26.194
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0069",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 7,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 3.607,
+    "expert": 43.018,
+    "naive": 3.661
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0070",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.111,
+    "expert": 1.0,
+    "naive": 0.583
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0071",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 11,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.722,
+    "expert": 42.528,
+    "naive": 3.944
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0072",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 1.224,
+    "expert": 11.633,
+    "naive": 1.905
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0073",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.139,
+    "expert": 11.917,
+    "naive": 2.25
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0074",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.972,
+    "expert": 9.722,
+    "naive": 0.528
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0075",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 1.556,
+    "naive": 0.25
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0076",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.528,
+    "expert": 1.194,
+    "naive": 0.583
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0077",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.363,
+    "expert": 0.181,
+    "naive": 0.484
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0078",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 6,
+    "expert": 14,
+    "naive": 14
+   },
+   "areaPctToFind": {
+    "engine": 31.822,
+    "expert": 80.004,
+    "naive": 81.311
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0079",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 2.889,
+    "expert": 17.639,
+    "naive": 9.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0080",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 3,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.028,
+    "expert": 1.056,
+    "naive": 0.556
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0081",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.861,
+    "expert": 1.111,
+    "naive": 0.833
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0082",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 10,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.417,
+    "expert": 28.667,
+    "naive": 1.444
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0083",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.307,
+    "expert": 4.474,
+    "naive": 0.285
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0084",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.611,
+    "expert": 4.972,
+    "naive": 4.222
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0085",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.278,
+    "expert": 10.528,
+    "naive": 1.722
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0086",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.238,
+    "expert": 4.441,
+    "naive": 1.626
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0087",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 0.028,
+    "naive": 0.278
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0088",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.167,
+    "expert": 0.806,
+    "naive": 0.333
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0089",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.312,
+    "expert": 0.29,
+    "naive": 0.402
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0090",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 10,
+    "naive": 10
+   },
+   "areaPctToFind": {
+    "engine": 13.806,
+    "expert": 60.5,
+    "naive": 59.056
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0091",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 6,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 7.828,
+    "expert": 5.556,
+    "naive": 29.242
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0092",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 13,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.361,
+    "expert": 84.056,
+    "naive": 2.556
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0093",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.222,
+    "expert": 3.444,
+    "naive": 1.361
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0094",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.15,
+    "expert": 0.412,
+    "naive": 0.112
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0095",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 6,
+    "expert": 11,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 0.767,
+    "expert": 27.529,
+    "naive": 11.505
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0096",
+   "category": "angler",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.139,
+    "expert": 2.722,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0097",
+   "category": "swimmer",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 2.833,
+    "expert": 9.806,
+    "naive": 2.833
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0098",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.667,
+    "expert": 2.417,
+    "naive": 1.139
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0099",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 12,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.004,
+    "expert": 13.375,
+    "naive": 1.12
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0100",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.746,
+    "expert": 5.427,
+    "naive": 1.425
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0101",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 13,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 4.889,
+    "expert": 29.944,
+    "naive": 20.806
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0102",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.139,
+    "expert": 0.944,
+    "naive": 1.25
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0103",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 4,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.444,
+    "expert": 14.722,
+    "naive": 18.389
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0104",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.306,
+    "expert": 0.417,
+    "naive": 0.361
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0105",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.417,
+    "expert": 1.028,
+    "naive": 0.556
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0106",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.028,
+    "expert": 9.611,
+    "naive": 1.222
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0107",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 0.139,
+    "naive": 0.75
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0108",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 3.0,
+    "expert": 13.556,
+    "naive": 9.889
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0109",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.417,
+    "naive": 0.25
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0110",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 10,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.944,
+    "expert": 11.25,
+    "naive": 2.028
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0111",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 5,
+    "expert": 6,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.418,
+    "expert": 2.815,
+    "naive": 0.635
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0112",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.098,
+    "expert": 0.049,
+    "naive": 0.18
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0113",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.156,
+    "expert": 0.756,
+    "naive": 0.267
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0114",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.444,
+    "expert": 2.306,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0115",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 5.972,
+    "naive": 0.764
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0116",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.583,
+    "expert": 10.694,
+    "naive": 1.667
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0117",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 11,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.75,
+    "expert": 26.611,
+    "naive": 2.306
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0118",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.371,
+    "expert": 0.58,
+    "naive": 0.822
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0119",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.972,
+    "expert": 8.75,
+    "naive": 2.722
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0120",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.861,
+    "naive": 0.556
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0121",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.056,
+    "naive": 0.333
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0122",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 2.028,
+    "naive": 1.556
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0123",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.667,
+    "expert": 0.556,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0124",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 3.523,
+    "expert": 20.401,
+    "naive": 9.62
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0125",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.722,
+    "expert": 10.389,
+    "naive": 0.972
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0126",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.725,
+    "expert": 4.275,
+    "naive": 0.411
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0127",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.194,
+    "expert": 0.028,
+    "naive": 0.583
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0128",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.985,
+    "expert": 12.623,
+    "naive": 2.77
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0129",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 5,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.139,
+    "expert": 7.25,
+    "naive": 3.167
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0130",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.472,
+    "expert": 7.472,
+    "naive": 0.444
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0131",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.75,
+    "expert": 0.111,
+    "naive": 0.778
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0132",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.778,
+    "expert": 0.25,
+    "naive": 0.611
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0133",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 10,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 14.028,
+    "expert": 52.833,
+    "naive": 51.917
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0134",
+   "category": "angler",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.298,
+    "expert": 0.06,
+    "naive": 0.655
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0135",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.359,
+    "expert": 0.234,
+    "naive": 0.547
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0136",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 9,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.528,
+    "expert": 28.306,
+    "naive": 2.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0137",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 10.5,
+    "naive": 1.056
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0138",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 0.111,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0139",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 5,
+    "expert": 4,
+    "naive": 7
+   },
+   "areaPctToFind": {
+    "engine": 9.155,
+    "expert": 39.614,
+    "naive": 39.082
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0140",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.343,
+    "expert": 7.708,
+    "naive": 0.787
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0141",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 6,
+    "expert": 6,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 6.667,
+    "expert": 8.778,
+    "naive": 14.611
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0142",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.602,
+    "expert": 0.88,
+    "naive": 0.926
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0143",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 8,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 5.583,
+    "expert": 15.556,
+    "naive": 4.806
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0144",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.111,
+    "expert": 0.194,
+    "naive": 0.139
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0145",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 8,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.694,
+    "expert": 37.0,
+    "naive": 1.444
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0146",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.983,
+    "expert": 5.514,
+    "naive": 2.682
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0147",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.248,
+    "expert": 6.667,
+    "naive": 0.135
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0148",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.162,
+    "expert": 6.621,
+    "naive": 4.878
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0149",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.278,
+    "expert": 0.056,
+    "naive": 0.417
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0150",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 1.103,
+    "expert": 9.044,
+    "naive": 3.431
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0151",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.806,
+    "expert": 0.361,
+    "naive": 0.861
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0152",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 9.639,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0153",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 0.25,
+    "naive": 0.111
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0154",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.083,
+    "expert": 2.972,
+    "naive": 1.722
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0155",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 3.056,
+    "expert": 2.639,
+    "naive": 0.917
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0156",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.611,
+    "expert": 7.917,
+    "naive": 1.444
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0157",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.7,
+    "expert": 7.633,
+    "naive": 0.652
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0158",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.541,
+    "expert": 8.311,
+    "naive": 1.667
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0159",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 4,
+    "expert": 12,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 6.083,
+    "expert": 97.722,
+    "naive": 25.167
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0160",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 5,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.025,
+    "expert": 1.816,
+    "naive": 0.075
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0161",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.722,
+    "expert": 11.222,
+    "naive": 2.056
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0162",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.583,
+    "expert": 8.694,
+    "naive": 3.111
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0163",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 5,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.139,
+    "expert": 9.361,
+    "naive": 0.528
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0164",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.861,
+    "expert": 3.25,
+    "naive": 0.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0165",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 6,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 2.035,
+    "expert": 16.297,
+    "naive": 2.941
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0166",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.556,
+    "expert": 0.361,
+    "naive": 0.639
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0167",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.694,
+    "expert": 0.694,
+    "naive": 0.111
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0168",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.139,
+    "expert": 1.028,
+    "naive": 0.361
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0169",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 6,
+    "naive": 5
+   },
+   "areaPctToFind": {
+    "engine": 1.221,
+    "expert": 8.122,
+    "naive": 2.535
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0170",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 8,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.667,
+    "expert": 48.556,
+    "naive": 4.611
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0171",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 4,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.732,
+    "expert": 41.288,
+    "naive": 1.288
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0172",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.778,
+    "expert": 11.194,
+    "naive": 1.611
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0173",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 0.139,
+    "naive": 0.306
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0174",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 0.639,
+    "expert": 10.083,
+    "naive": 1.472
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0175",
+   "category": "boater",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 5,
+    "expert": 6,
+    "naive": 3
+   },
+   "areaPctToFind": {
+    "engine": 4.956,
+    "expert": 0.933,
+    "naive": 0.911
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0176",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.722,
+    "expert": 0.611,
+    "naive": 0.889
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0177",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 3,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 5.771,
+    "expert": 17.239,
+    "naive": 23.607
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0178",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.123,
+    "expert": 0.025,
+    "naive": 0.196
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0179",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.583,
+    "expert": 2.944,
+    "naive": 0.417
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0180",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.222,
+    "expert": 13.194,
+    "naive": 3.889
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0181",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.917,
+    "expert": 11.194,
+    "naive": 0.778
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0182",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 3,
+    "expert": 4,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 1.806,
+    "expert": 1.361,
+    "naive": 2.389
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0183",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.778,
+    "expert": 2.25,
+    "naive": 0.806
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0184",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 6,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 0.139,
+    "expert": 1.472,
+    "naive": 17.917
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0185",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 1.125,
+    "expert": 6.438,
+    "naive": 1.667
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0186",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.252,
+    "expert": 0.078,
+    "naive": 0.446
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0187",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 1.5,
+    "naive": 0.806
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0188",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.652,
+    "expert": 6.067,
+    "naive": 1.435
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0189",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.5,
+    "expert": 0.333,
+    "naive": 0.694
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0190",
+   "category": "angler",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.083,
+    "expert": 0.333,
+    "naive": 0.083
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0191",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 2,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.417,
+    "expert": 11.139,
+    "naive": 0.861
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0192",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 0,
+   "rank": {
+    "engine": 3,
+    "expert": 3,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 0.056,
+    "expert": 1.167,
+    "naive": 6.972
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0193",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 12,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 2.472,
+    "expert": 15.889,
+    "naive": 3.25
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0194",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 2,
+   "rank": {
+    "engine": 1,
+    "expert": 9,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.436,
+    "expert": 1.587,
+    "naive": 0.209
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0195",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 11,
+    "naive": 4
+   },
+   "areaPctToFind": {
+    "engine": 1.722,
+    "expert": 14.25,
+    "naive": 4.778
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0196",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 2,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 0.306,
+    "expert": 0.722,
+    "naive": 0.667
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0197",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 2,
+   "rank": {
+    "engine": 2,
+    "expert": 7,
+    "naive": 6
+   },
+   "areaPctToFind": {
+    "engine": 1.944,
+    "expert": 9.823,
+    "naive": 15.025
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0198",
+   "category": "swimmer",
+   "behaviour": "swim_to_shore",
+   "misleading": 0,
+   "rank": {
+    "engine": 2,
+    "expert": 3,
+    "naive": 2
+   },
+   "areaPctToFind": {
+    "engine": 2.056,
+    "expert": 1.111,
+    "naive": 0.361
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0199",
+   "category": "boater",
+   "behaviour": "stay_with_boat",
+   "misleading": 1,
+   "rank": {
+    "engine": 1,
+    "expert": 1,
+    "naive": 1
+   },
+   "areaPctToFind": {
+    "engine": 0.065,
+    "expert": 4.327,
+    "naive": 3.327
+   }
+  },
+  {
+   "case": "v3-miedzyzdroje/case-0200",
+   "category": "boater",
+   "behaviour": "float_drift",
+   "misleading": 1,
+   "rank": {
+    "engine": 8,
+    "expert": 13,
+    "naive": 13
+   },
+   "areaPctToFind": {
+    "engine": 27.25,
+    "expert": 78.75,
+    "naive": 76.528
+   }
+  }
+ ],
+ "compareTo": {
+  "features": "default",
+  "methods": {
+   "engine": {
+    "topk": {
+     "1": 0.5883,
+     "3": 0.905,
+     "5": 0.9733
+    },
+    "areaToFind": {
+     "bins": [
+      0,
+      5,
+      10,
+      20,
+      40,
+      70,
+      100
+     ],
+     "counts": [
+      524,
+      45,
+      23,
+      7,
+      1,
+      0
+     ],
+     "median": 0.96,
+     "p75": 2.17,
+     "p90": 5.87,
+     "mean": 2.35
+    },
+    "brier": 0.531,
+    "calibration": [
+     {
+      "p": 0.05,
+      "observed": 0.0122,
+      "n": 7449,
+      "predicted": 0.0066
+     },
+     {
+      "p": 0.15,
+      "observed": 0.2308,
+      "n": 286,
+      "predicted": 0.1427
+     },
+     {
+      "p": 0.25,
+      "observed": 0.2775,
+      "n": 173,
+      "predicted": 0.2493
+     },
+     {
+      "p": 0.35,
+      "observed": 0.3333,
+      "n": 123,
+      "predicted": 0.3437
+     },
+     {
+      "p": 0.45,
+      "observed": 0.3736,
+      "n": 91,
+      "predicted": 0.4483
+     },
+     {
+      "p": 0.55,
+      "observed": 0.4198,
+      "n": 81,
+      "predicted": 0.5478
+     },
+     {
+      "p": 0.65,
+      "observed": 0.5135,
+      "n": 74,
+      "predicted": 0.6442
+     },
+     {
+      "p": 0.75,
+      "observed": 0.541,
+      "n": 61,
+      "predicted": 0.754
+     },
+     {
+      "p": 0.85,
+      "observed": 0.5844,
+      "n": 77,
+      "predicted": 0.8568
+     },
+     {
+      "p": 0.95,
+      "observed": 0.9189,
+      "n": 185,
+      "predicted": 0.9708
+     }
+    ]
+   }
+  }
+ }
+}
