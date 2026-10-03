@@ -65,7 +65,9 @@ def score(runs, features, workers):
         t0 = time.time()
         # one batch at a time: case names repeat across batches and the engine writes out/<case>.run.json
         with ProcessPoolExecutor(workers) as ex:
-            for r in ex.map(one_case, [(run_dir, row, features) for row in rows]):
+            for i, r in enumerate(ex.map(one_case, [(run_dir, row, features) for row in rows]), 1):
+                if i % 50 == 0:
+                    print(f"    {run}: {i}/{len(rows)} ({time.time() - t0:.0f} s)", file=sys.stderr, flush=True)
                 if "dropped" in r:
                     dropped.append([run, *r["dropped"]])
                 else:
