@@ -106,3 +106,28 @@ body.mode-walidacja #left,body.mode-walidacja #right,body.mode-walidacja #center
 .stat{display:inline-block;margin:0 18px 6px 0}.stat b{display:block;font-size:22px;color:var(--ink)}.stat span{font-size:11px;color:var(--mute)}
 table.cases{width:100%;border-collapse:collapse;font-size:12px}table.cases td,table.cases th{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left}
 table.cases th{color:var(--mute);font-weight:600}
+
+/* Teren overview */
+#teamFeed{padding:12px 16px;height:100%;overflow:auto}
+.asec ul{margin:2px 0 6px 16px;padding:0}.asec li{margin:2px 0;font-size:12.5px}.seglink{color:var(--accent);cursor:pointer;font-weight:700}
+/* roles */
+#rolePick{position:fixed;inset:0;z-index:100;background:rgba(5,8,10,.85);display:flex;align-items:center;justify-content:center;padding:16px}
+#rolePick[hidden]{display:none}
+.rolebox{background:var(--panel);border:1px solid var(--line);border-radius:var(--rl-radius-l);padding:18px;max-width:420px;width:100%}
+.rolebox button{display:block;width:100%;text-align:left;padding:16px;margin:10px 0;font-size:17px;border-radius:12px;background:var(--panel2)}
+.rolebox button span{display:block;font-size:13px;color:var(--mute);margin-top:3px}
+#rescuer{display:none}
+body.role-ratownik #app{display:flex;flex-direction:column}
+body.role-ratownik #app>*:not(header):not(#rescuer){display:none!important}
+body.role-ratownik header>*:not(h1):not(#roleBtn):not(#status):not(#pinbox){display:none!important}
+body.role-ratownik #rescuer{display:flex;flex-direction:column;gap:8px;padding:8px 10px;position:fixed;top:44px;left:0;right:0;bottom:0;overflow:auto;background:var(--bg)}
+.rbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.rbar select{font-size:16px;padding:8px;max-width:70vw}.rbar button{padding:9px 14px;font-size:15px}
+.rcard{border:2px solid var(--accent);border-radius:12px;padding:10px 12px;background:var(--panel)}
+.rlabel{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.rbig{font-size:24px;font-weight:800;margin:2px 0 4px}.rbig.off{color:var(--bad)}
+.rflag{color:#ff8a65;font-weight:700}.rcard details{margin-top:6px}.rcard summary{color:var(--accent);font-size:15px;cursor:pointer;padding:4px 0}
+.rsurv{color:var(--warn);font-size:14px}.rsurv:empty{display:none}
+#rMapHost{position:relative;height:38vh;min-height:220px;border-radius:12px;overflow:hidden;flex:none}
+#rMapHost #map{position:absolute;inset:0;display:block!important}
+#frameRescuer{width:100%;min-height:520px;flex:1;border:0;border-radius:12px;background:var(--panel)}
+.gpsdot{width:16px;height:16px;border-radius:50%;background:#3fa9ff;border:3px solid #fff;box-shadow:0 0 0 6px rgba(63,169,255,.3)}

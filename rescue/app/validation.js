@@ -21,7 +21,7 @@ export async function showValidation() {
 function renderAblation(A) {
   const M = [["engine", "Silnik", "var(--rl-accent)"], ["expert", "Ekspert", "var(--rl-warn)"], ["naive", "Naiwnie od IPP", "var(--rl-mute)"]];
   const bar = (v, c) => `<div class="bar" title="${pct(v, 1)}"><i style="width:${Math.min(100, (v || 0) * 100).toFixed(1)}%;background:${c}"></i></div>`;
-  return `<div class="vcard" style="margin-bottom:12px"><h3>Rundy na ślepo: obszar przeszukany, zanim trafi się w prawdziwą komórkę</h3>
+  return `<div class="vcard" style="margin-bottom:12px"><h3>Rundy na ślepo: % obszaru przeszukanego w kolejności POA, zanim trafi się w prawdziwą komórkę (główna miara)</h3>
   <table class="cases"><tr><th>runda</th>${M.map(([, l]) => `<th>${l}</th>`).join("")}<th>plan silnika</th><th>w rzeczywistości</th></tr>
   ${A.map((r) => `<tr><td><b>${esc(r.round)}</b><div class="help">${esc(r.segments)} segm., ${esc(r.cells)} komórek</div></td>
     ${M.map(([k, , c]) => `<td>${pct(r[k] && r[k].area, 1)} · segment #${esc(r[k] && r[k].segRank)}${bar(r[k] && r[k].area, c)}</td>`).join("")}
@@ -71,13 +71,13 @@ function renderResults(d) {
   return `<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Walidacja silnika</h2><span class="help">${esc(d.generated || "")}${d.engine ? " · silnik " + esc(d.engine) : ""}${d.simRun ? " · symulator " + esc(d.simRun) : ""}</span></div>
   <div class="vcard" style="margin-bottom:12px">
     <span class="stat"><b>${esc(d.n ?? "-")}</b><span>przypadków ${d.region ? "(" + esc(d.region) + ")" : ""}</span></span>
-    ${ms.map(([k, l]) => `<span class="stat"><b>${pct(n3(M[k]))}</b><span>${l}: trafienie w top-3</span></span>`).join("")}
+    ${ms.map(([k, l]) => `<span class="stat"><b>${M[k].areaToFind && M[k].areaToFind.median != null ? num(M[k].areaToFind.median, 1) + "%" : "-"}</b><span>${l}: mediana obszaru do znalezienia</span></span>`).join("")}
     <span class="stat"><b>${num(e.brier)}</b><span>Brier silnika (niżej = lepiej)</span></span>
-    <span class="stat"><b>${e.areaToFind && e.areaToFind.median != null ? num(e.areaToFind.median, 1) + "%" : "-"}</b><span>mediana obszaru do znalezienia</span></span>
+    <span class="stat" style="opacity:.7"><b>${pct(n3(e))}</b><span>segment w top-3 (pomocniczo)</span></span>
     ${d.note ? `<div class="help">${esc(d.note)}</div>` : ""}</div>
   <div class="vgrid">
-    <div class="vcard"><h3>Trafienia top-1 / 3 / 5</h3>${topkChart(ms, M)}${legend(ms)}</div>
-    <div class="vcard"><h3>Obszar przeszukany do znalezienia</h3>${histChart(ms, M)}${legend(ms)}<div class="help">Ile % obszaru trzeba przeszukać w kolejności metody, zanim trafi się w osobę.</div></div>
+    <div class="vcard"><h3>Obszar przeszukany do znalezienia</h3>${histChart(ms, M)}${legend(ms)}<div class="help">Główna miara: ile % obszaru (komórki w kolejności POA) trzeba przeszukać, zanim trafi się w prawdziwą komórkę.</div></div>
+    <div class="vcard"><h3>Trafienia segmentu top-1 / 3 / 5 (pomocniczo)</h3>${topkChart(ms, M)}${legend(ms)}<div class="help">Siatka rozszerza się automatycznie, więc miary segmentowe są łatwiejsze niż komórkowe.</div></div>
     <div class="vcard"><h3>Krzywa kalibracji</h3>${calibChart(ms, M)}${legend(ms)}<div class="help">Przewidziane POA segmentu vs. jak często osoba tam była. Przekątna = idealnie.</div></div>
     <div class="vcard"><h3>Brier</h3>${ms.map(([k, l]) => `<div class="kv"><span>${l}</span><b>${num(M[k].brier)}</b></div>`).join("")}<div class="help">Średni błąd kwadratowy przewidzianych POA (0 = idealnie).</div></div>
     ${groupTable("Według kategorii", "category", d.byCategory, ms)}

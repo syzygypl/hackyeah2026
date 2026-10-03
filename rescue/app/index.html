@@ -22,6 +22,7 @@
   <span class="edit-only edit-mode"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
   <label id="pinbox" style="display:none">PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
   <span id="status" class="mute"></span>
+  <button id="roleBtn" title="Zmień rolę">Rola</button>
 </header>
 <aside id="left">
   <div class="edit-only edit-mode">
@@ -41,9 +42,16 @@
   <div id="pane2d"><iframe id="frame2d" title="Analiza 2D" loading="lazy"></iframe><div id="note2d" class="note3d"></div></div>
   <div id="pane3d"><iframe id="frame3d" title="Widok 3D" loading="lazy"></iframe><div id="note3d" class="note3d"></div></div>
 </main>
-<section id="paneTeren" class="full"><iframe id="frameTeren" title="Teren"></iframe><div class="fullnote">Strony terenowe działają na serwerze rescue-field (:8770): <code>swift run rescue-field serve 8770</code>.</div></section>
+<section id="paneTeren" class="full"><div id="teamFeed" class="scroll" style="display:none"></div><iframe id="frameTeren" title="Teren"></iframe><div class="fullnote">Strony terenowe działają na serwerze rescue-field (:8770): <code>swift run rescue-field serve 8770</code>.</div></section>
 <section id="paneMon" class="full"><iframe id="frameMon" title="Monitoring"></iframe><div class="fullnote">Monitoring z <code>/metrics</code> serwera rescue-field (:8770).</div></section>
 <section id="paneVal" class="full scroll"><div id="val"></div></section>
+<section id="rescuer">
+  <div class="rbar"><label>Zespół <select id="rTeam"></select></label><button id="rCenter" title="Pokaż moją pozycję">Moja pozycja</button><span id="rClock" class="mute"></span></div>
+  <div id="rTask" class="rcard"></div>
+  <div id="rSurv" class="rsurv"></div>
+  <div id="rMapHost"></div>
+  <iframe id="frameRescuer" title="Meldunki"></iframe>
+</section>
 <aside id="right">
   <h2>Gdzie szukać najpierw</h2>
   <div class="box"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
@@ -57,6 +65,9 @@
 </footer>
 </div>
 <div id="ghost"></div>
+<div id="rolePick" hidden><div class="rolebox"><h2 style="font-size:16px;text-transform:none;letter-spacing:0;color:var(--ink)">Kim jesteś w tej akcji?</h2>
+  <button data-role="ratownik"><b>Ratownik w terenie</b><span>Telefon: moje zadanie, mapa, meldunki</span></button>
+  <button data-role="operator"><b>Operator / kierownik akcji</b><span>Mapa, 3D, plan zespołów, edycja, monitoring</span></button></div></div>
 <script type="module" src="app.js"></script>
 </body>
 </html>

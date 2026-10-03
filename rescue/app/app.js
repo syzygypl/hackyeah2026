@@ -4,7 +4,8 @@
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "../web/basemap/basemap.js";
 import { paintGrid, legendHTML } from "./scale.js";
-import { showValidation } from "./validation.js";   // shared heat scale (decision S2), same as 3D
+import { showValidation } from "./validation.js";
+import { initRescuer, render as renderRescuer, pollTask, myTeam } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -40,8 +41,10 @@ async function detect() {
   const m = await tryJSON("/modules");
   store.hasApi = !!a; store.hasStudio = !!(m && m.modules); store.mods = m ? m.modules : [];
   let list = [];
-  if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
+  // rescue-server (one port) also answers /report, /live-events, /field.html, /ops.html; otherwise rescue-field on :8770
+  FIELD = store.hasApi ? "" : `${location.protocol}//${location.hostname}:8770`;
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
+  if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
   if (!a) await Promise.all(Object.entries(STATIC).map(async ([id, s]) => {
     let ok = false; try { const r = await fetch(s.run, { cache: "no-store" }); ok = r.ok; r.body && r.body.cancel(); } catch (e) {}   // GET: the Studio server has no HEAD
     list.push({ id, name: s.name + (ok ? "" : " (brak run.json)"), static: true, disabled: !ok });
@@ -77,15 +80,26 @@ async function run(fn, msg) {
     return d;
   } catch (e) { toast(String(e.message || e), 4000); $("status").textContent = ""; }
 }
-let assessment = null;
+let assessment = null, assessSeq = 0;
+// Ocena sytuacji: rescue-server answers at once with rules (wait=0) and computes the local LLM in the background; poll until done
 async function fetchAssessment() {
-  assessment = null;
-  if (store.hasApi && store.backend === "api" && store.assessUrl) {
-    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000), want = store.scenario;
-    try { const r = await fetch(store.assessUrl + "?step=" + (store.step - 1), { signal: ctl.signal, cache: "no-store" }); if (r.ok && want === store.scenario) assessment = await r.json(); } catch (e) {}
-    clearTimeout(t);
-  }
-  renderAssess();
+  const seq = ++assessSeq; assessment = null; renderAssess();
+  if (!store.hasApi) return;
+  const i = store.step - 1;
+  try {
+    if (store.backend === "api" && store.assessUrl) {
+      for (let k = 0; k < 40 && seq === assessSeq; k++) {
+        const r = await fetch(`${store.assessUrl}?step=${i}&wait=0`, { cache: "no-store" }); if (!r.ok) break;
+        const d = await r.json(); if (seq !== assessSeq) return;
+        assessment = d; renderAssess();
+        if (!d.pending) break;
+        await new Promise((res) => setTimeout(res, d.retryAfterMs || 5000));
+      }
+    } else if (store.backend === "studio") {
+      const d = await api("/story/assessment", { step: i });   // blocking (rules fallback after the model timeout)
+      if (seq === assessSeq) { assessment = d; renderAssess(); }
+    }
+  } catch (e) {}
 }
 
 // ---------- 2D map
@@ -173,10 +187,11 @@ function renderPanels() {
     return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p">${pct(s.poa)} <span class="mute" style="font-size:13px">w ${(+s.areaPct).toFixed(1)}% obszaru</span></div></div>`; }).join("");
   const W = S.weather || {}; $("surv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
   const by = {}; (S.assignments || []).forEach((a) => by[a.resourceId] = a);
+  (store.manual || []).forEach((m) => by[m.resourceId] = { ...(by[m.resourceId] && by[m.resourceId].segmentId === m.segmentId ? by[m.resourceId] : { travelMin: NaN, expectedFind: NaN, safety: [] }), ...m, reason: "Przydział operatora" + (m.at ? " o " + m.at : "") });
   $("teams").innerHTML = (S.resources || []).map((r) => { const a = by[r.id];
     return `<div class="box team ${r.available ? "" : "off"}"><div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b><span class="pill ${r.available ? "" : "off"}">${r.available ? (a ? "przydział" : "wolny") : "niedostępny"}</span></div>
       ${r.available ? "" : `<div class="help">${esc(r.reason)}</div>`}
-      ${a ? `<div>-> <b class="seglink" data-seg="${esc(a.segmentId)}" style="cursor:pointer">${esc(a.segmentId)} ${esc(a.segmentName)}</b>, ETA ${Math.round(a.travelMin)} min, szansa ${pct(a.expectedFind)}</div>${(a.safety || []).map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}
+      ${a ? `<div>-> <b class="seglink" data-seg="${esc(a.segmentId)}" style="cursor:pointer">${esc(a.segmentId)} ${esc(a.segmentName)}</b>${isFinite(a.travelMin) ? `, ETA ${Math.round(a.travelMin)} min, szansa ${pct(a.expectedFind)}` : ""}${a.by === "operator" ? ` <span class="pill">operator</span>` : ""}</div>${(a.safety || []).map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}
       <details><summary>dlaczego</summary>${esc(a.reason || `POA ${pct(a.poa)}, POD ${pct(a.pod)}, dojście ${Math.round(a.travelMin)} min, przeszukanie ${Math.round(a.sweepMin || 0)} min`)}</details>` : ""}</div>`; }).join("") || `<div class="help">Brak zespołów w scenariuszu.</div>`;
   renderProgress(); renderEvents();
   $("clock").textContent = S.t + " · " + S.label;
@@ -202,6 +217,18 @@ function renderProgress() {
 }
 function renderAssess() {
   const R = D(), S = curStep(); if (!S) { $("assess").innerHTML = ""; return; }
+  if (assessment && assessment.assessment && typeof assessment.assessment === "object") {
+    const A = assessment.assessment, li = (x) => `<li>${x}</li>`;
+    const sec = (t, arr, f) => arr && arr.length ? `<div class="asec"><b>${t}</b><ul>${arr.map((x) => li(f(x))).join("")}</ul></div>` : "";
+    $("assess").innerHTML = `${A.sytuacja ? `<div>${esc(A.sytuacja)}</div>` : ""}
+      ${sec("Hipotezy", A.hipotezy, (h) => `<span class="seglink" data-seg="${esc(h.segment)}">${esc(h.segment)}</span> ${esc(h.opis || h.nazwa)}${(h.dowody || []).length ? ` <span class="mute">(${h.dowody.map(esc).join(", ")})</span>` : ""}`)}
+      ${sec("Rekomendacje na następną godzinę", A.rekomendacje, (r) => typeof r === "string" ? esc(r) : `<b>${esc(r.zespol || r.team || "")}</b> ${esc(r.segment || "")} ${esc(r.dzialanie || r.opis || r.text || "")}${r.dlaczego ? ` - ${esc(r.dlaczego)}` : ""}`)}
+      ${sec("Ryzyka", A.ryzyka, (r) => esc(typeof r === "string" ? r : r.opis || r.text || JSON.stringify(r)))}
+      ${sec("Czego brakuje", A.brakuje, (r) => esc(typeof r === "string" ? r : `${r.informacja}${r.dlaczego ? " - " + r.dlaczego : ""}`))}
+      <div class="help">źródło: ${esc(assessment.source || "?")}${assessment.latencyMs ? `, ${Math.round(assessment.latencyMs / 1000)} s` : ""}${assessment.pending ? " · lokalny model liczy w tle…" : ""}${(assessment.dropped || []).length ? ` · odrzucono ${assessment.dropped.length} niepotwierdzonych` : ""}</div>`;
+    $("assess").querySelectorAll(".seglink").forEach((x) => x.onclick = () => { selectSeg(x.dataset.seg, "panel"); flyToSeg(x.dataset.seg); });
+    return;
+  }
   if (assessment) {
     const a = assessment, txt = a.text || a.summary || a.assessment;
     const rows = Object.entries(a).filter(([k, v]) => !["text", "summary", "assessment"].includes(k) && (typeof v !== "object" || v === null)).slice(0, 8);
@@ -431,6 +458,7 @@ function dropTeam(r, ll) {
   teamOps.push({ res: r, segId: seg.id, segName: seg.name, at: curClock(), ll: [ll.lat, ll.lng], pod: plan ? +plan.pod.toFixed(2) : POD_DEF[r.type] || 0.6,
                  sweep: plan ? Math.min(120, Math.max(15, Math.round(plan.travelMin + plan.sweepMin))) : 30 });
   toast(`${r.name} -> ${seg.id} ${seg.name} (${curClock()})${plan ? ", zgodnie z planem" : ""}`);
+  assignTeam(r.id, seg.id);
   selectSeg(seg.id, "2d");
   renderTeams(); renderTokens();
 }
@@ -505,9 +533,9 @@ function runURL() {
 function frameURL(k) {
   const i = store.step - 1, sc = encodeURIComponent(store.scenario), ru = runURL(), po = encodeURIComponent(location.origin);
   if (k === "3d") {
-    if (store.backend === "studio") return `../web/3d/index.html?embed=1&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
-    if (store.backend === "api") return `../web/3d/index.html?embed=1&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
-    return `../web/3d/index.html?embed=1&sc=${sc}&step=${i}`;
+    if (store.backend === "studio") return `../web/3d/index.html?embed=bare&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
+    if (store.backend === "api") return `../web/3d/index.html?embed=bare&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
+    return `../web/3d/index.html?embed=bare&sc=${sc}&step=${i}`;
   }
   if (store.backend === "studio") return `../web/index.html?embed=1&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
   if (store.backend === "api") return `../web/index.html?embed=1&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/scenarios/" + store.scenario + ".json")}&step=${i}`;
@@ -544,11 +572,40 @@ addEventListener("message", (e) => {
   // a view reloading itself reports its boot step before "ready": only user steps after "ready" count
   if (m.type === "step" && Number.isInteger(m.i) && F.ready) setStep(m.i + 1, k);
 });
+// operator -> rescuer: persist the assignment (phones poll GET /story/assign) and tell embedded patrol views
+async function assignTeam(resourceId, segmentId) {
+  try { const a = await api("/story/assign", { resourceId, segmentId, at: curClock(), scenario: store.scenario, segmentName: curStep()?.segments.find((x) => x.id === segmentId)?.name }); store.manual = a.assignments || []; } catch (e) { toast("Przydział nie zapisany: " + (e.message || e)); }
+  for (const id of ["frameTeren", "frameRescuer"]) { const f = $(id); try { f.contentWindow && f.contentWindow.postMessage({ source: "rescue-app", type: "assign", resourceId, segmentId }, location.origin); } catch (e) {} }
+  renderPanels();
+}
+// ---------- roles: ratownik (phone, own task + patrol reports) / operator (all modes). ?role= or remembered; picker on first open
+function setRole(r) {
+  store.role = r; try { localStorage.setItem("rescue-app-role", r); } catch (e) {}
+  document.body.classList.toggle("role-ratownik", r === "ratownik"); document.body.classList.toggle("role-operator", r === "operator");
+  $("roleBtn").textContent = r === "ratownik" ? "Rola: ratownik" : "Rola: operator";
+  $("rolePick").hidden = true;
+  if (r === "ratownik") {
+    $("rMapHost").appendChild($("map"));
+    pollTask(); renderRescuer(); setRescuerFrame();
+  } else {
+    $("center").insertBefore($("map"), $("center").firstChild);
+    setMode(store.mode || "akcja");
+  }
+  setTimeout(() => map.resize(), 50);
+}
+function setRescuerFrame() { const t = myTeam(); setFrame("frameRescuer", patrolURL(t)); }
+$("roleBtn").onclick = () => { $("rolePick").hidden = false; };
+$("rolePick").onclick = (e) => { const b = e.target.closest("[data-role]"); if (b) setRole(b.dataset.role); };
+addEventListener("message", (e) => {
+  if (e.origin !== location.origin || !e.data || e.data.source !== "rescuePatrol") return;
+  if (e.data.type === "report") toast("Meldunek wysłany");
+  if (e.data.type === "queued") toast("Brak łączności - meldunek w kolejce");
+});
 // ---------- modes (top tabs) and views inside a mode
 const MODES = {
   akcja: { label: "Akcja", views: [["2d", "2D"], ["3d", "3D"], ["split", "Podział"]] },
   edycja: { label: "Edycja", views: [["map", "Mapa"], ["split", "Mapa + 3D"]] },
-  teren: { label: "Teren", views: [["patrol", "Telefon patrolu"], ["field", "Meldunek"]] },
+  teren: { label: "Teren", views: [["przeglad", "Przegląd zespołów"], ["patrol", "Telefon patrolu"], ["field", "Meldunek"]] },
   monitoring: { label: "Monitoring", views: [] },
   walidacja: { label: "Walidacja", views: [] },
 };
@@ -583,13 +640,40 @@ function setView(v) {
   hint();
 }
 // field server (rescue-field, :8770) pages are served by that server, so they talk to their own API
-const FIELD = `${location.protocol}//${location.hostname}:8770`;
+let FIELD = `${location.protocol}//${location.hostname}:8770`;   // set in detect()
 function setFrame(id, url) { const f = $(id); if (f.dataset.src !== url) { f.dataset.src = url; f.src = url; } }
 function showTeren() {
-  if (store.view === "field") setFrame("frameTeren", FIELD + "/field.html");
-  else setFrame("frameTeren", `../web/patrol/index.html?api=${encodeURIComponent(FIELD)}${store.backend === "studio" ? "&run=" + encodeURIComponent("/story") : store.runUrl ? "&run=" + encodeURIComponent(store.runUrl) : ""}`);
+  $("frameTeren").style.display = store.view === "przeglad" ? "none" : ""; $("teamFeed").style.display = store.view === "przeglad" ? "" : "none";
+  if (store.view === "przeglad") return pollFeed();
+  if (store.view === "field") setFrame("frameTeren", (FIELD || "") + "/field.html");
+  else setFrame("frameTeren", patrolURL());
 }
-function showMonitoring() { setFrame("frameMon", FIELD + "/ops.html"); }
+function showMonitoring() { setFrame("frameMon", (FIELD || "") + "/ops.html"); }
+function patrolURL(team) {
+  const api = FIELD || location.origin, run = store.backend === "studio" ? "/story" : store.runUrl;
+  return `../web/patrol/index.html?embed=1&api=${encodeURIComponent(api)}${run ? "&run=" + encodeURIComponent(run) : ""}${team ? "&team=" + encodeURIComponent(team) : ""}`;
+}
+// Teren / Przegląd zespołów: live field reports (GET /live-events) per team + silence from /metrics, "Dodaj do historii" -> Studio FieldReport
+let feedTimer = null;
+async function pollFeed() {
+  clearTimeout(feedTimer);
+  if (store.mode !== "teren" || store.view !== "przeglad") return;
+  let ev = [], met = "";
+  try { ev = await (await fetch((FIELD || "") + "/live-events", { cache: "no-store" })).json(); } catch (e) {}
+  try { met = await (await fetch((FIELD || "") + "/metrics", { cache: "no-store" })).text(); } catch (e) {}
+  const M = prom(met), now = M.find((m) => m.n === "rescue_server_time_seconds")?.v || Date.now() / 1000, thr = M.find((m) => m.n === "rescue_silent_threshold_seconds")?.v || 600;
+  const teams = {}; M.filter((m) => m.n === "rescue_client_last_report_timestamp_seconds").forEach((m) => { const k = m.lab.team || m.lab.client_id; teams[k] = Math.max(teams[k] || 0, m.v); });
+  const res = (curStep()?.resources || []), man = store.manual || [];
+  $("teamFeed").innerHTML = `<div class="vgrid">${res.map((r) => { const last = teams[r.id], age = last ? now - last : null, a = man.find((x) => x.resourceId === r.id) || (curStep()?.assignments || []).find((x) => x.resourceId === r.id);
+      return `<div class="vcard"><div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b>${age == null ? `<span class="pill off">brak meldunków</span>` : age > thr ? `<span class="pill off">CISZA ${Math.round(age / 60)} min</span>` : `<span class="pill">${Math.round(age / 60)} min temu</span>`}</div>
+        <div class="help">${a ? `zadanie: ${esc(a.segmentId)} ${esc(a.segmentName || "")}${a.by === "operator" ? " (operator)" : " (plan)"}` : r.available ? "bez zadania" : esc(r.reason)}</div></div>`; }).join("")}</div>
+    <h2>Meldunki z terenu (${ev.length})</h2>
+    ${ev.slice().reverse().slice(0, 60).map((e, k) => `<div class="box"><div class="row" style="justify-content:space-between"><b>${esc(e.at || (e.t || "").slice(11, 16))}</b><span class="mute">${esc(e.parsedBy || "")}</span></div>
+      <div>${esc(e.text)}</div><div class="help">${(e.hints || []).map((h) => esc(h.type + (h.segmentId ? " " + h.segmentId : ""))).join(", ")}</div>
+      ${store.backend === "studio" && store.hasStudio ? `<button data-add="${ev.length - 1 - k}">Dodaj do historii</button>` : ""}</div>`).join("") || `<div class="help">Brak meldunków. Ratownicy wysyłają je z roli „Ratownik” albo z telefonu patrolu.</div>`}`;
+  $("teamFeed").querySelectorAll("[data-add]").forEach((b) => b.onclick = () => { const e = ev[+b.dataset.add]; run(() => api("/story/event", { event: { provider: "FieldReport", text: e.text, at: e.at } }), "Meldunek dodany do historii"); });
+  feedTimer = setTimeout(pollFeed, 8000);
+}
 // ---------- wiring
 subs.push((why) => {
   if (!store.run || !store.run.steps) return;
@@ -597,6 +681,7 @@ subs.push((why) => {
   if (why !== "select") { renderPins(); renderTokens(); renderTeams(); }
   else renderPins();
   if (why !== "select" && why !== "selectEv" && why !== "step") sync3d(why);
+  if (store.role === "ratownik" && why !== "select") renderRescuer();
 });
 $("scen").onchange = () => loadScenario($("scen").value).catch((e) => toast(String(e.message || e), 5000));
 
@@ -608,9 +693,14 @@ async function boot() {
     renderPalette();
     let m = "akcja"; try { m = localStorage.getItem("rescue-app-mode") || "akcja"; } catch (e) {}
     const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode");
-    if (q.get("sc") && store.scenList.some((s) => s.id === q.get("sc"))) $("scen").value = q.get("sc");
+    const want = q.get("sc") || (store.hasApi ? "zawrat" : null);
+    if (want && store.scenList.some((s) => s.id === want)) $("scen").value = want;
     await loadScenario($("scen").value);
     setMode(m, q.get("view"));
+    initRescuer({ store, api, map, maplibregl, toast, curStep, selectSeg: (id, from) => selectSeg(id, from), onTeam: setRescuerFrame });
+    try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
+    let role = q.get("role"); if (!role) { try { role = localStorage.getItem("rescue-app-role"); } catch (e) {} }
+    if (role === "ratownik" || role === "operator") setRole(role); else { store.role = "operator"; $("rolePick").hidden = false; }
     hint();
     pollAlerts();
   } catch (e) { toast("Serwer niedostępny: swift run rescue-studio, potem http://127.0.0.1:8771/app/ (" + (e.message || e) + ")", 8000); }
