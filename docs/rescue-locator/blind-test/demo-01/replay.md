@@ -48,6 +48,8 @@ Czas scenariusza / czas demo. Uzupełniane z wątku.
 | 19:00 | ... | Kontrola: niezależny przebieg AI Denisa daje identyczne top 3 (silnik deterministyczny). Propozycja: S2 | kierownik | 14:48 |
 | 23:00 | ... | Po fali 1: S12 spada z 8,3% do 3,7%. Top 3: S3 29,0%, S2 25,3%, S13 12,8% | kierownik, mapa przed / po | 14:56 |
 | 19:20-23:00 | ... | Fala 2: dron -> S3; pies -> S2 (planer + AI Denisa); TOPR A -> S18 Dolina za Mnichem (odejście: zejście żlebem we mgle); TOPR B -> S4, S6 | kierownik, przydział zespołów | 14:56 |
+| fala 2 | ... | Sędzia: wszędzie "nic". Osiem przydziałów, zero śladów. Noc | widok patrolu -> kierownik | 14:53 |
+| - | ... | AI Michała: pierścienie startują od schroniska 11:50, a powinny od ostatniego znanego punktu (świadek 13:40, S5). Silnik zamrożony do odsłonięcia, zasadę LKP szukający stosują ręcznie | kierownik, mapa z pierścieniami | 14:52 |
 | ... | ... | Przeliczenie: top 3 = ... | kierownik, mapa | |
 | ... | ... | ... (kolejne fale) | | |
 | ... | ... | ZNALEZIONO albo koniec czasu | widok patrolu | |

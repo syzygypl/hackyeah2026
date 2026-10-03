@@ -55,7 +55,7 @@ Bez pingu GPS.
 
 - **Start:** 14:40, sędzia AI Marcina.
 - **Zobowiązanie (SHA-256):** `fdd079df019d7bf044c1d5892802245ec085200dc7b6a2fe10c45baf8895b474`, liczone z `{"round","at","salt"}`. Opublikowane 14:40.
-- **Commity:** b628d8a, 291a655 (teren OSM + DEM, obszar jak zawrat)
+- **Commity:** b628d8a, 291a655 (teren OSM + DEM, obszar jak zawrat). Mapa podkładowa offline: jeden plik tatry.pmtiles dla wszystkich scenariuszy tatrzańskich (5,4 MB, 562 kafelki, AI Michała, ce56137).
 - **Sprawa:** Ewa K. (osoba fikcyjna), 34 lata, sama, dobra kondycja. Zgłoszenie od partnera o 18:15. Planowana pętla Palenica - Roztoka (...). Bez GPS.
 - **Szukający:** AI Mateusza, AI Denisa, AI Michała.
 - **Format patrolu:** `[AI ...] ASSIGN-PATROL: <zespół> -> <segmenty>, start HH:MM, POD 0.x`. Zespoły i ich gotowość wynikają z zasobów w scenariuszu.
@@ -121,17 +121,26 @@ Mapa o **23:00** (S12 spadł z 8,3% do 3,7%):
 
 | # | Start | Zespół | Planer proponował | Wysłane | POD | Dlaczego | Odpowiedź sędziego |
 |---|---|---|---|---|---|---|---|
-| 5 | 19:20 | Dron | S3 | S3 (jak planer) | 0,27 | Nadal najwyższe POA | ... |
-| 6 | 20:25 | Pies | S2 | S2 (jak planer i AI Denisa) | 0,56 | Drugie POA, propozycja AI Denisa | ... |
-| 7 | 21:30 | Patrol TOPR A | S13 (już pokryty przez B) | **S18 Dolina za Mnichem** (odejście od planera) | 0,40 | Zejście żlebem po zgubieniu szlaku we mgle | ... |
-| 8 | 23:00 | Patrol TOPR B | S4 | S4, S6 (S6 = rozwidlenie na Zawrat) | 0,46 | Planer + domknięcie rozwidlenia | ... |
+| 5 | 19:20 | Dron | S3 | S3 (jak planer) | 0,27 | Nadal najwyższe POA | nic |
+| 6 | 20:25 | Pies | S2 | S2 (jak planer i AI Denisa) | 0,56 | Drugie POA, propozycja AI Denisa | nic |
+| 7 | 21:30 | Patrol TOPR A | S13 (już pokryty przez B) | **S18 Dolina za Mnichem** (odejście od planera) | 0,40 | Zejście żlebem po zgubieniu szlaku we mgle | nic |
+| 8 | 23:00 | Patrol TOPR B | S4 | S4, S6 (S6 = rozwidlenie na Zawrat) | 0,46 | Planer + domknięcie rozwidlenia | nic (S4, S6) |
 
 Agent-szukający AI Mateusza odszedł od planera w 1 z 4 przydziałów fali 2 (TOPR A).
+
+**14:53, odpowiedź sędziego na falę 2:** wszędzie "nic" (S3 dron, S2 pies, S18 TOPR A, S4 i S6 TOPR B). Po dwóch falach osiem przydziałów, zero śladów. Ewa K. jest w terenie już w nocy.
+
+**14:52, błąd silnika wskazany przez AI Michała:** pierścienie Koestera startują od schroniska o 11:50, a nie od ostatniego znanego punktu (świadek o 13:40 w S5). Zasada samego Koestera: punkt startu planowania (IPP) = ostatni znany punkt (LKP). To pozycja 1 w backlogu poniżej.
+
+**Decyzja AI Mateusza jako koordynatora:** silnik zostaje zamrożony do odsłonięcia. Szukający mogą stosować zasadę LKP ręcznie przy wyborze patroli, a każde odejście od planera jest zapisywane z powodem.
+
+**Fala 3:** w obliczeniach. ...
 
 ### Uwagi do silnika (backlog, wdrażane dopiero po odsłonięciu)
 
 Znalezione w trakcie rundy. Nie poprawiamy silnika w trakcie gry, żeby nie dopasować go do ukrytego miejsca.
 
+- **(1)** Pierścienie Koestera liczone od schroniska (11:50) zamiast od ostatniego znanego punktu (świadek 13:40, S5). Koester: IPP = LKP. Zgłosił AI Michała, 14:52.
 - Planer nie wie, które zespoły są zajęte (proponuje segment, który już ktoś przeszukuje).
 - Dron zapętla się na S3 po przelocie z niskim POD.
 - Brak zachowania "zgubiony szlak we mgle -> zejście żlebem".
