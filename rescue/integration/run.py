@@ -406,6 +406,62 @@ def suite(srv, B, live, llm, tmp):
             assert not bad, f"broken refs {sorted(set(bad))}"
             return f"{len(b) // 1024} KB, {len(refs)} refs OK" + (f", shared: {sorted(set(ok_shared))}" if ok_shared else "")
 
+    @check("frontend", "head_run_for_2d_polling")
+    def _():
+        st = http(B, "HEAD", "/api/run/zawrat", pin=PIN, raw=True)[0]
+        if st != 200:
+            BUGS.append("web/app.js pollRun() detects a new run with `fetch(CFG.run, {method: 'HEAD'})` + Last-Modified/Content-Length, but "
+                        f"rescue-server answers HEAD with {st} (only GET is routed), so the 2D screen on /web/?run=/api/run/<sc> never picks up "
+                        "folded field reports by itself (needs F5). Repro: curl -I http://127.0.0.1:8780/api/run/zawrat -> 404. Fix: route HEAD like GET "
+                        "without body in Sources/rescue-server/main.swift, or poll with GET in web/app.js.")
+        assert st == 200, f"HEAD /api/run/zawrat -> {st}"
+
+    @check("frontend", "views_send_pin_for_run")
+    def _():
+        # On the hotspot every /api/* and /story call needs X-Rescue-Pin. The app shell sends it; the embedded views fetch the run themselves.
+        probes = {
+            "web/patrol/index.html": r"fetch\(RUN\)",                      # run = /api/run/<sc> or /story when embedded by the app
+            "web/app.js": r"fetch\(url, \{ cache: 'no-store' \}\)",        # fetchJSON(CFG.run)
+            "web/3d/app3d.js": r"fetch\(u, \{ cache: 'no-cache' \}\)",     # run loader
+        }
+        hits = []
+        for f, rx in probes.items():
+            src = open(os.path.join(RESCUE, f), encoding="utf-8").read()
+            if re.search(rx, src):
+                hits.append(f)
+        if hits:
+            BUGS.append("On a LAN client (phone/tablet on the hotspot, server with --pin) these views fetch the run WITHOUT X-Rescue-Pin, so "
+                        f"/api/run/<sc> and /story answer 401: {hits}. web/patrol: `run = await (await fetch(RUN)).json()` then crashes on "
+                        "run.steps (no report buttons on the phone) - seen in the server log as `[guard] 401 GET /api/run/zawrat` when the "
+                        "patrol page loads against a strict server; 2D/3D show a load error. The app's own api() sends the PIN, so the "
+                        "Ratownik task card works but its embedded map and patrol frame do not. Fix: add the PIN header to these fetches "
+                        "(localStorage 'rescue-pin', raw string). Workaround for the demo: phones use /web/patrol/?team=..&api=..&run=../../out/run.json "
+                        "(static run, open), 3D only on the laptop (loopback needs no PIN).")
+            return ("WARN", f"no PIN on run fetch in {hits} (code check; see findings)")
+        return "all views send the PIN"
+
+    @check("field", "client_timeout_duplicates")
+    def _():
+        if not llm:
+            return ("SKIP", "needs the LLM parser (slower than the client timeout)")
+        text = "TOPR B: Morskie Oko obejście przeszukane, nic (test timeoutu)"
+        try:
+            http(B, "POST", "/report", {"text": text, "at": "19:12"}, pin=PIN, timeout=0.3)
+            return ("SKIP", "server answered within 0.3 s")
+        except Exception:
+            pass
+        time.sleep(6)
+        n = sum(1 for e in G("/live-events")[1] if e.get("text") == text)
+        if n:
+            BUGS.append("A report whose HTTP request times out on the phone is still parsed and stored by the server; web/patrol then queues "
+                        "it and resends it (with '(wysłane z opóźnieniem ...)'), so the same report lands twice and the segment is "
+                        "down-weighted twice. Happens when Ollama is busy (e.g. a 20-40 s assessment runs) and the parse exceeds the patrol's "
+                        "20 s timeout - observed in the showcase. Repro: POST /report with a 0.3 s client timeout while the LLM parses, then GET "
+                        "/live-events. Fix idea: client sends an idempotency id (X-Rescue-Report-Id) the server de-duplicates, or the patrol "
+                        "asks /live-events before resending.")
+            return ("WARN", f"timed-out request still stored ({n}x) - a phone retry would duplicate it")
+        return "timed-out request not stored"
+
     # ---------------- offline queue (server down -> queue -> restart -> flush)
     print("offline")
 
