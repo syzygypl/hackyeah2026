@@ -175,20 +175,28 @@ pub async fn incidents_data(fast: bool) -> Resp {
     let names = scenario_names();
     // engine part in spawned tasks, so a fast answer can leave them running
     let bx: Arc<Mutex<(HashMap<usize, Bytes>, usize)>> = Arc::new(Mutex::new((HashMap::new(), 0)));
+    let done = Arc::new(tokio::sync::Notify::new());
     for (i, sc) in names.iter().enumerate() {
-        let (sc, bx) = (sc.clone(), bx.clone());
+        let (sc, bx, done) = (sc.clone(), bx.clone(), done.clone());
         tokio::spawn(async move {
             let d = incident_base(&sc, n_live).await;
-            let mut g = bx.lock();
-            g.1 += 1;
-            if let Some(d) = d {
-                g.0.insert(i, d);
+            {
+                let mut g = bx.lock();
+                g.1 += 1;
+                if let Some(d) = d {
+                    g.0.insert(i, d);
+                }
             }
+            done.notify_one();
         });
     }
-    let deadline = Instant::now() + if fast { Duration::from_millis(1500) } else { Duration::from_secs(3600) };
-    while bx.lock().1 < names.len() && Instant::now() < deadline {
-        tokio::time::sleep(Duration::from_millis(20)).await;
+    // woken by each finished incident (not a 20 ms poll): an all-cached answer returns at once
+    let deadline = tokio::time::Instant::now() + if fast { Duration::from_millis(1500) } else { Duration::from_secs(3600) };
+    while bx.lock().1 < names.len() && tokio::time::Instant::now() < deadline {
+        tokio::select! {
+            _ = done.notified() => {}
+            _ = tokio::time::sleep_until(deadline) => {}
+        }
     }
     let (bases, complete) = {
         let g = bx.lock();
