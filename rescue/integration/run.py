@@ -445,13 +445,17 @@ def suite(srv, B, live, llm, tmp):
         if not llm:
             return ("SKIP", "needs the LLM parser (slower than the client timeout)")
         text = "TOPR B: Morskie Oko obejście przeszukane, nic (test timeoutu)"
+        rid = f"integ-{time.time()}"   # web/patrol sends the same client id on the resend (with a delay suffix)
         try:
-            http(B, "POST", "/report", {"text": text, "at": "19:12"}, pin=PIN, timeout=0.3)
+            http(B, "POST", "/report", {"text": text, "at": "19:12", "id": rid}, pin=PIN, timeout=0.3)
             return ("SKIP", "server answered within 0.3 s")
         except Exception:
             pass
+        st, d, _ = http(B, "POST", "/report", {"text": text + " (wysłane z opóźnieniem, zdarzenie o 19:12)", "at": "19:12", "id": rid}, pin=PIN, timeout=90)
         time.sleep(6)
-        n = sum(1 for e in G("/live-events")[1] if e.get("text") == text)
+        n = sum(1 for e in G("/live-events")[1] if e.get("text", "").startswith(text))
+        if n == 1 and isinstance(d, dict) and d.get("duplicate"):
+            return "timed-out request stored once, the resend with the same id answered duplicate"
         if n:
             BUGS.append("A report whose HTTP request times out on the phone is still parsed and stored by the server; web/patrol then queues "
                         "it and resends it (with '(wysłane z opóźnieniem ...)'), so the same report lands twice and the segment is "

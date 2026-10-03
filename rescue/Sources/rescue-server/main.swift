@@ -75,6 +75,16 @@ actor LiveStore {
     func raw() -> Data { FileManager.default.contents(atPath: path) ?? Data("[]".utf8) }
 }
 let store = LiveStore(path: livePath)
+/// Idempotent POST /report: a phone that timed out resends the same client id - stored once (in memory, marked on arrival).
+actor SeenReports {
+    var ids: [String] = []
+    func firstTime(_ id: String) -> Bool {
+        if ids.contains(id) { return false }
+        ids.append(id); if ids.count > 5000 { ids.removeFirst(1000) }
+        return true
+    }
+}
+let seenReports = SeenReports()
 let ratePerMin = Int(ProcessInfo.processInfo.environment["RESCUE_RATE_PER_MIN"] ?? "") ?? 10
 let reportLimiter = RateLimiter(max: ratePerMin, perSeconds: 60)
 let maxReportBody = 4096, maxText = 500, maxBody = 4 << 20    // /report 4 KB, /api/run up to 4 MB (terrain inline)
@@ -242,6 +252,10 @@ func handle(_ q: Req) async -> Data {
             guard let o = try? JSONSerialization.jsonObject(with: q.body) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
             text = o["text"] as? String ?? ""
             at = (o["at"] as? String).flatMap { $0.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil ? $0 : nil }
+            if let id = (o["id"] as? String) ?? (o["id"] as? NSNumber).map({ "\($0)" }), !id.isEmpty, !(await seenReports.firstTime(String(id.prefix(100)))) {
+                Metrics.shared.inc("reports_rejected_total", ["reason": "duplicate"])
+                return response("200 OK", json, Data(#"{"duplicate":true,"hints":[],"parsedBy":"duplicate"}"#.utf8))
+            }
         }
         text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return jsonErr("400 Bad Request", "empty text") }
