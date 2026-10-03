@@ -13,6 +13,21 @@ public final class ProbabilityGrid {
     // Precomputed terrain distances (metres)
     let dTrail: [Double], dStream: [Double], dRidge: [Double], dHut: [Double]
     let inLake: [Bool]
+    /// Forest canopy per cell (from terrain.woods polygons; all false without data). Used by the podModel feature.
+    public private(set) lazy var forest: [Bool] = {
+        guard let w = scenario.terrain.woods, !w.isEmpty else { return [Bool](repeating: false, count: count) }
+        let polys = w.map { $0.points.map(Coord.init) }.filter { $0.count >= 3 }
+        func inside(_ p: Coord, _ poly: [Coord]) -> Bool {   // ray casting
+            var c = false, j = poly.count - 1
+            for i in 0..<poly.count {
+                if (poly[i].lat > p.lat) != (poly[j].lat > p.lat),
+                   p.lon < (poly[j].lon - poly[i].lon) * (p.lat - poly[i].lat) / (poly[j].lat - poly[i].lat) + poly[i].lon { c.toggle() }
+                j = i
+            }
+            return c
+        }
+        return centers.map { p in polys.contains { inside(p, $0) } }
+    }()
     /// Terrain difficulty class per cell (searcher speed / POD and victim mobility).
     public let difficulty: [Difficulty]
 

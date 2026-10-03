@@ -7,7 +7,9 @@ public struct Scenario: Codable, Sendable {
         public let age: Int
         public let category: String
         public let note: String
-        public var lastContact: String? = nil   // "HH:mm", for the hypothermia clock
+        public var lastContact: String? = nil
+        /// "responsive" (answers calls, moves) or "unresponsive" (lying, unconscious); feature podModel
+        public var posture: String? = nil   // "HH:mm", for the hypothermia clock
     }
     public struct BBox: Codable, Sendable {
         public let south: Double, west: Double, north: Double, east: Double
@@ -38,6 +40,8 @@ public struct Scenario: Codable, Sendable {
         public let huts: [Spot]
         /// Optional slope in degrees per cell, row-major (row 0 = north), same rows x cols as the grid.
         public var slopeDeg: [Double]? = nil
+        /// Optional OSM landuse=forest / natural=wood polygons (rings, [lat, lon]); feature podModel (canopy lowers POD)
+        public var woods: [Named]? = nil
         /// Optional drivable access roads for rescue vehicles ([lat, lon] polylines, first point = road start).
         public var roads: [Named]? = nil
         /// Optional OSM natural=cliff / arete lines or polygon rings ([lat, lon] points).

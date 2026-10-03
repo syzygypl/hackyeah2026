@@ -200,6 +200,29 @@ public enum SearchPlanner {
         min(0.95, p.pod[d.rawValue] * podMult(type, c))
     }
 
+    /// Feature podModel: POD = resource x land cover x visibility/precip x daylight x subject posture.
+    /// Illustrative values, order of magnitude from: Koopman/Frost sweep-width tables (ground lines in open vs wooded
+    /// terrain), thermal drone limits under canopy and on sun-warmed rock (manufacturer guidance, SAR drone trials),
+    /// dogs least affected by cover (air-scent), helicopters weakest under canopy. Not TOPR/GOPR numbers.
+    static func cellPodModel(_ p: Profile, _ type: String, _ d: Diff, forest: Bool, _ c: LocationHint.Conditions, unresponsive: Bool) -> Double {
+        var pod = p.pod[d.rawValue] * podMult(type, c)
+        if forest {
+            pod *= ["ground": 0.6, "dog": 0.9, "drone": 0.35, "heli": 0.25][type] ?? 1
+        }
+        // thermal contrast: sun-warmed scree/slabs hide a body in daylight, better at night (podMult already x1.1 at night)
+        if type == "drone" && !c.dark && (d == .scree || d == .slab) { pod *= 0.8 }
+        // an unresponsive person does not answer calls or whistles: ground lines lose their acoustic detection
+        if unresponsive && type == "ground" { pod *= 0.7 }
+        if unresponsive && type == "heli" { pod *= 0.85 }   // no waving / signalling
+        return min(0.95, pod)
+    }
+
+    static func pod(_ ctx: Ctx, _ p: Profile, _ type: String, cell: Int, _ c: LocationHint.Conditions) -> Double {
+        let s = ctx.grid.scenario
+        guard s.has("podModel") else { return cellPod(p, type, ctx.grid.difficulty[cell], c) }
+        return cellPodModel(p, type, ctx.grid.difficulty[cell], forest: ctx.grid.forest[cell], c, unresponsive: s.subject.posture == "unresponsive")
+    }
+
     static func safetyFlags(_ ctx: Ctx, seg: Int, type: String, _ c: LocationHint.Conditions) -> [String] {
         var f: [String] = []
         if ctx.exposed[seg] > 0.25 && (c.ice || c.windMs > 12) {
@@ -295,7 +318,7 @@ public enum SearchPlanner {
             let cr = core(ctx, seg: seg, poa: poa)
             let segPoa = cr.reduce(0) { $0 + poa[$1] }
             if segPoa <= 0 { continue }
-            let pod = cr.reduce(0) { $0 + poa[$1] * cellPod(p, r.type, ctx.grid.difficulty[$1], c) } / segPoa
+            let pod = cr.reduce(0) { $0 + poa[$1] * SearchPlanner.pod(ctx, p, r.type, cell: $1, c) } / segPoa
             var tr = travel(ctx, p, from: from, seg: seg, core: cr, c)
             var byVehicle = false
             // a team still at its base can take the vehicle instead (once out in the field it walks)
@@ -437,7 +460,7 @@ public enum SearchPlanner {
             let end = free[i] + best.travel + best.sweep
             var pods: [Double] = []
             for cell in best.core {
-                let d = cellPod(p, res[i].type, grid.difficulty[cell], c)
+                let d = SearchPlanner.pod(ctx, p, res[i].type, cell: cell, c)
                 pods.append(d)
                 poa[cell] *= (1 - d)
             }
