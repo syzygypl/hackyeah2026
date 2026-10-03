@@ -390,7 +390,17 @@ fn path_label(p: &str) -> String {
     }
 }
 
-async fn serve(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -> Response<Body> {
+/// Every response carries `Server-Timing: app;dur=<ms>` (time inside this server, before gzip) so production shows
+/// server time apart from the network.
+async fn serve(ci: ConnectInfo<SocketAddr>, req: Request) -> Response<Body> {
+    let t0 = Instant::now();
+    let mut r = serve_inner(ci, req).await;
+    let dur = format!("app;dur={:.2}", t0.elapsed().as_secs_f64() * 1000.0);
+    r.headers_mut().insert("server-timing", HeaderValue::from_str(&dur).unwrap_or(HeaderValue::from_static("app")));
+    r
+}
+
+async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -> Response<Body> {
     let (parts, body) = req.into_parts();
     let method = parts.method.as_str().to_string();
     let path = parts.uri.path().to_string();
