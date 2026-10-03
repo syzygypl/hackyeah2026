@@ -8,7 +8,7 @@ proxy (worktree `rescue/app/` + production API) before pushing.
 **Summary.** No page scrolls horizontally, no image is broken, first contentful paint is under 1 s everywhere (Ćwiczenia at
 360 px: 1.75 s once). The real problems were layout on phones (Centrum opened on an unlabeled map, porównanie hid its key
 moment below the fold, the version stamp sat on the start-page cards), small touch targets (24 px buttons in Zasoby) and grey
-text at 4.15:1 (`--rl-mute` on the paper ground, under AA 4.5:1). Everything in Mateusz's area is fixed. The issues in other
+text at 4.15:1 (`--rl-mute` on the paper ground, under AA 4.5:1; now fixed in tokens.css). Everything in Mateusz's area is fixed. The issues in other
 owners' areas are listed at the end, with selectors.
 
 `/app/czat.html` does not exist yet (404), so it was not tested.
@@ -37,7 +37,7 @@ owners' areas are listed at the end, with selectors.
 | centrum.html | all | 75 muted labels at 4.15:1 | fixed `8122c1e` |
 | zasoby.html | 390, 360 | Unit event buttons ("Wymiana baterii", "Usterka"...) 24 px tall. Bar controls (select, godzina, Na żywo, klucz) 26 px | fixed `c8e716e`: 40 px with an 8 px gap on touch and under 600 px (unitcard.css, so Ćwiczenia cards get it too). Markup unchanged |
 | zasoby.html | all | "39.4 h" do przeglądu: decimal point in Polish UI | fixed `c8e716e` (card) and `ed7c961` (drawer): "39,4 h" |
-| zasoby.html | all | Card header shows the raw id and callsign ("drone · DRONE-265", "dog · DOG-801"). English ids read as jargon | open, Mateusz: it's data (u.id), and Ćwiczenia shares the card, so not changed tonight |
+| zasoby.html | all | Card header showed the raw id and callsign ("drone · DRONE-265"). English ids read as jargon | fixed `d8ed98b`: only the callsign, as a small muted mono tag. The raw id is only in the tooltip. Ćwiczenia cards have no callsign, so they show no tag. Prompt and toast use the unit name. Shot: `qa-zasoby-390-after.jpg` |
 | unit drawer (actorlog) | 390 | Close button 31x26. Feed and filter buttons 22 px | fixed `ed7c961`: close 44 px, buttons 36 px on touch |
 | web/seen (Widziałem) | 390, 360 | Flow works: card, big "Widziałem tę osobę", map, when (chips), notes, send. No scroll, targets 44+ px | ok |
 | web/seen (Widziałem) | 360 | Map attribution, expanded, covers ~20% of the small map | open, AI Marcina |
@@ -70,11 +70,9 @@ owners' areas are listed at the end, with selectors.
 8. **Widziałem (web/seen)**: on a 360 px phone the expanded attribution covers the bottom of the map. Use the compact attribution
    (`attributionControl: { compact: true }`). Shot: `shots/qa-widzialem-360-form.jpg`.
 
-### For whoever owns tokens.css (shared)
+### tokens.css (shared)
 
-`--rl-mute:#6b6f72` on `--rl-bg:#ece8df` is **4.15:1**, under WCAG AA (4.5:1) for the 12-14 px notes that use it on every page.
-Tonight the pages in Mateusz's area override it locally (`:root:not([data-theme=dark]){--rl-mute:#5d6165}`, 5.3:1). One change in
-`tokens.css` would fix the operator app, Ćwiczenia and the rescuer phone too, and the local overrides could then be removed.
+`--rl-mute` was `#6b6f72`, which is 4.15:1 on `--rl-bg`. Now it is `#5d6165`: 5.1:1 on `--rl-bg`, 5.9:1 on the panel, 6.2:1 on white (fixed `56f88d4`, decided by Mateusz). The dark theme `#8797a4` was already 5.2-6.2:1. The per-page overrides were removed in `9c038e7`.
 
 ## Screenshots (docs/rescue-locator/shots/)
 
