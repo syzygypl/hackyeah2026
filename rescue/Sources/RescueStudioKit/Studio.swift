@@ -464,9 +464,11 @@ public actor Studio {
     public func assign(_ body: Data) -> Data {
         let o = jsonObj(body)
         guard let rid = o["resourceId"] as? String, !rid.isEmpty, rid.count < 64 else { return jsonData(["error": "resourceId required"]) }
-        if let seg = o["segmentId"] as? String, let sd = segments.first(where: { ($0["id"] as? String) == seg }) {
+        // segment ids are checked by shape only: the operator may be working on a rescue-server scenario, not the Studio story
+        if let seg = o["segmentId"] as? String, seg.range(of: #"^[A-Za-z0-9_-]{1,16}$"#, options: .regularExpression) != nil {
             var a: [String: Any] = ["resourceId": rid, "segmentId": seg, "by": "operator", "t": ISO8601DateFormatter().string(from: Date())]
-            a["segmentName"] = sd["name"]
+            a["segmentName"] = (o["segmentName"] as? String).map { String($0.prefix(80)) } ?? segments.first { ($0["id"] as? String) == seg }?["name"]
+            if let sc = o["scenario"] as? String { a["scenario"] = String(sc.prefix(60)) }
             if let at = o["at"] as? String { a["at"] = at }
             if let n = o["note"] as? String { a["note"] = String(n.prefix(300)) }
             manual[rid] = a
