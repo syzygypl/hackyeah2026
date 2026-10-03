@@ -18,9 +18,9 @@
     - Obietnica pracy offline zniknęła ze strony (`556a747`): w pokazie model to OpenAI z regułami jako zapasem, więc nie deklarujemy offline (`docs/submission/hackathon/rescue-locator/v4/CHANGELOG.md`).
     - Tryb Auto (zdarzenia wpisywane jak w czacie) oznaczony jako "planowane", wycięty na tę noc (`7fe432b`).
     - Linia "66% / 56% / 43%" (symulacja) usunięta ze strony startowej razem z sekcją walidacji na landingu, notki prawne zostały (`e949d42`). Liczby nadal są w `docs/rescue-locator/pitch.md` z opisem "symulacja, nie prawdziwe akcje".
-12. **Sob 23:18-niedz 00:11 - port backendu do Rusta.** Szkielet (`c8ff366`), zasady identyczności bajt w bajt (`cef47bd`), port: silnik 11-240 ms zamiast 2-6 s, `/api/incidents` z 29,5 s do ok. 1,5 s rozgrzewki, potem z cache, zgodność z serwerem Swift na 93 ze 105 odpowiedzi wzorcowych (`6604627`). Produkcja na Ruście (`324a184`, `785fcf1`, Swift zostaje do wycofania), API w fra1 obok Neon (`c18e869`), ETag i 304 zamiast ponownego pobierania do 2,6 MB (`0f59ef4`, `71e426a`). Przed portem produkcja mierzyła 28-36 s na każde wywołanie `/api/incidents` (`docs/rescue-locator/wydajnosc.md`).
+12. **Sob 23:18-niedz 00:11 - port backendu do Rusta.** Szkielet (`c8ff366`), zasady identyczności bajt w bajt (`cef47bd`), port: silnik 11-240 ms zamiast 2-6 s, `/api/incidents` z 29,5 s do ok. 1,5 s rozgrzewki, potem z cache, zgodność z serwerem Swift na 93 ze 105 odpowiedzi wzorcowych (`6604627`). Produkcja na Ruście (`324a184`, `785fcf1`, Swift zostaje do wycofania), API w fra1 obok Neon (`c18e869`), ETag i 304 zamiast ponownego pobierania do 2,6 MB (`0f59ef4`, `71e426a`). Przed portem produkcja mierzyła 28-36 s na każde wywołanie `/api/incidents` (`docs/rescue-locator/wydajnosc.md`). Pomiar produkcji po porcie (`402802f`, wydajnosc.md "Runda 2", p50 z sali, ok. 0,2 s to sieć): `/api/incidents` 34,3 -> 0,43 s, `/api/inventory` 9,8 -> 0,32 s, `/api/run?live=0` 7,4 -> 0,85 s, `/api/tracks` 7,5 -> 0,29 s.
 
-Uwaga: liczby "ok. 22 ms" dla produkcyjnego `/api/incidents` nie znalazłem w repo (ani w commitach, ani w `docs/`). W tekście używamy tylko liczb z `6604627` i `wydajnosc.md`. Jeśli ktoś ma pomiar 22 ms, trzeba go dopisać do `wydajnosc.md` (Runda 2) i dopiero wtedy cytować.
+Uwaga: liczba "ok. 22 ms" z wątku nie jest udokumentowana - w pitchu cytujemy pomiar produkcji z `402802f` (34,3 s -> 0,43 s).
 
 ## B) Narracja do pitchu (60-90 s)
 
@@ -32,7 +32,7 @@ Uwaga: liczby "ok. 22 ms" dla produkcyjnego `/api/incidents` nie znalazłem w re
 >
 > Uczciwie: nie obiecujemy pracy offline i nie pokazujemy prawdziwych akcji - wszystkie scenariusze są fikcyjne.
 >
-> I jedna liczba z ostatniej nocy: przenieśliśmy cały backend do Rusta. Silnik liczy mapę w 11 do 240 milisekund zamiast 2 do 6 sekund, a lista wszystkich akcji, która na produkcji trwała około 30 sekund, przychodzi po półtorej sekundy rozgrzewki, a potem z pamięci podręcznej. To znaczy, że ratownik zgłasza "pusto", a kierownik widzi nową mapę, zanim odłoży telefon.
+> I jedna liczba z ostatniej nocy: przenieśliśmy cały backend do Rusta. Silnik liczy mapę w 11 do 240 milisekund zamiast 2 do 6 sekund, a lista wszystkich akcji, która na produkcji trwała 34 sekundy, przychodzi w niecałe pół sekundy. To znaczy, że ratownik zgłasza "pusto", a kierownik widzi nową mapę, zanim odłoży telefon.
 
 ### Źródła
 
@@ -43,11 +43,11 @@ Uwaga: liczby "ok. 22 ms" dla produkcyjnego `/api/incidents` nie znalazłem w re
 - Meldunek z telefonu zmienia mapę: `ba9cb64`, `e8e70ed`, `docs/rescue-locator/najmocniejsze-funkcje.md` (demo 30 s).
 - 2D i 3D, 1x-30x, Centrum: `fd92ffe`, `ef5f100`, `7f4bbab`.
 - Bez obietnicy offline: `556a747`, `v4/CHANGELOG.md`.
-- Silnik 11-240 ms vs 2-6 s, `/api/incidents` 29,5 s -> ok. 1,5 s potem cache: `6604627`. Produkcja 28-36 s przed portem: `docs/rescue-locator/wydajnosc.md`. Produkcja na Ruście: `324a184`, `785fcf1`.
+- Silnik 11-240 ms vs 2-6 s, `/api/incidents` 29,5 s -> ok. 1,5 s potem cache: `6604627`. Produkcja 28-36 s przed portem: `docs/rescue-locator/wydajnosc.md`. Produkcja na Ruście: `324a184`, `785fcf1`. Lista akcji 34,3 s -> 0,43 s (p50, produkcja): `402802f`, wydajnosc.md "Runda 2".
 - "Zanim odłoży telefon" to obraz, nie pomiar - jeśli jury dopyta, podajemy liczby z `6604627`.
 
 ## C) Zdania na slajd
 
 1. W 24 h: od bramki dla agentów AI do mapy, która mówi ratownikom, gdzie szukać najpierw.
 2. Prawdziwy teren (OSM + Copernicus DEM), fikcyjne scenariusze, jedna mapa dla operatora, telefonu i Centrum.
-3. Backend w Ruście: silnik 11-240 ms zamiast 2-6 s, lista akcji z ok. 30 s do ok. 1,5 s.
+3. Backend w Ruście: silnik 11-240 ms zamiast 2-6 s, lista akcji z 34 s do 0,43 s na produkcji.
