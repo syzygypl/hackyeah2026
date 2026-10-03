@@ -307,6 +307,7 @@ function render() {
   const has = gr => audit.some(e => e.guardrails?.includes(gr));
   const f = [];
   if (has("prompt_injection")) f.push(`<b>Prompt injection</b> detected ${audit.filter(e => e.guardrails?.includes("prompt_injection")).length}×; tainted sessions now need human approval for sensitive tools.`);
+  if (has("prompt_leak")) f.push(`<b>System prompt leak</b> caught by the per-session canary ${audit.filter(e => e.guardrails?.includes("prompt_leak")).length}×; the session is tainted.`);
   if (has("egress_allowlist") || has("pii")) f.push(`<b>Data exfiltration</b> attempts blocked at egress (allowlist / PII).`);
   if (has("business_rule")) f.push(`<b>Unauthorized payment</b> to an unapproved beneficiary blocked.`);
   if (has("attack_signature")) f.push(`<b>Known attack signatures</b> matched: ${[...new Set(audit.filter(e => e.guardrails?.includes("attack_signature")).map(e => (e.reasons?.[0] || "").split(" ")[0]))].map(s => `<code>${esc(s)}</code>`).join(", ")}.`);
