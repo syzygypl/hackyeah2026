@@ -43,7 +43,7 @@ SECRET_PATTERNS = {
 }
 PII_PATTERNS = {
     "email": re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
-    "card_number": re.compile(r"\b(?:\d[ -]?){12,18}\d\b"),
+    "card_number": None,  # _CardFinder below (NEW-7: a card glued to another digit run must still be found)
     "pesel": re.compile(r"\b\d{11}\b"),
     "iban": re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,3})?\b"),
 }
@@ -58,6 +58,77 @@ def luhn_ok(digits):
             n = n * 2 - 9 if n > 4 else n * 2
         s, alt = s + n, not alt
     return s % 10 == 0
+
+
+class _CardMatch:
+    def __init__(self, text, a, b):
+        self.string, self._a, self._b = text, a, b
+
+    def group(self, i=0):
+        return self.string[self._a:self._b]
+
+    def start(self):
+        return self._a
+
+    def end(self):
+        return self._b
+
+    def span(self):
+        return self._a, self._b
+
+
+class _CardFinder:
+    """NEW-7: the old `\\b(?:\\d[ -]?){12,18}\\d\\b` matched one greedy run per digit stretch, so
+    "ref 12345 4111 1111 1111 1111" became one 21-digit run that failed Luhn and the card leaked. Now: find every
+    digit run (single space/dash separators), then test each window of 13-19 digits that starts and ends on a
+    group boundary (run edge or separator) with Luhn. Windows inside an IBAN are skipped. Group-aligned windows only,
+    so a long unseparated digit string is a single window (no Luhn lottery over every sub-window)."""
+    RUN = re.compile(r"(?<!\w)\d+(?:[ -]\d+)*(?!\w)")
+    IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){3,7}(?: ?[A-Z0-9]{1,3})?\b")
+
+    def _spans(self, text):
+        iban = [m.span() for m in self.IBAN.finditer(text)]
+        out = []
+        for run in self.RUN.finditer(text):
+            groups = [(g.start() + run.start(), g.end() + run.start()) for g in re.finditer(r"\d+", run.group(0))]
+            if sum(b - a for a, b in groups) < 13:
+                continue
+            cands = []
+            for i in range(len(groups)):
+                n = 0
+                for j in range(i, len(groups)):
+                    n += groups[j][1] - groups[j][0]
+                    if n > 19:
+                        break
+                    if n >= 13:
+                        a, b = groups[i][0], groups[j][1]
+                        if any(a < ib and ia < b for ia, ib in iban):
+                            continue
+                        if luhn_ok(re.sub(r"\D", "", text[a:b])):
+                            cands.append((0 if n == 16 else 1, -n, a, b))
+            taken = []
+            for _, _, a, b in sorted(cands):  # prefer 16-digit cards, then longer; no overlaps
+                if all(b <= ta or a >= tb for ta, tb in taken):
+                    taken.append((a, b))
+            out += sorted(taken)
+        return out
+
+    def finditer(self, text):
+        return [_CardMatch(text, a, b) for a, b in self._spans(text)]
+
+    def sub(self, fn, text):
+        out, last = [], 0
+        for a, b in self._spans(text):
+            out += [text[last:a], fn(_CardMatch(text, a, b))]
+            last = b
+        return "".join(out + [text[last:]])
+
+    def subn(self, fn, text):
+        n = len(self._spans(text))
+        return self.sub(fn, text), n
+
+
+PII_PATTERNS["card_number"] = _CardFinder()
 
 
 def pesel_ok(p):

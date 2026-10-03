@@ -1497,6 +1497,41 @@ class AuditPrivacy(unittest.TestCase):
         self.assertEqual(redact(once)[0], once)
 
 
+class CardAfterDigitRun(unittest.TestCase):
+    """NEW-7 (retest 2026-10-03): a card right after another digit run (reference, PESEL) was neither blocked nor
+    redacted and landed in clear in the audit. Negative: a long non-Luhn digit run must not trip the card detector."""
+
+    CARD = "4111 1111 1111 1111"
+
+    def test_card_after_digit_run_detected_and_redacted(self):
+        from control_layer import find_sensitive, redact
+        for text in ["ref 12345 " + self.CARD, "Anna 90010112349 " + self.CARD]:
+            self.assertIn(("pii", "card_number", self.CARD), find_sensitive(text), text)
+            red = redact(text, True, ("email", "card_number", "pesel", "iban"))[0]
+            self.assertNotIn("4111", red, text)
+            self.assertIn("[REDACTED:card_number#", red)
+        self.assertIn("[REDACTED:pesel#", redact("Anna 90010112349 " + self.CARD, True, ("card_number", "pesel"))[0])
+
+    def test_card_after_digit_run_blocked_and_not_in_audit(self):
+        layer, s, env = fresh()
+        r = layer.call(s, "send_email", {"to": "ops@bank.example", "subject": "s", "body": "Anna 90010112349 " + self.CARD})
+        self.assertEqual(r["decision"], DENY)
+        self.assertIn("pii", r["event"]["guardrails"])
+        layer.check_prompt(s, "ref 12345 " + self.CARD)
+        p = os.path.join(env.dir, "audit.jsonl")
+        layer.export_audit(p)
+        self.assertNotIn("4111111111111111", open(p).read().replace(" ", ""))
+
+    def test_long_non_luhn_run_not_a_card(self):
+        from control_layer import find_sensitive, redact
+        for text in ["order 1234 5678 9012 3456 7890 1234", "acct 12345678901234567890123", "ref 12345 4111 1111 1111 1112"]:
+            self.assertFalse([h for h in find_sensitive(text) if h[1] == "card_number"], text)
+            self.assertNotIn("REDACTED", redact(text, True, ("card_number",))[0], text)
+        layer, s, _ = fresh()
+        r = layer.call(s, "send_email", {"to": "ops@bank.example", "subject": "s", "body": "order 1234 5678 9012 3456 7890 1234"})
+        self.assertEqual(r["decision"], ALLOW)
+
+
 class Performance(unittest.TestCase):
     def test_overhead_under_1ms_p99(self):
         p = measure_overhead(2000)
