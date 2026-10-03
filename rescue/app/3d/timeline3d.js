@@ -46,7 +46,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     g.add(dot, tag); group.add(g);
     return { ...a, g, tag, dot, color: colors[a.kind] || '#555' };
   });
-  let target = null, shown = null, from = null, blend = 1, lastFrame = null, request = 0, fpp = null, savedCamera = null, selected = null, visible = true;
+  let target = null, shown = null, from = null, blend = 1, lastFrame = null, held = null, lastSetAt = 0, request = 0, fpp = null, savedCamera = null, selected = null, visible = true;
   const panel = document.createElement('div'); panel.id = 'timeline3dCtl'; panel.className = 'floating';
   panel.innerHTML = `<div class="tl3d-title">Perspektywa jednostki</div><select aria-label="Jednostka dla kamery FPP">${actors.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)}</option>`).join('')}</select><button class="btn full" type="button" title="Kamera na wysokości oczu; Esc wraca do mapy">FPP</button><div class="tl3d-key">● ślad GPS · - - ślad szacowany<br>okrąg: dokładność · obrys: pole widzenia</div><div class="tl3d-clock" aria-live="polite"></div>`;
   (document.getElementById('sceneCtl') || document.body).appendChild(panel);
@@ -132,14 +132,21 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     }
   }
   function apply(frame, minute) {
-    lastFrame = frame; onFrame(frame, minute);
+    // the same frame again (the shell sends ~30 minutes per second while playing): no heat / ranking rebuild
+    const same = frame && frame === lastFrame;
+    lastFrame = frame; if (!same) onFrame(frame, minute);
     rings(frame, minute); trails(minute); wake();
   }
-  function setTime(minute, t, animate = true, suppliedFrame = null) {
+  function setTime(minute, t, animate = true, suppliedFrame = null, frameMinute = null) {
     if (!Number.isFinite(minute)) return;
+    // the shell sends the (per-minute) frame once and then only frameMinute while it stays in force
+    if (suppliedFrame) held = suppliedFrame;
+    else if (held && Number.isFinite(frameMinute) && frameMinute === held.minute) suppliedFrame = held;
     const previous = target;
     target = Math.min(timeline.endMinute, minute); from = shown ?? target;
-    blend = animate && previous != null && target >= previous && target - previous <= 2 ? 0 : 1;
+    // a continuous stream (play / drag, a message every ~33 ms) is already smooth: follow it directly, glide only single moves
+    const now = performance.now(), streaming = now - lastSetAt < 150; lastSetAt = now;
+    blend = animate && !streaming && previous != null && target >= previous && target - previous <= 2 ? 0 : 1;
     if (blend === 1) shown = target;
     const frame = suppliedFrame || earlierFrame(timeline.frames, target);
     const clock = t || timelineClock(timeline, target);

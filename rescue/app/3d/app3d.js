@@ -1460,7 +1460,7 @@ function setStep(i, animate = true, fromTime = false) {
   if (REV) { const at = i >= (foundStep >= 0 ? foundStep : R.steps.length - 1); if (at) gamePanel(`<h3>Odsłonięcie (${esc(REV.round || '')})</h3><p>${esc(REV.story || '')}${REV.state ? ` <i>(${esc(REV.state)})</i>` : ''}</p>`); else $('game').hidden = true; }
   setMood(s.weather, i);
   renderOffBanner(i);
-  if (TL3D && !fromTime) TL3D.setTime(s.minute, s.t, false);
+  if (TL3D && !fromTime && !fromParent) TL3D.setTime(s.minute, s.t, false); // the shell sends {type:'time'} right after its step
   if (prev !== i && !fromParent) toParent({ type: 'step', i, t: s.t });
 }
 function drawTeams(s) {
@@ -1953,7 +1953,7 @@ addEventListener('message', (e) => {
   const m = e.data; fromParent = true;
   try {
     if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
-    else if (m.type === 'time' && Number.isFinite(m.minute)) TL3D?.setTime(m.minute, m.t, true, m.frame);
+    else if (m.type === 'time' && Number.isFinite(m.minute)) TL3D?.setTime(m.minute, m.t, true, m.frame, m.frameMinute);
     else if (m.type === 'fpp') { if (m.on === false) TL3D?.stopFpp(); else TL3D?.startFpp(m.actorId); }
     else if (m.type === 'actor' && (m.id === null || typeof m.id === 'string')) TL3D?.selectActor(m.id, false);
     else if (m.type === 'highlight' && typeof m.actor === 'string') TL3D?.selectActor(m.actor, false);
