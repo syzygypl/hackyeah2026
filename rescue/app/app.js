@@ -856,9 +856,10 @@ function renderLiveHead() {
   $("slider").hidden = on; $("play").hidden = on; $("histStart").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
   const lc = D() && D().liveCursor, nx = lc && lc.next;
   $("advNext").disabled = !liveNow() || !nx; $("advStart").disabled = !liveNow();
-  $("advNextT").textContent = !lc ? "" : nx ? `dalej: ${nx.at} ${nx.title}` : "koniec nagranej akcji";
-  $("advNextT").title = nx ? nx.title : "";
+  $("advNextT").textContent = !lc ? "" : nx ? `dalej ${nx.at} · ${shortEv(nx.title, evKind({ label: nx.title }))}` : "koniec nagranej akcji";
+  $("advNextT").title = nx ? `Następne zdarzenie: ${nx.at} ${nx.title}` : "";
   $("tlabel").textContent = plan ? "Historia" : on ? "Na żywo · teraz" : "Historia";
+  renderDock();
   document.body.classList.toggle("time-live", on); document.body.classList.toggle("time-hist", !plan && !on);
   // live box: always in Akcja, active only in Na żywo with a live connection
   const box = $("liveBox"); if (!box) return;
@@ -875,6 +876,55 @@ function renderLiveHead() {
   const g = note.querySelector(".golive"); if (g) g.onclick = () => setTime("live");
 }
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+// ---------- compact dock (Mateusz): kind markers on the timeline, a tiny tooltip "HH:MM · short title", a ticker of the last
+// events (newest first; the current one is the #clock line). Cards stay behind ☰ Sygnały. Kinds: ślad, nic (searched), pogoda,
+// zespół (live dispatch / report), znaleziono (TOPR red), baza (terrain / rings / cost at the start, a small dot).
+function evKind(s) {
+  const k = s.kind || "";
+  if (k === "found" || s.source === "Found" || /^ZNALEZIONO/i.test(s.label || "")) return "found";
+  if (k === "searched") return "nic";
+  if (k === "weather" || k === "conditions") return "pogoda";
+  if (["terrain", "cost", "difficulty", "rings", "behaviour"].includes(k)) return "baza";
+  return "slad";
+}
+function shortEv(label, k) {
+  const t = String(label || "").replace(/\s+/g, " ").trim(), w = (x) => x.split(" ").filter(Boolean), cut = (a) => a.join(" ").replace(/[,.;:]+$/, "");
+  if (k === "found") return "Znaleziono";
+  const [p, ...r] = t.split(": "), rest = r.join(": ").split(",")[0];
+  if (k === "nic") return cut(w(p).slice(0, 2)) + " - nic";
+  if (rest && w(p).length <= 3) return w(p).length >= 2 ? cut(w(p)) : p + ": " + cut(w(rest).slice(0, 3));
+  return cut(w(t.split(",")[0]).slice(0, 4));
+}
+function renderDock() {
+  const R = D(); if (!R || !R.steps || !$("tlMarks")) return;
+  const n = R.steps.length, S = curStep();
+  $("tlMarks").innerHTML = R.steps.map((s, k) => `<i class="tlk k-${evKind(s)}${k + 1 === store.step ? " cur" : k + 1 > store.step ? " fut" : ""}" style="left:${n > 1 ? (k / (n - 1) * 100).toFixed(2) : 50}%"></i>`).join("");
+  if (S) $("clock").title = S.t + " · " + S.label;
+  const byTitle = (t) => { const st = R.steps.find((s) => s.label === t); return st ? evKind(st) : /^ZNALEZIONO/i.test(t || "") ? "found" : "slad"; };
+  const items = liveOn() && live.events.length
+    ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title) }))
+    : R.steps.slice(0, store.step - 1).slice(-4).reverse().map((s, j) => ({ at: s.t, label: s.label, k: evKind(s), step: store.step - 1 - j }));
+  $("ticker").innerHTML = items.map((it) => `<span class="tk k-${it.k}"${it.step && !liveOn() ? ` data-step="${it.step}"` : ""} title="${esc(it.at + " · " + it.label)}"><i></i><b>${esc(it.at)}</b><span class="tx">${esc(shortEv(it.label, it.k))}</span></span>`).join("");
+}
+function tlIndexAt(x) { const r = $("tlMarks").getBoundingClientRect(), n = D().steps.length; return n < 2 ? 1 : Math.round(Math.max(0, Math.min(1, (x - r.left) / (r.width || 1))) * (n - 1)) + 1; }
+function tlTip(k) {
+  const tip = $("tlTip"), s = k && D() && D().steps[k - 1], m = s && $("tlMarks").children[k - 1];
+  if (!m) { tip.hidden = true; return; }
+  tip.textContent = `${s.t} · ${shortEv(s.label, evKind(s))}`; tip.hidden = false;
+  const r = m.getBoundingClientRect();
+  tip.style.left = Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left + r.width / 2 - tip.offsetWidth / 2)) + "px";
+  tip.style.top = Math.max(8, r.top - tip.offsetHeight - 10) + "px";
+}
+$("tl").addEventListener("pointermove", (e) => { if (D() && D().steps) { clearTimeout(tlTip.h); tlTip(tlIndexAt(e.clientX)); } });
+$("tl").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") tlTip(0); });
+$("tl").addEventListener("click", (e) => {
+  if (!D() || !D().steps) return;
+  const k = tlIndexAt(e.clientX);
+  if (liveOn()) toast("Na żywo mapa pokazuje teraz. Wcześniejsze kroki przewiniesz w trybie Historia.", 3000);
+  else if (k !== store.step) setStep(k);
+  tlTip(k); clearTimeout(tlTip.h); tlTip.h = setTimeout(() => tlTip(0), 2200);
+});
+$("ticker").onclick = (e) => { const t = e.target.closest("[data-step]"); if (t && !liveOn()) setStep(+t.dataset.step); };
 function renderLiveFeed() {
   const el = $("liveFeed"); if (!el) return;
   const K = { clue: "ślad", dispatch: "przydział", report: "meldunek", scenario: "zdarzenie" };
