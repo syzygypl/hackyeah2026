@@ -1,0 +1,323 @@
+// Centrum - all incidents (scenarios / LIVE actions) on one view for the operator (kierownik akcji / dyspozytor).
+// Overview map + incident cards + shared team roster (drag a team onto an incident). Click -> open the incident in the app.
+// Data: GET /api/incidents + GET /api/teams + POST /api/teams/assign (CONTRACT.md "Live mode"). Until the server has them,
+// the adapter below falls back to GET /api/scenarios + lazy GET /api/run/<sc> (+ GET /api/live if present) and an
+// in-memory team roster mock seeded from the scenario files. Switching is automatic: a 404 means "not there yet".
+import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
+import { offlineStyle, loadBasemap, REGIONS } from "../web/basemap/basemap.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const pct = (p) => Math.round((p || 0) * 100) + "%";
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const POLL_MS = 5000;
+const openURL = (sc) => `./?role=operator&mode=akcja&sc=${encodeURIComponent(sc)}`;
+function toast(t, ms = 3000) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = "none", ms); }
+
+// ---------- transport (PIN like app.js: loopback needs none)
+const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
+let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}
+if (!LOOPBACK) { $("pinbox").hidden = false; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} tick(); }; }
+async function api(path, body) {
+  const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
+  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-store" } : { method: "POST", headers: h, body: JSON.stringify(body) });
+  if (!r.ok) { const e = new Error(r.status === 401 ? "Podaj PIN akcji." : "HTTP " + r.status); e.status = r.status; throw e; }
+  return r.json();
+}
+
+// ---------- data adapter: normalized incident = { sc, title, place, live, found, mode, lastEventAt, lastClock, top3:[{segmentId,name,weight}], teams:{assigned,total}, pending }
+const has = { incidents: null, teams: null, live: null };   // null = not probed yet, true / false after the first answer
+let liveRetry = 0;
+const reprobe = { incidents: 0, teams: 0 };   // after a 404, ask again every 60 s (the server route may land while the page is open)
+const tryReal = (k) => has[k] !== false || Date.now() > reprobe[k];
+const missing = (k) => { has[k] = false; reprobe[k] = Date.now() + 60000; };
+function splitIncident(txt, sc) {
+  const t = String(txt || sc).replace(/\s*\(scenariusz fikcyjny\)\s*/i, "").trim();
+  const i = t.indexOf(" - "); let title = i > 0 ? t.slice(0, i) : t, place = i > 0 ? t.slice(i + 3) : sc;
+  if (/^.[a-ząćęłńóśźż]/.test(title)) title = title.charAt(0).toLowerCase() + title.slice(1);
+  return { title, place };
+}
+async function loadIncidents() {
+  if (tryReal("incidents")) {
+    try { const a = await api("/api/incidents"); has.incidents = true; return (Array.isArray(a) ? a : a.incidents || []).filter((x) => !/blind/i.test(x.sc)).map(normIncident); }
+    catch (e) { if (e.status === 404) missing("incidents"); else throw e; }
+  }
+  return fallbackIncidents();
+}
+function normIncident(x) {
+  return { sc: x.sc, title: x.title || "", place: x.place || x.sc, live: !!x.live, found: !!x.found, mode: x.mode || null, lastEventAt: x.lastEventAt || null,
+    lastClock: x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0 })), teams: x.teams || null, pending: false };
+}
+// fallback: /api/scenarios (every 60 s) + one /api/run/<sc> at a time (first engine run can take ~15 s), summarized and cached
+let scenCache = null, scenAt = 0;
+const runSum = {};            // sc -> { top3, teams, found, lastClock, liveFolded }
+const runWant = {};           // sc -> live seq the cached summary is based on (refetch when the feed seq for sc grows)
+const liveBySc = {};          // sc -> { seq, t } from /api/live or roster moves (mock)
+let liveSeq = 0, runQueue = [], runBusy = null;   // runBusy = sc being computed
+async function fallbackIncidents() {
+  if (!scenCache || Date.now() - scenAt > 60000) {
+    const a = await api("/api/scenarios"); scenAt = Date.now();
+    scenCache = (Array.isArray(a) ? a : a.scenarios || []).map((s) => typeof s === "string" ? { name: s } : s).filter((s) => s.name && !/blind/i.test(s.name));
+  }
+  await pollLive();
+  const out = scenCache.map((s) => {
+    const sc = s.name, r = runSum[sc], lv = liveBySc[sc];
+    if ((!r || (lv && lv.seq > (runWant[sc] || 0))) && !runQueue.includes(sc) && runBusy !== sc) runQueue.push(sc);
+    return { sc, ...splitIncident(s.incident, sc), live: !!lv || !!(r && r.liveFolded), found: !!(r && r.found), mode: null, lastEventAt: lv ? lv.t : null,
+      lastClock: r ? r.lastClock : s.startClock || null, top3: r ? r.top3 : [], teams: r ? r.teams : null, pending: !r };
+  });
+  pumpRuns();
+  return out;
+}
+async function pumpRuns() {
+  if (runBusy || !runQueue.length) return;
+  const sc = runQueue.shift(), seq = (liveBySc[sc] || {}).seq || 0;
+  runBusy = sc;
+  try { const run = await api("/api/run/" + encodeURIComponent(sc)); runSum[sc] = summarize(run); }
+  catch (e) { runSum[sc] = runSum[sc] || { top3: [], teams: null, found: false, lastClock: null, err: true }; }
+  runWant[sc] = seq; runBusy = null;
+  const x = !has.incidents && incidents.find((i) => i.sc === sc), r = runSum[sc];   // patch the shown card now, not at the next 5 s tick
+  if (x) { Object.assign(x, { top3: r.top3, teams: r.teams, found: r.found, lastClock: r.lastClock || x.lastClock, pending: false }); x.live = x.live || !!r.liveFolded; render(); }
+  setTimeout(pumpRuns, 300);   // stagger: never two engine runs at once from this page
+}
+function summarize(run) {
+  const steps = run.steps || [], last = steps[steps.length - 1] || {};
+  const segs = (last.segments || []).slice().sort((a, b) => b.poa - a.poa).slice(0, 3);
+  const assigned = new Set((last.assignments || []).map((a) => a.resourceId));
+  return { top3: segs.map((s) => ({ segmentId: s.id, name: s.name, weight: s.poa })), teams: { assigned: assigned.size, total: (last.resources || []).length },
+    found: steps.some((s) => s.kind === "found"), lastClock: last.t || null, liveFolded: (run.liveEventsFolded || 0) > 0 };
+}
+async function pollLive() {
+  if (has.live === false && Date.now() < liveRetry) return;
+  try {
+    const f = await api("/api/live?since=" + liveSeq); has.live = true;
+    for (const e of f.events || []) if (e.sc) liveBySc[e.sc] = { seq: e.seq, t: e.t };
+    liveSeq = Math.max(liveSeq, f.seq || 0);
+  } catch (e) { has.live = false; liveRetry = Date.now() + 60000; }
+}
+
+// ---------- scenario files (IPP, bbox, resources): /scenarios/<sc>.json, small, fetched once
+const meta = {};
+async function loadMeta(sc) {
+  if (meta[sc] !== undefined) return meta[sc];
+  meta[sc] = null;
+  try { const s = await api("/scenarios/" + encodeURIComponent(sc) + ".json"); meta[sc] = { ipp: s.ipp && s.ipp.at, bbox: s.bbox, resources: s.resources || [] }; } catch (e) {}
+  return meta[sc];
+}
+
+// ---------- team roster: real API or in-memory mock (same shapes as CONTRACT.md)
+const KIND = { ground: "pieszy", dog: "pies", drone: "dron", heli: "smiglowiec", boat: "lodz", diver: "nurkowie" };
+let mock = null;
+function seedMock(scs) {
+  const by = new Map();
+  for (const sc of scs) for (const r of (meta[sc] && meta[sc].resources) || []) {
+    if (!by.has(r.id)) by.set(r.id, { id: r.id, name: r.name, kind: KIND[r.type] || r.type, base: r.base || null, sc: null, segmentId: null, status: "wolny", home: [] });
+    by.get(r.id).home.push(sc);
+  }
+  return [...by.values()];
+}
+async function loadTeams(scs) {
+  if (tryReal("teams")) {
+    try { const a = await api("/api/teams"); has.teams = true; return Array.isArray(a) ? a : a.teams || []; }
+    catch (e) { if (e.status === 404) missing("teams"); else throw e; }
+  }
+  if (!mock || !mock.length) mock = seedMock(scs);
+  return mock;
+}
+async function assignTeam(team, sc) {
+  if (has.teams) return api("/api/teams/assign", { team, sc, by: "operator" });
+  const t = mock.find((x) => x.id === team); if (!t) return mock;
+  const old = t.sc, now = new Date().toISOString();
+  t.sc = sc; t.segmentId = null; t.status = sc ? "w drodze" : "wolny";
+  for (const s of [old, sc]) if (s) liveBySc[s] = { seq: ((liveBySc[s] || {}).seq || 0), t: now };   // a roster move makes the incident LIVE (contract)
+  return mock;
+}
+
+// ---------- state + render
+let incidents = [], teams = [], hl = null, dragging = false, fitted = false;
+const kindLabel = (k) => ({ pieszy: "pieszy", pies: "pies", dron: "dron", smiglowiec: "śmigłowiec", lodz: "łódź", nurkowie: "nurkowie" }[k] || k || "zespół");
+const ICON = {
+  pieszy: '<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7m0 0-3 7m3-7 3 7M7 11l5-3 5 3"/>',
+  pies: '<path d="M5 12h9l2-4 3 1-1 3v7M5 12v7M5 12 3 9m11 3v7"/>',
+  dron: '<circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7 8l3 3m4 0 3-3M7 16l3-3m4 0 3 3M10 10h4v4h-4z"/>',
+  smiglowiec: '<path d="M3 5h18M12 5v3M5 12a5 4 0 0 0 5 4h6l3-4-3-3H9a4 3 0 0 0-4 3zM21 12h-2M9 19h8"/>',
+  lodz: '<path d="M3 15h18l-3 4H6zM12 4v11M12 5l6 8h-6"/>',
+  nurkowie: '<circle cx="9" cy="10" r="3"/><circle cx="15" cy="10" r="3"/><path d="M4 18c2-1 4-1 6 0s4 1 6 0 4-1 6 0"/>',
+};
+const icon = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k] || '<circle cx="12" cy="12" r="6"/>'}</svg>`;
+// short names for the map labels and card headings (incident text is long and not always "title - place")
+const SHORT = { zawrat: "Zawrat", "morskie-oko": "Morskie Oko", kasprowy: "Kasprowy Wierch", "bieszczady-wetlinska": "Połonina Wetlińska", "karkonosze-sniezka": "Śnieżka",
+  sniardwy: "Śniardwy", morzycko: "Morzycko", miedzyzdroje: "Międzyzdroje", mamry: "Mamry", krakow: "Kraków", "night-test": "Test nocny" };
+const short = (x) => SHORT[x.sc] || (x.place && x.place !== x.sc ? x.place.split(/[,/]/)[0].trim() : x.sc);
+const longText = (x) => [x.title, x.place !== x.sc ? x.place : ""].filter(Boolean).join(" - ");
+const modeOf = (x) => x.live ? "live" : x.found ? "found" : x.mode === "plan" ? "plan" : "replay";
+const BADGE = { live: "LIVE", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE" };
+const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); };
+function sortIncidents(a) {
+  return a.slice().sort((x, y) => (y.live - x.live) || String(y.lastEventAt || "").localeCompare(String(x.lastEventAt || "")) || (x.found - y.found) || x.place.localeCompare(y.place, "pl"));
+}
+function render() {
+  if (!dragging) { renderCards(); renderTeams(); }
+  renderMarkers();
+  const nLive = incidents.filter((x) => x.live).length;
+  $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
+  $("src").textContent = (has.incidents ? "/api/incidents" : "/api/scenarios + /api/run (zapas)") + " · " + (has.teams ? "/api/teams" : "zespoły: makieta w pamięci");
+  $("src").title = has.incidents ? "Źródło: GET /api/incidents" : "Serwer nie ma jeszcze /api/incidents - dane z /api/scenarios i /api/run/<sc>. Zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce (do czasu /api/teams)");
+}
+function renderCards() {
+  const list = sortIncidents(incidents);
+  $("cards").innerHTML = list.map((x) => {
+    const m = modeOf(x), mine = teams.filter((t) => t.sc === x.sc);
+    const when = x.lastEventAt ? `ost. zdarzenie ${hhmm(x.lastEventAt)}` : x.lastClock ? `scenariusz ${esc(x.lastClock)}` : "";
+    return `<article class="card ${m} ${hl === x.sc ? "hl" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
+      <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="mute">${esc(x.sc)}</span><span class="when mono">${when}</span></div>
+      <h3><a href="${openURL(x.sc)}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}</div>
+      ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw · waga mapy</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span><b>${pct(s.weight)}</b></div>`).join("")}</div>`
+        : `<div class="loading">${x.pending ? "Liczę mapę (pierwsze przeliczenie do ~15 s)..." : "Brak mapy dla tej akcji."}</div>`}
+      <div class="cteams">${x.teams ? `Zespoły z sektorem: <span class="n">${x.teams.assigned}/${x.teams.total}</span>` : ""}
+        ${mine.map((t) => `<span class="chip" title="${esc(t.name)} · ${esc(t.status)}">${esc(t.id)}</span>`).join("")}</div>
+      <div class="drophint">Upuść tutaj, aby dołączyć zespół do tej akcji</div></article>`;
+  }).join("") || `<div class="help">Brak akcji na serwerze.</div>`;
+  $("cards").querySelectorAll(".card").forEach((el) => {
+    el.onclick = (e) => { if (!e.target.closest("a")) location.href = openURL(el.dataset.sc); };
+    el.onmouseenter = () => setHl(el.dataset.sc); el.onmouseleave = () => setHl(null);
+  });
+  wireDrops($("cards"));
+}
+function renderTeams() {
+  if ($("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT") return;   // do not rebuild under an open select
+  const list = sortIncidents(incidents);
+  const opts = (cur) => `<option value="" ${!cur ? "selected" : ""}>wolny</option>` + list.map((x) => `<option value="${esc(x.sc)}" ${cur === x.sc ? "selected" : ""}>${esc(short(x))}</option>`).join("");
+  const row = (t) => `<div class="team" draggable="true" data-team="${esc(t.id)}" title="${esc(t.name)}${t.home && t.home.length ? " · baza w: " + esc(t.home.join(", ")) : ""}">
+      <span class="ic">${icon(t.kind)}</span><span class="nm">${esc(t.name)}</span>
+      <span class="meta"><span>${esc(kindLabel(t.kind))}</span><span class="st ${t.status === "wolny" ? "wolny" : t.status === "w akcji" ? "akcja" : ""}">${esc(t.status || (t.sc ? "w drodze" : "wolny"))}${t.segmentId ? " " + esc(t.segmentId) : ""}</span>
+      <select data-team="${esc(t.id)}" aria-label="Przydziel ${esc(t.name)} do akcji">${opts(t.sc)}</select></span></div>`;
+  const grp = (sc, title, ts, extra = "") => `<section class="grp" data-drop="${esc(sc)}"><h3>${title} <span class="cnt">${ts.length}</span>${extra}</h3>${ts.map(row).join("") || `<div class="help">${sc ? "Brak zespołów - przeciągnij tutaj." : "Wszystkie zespoły pracują."}</div>`}</section>`;
+  const free = teams.filter((t) => !t.sc);
+  const busy = list.filter((x) => teams.some((t) => t.sc === x.sc));
+  $("teams").innerHTML = grp("", "Wolne", free) + busy.map((x) => grp(x.sc, esc(short(x)), teams.filter((t) => t.sc === x.sc), modeOf(x) === "live" ? ' <span class="badge live">LIVE</span>' : "")).join("")
+    || `<div class="help">Brak zespołów.</div>`;
+  $("teams").querySelectorAll(".team").forEach((el) => {
+    el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", el.dataset.team); e.dataTransfer.effectAllowed = "move"; dragging = true; document.body.classList.add("dragging"); };
+    el.ondragend = () => { dragging = false; document.body.classList.remove("dragging"); document.querySelectorAll(".over").forEach((o) => o.classList.remove("over")); };
+  });
+  $("teams").querySelectorAll("select").forEach((s) => s.onchange = () => doAssign(s.dataset.team, s.value || null));
+  wireDrops($("teams"));
+}
+function wireDrops(root) {
+  root.querySelectorAll("[data-drop]").forEach((el) => {
+    el.ondragover = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; el.classList.add("over"); };
+    el.ondragleave = (e) => { if (!el.contains(e.relatedTarget)) el.classList.remove("over"); };
+    el.ondrop = (e) => { e.preventDefault(); el.classList.remove("over"); const id = e.dataTransfer.getData("text/plain"); if (id) doAssign(id, el.dataset.drop || null); };
+  });
+}
+async function doAssign(team, sc) {
+  const t = teams.find((x) => x.id === team);
+  if (!t || (t.sc || null) === (sc || null)) return;
+  try {
+    const r = await assignTeam(team, sc); teams = Array.isArray(r) ? r : r.teams || teams;
+    const x = incidents.find((i) => i.sc === sc);
+    toast(sc ? `${t.name} -> ${x ? short(x) : sc}. Sektor wybierz w akcji.` : `${t.name}: zwolniony`);
+    dragging = false; document.body.classList.remove("dragging");
+    tick();
+  } catch (e) { toast("Przydział nie został zapisany: " + e.message); }
+}
+function setHl(sc) {
+  hl = sc;
+  document.querySelectorAll(".card").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
+  for (const [k, m] of markers) m.getElement().classList.toggle("hl", k === sc);
+}
+
+// ---------- map: paper ground + rough outline of Poland; regional offline basemaps (web/basemap) load when zoomed in
+const POLAND = [[14.22,53.93],[15.0,54.2],[16.2,54.45],[17.0,54.7],[18.3,54.83],[18.6,54.43],[19.6,54.45],[20.8,54.35],[22.8,54.36],[23.5,54.0],[23.9,53.2],[23.6,52.6],[23.2,52.3],[23.6,52.08],[23.7,51.6],[24.1,50.8],[23.5,50.4],[22.7,49.6],[22.9,49.1],[22.0,49.2],[21.0,49.4],[20.4,49.38],[20.0,49.18],[19.6,49.4],[19.2,49.45],[18.85,49.5],[18.6,49.9],[18.0,50.05],[17.6,50.27],[16.9,50.45],[16.7,50.2],[16.2,50.6],[15.8,50.74],[15.5,50.8],[14.8,50.85],[14.95,51.4],[14.7,52.1],[14.55,52.6],[14.15,52.85],[14.4,53.3],[14.25,53.7],[14.22,53.93]];
+const base = offlineStyle();
+const map = new maplibregl.Map({
+  container: "map", attributionControl: { compact: true }, center: [19.4, 52.0], zoom: 5.3, minZoom: 4,
+  style: { version: 8, glyphs: base.glyphs, sprite: base.sprite,
+    sources: { pl: { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [POLAND] } } } },
+    layers: [{ id: "bg", type: "background", paint: { "background-color": css("--rl-bg") } },
+      { id: "pl-fill", type: "fill", source: "pl", maxzoom: 8, paint: { "fill-color": css("--rl-panel-solid"), "fill-opacity": 0.75 } },
+      { id: "pl-line", type: "line", source: "pl", maxzoom: 8, paint: { "line-color": css("--rl-line-strong"), "line-width": 1.5 } }] },
+});
+map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+let mapReady = false; map.on("load", () => { mapReady = true; fitAll(); loadRegions(); });
+const loaded = new Set();
+async function loadRegions() {
+  if (!mapReady || map.getZoom() < 7) return;
+  const b = map.getBounds();
+  for (const [id, r] of Object.entries(REGIONS)) {
+    const [[w, s], [e, n]] = r.bounds;
+    if (loaded.has(id) || e < b.getWest() || w > b.getEast() || n < b.getSouth() || s > b.getNorth()) continue;
+    loaded.add(id);
+    try {
+      await loadBasemap(maplibregl, r.file);
+      const st = offlineStyle({ file: r.file });
+      map.addSource("pm-" + id, st.sources.protomaps);
+      for (const l of st.layers) if (l.type !== "background") map.addLayer({ ...l, id: id + ":" + l.id, source: "pm-" + id, minzoom: Math.max(l.minzoom || 0, 7) }, "pl-line");
+    } catch (err) { console.warn("basemap " + id, err); }
+  }
+}
+map.on("moveend", loadRegions);
+map.on("zoom", () => document.body.classList.toggle("zin", map.getZoom() >= 9));   // zoomed in: labels next to their own dots
+const markers = new Map();
+function renderMarkers() {
+  const placed = [];   // Tatra incidents sit within a few km: stack their labels below each other (dot stays on the IPP)
+  for (const x of incidents.slice().sort((a, b) => a.sc.localeCompare(b.sc))) {
+    const p = meta[x.sc] && meta[x.sc].ipp; if (!p) continue;
+    const k = placed.filter((q) => Math.abs(q[0] - p[0]) < 0.2 && Math.abs(q[1] - p[1]) < 0.3).length; placed.push(p);
+    x._stack = k;
+  }
+  for (const x of incidents) {
+    const md = meta[x.sc]; if (!md || !md.ipp) continue;
+    let m = markers.get(x.sc);
+    if (!m) {
+      const el = document.createElement("div");
+      el.innerHTML = `<span class="dot"></span><span class="lbl"></span>`;
+      el.onclick = () => location.href = openURL(x.sc);
+      el.onmouseenter = () => setHl(x.sc); el.onmouseleave = () => setHl(null);
+      el.dataset.drop = x.sc;
+      el.ondragover = (e) => { e.preventDefault(); el.classList.add("over"); };
+      el.ondragleave = () => el.classList.remove("over");
+      el.ondrop = (e) => { e.preventDefault(); el.classList.remove("over"); const id = e.dataTransfer.getData("text/plain"); if (id) doAssign(id, x.sc); };
+      m = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat([md.ipp[1], md.ipp[0]]).addTo(map);
+      markers.set(x.sc, m);
+    }
+    const el = m.getElement(), mode = modeOf(x);
+    el.classList.add("mk"); for (const c of ["live", "found", "plan", "replay"]) el.classList.toggle(c, c === mode); el.classList.toggle("hl", hl === x.sc);
+    el.title = `${short(x)}: ${longText(x)} - ${BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
+    el.querySelector(".lbl").textContent = short(x);
+    el.style.zIndex = mode === "live" ? 3 : 1;
+    el.style.setProperty("--k", x._stack || 0);
+  }
+  for (const [k, m] of markers) if (!incidents.some((x) => x.sc === k)) { m.remove(); markers.delete(k); }
+  fitAll();
+}
+function fitAll() {
+  if (fitted || !mapReady) return;
+  const pts = incidents.map((x) => meta[x.sc] && meta[x.sc].ipp).filter(Boolean);
+  if (!pts.length || pts.length < Math.min(incidents.length, 2)) return;
+  const lons = pts.map((p) => p[1]), lats = pts.map((p) => p[0]);
+  const wide = innerWidth > 900, pad = wide ? { left: 400 + 40, right: 300 + 160, top: 100, bottom: 40 } : 30;
+  map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: pad, maxZoom: 9, duration: 0 });
+  fitted = pts.length >= incidents.length;
+}
+
+// ---------- loop: every 5 s, never overlapping
+let busy = false;
+async function tick() {
+  if (busy) return; busy = true;
+  try {
+    incidents = await loadIncidents();
+    await Promise.all(incidents.map((x) => loadMeta(x.sc)));
+    teams = await loadTeams(incidents.map((x) => x.sc));
+    render();
+  } catch (e) {
+    console.warn(e);
+    toast(e.status === 401 ? "Podaj PIN akcji (pole PIN u góry)." : "Brak połączenia z serwerem akcji - ponawiam co 5 s.");
+  }
+  busy = false;
+}
+setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("pl-PL"); }, 1000);
+setInterval(tick, POLL_MS);
+tick();
+window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, map };   // tests

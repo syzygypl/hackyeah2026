@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Centrum - wszystkie akcje</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../web/vendor/maplibre-gl.css">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="centrum.css">
+</head>
+<body>
+<div id="map"></div>
+<header id="bar">
+  <a class="brand" href="./?role=operator" title="Wróć do aplikacji (ostatnia akcja)"><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</a>
+  <h1>Centrum - wszystkie akcje</h1>
+  <span id="counts" class="mute"></span>
+  <span style="flex:1"></span>
+  <label id="pinbox" hidden>PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
+  <span id="src" class="mute mono" title="Źródło danych"></span>
+  <span id="clock" class="mono"></span>
+</header>
+<aside id="list" aria-label="Akcje">
+  <h2>Akcje <span class="mute" id="listHint">kliknij, aby otworzyć</span></h2>
+  <div id="cards"><div class="help">Wczytuję akcje...</div></div>
+</aside>
+<aside id="roster" aria-label="Zespoły">
+  <h2>Zespoły <span class="mute">przeciągnij na akcję</span></h2>
+  <div id="teams"><div class="help">Wczytuję zespoły...</div></div>
+  <div class="help foot">Przydział do sektora robi się w akcji (Plan). Tu: który zespół pracuje przy której akcji.</div>
+</aside>
+<div id="toast" role="status"></div>
+<script type="module" src="centrum.js"></script>
+</body>
+</html>
