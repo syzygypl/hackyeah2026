@@ -77,3 +77,11 @@ Razem ok. 5-7 h jednej osoby z agentem; kroki 1-3 dają działający pokaz po ok
 - **Liczby Koestera są amerykańskie i przybliżone.** Mówimy "ilustracyjne", tak jak w Zawracie.
 - **Strefy lotów dronów i procedury policji** - sprawdzić przed slajdem.
 - **Czy dwa demo (góry + miasto) to nie za dużo?** Na pitch: miasto jako główna historia, góry jako jedno zdanie "ten sam silnik działa w Tatrach".
+
+## Stan (2026-10-03 wieczór, AI Michała, decyzja Michała: budujemy)
+
+- `rescue/scenarios/krakow-nowa-huta.json`: Józef K. (fikcyjny), 81 lat, demencja, os. Centrum C, upał 33°C, zgłoszenie 16:30. Zdarzenia: pierścienie Koestera dla demencji, słowa córki o dawnym domu w Mogile (korytarz), BTS Mogiła 450 m, motorniczy MPK przy Klasztornej, fałszywe zgłoszenie z Parku Lotników zamknięte przez patrol, dron z termowizją słabszy w upale, znalezienie przez psa w zaroślach na Łąkach Nowohuckich o 18:40.
+- Teren: `osm_terrain.py` bez zmian (OSM + DEM; Kraków leży powyżej 50°N, więc DEM działa): 4 szlaki, 14 cieków (Wisła, rowy), 13 akwenów (Zalew Nowohucki), brzegi.
+- Mapa offline: `rescue/web/basemap/krakow.pmtiles` (bbox + margines), `REGIONS.krakow`.
+- Wynik silnika (domyślny v2.1, stan 18:15 przed znalezieniem): do miejsca znalezienia trzeba przejrzeć **4,8% obszaru zamiast 24,5%** przy samych pierścieniach; segment znalezienia na 4. miejscu (9. przy pierścieniach). Fałszywe zgłoszenie bez zamknięcia przez patrol ciągnie mapę do parku (52%) - dobry moment na demo: wyłącz dowód albo pokaż meldunek patrolu.
+- Nie zrobione: profile zespołów miejskich, upał w zegarze przeżycia (silnik pisze dziś "ryzyko hipotermii niski" przy 33°C - zgłoszone do właściciela silnika), strona "Widziałem".

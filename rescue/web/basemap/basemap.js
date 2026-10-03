@@ -26,6 +26,7 @@ export const REGIONS = {
   mamry:      { file: "mamry.pmtiles",      bounds: [[21.70, 54.03], [21.98, 54.20]], label: "Mazury - Mamry" },
   miedzyzdroje: { file: "miedzyzdroje.pmtiles", bounds: [[14.37, 53.88], [14.53, 53.98]], label: "Bałtyk - Międzyzdroje" },
   moryn:      { file: "moryn.pmtiles",      bounds: [[14.33, 52.82], [14.46, 52.90]], label: "Moryń - Jezioro Morzycko" },
+  krakow:     { file: "krakow.pmtiles",     bounds: [[19.97, 50.03], [20.10, 50.106]], label: "Kraków - Nowa Huta (miasto)" },
 };
 // Pick the region whose bounds contain a scenario bbox ({west,south,east,north}); null if none.
 export function regionFor(bb) {

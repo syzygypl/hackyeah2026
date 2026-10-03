@@ -21,7 +21,8 @@
     { id: 'blind-02-replay', label: 'Test na ślepo 2 (powtórka)', run: '../out/blind-02-replay.run.json', scenario: '../scenarios/blind-02-replay.json', dem: '../tools/terrain/data/blind-02-dem.json', basemap: false },
     // outside the Tatras (rescue/README "Scenarios outside the Tatras"); basemapFile = regional PMTiles in basemap/
     ...[['bieszczady-wetlinska', 'Bieszczady - Połonina Wetlińska', 'bieszczady.pmtiles'], ['karkonosze-sniezka', 'Karkonosze - Śnieżka', 'karkonosze.pmtiles'],
-      ['sniardwy', 'Śniardwy (woda)', 'sniardwy.pmtiles'], ['morzycko', 'Morzycko (woda)', 'moryn.pmtiles'], ['miedzyzdroje', 'Międzyzdroje (Bałtyk)', 'miedzyzdroje.pmtiles']]
+      ['sniardwy', 'Śniardwy (woda)', 'sniardwy.pmtiles'], ['morzycko', 'Morzycko (woda)', 'moryn.pmtiles'], ['miedzyzdroje', 'Międzyzdroje (Bałtyk)', 'miedzyzdroje.pmtiles'],
+      ['krakow-nowa-huta', 'Kraków - Nowa Huta (miasto)', 'krakow.pmtiles']]
       .map(([id, label, f]) => ({ id, label, run: `../out/${id}.run.json`, scenario: `../scenarios/${id}.json`, dem: `../tools/terrain/data/${id}-dem.json`, basemap: true, basemapFile: f })),
   ];
   const SC = SCENARIOS.find((x) => x.id === Q.get('sc')) || SCENARIOS[0];

@@ -1,0 +1,384 @@
+{
+  "incident": "Zaginiony senior z demencją - Kraków, Nowa Huta, upał (scenariusz fikcyjny, miasto)",
+  "date": "2026-07-22",
+  "startClock": "16:30",
+  "subject": {
+    "name": "Józef K. (osoba fikcyjna)",
+    "age": 81,
+    "category": "dementia",
+    "note": "Demencja (Alzheimer, średni etap), chodzi samodzielnie, ale wolno. Mieszka z córką na os. Centrum C. Wyszedł ok. 13:00 w kapciach i jasnej koszuli, bez portfela i biletu, telefon w kieszeni (nie odbiera). Od tygodnia powtarza, że 'wraca do domu' - 40 lat mieszkał w Mogile przy klasztorze, pracował w Kombinacie. Upał 33°C. Córka dzwoni na 112 o 16:30.",
+    "lastContact": "13:00"
+  },
+  "bbox": {
+    "south": 50.045,
+    "west": 19.995,
+    "north": 50.092,
+    "east": 20.075
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: dom, os. Centrum C (wyszedł ok. 13:00)",
+    "at": [
+      50.0738,
+      20.04
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "N1",
+      "name": "Os. Centrum i Plac Centralny",
+      "seed": [
+        50.0725,
+        20.037
+      ]
+    },
+    {
+      "id": "N2",
+      "name": "Park Ratuszowy i Szklane Domy",
+      "seed": [
+        50.0765,
+        20.0425
+      ]
+    },
+    {
+      "id": "N3",
+      "name": "Zalew Nowohucki",
+      "seed": [
+        50.079,
+        20.0525
+      ]
+    },
+    {
+      "id": "N4",
+      "name": "Bieńczyce, Arka Pana",
+      "seed": [
+        50.0845,
+        20.029
+      ]
+    },
+    {
+      "id": "N5",
+      "name": "Rondo Kocmyrzowskie",
+      "seed": [
+        50.08,
+        20.0185
+      ]
+    },
+    {
+      "id": "N6",
+      "name": "Rondo Czyżyńskie",
+      "seed": [
+        50.072,
+        20.013
+      ]
+    },
+    {
+      "id": "N7",
+      "name": "Park Lotników i Tauron Arena",
+      "seed": [
+        50.0675,
+        20.0
+      ]
+    },
+    {
+      "id": "N8",
+      "name": "Łąki Nowohuckie - północ",
+      "seed": [
+        50.0675,
+        20.0345
+      ]
+    },
+    {
+      "id": "N9",
+      "name": "Łąki Nowohuckie - południe, rowy i zarośla",
+      "seed": [
+        50.0595,
+        20.04
+      ]
+    },
+    {
+      "id": "N10",
+      "name": "Mogiła, Opactwo Cystersów",
+      "seed": [
+        50.065,
+        20.0545
+      ]
+    },
+    {
+      "id": "N11",
+      "name": "Ogródki działkowe Mogiła",
+      "seed": [
+        50.056,
+        20.056
+      ]
+    },
+    {
+      "id": "N12",
+      "name": "Wał i bulwar Wisły",
+      "seed": [
+        50.049,
+        20.043
+      ]
+    },
+    {
+      "id": "N13",
+      "name": "Kopiec Wandy i Pleszów",
+      "seed": [
+        50.07,
+        20.068
+      ]
+    },
+    {
+      "id": "N14",
+      "name": "Krzesławice",
+      "seed": [
+        50.0875,
+        20.0505
+      ]
+    },
+    {
+      "id": "N15",
+      "name": "Czyżyny południe i Łęg",
+      "seed": [
+        50.056,
+        20.015
+      ]
+    },
+    {
+      "id": "N16",
+      "name": "Wisła - wschód",
+      "seed": [
+        50.049,
+        20.065
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "id": "pol-a",
+      "name": "Patrol Policji A (KP Nowa Huta)",
+      "type": "ground",
+      "base": [
+        50.0735,
+        20.0335
+      ],
+      "readyAt": "16:45"
+    },
+    {
+      "id": "pol-b",
+      "name": "Patrol Policji B",
+      "type": "ground",
+      "base": [
+        50.0735,
+        20.0335
+      ],
+      "readyAt": "17:00"
+    },
+    {
+      "id": "sm",
+      "name": "Straż Miejska (2 os.)",
+      "type": "ground",
+      "base": [
+        50.0718,
+        20.0381
+      ],
+      "readyAt": "17:05"
+    },
+    {
+      "id": "dog",
+      "name": "Policyjny pies tropiący",
+      "type": "dog",
+      "base": [
+        50.0735,
+        20.0335
+      ],
+      "readyAt": "17:40"
+    },
+    {
+      "id": "drone",
+      "name": "Dron Policji z termowizją",
+      "type": "drone",
+      "base": [
+        50.0738,
+        20.04
+      ],
+      "readyAt": "17:20"
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): zarośla przy rowie na Łąkach Nowohuckich",
+    "at": [
+      50.0598,
+      20.0452
+    ]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "16:30",
+      "title": "Teren: ścieżki, Wisła i rowy, zalew, kościoły",
+      "detail": "OSM. Osoby z demencją idą 'prosto', trzymają się dróg i ścieżek, a utykają w zaroślach, przy wodzie i rowach (Koester).",
+      "factor": 1
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "16:30",
+      "title": "Koester: demencja, teren zabudowany",
+      "detail": "Pierścienie ISRID od IPP (wartości przybliżone; 89% znajdowanych w promieniu 1,6 km).",
+      "point": [
+        50.0738,
+        20.04
+      ],
+      "quantilesKm": [
+        0.3,
+        0.8,
+        1.6,
+        3.2
+      ]
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "16:30",
+      "title": "Trudność terenu",
+      "detail": "Miasto płaskie; klasy z nachylenia DEM i wody."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "16:30",
+      "title": "Warunki: upał 33°C, słońce, wiatr 2 m/s",
+      "detail": "IMGW: ostrzeżenie przed upałem 2. stopnia. Senior bez wody od 13:00: ryzyko odwodnienia i udaru. Zachód słońca 20:50.",
+      "visibilityM": 10000,
+      "windMs": 2,
+      "tempC": 33,
+      "precip": "none",
+      "dark": false,
+      "ice": false
+    },
+    {
+      "provider": "TripPlan",
+      "at": "16:35",
+      "title": "Córka: 'od tygodnia mówi, że wraca do domu w Mogile'",
+      "detail": "\"40 lat mieszkał przy klasztorze w Mogile, chodził tam pieszo przez łąki. Mógł iść tą drogą.\" Korytarz: dom - Łąki Nowohuckie - Opactwo.",
+      "points": [
+        [
+          50.0738,
+          20.04
+        ],
+        [
+          50.07,
+          20.042
+        ],
+        [
+          50.0655,
+          20.048
+        ],
+        [
+          50.0645,
+          20.054
+        ]
+      ],
+      "radiusM": 200
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "16:25",
+      "title": "Córka i sąsiedzi sprawdzili osiedle i Plac Centralny, nic",
+      "detail": "Klatki, ławki, sklep na rogu. Niski POD.",
+      "segments": [
+        "N1"
+      ],
+      "pod": 0.3
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "16:50",
+      "title": "CPR Kraków: ostatnie logowanie telefonu 15:40, BTS Mogiła",
+      "detail": "W mieście małe komórki: sektor ok. 450 m. Potem telefon się wyłączył (bateria).",
+      "point": [
+        50.064,
+        20.047
+      ],
+      "radiusM": 450
+    },
+    {
+      "provider": "Clue",
+      "at": "17:10",
+      "title": "Świadek: motorniczy - starszy pan w kapciach wysiadł na przystanku przy Klasztornej ok. 15:20",
+      "detail": "Zgłoszenie z dyspozytorni MPK po komunikacie policji. Pan bez biletu, 'pytał, gdzie jest jego dom'. Pewność godziny +/- 10 min.",
+      "point": [
+        50.0675,
+        20.053
+      ],
+      "radiusM": 250,
+      "seenAt": "15:20"
+    },
+    {
+      "provider": "Clue",
+      "at": "17:30",
+      "title": "Zgłoszenie mieszkanki: starszy pan na ławce w Parku Lotników ok. 16:50",
+      "detail": "Telefon na 112, opis ogólny (siwy, jasna koszula). Niepotwierdzone.",
+      "point": [
+        50.069,
+        19.999
+      ],
+      "radiusM": 300,
+      "seenAt": "16:50"
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "17:45",
+      "title": "Patrol Policji A: Park Ratuszowy i Szklane Domy, nic",
+      "detail": "Patrol pieszy, ławki i podwórka. POD 60%.",
+      "segments": [
+        "N2"
+      ],
+      "pod": 0.6
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "17:55",
+      "title": "Patrol Policji B: Park Lotników - to inny mieszkaniec, nic",
+      "detail": "Pan z ławki to sąsiad z Czyżyn, nie zaginiony. Park i okolice Tauron Areny przejrzane. POD 80%.",
+      "segments": [
+        "N7"
+      ],
+      "pod": 0.8
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "18:10",
+      "title": "Dron: Łąki Nowohuckie - północ, nic",
+      "detail": "Termowizja w upale słabo odróżnia człowieka od nagrzanej ziemi. POD 40%.",
+      "segments": [
+        "N8"
+      ],
+      "pod": 0.4
+    },
+    {
+      "provider": "Weather",
+      "at": "18:15",
+      "title": "IMGW: nadal 31°C, upał do 20:00",
+      "detail": "Zegar przeżycia: odwodnienie u 81-latka po 5-6 h bez wody.",
+      "factor": 1.0
+    },
+    {
+      "provider": "Clue",
+      "at": "18:40",
+      "title": "ZNALEZIONO: pies tropiący - senior w zaroślach przy rowie na Łąkach Nowohuckich",
+      "detail": "Odwodniony, przytomny, siedział w cieniu krzaków ok. 400 m od klasztoru. Zabrany przez ZRM.",
+      "point": [
+        50.0598,
+        20.0452
+      ],
+      "radiusM": 30,
+      "found": true
+    }
+  ]
+}
