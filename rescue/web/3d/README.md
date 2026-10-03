@@ -30,3 +30,18 @@ You hide the person by clicking the terrain (or "Losuj"). The map keeps the engi
 
 ## Wide terrain backdrop
 `data/zawrat-dem-wide.json` is a wider Copernicus DEM GLO-30 cut (scenario bbox + 5 km, about 16 x 16 km of the High Tatras) used by `?sc=zawrat` and `?sc=blind-01` as a backdrop, so the search area sits inside the surrounding massif. Generated with `python3 rescue/tools/terrain/osm_terrain.py --scenario <bbox-only json> --data <tmp cache> --dem-only --dem-margin-km 5`. The page averages it 2x2 (cuts over 600 px wide) to keep the mesh around 100k vertices; `?wide=0` uses the scenario's own DEM. Copernicus DEM (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018, provided under COPERNICUS by the European Union and ESA.
+
+## Embedding (iframe + postMessage)
+For the combined app (`rescue/app/`). Same origin only: messages from other origins or from anything but `window.parent` are ignored; replies go to `location.origin`.
+
+| Direction | Message | Effect |
+|---|---|---|
+| parent -> 3D | `{type: 'step', i}` | jump to step `i` |
+| parent -> 3D | `{type: 'select', segmentId}` | outline the segment in blue, highlight it in the ranking, fly to it |
+| parent -> 3D | `{type: 'run', url}` | reload with `?run=<url>` |
+| parent -> 3D | `{type: 'run', run}` | reload with this run object (parked in `sessionStorage`, `?runInline=1`) |
+| 3D -> parent | `{source: 'rescue3d', type: 'ready', scenario, steps, step}` | page loaded |
+| 3D -> parent | `{source: 'rescue3d', type: 'step', i, t}` | user changed the step (not echoed for parent-driven changes) |
+| 3D -> parent | `{source: 'rescue3d', type: 'select', segmentId}` | user clicked a segment (ranking or terrain) |
+
+`?embed=1` hides the 3D header (the shell has its own). Before the contract settles, `?sc=`, `?run=<url>` and `?step=i` work as URL parameters too.

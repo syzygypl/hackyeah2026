@@ -196,3 +196,8 @@ body.cinema .lbl3d.hut, body.cinema .lbl3d.team, body.cinema .lbl3d.ring { opaci
 #progress .pg-leg i { width: 10px; height: 3px; display: inline-block; border-radius: 2px; margin-left: 6px; }
 #right { max-height: calc(100vh - 425px); }
 @media (max-width: 1250px) { #progress { display: none; } }
+
+/* selection + embed */
+#ranklist li.sel { background: rgba(31, 78, 121, 0.1); box-shadow: inset 3px 0 0 var(--blue); }
+body.embed #top { display: none; }
+body.embed #left, body.embed #right { top: 12px; }

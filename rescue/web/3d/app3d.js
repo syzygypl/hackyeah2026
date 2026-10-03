@@ -91,10 +91,13 @@ function decimate(D, k) {
 }
 
 // ---------- load ----------
+// Embed: a parent page can hand a run object over postMessage; it is parked in sessionStorage and the page reloads.
+const inlineRun = (() => { if (!Q.has('runInline')) return null; try { return JSON.parse(sessionStorage.getItem('rescue3d-run')); } catch { return null; } })();
+if (Q.get('embed') === '1') document.body.classList.add('embed');
 let R, SCN, TER, DEM, REV;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
-  [R, SCN, TER, DEM, REV] = await Promise.all([getJSON(P.run, !!P.reveal), getJSON(P.scenario, true), getJSON(P.terrain, true),
+  [R, SCN, TER, DEM, REV] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : getJSON(P.run, !!P.reveal), getJSON(P.scenario, true), getJSON(P.terrain, true),
     (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => d || getJSON(P.dem)), P.reveal ? getJSON(P.reveal, true) : null]);
   if (DEM.cols > 600) DEM = decimate(DEM, 2); // wide backdrop: 2x2 average keeps the mesh ~100k vertices
   if (!R && SCN) R = synthRun(SCN); // replay without engine output: signals and patrols only, no POA map
@@ -595,6 +598,8 @@ function setStep(i, animate = true) {
   setMood(s.weather);
   renderUI(i, ranked, searched, prev);
   renderSignals(i);
+  if (SEL) document.querySelectorAll('#ranklist li').forEach((li) => li.classList.toggle('sel', li.dataset.seg === SEL));
+  if (prev !== i && !fromParent) toParent({ type: 'step', i, t: s.t });
 }
 function drawTeams(s) {
   disposeGroup(dyn.teams); movers.length = 0;
@@ -691,7 +696,7 @@ function renderRanking(ranked, searched, foundSeg, scope) {
 $('ranklist').addEventListener('click', (e) => {
   const li = e.target.closest('li'); if (!li) return;
   if (G.phase === 'search') return sendPatrol(li.dataset.seg);
-  const g = segs.get(li.dataset.seg); if (g) flyTo(v3(g.center[0], g.center[1]), 2.4);
+  selectSeg(li.dataset.seg);
 });
 
 function buildTimeline() {
@@ -809,7 +814,9 @@ cv.addEventListener('pointerleave', () => { $('tip').hidden = true; });
 cv.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
 cv.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
-  if (G.phase === 'hide') { const h = pick(e); if (h) hideAt(toLat(h.point.z), toLon(h.point.x)); }
+  const h = pick(e); if (!h) return;
+  if (G.phase === 'hide') return hideAt(toLat(h.point.z), toLon(h.point.x));
+  const k = cellOf(toLat(h.point.z), toLon(h.point.x)); if (k >= 0 && G.phase === 'off') selectSeg(R.segOf[k], { fly: false });
 });
 cv.addEventListener('dblclick', (e) => { const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
 function hover() {
@@ -990,6 +997,35 @@ function toast(e) {
   setTimeout(() => el.remove(), 30000);
 }
 
+// ---------- selection + embed API (postMessage, same origin only) ----------
+// in:  {type:'run', run} | {type:'run', url} | {type:'step', i} | {type:'select', segmentId}
+// out: {type:'ready', scenario, steps} | {type:'step', i, t} | {type:'select', segmentId}
+let SEL = null, fromParent = false;
+const toParent = (msg) => { if (window.parent !== window) window.parent.postMessage({ source: 'rescue3d', ...msg }, location.origin); };
+function selectSeg(id, { fly: doFly = true, notify = true } = {}) {
+  const g = segs.get(id); if (!g) return;
+  SEL = id; disposeGroup(dyn.sel);
+  drapeRuns(ringLL(g.polygon), 0.026, { color: '#1f4e79', width: 4, opacity: 0.95 }, dyn.sel);
+  document.querySelectorAll('#ranklist li').forEach((li) => li.classList.toggle('sel', li.dataset.seg === id));
+  if (doFly) flyTo(v3(g.center[0], g.center[1]), 2.4);
+  if (notify && !fromParent) toParent({ type: 'select', segmentId: id });
+}
+dyn.sel = new THREE.Group(); scene.add(dyn.sel);
+addEventListener('message', (e) => {
+  if (e.origin !== location.origin || e.source !== window.parent || !e.data || typeof e.data !== 'object') return;
+  const m = e.data; fromParent = true;
+  try {
+    if (m.type === 'step' && Number.isInteger(m.i)) { stopPlay(); setStep(m.i); }
+    else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
+    else if (m.type === 'run' && m.run && typeof m.run === 'object') {
+      sessionStorage.setItem('rescue3d-run', JSON.stringify(m.run));
+      const u = new URL(location.href); u.searchParams.set('runInline', '1'); u.searchParams.delete('run'); location.replace(u);
+    } else if (m.type === 'run' && typeof m.url === 'string') {
+      const u = new URL(location.href); u.searchParams.set('run', m.url); u.searchParams.delete('runInline'); location.replace(u);
+    }
+  } finally { fromParent = false; }
+});
+
 // ---------- loop ----------
 const clock = new THREE.Clock();
 function frame() {
@@ -1026,3 +1062,4 @@ renderer.shadowMap.needsUpdate = true;
 frame();
 pollLive();
 document.body.dataset.state = 'ready';
+toParent({ type: 'ready', scenario: SC, steps: R.steps.length, step: STEP });
