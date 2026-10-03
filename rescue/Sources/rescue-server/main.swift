@@ -188,6 +188,76 @@ func landing() -> Data {
     return response("200 OK", "text/html; charset=utf-8", Data(html.utf8))
 }
 
+// MARK: live mode (CONTRACT.md "Live mode": POST /api/clue, GET /api/live feed; dispatch + reports also land in the feed)
+
+struct LiveFeedEvent: Codable, Sendable {
+    var seq = 0, kind = "", t = "", by = "operator", title = ""
+    var team: String?, type: String?, segmentId: String?, note: String?, lat: Double?, lon: Double?
+}
+actor LiveFeed {
+    var seq = 0
+    var events: [LiveFeedEvent] = []
+    func add(_ e: LiveFeedEvent) -> LiveFeedEvent {
+        var e = e; seq += 1; e.seq = seq; e.t = ISO8601DateFormatter().string(from: Date())
+        events.append(e); if events.count > 300 { events.removeFirst(100) }
+        return e
+    }
+    func since(_ s: Int) -> (Int, [LiveFeedEvent]) { (seq, Array(events.filter { $0.seq > s }.suffix(50))) }
+}
+let liveFeed = LiveFeed()
+let clueTypes: [String: (label: String, strength: String)] = ["odziez": ("Odzież", "strong"), "slad": ("Ślad", "medium"), "swiadek": ("Świadek", "weak"),
+                                                               "telefon": ("Sygnał telefonu", "medium"), "znalezisko": ("Znalezisko", "strong")]
+func shortClean(_ v: Any?, _ n: Int) -> String? {
+    (v as? String).map { String($0.trimmingCharacters(in: .whitespacesAndNewlines).prefix(n)) }.flatMap { $0.isEmpty ? nil : $0 }
+}
+/// Feed entry for an operator dispatch (POST /api/assignments or /story/assign body).
+func feedDispatch(_ body: Data) async {
+    guard let o = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any], let team = shortClean(o["team"] ?? o["resourceId"], 64) else { return }
+    let seg = shortClean(o["segmentId"], 16)
+    var e = LiveFeedEvent(kind: "dispatch", by: shortClean(o["by"], 40) ?? "operator", title: seg.map { "\(team) -> \($0)" } ?? "\(team): odwołany")
+    e.team = team; e.segmentId = seg; e.note = shortClean(o["why"] ?? o["note"], 200)
+    _ = await liveFeed.add(e)
+}
+func addClue(_ body: Data) async -> Data {
+    guard let o = (try? JSONSerialization.jsonObject(with: body)) as? [String: Any] else { return jsonErr("400 Bad Request", "bad JSON") }
+    let type = clueTypes[(o["type"] as? String ?? "").lowercased()] != nil ? (o["type"] as! String).lowercased() : "slad"
+    let (label, strength) = clueTypes[type]!
+    var lat = (o["lat"] as? NSNumber)?.doubleValue, lon = (o["lon"] as? NSNumber)?.doubleValue
+    let seg = shortClean(o["segmentId"], 16)
+    if lat == nil || lon == nil, let seg {
+        let sc = shortClean(o["scenario"], 60).flatMap { validName($0) ? $0 : nil } ?? "zawrat"
+        let s = (try? Scenario.load(scenariosDir.appendingPathComponent("\(sc).json").path)) ?? defaultScenario
+        if let p = s.segments.first(where: { $0.id == seg })?.seed, p.count == 2 { lat = p[0]; lon = p[1] }
+    }
+    guard let lat, let lon, abs(lat) <= 90, abs(lon) <= 180 else { return jsonErr("400 Bad Request", "lat/lon or a known segmentId required") }
+    if let id = shortClean(o["id"], 100), !(await seenReports.firstTime("clue:" + id)) {
+        return response("200 OK", json, Data(#"{"ok":true,"duplicate":true}"#.utf8))
+    }
+    let note = shortClean(o["note"], 200), team = shortClean(o["team"], 64)
+    let by = (o["by"] as? String) == "ratownik" ? "ratownik" : "operator"
+    let at = (o["at"] as? String).flatMap { $0.range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil ? $0 : nil }
+        ?? { let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: Date()) }()
+    let desc = "\(label)\(note.map { ": \($0)" } ?? "")"
+    var hint: [String: Any] = ["type": "clue", "lat": lat, "lon": lon, "description": desc, "strength": strength]
+    if let team { hint["resource"] = team }
+    if let seg { hint["segmentId"] = seg }
+    let rep: [String: Any] = ["t": ISO8601DateFormatter().string(from: Date()), "at": at, "source": "live-clue", "parsedBy": "manual", "latencyMs": 0,
+                              "text": "\(by == "ratownik" ? (team ?? "ratownik") : "operator"): \(desc)", "hints": [hint]]
+    guard let r = (try? JSONSerialization.data(withJSONObject: rep)).flatMap({ try? JSONDecoder().decode(FieldReport.self, from: $0) }) else { return jsonErr("500 Internal Server Error", "encode failed") }
+    do { Metrics.shared.set("live_events_total", [:], Double(try await store.append(r).count)) } catch { return jsonErr("500 Internal Server Error", "write failed") }
+    var e = LiveFeedEvent(kind: "clue", by: by, title: desc)
+    e.team = team; e.type = type; e.segmentId = seg; e.note = note; e.lat = lat; e.lon = lon
+    e = await liveFeed.add(e)
+    print("[clue \(by)\(team.map { " " + $0 } ?? "")] \(desc) @ \(lat),\(lon)")
+    return response("200 OK", json, Data(#"{"ok":true,"seq":\#(e.seq),"event":\#(jsonString(e))}"#.utf8))
+}
+func liveFeedData(_ since: Int) async -> Data {
+    let (seq, evs) = await liveFeed.since(since)
+    let asg = String(decoding: await studio.assignmentsByTeam(), as: UTF8.self)
+    let now = ISO8601DateFormatter().string(from: Date())
+    return response("200 OK", json, Data(#"{"seq":\#(seq),"now":"\#(now)","events":\#(jsonString(evs)),"assignments":\#(asg)}"#.utf8))
+}
+
 // MARK: routing
 
 struct Req { let method: String; let path: String; let query: [String: String]; let headers: [String: String]; let body: Data; let peer: String }
@@ -281,6 +351,8 @@ func handle(_ q: Req) async -> Data {
         Metrics.shared.inc("client_reports_total", ["client_id": cid, "team": team])
         Metrics.shared.set("client_last_report_timestamp_seconds", ["client_id": cid, "team": team], Date().timeIntervalSince1970)
         print("[report \(r.parsedBy) \(r.latencyMs) ms] \(text) -> \(r.hints.map(\.type))")
+        var fe = LiveFeedEvent(kind: "report", by: "ratownik", title: "Meldunek: \(text.prefix(80))"); fe.team = team == "-" ? nil : team; fe.note = String(text.prefix(200))
+        _ = await liveFeed.add(fe)
         return response("200 OK", json, Data(jsonString(r).utf8))
 
     // Studio (same actor as rescue-studio)
@@ -288,9 +360,11 @@ func handle(_ q: Req) async -> Data {
     case ("GET", "/story"): return response("200 OK", json, await studio.get())
     case ("GET", "/story/scenario"): return response("200 OK", json, await studio.scenarioData())
     case ("GET", "/api/assignments"): return response("200 OK", json, await studio.assignmentsByTeam())
-    case ("POST", "/api/assignments"): return response("200 OK", json, await studio.assignTeam(q.body))
+    case ("POST", "/api/assignments"): await feedDispatch(q.body); return response("200 OK", json, await studio.assignTeam(q.body))
+    case ("POST", "/api/clue"): return await addClue(q.body)
+    case ("GET", "/api/live"): return await liveFeedData(Int(q.query["since"] ?? "") ?? 0)
     case ("GET", "/story/assign"): return response("200 OK", json, await studio.assignments())
-    case ("POST", "/story/assign"): return response("200 OK", json, await studio.assign(q.body))
+    case ("POST", "/story/assign"): await feedDispatch(q.body); return response("200 OK", json, await studio.assign(q.body))
     case ("GET", "/eval/sim-runs"): return response("200 OK", json, EvalFiles.simRuns())
     case ("POST", "/story"): return response("200 OK", json, await studio.setStory(q.body))
     case ("POST", "/story/new"): return response("200 OK", json, await studio.newStory(q.body))
