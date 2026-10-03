@@ -1,0 +1,105 @@
+{
+ "find": [
+  53.767965,
+  21.82774
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "float_drift",
+ "lostAt": [
+  53.765537,
+  21.826075
+ ],
+ "lostClock": "18:57",
+ "stopReason": "in_water",
+ "reportClock": "19:51",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  194,
+  259
+ ],
+ "path": [
+  [
+   53.765537,
+   21.826075,
+   "18:57"
+  ],
+  [
+   53.765762,
+   21.826229,
+   "19:02"
+  ],
+  [
+   53.765987,
+   21.826383,
+   "19:07"
+  ],
+  [
+   53.766212,
+   21.826538,
+   "19:12"
+  ],
+  [
+   53.766436,
+   21.826692,
+   "19:17"
+  ],
+  [
+   53.766661,
+   21.826846,
+   "19:22"
+  ],
+  [
+   53.766886,
+   21.827,
+   "19:27"
+  ],
+  [
+   53.767111,
+   21.827154,
+   "19:32"
+  ],
+  [
+   53.767336,
+   21.827308,
+   "19:37"
+  ],
+  [
+   53.76756,
+   21.827462,
+   "19:42"
+  ],
+  [
+   53.767785,
+   21.827616,
+   "19:47"
+  ],
+  [
+   53.767965,
+   21.82774,
+   "19:51"
+  ]
+ ],
+ "distKmFromIpp": 0.292,
+ "trackOffsetM": 480,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  }
+ ],
+ "case": "case-0156",
+ "region": "sniardwy",
+ "seed": 3
+}

@@ -1,0 +1,276 @@
+{
+ "incident": "Symulacja wodna 0056: wędkarz (przypadek fikcyjny)",
+ "date": "2026-08-08",
+ "startClock": "12:52",
+ "blind": true,
+ "subject": {
+  "name": "Osoba fikcyjna 0056",
+  "age": 38,
+  "category": "angler",
+  "note": "Zgłoszenie o 12:52. Kamizelka: tak.",
+  "lastContact": "10:55"
+ },
+ "bbox": {
+  "south": 53.90305,
+  "west": 14.40423,
+  "north": 53.95695,
+  "east": 14.49577
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "LKP: miejsce wypadku na wodzie (świadek)",
+  "at": [
+   53.930328,
+   14.434854
+  ],
+  "seenAt": "10:55"
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "B1",
+   "name": "Strefa prądu wstecznego (LKP)",
+   "seed": [
+    53.93674,
+    14.44924
+   ]
+  },
+  {
+   "id": "B2",
+   "name": "Plaża przy miejscu kąpieli",
+   "seed": [
+    53.93404,
+    14.45534
+   ]
+  },
+  {
+   "id": "B3",
+   "name": "Molo i przystań morska",
+   "seed": [
+    53.93314,
+    14.44161
+   ]
+  },
+  {
+   "id": "B4",
+   "name": "Toń na SW od mola",
+   "seed": [
+    53.92955,
+    14.42788
+   ]
+  },
+  {
+   "id": "B5",
+   "name": "Plaża na SW od mola",
+   "seed": [
+    53.92596,
+    14.43551
+   ]
+  },
+  {
+   "id": "B6",
+   "name": "Toń przybrzeżna NE (300-700 m)",
+   "seed": [
+    53.94033,
+    14.45534
+   ]
+  },
+  {
+   "id": "B7",
+   "name": "Toń przybrzeżna NE (700-1500 m)",
+   "seed": [
+    53.94482,
+    14.46449
+   ]
+  },
+  {
+   "id": "B8",
+   "name": "Plaża NE (ok. 1 km)",
+   "seed": [
+    53.94123,
+    14.46755
+   ]
+  },
+  {
+   "id": "B9",
+   "name": "Plaża NE (1.5-2.5 km)",
+   "seed": [
+    53.94842,
+    14.47822
+   ]
+  },
+  {
+   "id": "B10",
+   "name": "Toń przybrzeżna dalej NE",
+   "seed": [
+    53.95201,
+    14.4767
+   ]
+  },
+  {
+   "id": "B11",
+   "name": "Otwarte morze (ponad 1 km od brzegu)",
+   "seed": [
+    53.94752,
+    14.43551
+   ]
+  },
+  {
+   "id": "B12",
+   "name": "Klif i las (Woliński PN)",
+   "seed": [
+    53.93674,
+    14.47365
+   ]
+  },
+  {
+   "id": "B13",
+   "name": "Międzyzdroje - promenada",
+   "seed": [
+    53.92955,
+    14.45076
+   ]
+  },
+  {
+   "id": "B14",
+   "name": "Otwarte morze NW",
+   "seed": [
+    53.9547,
+    14.41262
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "wopr-jetski",
+   "name": "Skuter WOPR (kąpielisko Międzyzdroje)",
+   "type": "boat",
+   "base": [
+    53.93404,
+    14.44619
+   ],
+   "readyAt": "14:00"
+  },
+  {
+   "id": "wopr-boat",
+   "name": "Łódź ratownicza WOPR (przystań morska)",
+   "type": "boat",
+   "base": [
+    53.93314,
+    14.44161
+   ],
+   "readyAt": "14:10"
+  },
+  {
+   "id": "sar-boat",
+   "name": "Łódź Morskiej Służby SAR (Świnoujście)",
+   "type": "boat",
+   "base": [
+    53.92,
+    14.28
+   ],
+   "readyAt": "14:15"
+  },
+  {
+   "id": "beach-patrol",
+   "name": "Ratownicy + Policja - patrol plaży",
+   "type": "ground",
+   "base": [
+    53.93314,
+    14.44771
+   ],
+   "readyAt": "14:00"
+  },
+  {
+   "id": "drone",
+   "name": "Dron WOPR",
+   "type": "drone",
+   "base": [
+    53.93314,
+    14.44771
+   ],
+   "readyAt": "14:20"
+  },
+  {
+   "id": "heli",
+   "name": "Śmigłowiec SAR Marynarki Wojennej (Darłowo)",
+   "type": "heli",
+   "base": [
+    54.405,
+    16.353
+   ],
+   "readyAt": "14:30"
+  }
+ ],
+ "events": [
+  {
+   "provider": "TerrainDifficulty",
+   "at": "12:52",
+   "title": "Teren: toń / trzcinowiska / brzeg",
+   "detail": "Łodzie tylko na wodzie, patrole piesze z brzegu."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "12:52",
+   "title": "Warunki: wiatr 7 m/s z 307°, woda 18°C",
+   "detail": "Pomiar w rejonie akcji.",
+   "visibilityM": 800,
+   "windMs": 7,
+   "windFromDeg": 307,
+   "tempC": 18,
+   "precip": "none",
+   "dark": false
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "12:52",
+   "title": "Pierścienie odległości od LKP: wędkarz",
+   "detail": "Przybliżone, ISRID nie ma tabel dla osoby w wodzie.",
+   "point": [
+    53.930328,
+    14.434854
+   ],
+   "quantilesKm": [
+    0.1,
+    0.3,
+    0.6,
+    1.2
+   ]
+  },
+  {
+   "provider": "WaterDrift",
+   "at": "12:57",
+   "title": "Dryf od LKP: wiatr 7 m/s z 307°",
+   "detail": "Parametry ilustracyjne wg tabel leeway US Coast Guard.",
+   "point": [
+    53.930328,
+    14.434854
+   ],
+   "radiusM": 200,
+   "windMs": 7,
+   "windFromDeg": 307,
+   "object": "person",
+   "driftHours": 1.95,
+   "currentMs": 0.48,
+   "currentToDeg": 232
+  },
+  {
+   "provider": "Clue",
+   "at": "13:02",
+   "title": "Świadek: ostatnio widziany/a w wodzie około 10:56",
+   "detail": "Relacja z brzegu lub z innej łodzi, pewność miejsca średnia.",
+   "point": [
+    53.931074,
+    14.432954
+   ],
+   "radiusM": 300,
+   "seenAt": "10:56"
+  }
+ ]
+}

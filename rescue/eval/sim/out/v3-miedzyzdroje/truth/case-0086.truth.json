@@ -1,0 +1,71 @@
+{
+ "find": [
+  53.955208,
+  14.485006
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "stay_with_boat",
+ "lostAt": [
+  53.952252,
+  14.478573
+ ],
+ "lostClock": "13:05",
+ "stopReason": "drowned",
+ "reportClock": "13:48",
+ "pfd": false,
+ "object": "kayak",
+ "env": "sea",
+ "inWater": true,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.952252,
+   14.478573,
+   "13:05"
+  ],
+  [
+   53.953307,
+   14.480871,
+   "13:10"
+  ],
+  [
+   53.954363,
+   14.483168,
+   "13:15"
+  ],
+  [
+   53.955208,
+   14.485006,
+   "13:48"
+  ]
+ ],
+ "distKmFromIpp": 0.535,
+ "trackOffsetM": 79,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt kayak, faktycznie kayak"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  }
+ ],
+ "case": "case-0086",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

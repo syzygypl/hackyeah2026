@@ -1,0 +1,116 @@
+{
+ "find": [
+  53.939723,
+  14.45757
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "float_drift",
+ "lostAt": [
+  53.933517,
+  14.444594
+ ],
+ "lostClock": "18:22",
+ "stopReason": "in_water",
+ "reportClock": "19:17",
+ "pfd": true,
+ "object": "person_pfd",
+ "env": "sea",
+ "inWater": true,
+ "driftAfterReportMh": [
+  718,
+  875
+ ],
+ "path": [
+  [
+   53.933517,
+   14.444594,
+   "18:22"
+  ],
+  [
+   53.934072,
+   14.445752,
+   "18:27"
+  ],
+  [
+   53.934626,
+   14.446911,
+   "18:32"
+  ],
+  [
+   53.93518,
+   14.448069,
+   "18:37"
+  ],
+  [
+   53.935734,
+   14.449228,
+   "18:42"
+  ],
+  [
+   53.936288,
+   14.450386,
+   "18:47"
+  ],
+  [
+   53.936842,
+   14.451545,
+   "18:52"
+  ],
+  [
+   53.937396,
+   14.452704,
+   "18:57"
+  ],
+  [
+   53.93795,
+   14.453862,
+   "19:02"
+  ],
+  [
+   53.938504,
+   14.455021,
+   "19:07"
+  ],
+  [
+   53.939058,
+   14.456179,
+   "19:12"
+  ],
+  [
+   53.939612,
+   14.457338,
+   "19:17"
+  ],
+  [
+   53.939723,
+   14.45757,
+   "19:17"
+  ]
+ ],
+ "distKmFromIpp": 1.096,
+ "trackOffsetM": 203,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person_pfd"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  }
+ ],
+ "case": "case-0079",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

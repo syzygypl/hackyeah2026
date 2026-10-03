@@ -13,6 +13,10 @@ weights are written in `behaviour.md` with their source, so they can be argued w
 python3 rescue/eval/sim/sim.py --region zawrat --n 200 --seed 1 --out rescue/eval/sim/out/v1-zawrat
 ```
 
+Water cases (lakes and sea, v3): `python3 rescue/eval/sim/sim_water.py --region sniardwy --n 200 --seed 3 --out
+rescue/eval/sim/out/v3-sniardwy` (also `morzycko`, `miedzyzdroje`). Categories `boater | swimmer | angler`, model in
+`behaviour.md`, same contract below.
+
 ## Output contract (for the calibration harness, AI Denisa)
 
 ```

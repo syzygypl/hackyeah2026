@@ -1,0 +1,121 @@
+{
+ "find": [
+  53.944005,
+  14.46941
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.946054,
+  14.466095
+ ],
+ "lostClock": "13:48",
+ "stopReason": "ashore_walked",
+ "reportClock": "17:46",
+ "pfd": true,
+ "object": "person_pfd",
+ "env": "sea",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.946054,
+   14.466095,
+   "13:48"
+  ],
+  [
+   53.945775,
+   14.467901,
+   "13:53"
+  ],
+  [
+   53.945569,
+   14.468941,
+   "13:58"
+  ],
+  [
+   53.94519,
+   14.469465,
+   "14:03"
+  ],
+  [
+   53.94499,
+   14.469639,
+   "14:08"
+  ],
+  [
+   53.944634,
+   14.469533,
+   "14:13"
+  ],
+  [
+   53.94467,
+   14.469587,
+   "14:18"
+  ],
+  [
+   53.944564,
+   14.469522,
+   "14:23"
+  ],
+  [
+   53.944583,
+   14.469537,
+   "14:28"
+  ],
+  [
+   53.944684,
+   14.469608,
+   "14:33"
+  ],
+  [
+   53.944751,
+   14.469656,
+   "14:38"
+  ],
+  [
+   53.944994,
+   14.469828,
+   "14:43"
+  ],
+  [
+   53.944005,
+   14.46941,
+   "17:46"
+  ],
+  [
+   53.944005,
+   14.46941,
+   "17:46"
+  ]
+ ],
+ "distKmFromIpp": 0.315,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt kayak, faktycznie person_pfd"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0035",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

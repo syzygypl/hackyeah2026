@@ -1,0 +1,302 @@
+{
+ "incident": "Symulacja wodna 0027: żeglarz / kajakarz po wywrotce (przypadek fikcyjny)",
+ "date": "2026-08-15",
+ "startClock": "15:34",
+ "blind": true,
+ "subject": {
+  "name": "Osoba fikcyjna 0027",
+  "age": 30,
+  "category": "boater",
+  "note": "Zgłoszenie o 15:34. Kamizelka: tak.",
+  "lastContact": "12:56"
+ },
+ "bbox": {
+  "south": 53.73805,
+  "west": 21.76941,
+  "north": 53.79195,
+  "east": 21.86059
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "LKP: miejsce wypadku na wodzie (świadek)",
+  "at": [
+   53.771665,
+   21.792909
+  ],
+  "seenAt": "12:56"
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [
+   {
+    "name": "Śniardwy",
+    "center": [
+     53.761793,
+     21.735663
+    ],
+    "radiusM": 5637
+   }
+  ],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "W1",
+   "name": "Miejsce wywrotki (LKP)",
+   "seed": [
+    53.77803,
+    21.79296
+   ]
+  },
+  {
+   "id": "W2",
+   "name": "Toń na wschód od LKP",
+   "seed": [
+    53.77533,
+    21.81272
+   ]
+  },
+  {
+   "id": "W3",
+   "name": "Toń - pas dryfu z wiatrem",
+   "seed": [
+    53.76994,
+    21.82792
+   ]
+  },
+  {
+   "id": "W4",
+   "name": "Toń - zatoka przy Nowych Gutach",
+   "seed": [
+    53.77353,
+    21.84615
+   ]
+  },
+  {
+   "id": "W5",
+   "name": "Trzciny przy brzegu SE (łódź)",
+   "seed": [
+    53.76455,
+    21.84159
+   ]
+  },
+  {
+   "id": "W6",
+   "name": "Toń przy brzegu SE",
+   "seed": [
+    53.76006,
+    21.81576
+   ]
+  },
+  {
+   "id": "W7",
+   "name": "Plaża i pomosty Nowe Guty",
+   "seed": [
+    53.77443,
+    21.85527
+   ]
+  },
+  {
+   "id": "W8",
+   "name": "Brzeg południowy (od Zdorów)",
+   "seed": [
+    53.75018,
+    21.80664
+   ]
+  },
+  {
+   "id": "W9",
+   "name": "Toń zachodnia (pod wiatr)",
+   "seed": [
+    53.76904,
+    21.77777
+   ]
+  },
+  {
+   "id": "W10",
+   "name": "Toń północna",
+   "seed": [
+    53.78791,
+    21.81576
+   ]
+  },
+  {
+   "id": "W11",
+   "name": "Brzeg północno-zachodni",
+   "seed": [
+    53.78881,
+    21.77625
+   ]
+  },
+  {
+   "id": "W12",
+   "name": "Toń południowo-zachodnia",
+   "seed": [
+    53.75108,
+    21.78233
+   ]
+  },
+  {
+   "id": "W13",
+   "name": "Ląd SE za trzcinami",
+   "seed": [
+    53.75557,
+    21.84615
+   ]
+  },
+  {
+   "id": "W14",
+   "name": "Jezioro Białoławki i przystań",
+   "seed": [
+    53.7403,
+    21.82488
+   ]
+  },
+  {
+   "id": "W15",
+   "name": "Toń środkowa południowa",
+   "seed": [
+    53.76275,
+    21.79752
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "wopr-boat",
+   "name": "Łódź WOPR Mazury (Mikołajki)",
+   "type": "boat",
+   "base": [
+    53.802,
+    21.576
+   ],
+   "readyAt": "16:55"
+  },
+  {
+   "id": "psp-boat",
+   "name": "Łódź PSP JRG Pisz",
+   "type": "boat",
+   "base": [
+    53.77443,
+    21.85527
+   ],
+   "readyAt": "17:20"
+  },
+  {
+   "id": "police-shore",
+   "name": "Policja Pisz - patrol brzegowy",
+   "type": "ground",
+   "base": [
+    53.77443,
+    21.85679
+   ],
+   "readyAt": "17:10"
+  },
+  {
+   "id": "drone",
+   "name": "Dron WOPR z termowizją",
+   "type": "drone",
+   "base": [
+    53.77443,
+    21.85679
+   ],
+   "readyAt": "17:40"
+  },
+  {
+   "id": "divers",
+   "name": "Nurkowie PSP (SGRW Olsztyn)",
+   "type": "diver",
+   "base": [
+    53.77443,
+    21.85527
+   ],
+   "readyAt": "18:40"
+  },
+  {
+   "id": "heli",
+   "name": "Śmigłowiec LPR (Olsztyn)",
+   "type": "heli",
+   "base": [
+    53.781,
+    20.452
+   ],
+   "readyAt": "17:30"
+  }
+ ],
+ "events": [
+  {
+   "provider": "TerrainDifficulty",
+   "at": "15:34",
+   "title": "Teren: toń / trzcinowiska / brzeg",
+   "detail": "Łodzie tylko na wodzie, patrole piesze z brzegu."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "15:34",
+   "title": "Warunki: wiatr 3 m/s z 41°, woda 20°C",
+   "detail": "Pomiar w rejonie akcji.",
+   "visibilityM": 2000,
+   "windMs": 3,
+   "windFromDeg": 41,
+   "tempC": 14,
+   "precip": "rain",
+   "dark": false
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "15:34",
+   "title": "Pierścienie odległości od LKP: żeglarz / kajakarz po wywrotce",
+   "detail": "Przybliżone, ISRID nie ma tabel dla osoby w wodzie.",
+   "point": [
+    53.771665,
+    21.792909
+   ],
+   "quantilesKm": [
+    0.8,
+    1.6,
+    2.8,
+    5.0
+   ]
+  },
+  {
+   "provider": "WaterDrift",
+   "at": "15:39",
+   "title": "Dryf od LKP: wiatr 3 m/s z 41°",
+   "detail": "Parametry ilustracyjne wg tabel leeway US Coast Guard.",
+   "point": [
+    53.771665,
+    21.792909
+   ],
+   "radiusM": 200,
+   "windMs": 3,
+   "windFromDeg": 41,
+   "object": "person",
+   "driftHours": 2.63
+  },
+  {
+   "provider": "Clue",
+   "at": "15:44",
+   "title": "Świadek: ostatnio widziany/a w wodzie około 13:01",
+   "detail": "Relacja z brzegu lub z innej łodzi, pewność miejsca średnia.",
+   "point": [
+    53.773379,
+    21.790965
+   ],
+   "radiusM": 300,
+   "seenAt": "13:01"
+  },
+  {
+   "provider": "Clue",
+   "at": "16:14",
+   "title": "Ślad: łódź/kajak znaleziony pusty",
+   "detail": "Zgłoszenie z brzegu, osoby przy łodzi brak.",
+   "point": [
+    53.765865,
+    21.784307
+   ],
+   "radiusM": 150
+  }
+ ]
+}

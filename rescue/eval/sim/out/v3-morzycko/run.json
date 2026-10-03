@@ -1,0 +1,42 @@
+{
+ "generator": "sim_water.py",
+ "region": "morzycko",
+ "env": "lake",
+ "seed": 3,
+ "n": 200,
+ "tries": 204,
+ "dropped": {
+  "ipp_edge": 4
+ },
+ "commit": "2403bfb",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "phone_on_shore": 0.6,
+  "false_sighting": 0.1,
+  "no_bts": 0.35
+ },
+ "categories": {
+  "angler": 46,
+  "boater": 115,
+  "swimmer": 39
+ },
+ "behaviours": {
+  "float_drift": 56,
+  "stay_with_boat": 62,
+  "swim_to_shore": 82
+ },
+ "stopReasons": {
+  "ashore": 72,
+  "ashore_walked": 82,
+  "drowned": 9,
+  "drowned_floating": 3,
+  "in_water": 34
+ },
+ "distKmQ25_50_75_95": [
+  0.218,
+  0.389,
+  0.661,
+  1.08
+ ]
+}

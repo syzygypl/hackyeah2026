@@ -1,0 +1,60 @@
+{
+ "find": [
+  53.76404,
+  21.84171
+ ],
+ "inGrid": true,
+ "category": "swimmer",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.765071,
+  21.841484
+ ],
+ "lostClock": "15:14",
+ "stopReason": "ashore",
+ "reportClock": "15:51",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.765071,
+   21.841484,
+   "15:14"
+  ],
+  [
+   53.76404,
+   21.84171,
+   "15:51"
+  ],
+  [
+   53.76404,
+   21.84171,
+   "15:51"
+  ]
+ ],
+ "distKmFromIpp": 0.116,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  }
+ ],
+ "case": "case-0154",
+ "region": "sniardwy",
+ "seed": 3
+}

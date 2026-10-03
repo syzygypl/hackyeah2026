@@ -1,0 +1,43 @@
+{
+ "generator": "sim_water.py",
+ "region": "sniardwy",
+ "env": "lake",
+ "seed": 3,
+ "n": 200,
+ "tries": 289,
+ "dropped": {
+  "ipp_edge": 64,
+  "out_of_grid": 25
+ },
+ "commit": "2403bfb",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "phone_on_shore": 0.6,
+  "false_sighting": 0.1,
+  "no_bts": 0.35
+ },
+ "categories": {
+  "angler": 36,
+  "boater": 103,
+  "swimmer": 61
+ },
+ "behaviours": {
+  "float_drift": 75,
+  "stay_with_boat": 51,
+  "swim_to_shore": 74
+ },
+ "stopReasons": {
+  "ashore": 43,
+  "ashore_walked": 56,
+  "drowned": 26,
+  "drowned_floating": 3,
+  "in_water": 72
+ },
+ "distKmQ25_50_75_95": [
+  0.208,
+  0.353,
+  0.864,
+  1.755
+ ]
+}

@@ -1,0 +1,105 @@
+{
+ "find": [
+  52.866829,
+  14.419947
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "stay_with_boat",
+ "lostAt": [
+  52.869363,
+  14.402364
+ ],
+ "lostClock": "17:37",
+ "stopReason": "ashore",
+ "reportClock": "19:59",
+ "pfd": true,
+ "object": "dinghy",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.869363,
+   14.402364,
+   "17:37"
+  ],
+  [
+   52.869082,
+   14.404318,
+   "17:42"
+  ],
+  [
+   52.8688,
+   14.406271,
+   "17:47"
+  ],
+  [
+   52.868519,
+   14.408225,
+   "17:52"
+  ],
+  [
+   52.868237,
+   14.410179,
+   "17:57"
+  ],
+  [
+   52.867955,
+   14.412132,
+   "18:02"
+  ],
+  [
+   52.867674,
+   14.414086,
+   "18:07"
+  ],
+  [
+   52.867392,
+   14.41604,
+   "18:12"
+  ],
+  [
+   52.867111,
+   14.417994,
+   "18:17"
+  ],
+  [
+   52.866829,
+   14.419947,
+   "18:22"
+  ],
+  [
+   52.866829,
+   14.419947,
+   "19:59"
+  ],
+  [
+   52.866829,
+   14.419947,
+   "19:59"
+  ]
+ ],
+ "distKmFromIpp": 1.215,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt dinghy, faktycznie dinghy"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  }
+ ],
+ "case": "case-0190",
+ "region": "morzycko",
+ "seed": 3
+}

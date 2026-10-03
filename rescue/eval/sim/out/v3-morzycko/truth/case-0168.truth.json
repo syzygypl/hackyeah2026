@@ -1,0 +1,127 @@
+{
+ "find": [
+  52.861059,
+  14.409888
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "float_drift",
+ "lostAt": [
+  52.858684,
+  14.409168
+ ],
+ "lostClock": "11:52",
+ "stopReason": "in_water",
+ "reportClock": "12:56",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  129,
+  216
+ ],
+ "path": [
+  [
+   52.858684,
+   14.409168,
+   "11:52"
+  ],
+  [
+   52.85887,
+   14.409225,
+   "11:57"
+  ],
+  [
+   52.859055,
+   14.409281,
+   "12:02"
+  ],
+  [
+   52.859241,
+   14.409337,
+   "12:07"
+  ],
+  [
+   52.859426,
+   14.409393,
+   "12:12"
+  ],
+  [
+   52.859612,
+   14.40945,
+   "12:17"
+  ],
+  [
+   52.859797,
+   14.409506,
+   "12:22"
+  ],
+  [
+   52.859983,
+   14.409562,
+   "12:27"
+  ],
+  [
+   52.860168,
+   14.409618,
+   "12:32"
+  ],
+  [
+   52.860354,
+   14.409675,
+   "12:37"
+  ],
+  [
+   52.86054,
+   14.409731,
+   "12:42"
+  ],
+  [
+   52.860725,
+   14.409787,
+   "12:47"
+  ],
+  [
+   52.860911,
+   14.409843,
+   "12:52"
+  ],
+  [
+   52.861059,
+   14.409888,
+   "12:56"
+  ]
+ ],
+ "distKmFromIpp": 0.269,
+ "trackOffsetM": 548,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt dinghy, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 6,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0168",
+ "region": "morzycko",
+ "seed": 3
+}

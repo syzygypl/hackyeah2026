@@ -1,0 +1,60 @@
+{
+ "find": [
+  53.939962,
+  14.449829
+ ],
+ "inGrid": true,
+ "category": "swimmer",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.938656,
+  14.451722
+ ],
+ "lostClock": "17:57",
+ "stopReason": "in_water",
+ "reportClock": "18:02",
+ "pfd": false,
+ "object": "person",
+ "env": "sea",
+ "inWater": true,
+ "driftAfterReportMh": [
+  -412,
+  -618
+ ],
+ "path": [
+  [
+   53.938656,
+   14.451722,
+   "17:57"
+  ],
+  [
+   53.939745,
+   14.450145,
+   "18:02"
+  ],
+  [
+   53.939962,
+   14.449829,
+   "18:02"
+  ]
+ ],
+ "distKmFromIpp": 0.191,
+ "trackOffsetM": 528,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  }
+ ],
+ "case": "case-0074",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

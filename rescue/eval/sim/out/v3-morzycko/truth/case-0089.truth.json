@@ -1,0 +1,70 @@
+{
+ "find": [
+  52.863757,
+  14.410467
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "stay_with_boat",
+ "lostAt": [
+  52.86444,
+  14.405505
+ ],
+ "lostClock": "17:20",
+ "stopReason": "drowned",
+ "reportClock": "19:05",
+ "pfd": false,
+ "object": "kayak",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.86444,
+   14.405505,
+   "17:20"
+  ],
+  [
+   52.86426,
+   14.406811,
+   "17:25"
+  ],
+  [
+   52.864081,
+   14.408117,
+   "17:30"
+  ],
+  [
+   52.863901,
+   14.409422,
+   "17:35"
+  ],
+  [
+   52.863757,
+   14.410467,
+   "19:05"
+  ]
+ ],
+ "distKmFromIpp": 0.342,
+ "trackOffsetM": 718,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt kayak, faktycznie kayak"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  }
+ ],
+ "case": "case-0089",
+ "region": "morzycko",
+ "seed": 3
+}

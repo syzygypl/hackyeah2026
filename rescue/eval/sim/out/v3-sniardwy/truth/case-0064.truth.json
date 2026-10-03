@@ -1,0 +1,76 @@
+{
+ "find": [
+  53.759126,
+  21.816383
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.76341,
+  21.811958
+ ],
+ "lostClock": "12:27",
+ "stopReason": "ashore_walked",
+ "reportClock": "13:50",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.76341,
+   21.811958,
+   "12:27"
+  ],
+  [
+   53.762602,
+   21.813853,
+   "12:32"
+  ],
+  [
+   53.761745,
+   21.81576,
+   "12:37"
+  ],
+  [
+   53.759126,
+   21.816383,
+   "13:50"
+  ],
+  [
+   53.759126,
+   21.816383,
+   "13:50"
+  ]
+ ],
+ "distKmFromIpp": 0.559,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt kayak, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0064",
+ "region": "sniardwy",
+ "seed": 3
+}

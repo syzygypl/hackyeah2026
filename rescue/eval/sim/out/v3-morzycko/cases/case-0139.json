@@ -1,0 +1,283 @@
+{
+ "incident": "Symulacja wodna 0139: pływak (przypadek fikcyjny)",
+ "date": "2026-07-04",
+ "startClock": "12:19",
+ "blind": true,
+ "subject": {
+  "name": "Osoba fikcyjna 0139",
+  "age": 43,
+  "category": "swimmer",
+  "note": "Zgłoszenie o 12:19. Kamizelka: nie / nie wiadomo.",
+  "lastContact": "11:57"
+ },
+ "bbox": {
+  "south": 52.83305,
+  "west": 14.36036,
+  "north": 52.88695,
+  "east": 14.44964
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "LKP: miejsce wypadku na wodzie (świadek)",
+  "at": [
+   52.861626,
+   14.403605
+  ],
+  "seenAt": "11:57"
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [
+   {
+    "name": "Jezioro Morzycko",
+    "center": [
+     52.86343,
+     14.406253
+    ],
+    "radiusM": 1022
+   }
+  ],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "M1",
+   "name": "Plaża Miejska i pomosty (Moryń)",
+   "seed": [
+    52.86314,
+    14.39533
+   ]
+  },
+  {
+   "id": "M2",
+   "name": "Toń środkowa (LKP)",
+   "seed": [
+    52.86314,
+    14.41021
+   ]
+  },
+  {
+   "id": "M3",
+   "name": "Toń północna",
+   "seed": [
+    52.86943,
+    14.40574
+   ]
+  },
+  {
+   "id": "M4",
+   "name": "Brzeg NE - trzciny (kajak)",
+   "seed": [
+    52.86943,
+    14.41914
+   ]
+  },
+  {
+   "id": "M5",
+   "name": "Brzeg wschodni - trzciny",
+   "seed": [
+    52.86494,
+    14.42509
+   ]
+  },
+  {
+   "id": "M6",
+   "name": "Toń południowa",
+   "seed": [
+    52.85686,
+    14.41021
+   ]
+  },
+  {
+   "id": "M7",
+   "name": "Brzeg SE",
+   "seed": [
+    52.85865,
+    14.4236
+   ]
+  },
+  {
+   "id": "M8",
+   "name": "Brzeg południowy",
+   "seed": [
+    52.85057,
+    14.40128
+   ]
+  },
+  {
+   "id": "M9",
+   "name": "Brzeg zachodni - Moryń",
+   "seed": [
+    52.85686,
+    14.39979
+   ]
+  },
+  {
+   "id": "M10",
+   "name": "Plaża północna",
+   "seed": [
+    52.87303,
+    14.40723
+   ]
+  },
+  {
+   "id": "M11",
+   "name": "Brzeg NW",
+   "seed": [
+    52.87033,
+    14.39086
+   ]
+  },
+  {
+   "id": "M12",
+   "name": "Las na wschód od jeziora",
+   "seed": [
+    52.86674,
+    14.4355
+   ]
+  },
+  {
+   "id": "M13",
+   "name": "Pola na północ od jeziora",
+   "seed": [
+    52.87931,
+    14.41318
+   ]
+  },
+  {
+   "id": "M14",
+   "name": "Moryń - zabudowa",
+   "seed": [
+    52.85416,
+    14.38342
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "osp-boat",
+   "name": "Łódź OSP Moryń",
+   "type": "boat",
+   "base": [
+    52.86314,
+    14.39533
+   ],
+   "readyAt": "22:00"
+  },
+  {
+   "id": "wopr-boat",
+   "name": "Łódź WOPR Zachodniopomorskie",
+   "type": "boat",
+   "base": [
+    52.86314,
+    14.39533
+   ],
+   "readyAt": "22:20"
+  },
+  {
+   "id": "police-shore",
+   "name": "Policja Gryfino + OSP - patrol brzegowy (termowizja ręczna)",
+   "type": "ground",
+   "base": [
+    52.86314,
+    14.39533
+   ],
+   "readyAt": "22:05"
+  },
+  {
+   "id": "drone",
+   "name": "Dron termowizyjny PSP Gryfino",
+   "type": "drone",
+   "base": [
+    52.86314,
+    14.39533
+   ],
+   "readyAt": "22:30"
+  },
+  {
+   "id": "divers",
+   "name": "Nurkowie PSP (SGRW Szczecin)",
+   "type": "diver",
+   "base": [
+    52.86314,
+    14.39533
+   ],
+   "readyAt": "23:00"
+  },
+  {
+   "id": "heli",
+   "name": "Śmigłowiec Policji (Szczecin)",
+   "type": "heli",
+   "base": [
+    53.43,
+    14.55
+   ],
+   "readyAt": "22:40"
+  }
+ ],
+ "events": [
+  {
+   "provider": "TerrainDifficulty",
+   "at": "12:19",
+   "title": "Teren: toń / trzcinowiska / brzeg",
+   "detail": "Łodzie tylko na wodzie, patrole piesze z brzegu."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "12:19",
+   "title": "Warunki: wiatr 15 m/s z 275°, woda 22°C",
+   "detail": "Pomiar w rejonie akcji.",
+   "visibilityM": 6000,
+   "windMs": 15,
+   "windFromDeg": 275,
+   "tempC": 26,
+   "precip": "none",
+   "dark": false
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "12:19",
+   "title": "Pierścienie odległości od LKP: pływak",
+   "detail": "Przybliżone, ISRID nie ma tabel dla osoby w wodzie.",
+   "point": [
+    52.861626,
+    14.403605
+   ],
+   "quantilesKm": [
+    0.2,
+    0.5,
+    1.0,
+    2.0
+   ]
+  },
+  {
+   "provider": "WaterDrift",
+   "at": "12:24",
+   "title": "Dryf od LKP: wiatr 15 m/s z 275°",
+   "detail": "Parametry ilustracyjne wg tabel leeway US Coast Guard.",
+   "point": [
+    52.861626,
+    14.403605
+   ],
+   "radiusM": 200,
+   "windMs": 15,
+   "windFromDeg": 275,
+   "object": "person",
+   "driftHours": 0.37
+  },
+  {
+   "provider": "Clue",
+   "at": "12:29",
+   "title": "Świadek: ostatnio widziany/a w wodzie około 11:57",
+   "detail": "Relacja z brzegu lub z innej łodzi, pewność miejsca średnia.",
+   "point": [
+    52.862748,
+    14.404574
+   ],
+   "radiusM": 300,
+   "seenAt": "11:57"
+  }
+ ]
+}

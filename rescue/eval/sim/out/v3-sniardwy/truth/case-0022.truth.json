@@ -1,0 +1,82 @@
+{
+ "find": [
+  53.747892,
+  21.798731
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.748861,
+  21.795784
+ ],
+ "lostClock": "13:16",
+ "stopReason": "ashore",
+ "reportClock": "15:46",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.748861,
+   21.795784,
+   "13:16"
+  ],
+  [
+   53.748423,
+   21.797541,
+   "13:21"
+  ],
+  [
+   53.747892,
+   21.798731,
+   "13:26"
+  ],
+  [
+   53.747892,
+   21.798731,
+   "15:46"
+  ],
+  [
+   53.747892,
+   21.798731,
+   "15:46"
+  ]
+ ],
+ "distKmFromIpp": 0.222,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  },
+  {
+   "event": 6,
+   "kind": "sighting",
+   "truthful": false,
+   "note": "boja / inna osoba"
+  }
+ ],
+ "case": "case-0022",
+ "region": "sniardwy",
+ "seed": 3
+}

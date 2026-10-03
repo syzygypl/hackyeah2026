@@ -1,0 +1,96 @@
+{
+ "find": [
+  53.741503,
+  21.792196
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "float_drift",
+ "lostAt": [
+  53.741388,
+  21.791258
+ ],
+ "lostClock": "18:25",
+ "stopReason": "drowned",
+ "reportClock": "19:19",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.741388,
+   21.791258,
+   "18:25"
+  ],
+  [
+   53.741404,
+   21.791392,
+   "18:30"
+  ],
+  [
+   53.741421,
+   21.791526,
+   "18:35"
+  ],
+  [
+   53.741437,
+   21.79166,
+   "18:40"
+  ],
+  [
+   53.741454,
+   21.791794,
+   "18:45"
+  ],
+  [
+   53.74147,
+   21.791928,
+   "18:50"
+  ],
+  [
+   53.741487,
+   21.792062,
+   "18:55"
+  ],
+  [
+   53.741503,
+   21.792196,
+   "19:00"
+  ],
+  [
+   53.741503,
+   21.792196,
+   "19:19"
+  ]
+ ],
+ "distKmFromIpp": 0.063,
+ "trackOffsetM": 61,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  }
+ ],
+ "case": "case-0120",
+ "region": "sniardwy",
+ "seed": 3
+}

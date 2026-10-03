@@ -41,3 +41,36 @@ gatherer 0.8-5 h (uniform, Koester's mobility tables give medians in these range
 - The person is static from the report time on (the engine search starts then).
 - The model was written by the same AI family as the engine (Claude). It does not read the engine, but shares its
   general priors. Andrzej's real cases (`rescue/eval/data/`) are the independent check.
+
+## Water cases (v3, `sim_water.py`)
+
+Regions: `sniardwy` (lake), `morzycko` (lake), `miedzyzdroje` (sea). Output in `out/v3-<region>`, same contract.
+Land and water come from `waterMask` in `<region>-terrain.json` (60 x 60 cells of 100 m, row 0 = north).
+
+| Category | Lake / sea share | Life jacket | Drowning chance (no jacket / jacket) | Start |
+|---|---|---|---|---|
+| boater (dinghy or kayak capsized) | 55% / 25% | 60% | 35% / 6% | open water, >= 300 m from shore |
+| swimmer | 25% / 60% | 0% | 30% | 50-350 m from shore, 70% off a beach |
+| angler | 20% / 15% | 30% | 45% / 6% | half from the shore, half from a boat |
+
+Drowning chance is scaled by water temperature (16°C x1.3 ... 22°C x0.9). After the accident:
+
+- `stay_with_boat` (50% of those with a craft): drifts with the boat (leeway 3% of wind for a dinghy, 2.5% for a kayak).
+- `swim_to_shore` if the nearest shore is within the person's swim range (swimmer 0.3-1.5 km, others 0.05-0.7 km),
+  at 0.3-0.7 m/s, slowing over 2 h, plus drift. Landing alive: half stay in the reeds, half walk 30-300 m inland.
+- `float_drift`: person in water, 1.5% of wind with a life jacket, 1% without.
+- Drift direction is downwind +/- 10-30° (leeway divergence). At sea a longshore current of 0.1-0.5 m/s runs along the
+  coastline (either way); swimmers are first carried out by a rip current (0.6 m/s for 5-15 min).
+- Drowned without a jacket: the body stays where the person went under. With a jacket: it keeps drifting.
+- Leeway rates: US Coast Guard leeway tables (Allen and Plourde 1999), rounded. Drowning rates and swim ranges are
+  rough guesses for summer conditions, not measured.
+
+Misleading clues: the drift event models the boat instead of the person in ~60% of craft cases; the witness position
+or time is off; swimmers and shore anglers leave the phone on the shore, so the BTS fix points at the beach (60%);
+an empty boat is reported where the boat drifted, not where the person is; a false "someone waving" call (10%).
+
+Truth extras for water: `pfd`, `object`, `env`, `inWater`, `driftAfterReportMh` ([east, north] m/h, the person keeps
+drifting after the report; the harness can move the find point if it scores a later time).
+
+Known limits: no waves, no wind change during the case, a 100 m water mask (beaches and narrow reeds are coarse),
+no bottom depth (a drowned person in deep water can be anywhere within a short radius, here exactly at the point).

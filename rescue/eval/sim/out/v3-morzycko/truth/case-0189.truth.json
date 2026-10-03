@@ -1,0 +1,117 @@
+{
+ "find": [
+  52.860949,
+  14.410471
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "float_drift",
+ "lostAt": [
+  52.861857,
+  14.40902
+ ],
+ "lostClock": "11:31",
+ "stopReason": "drowned_floating",
+ "reportClock": "12:23",
+ "pfd": true,
+ "object": "person_pfd",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  154,
+  -51
+ ],
+ "path": [
+  [
+   52.861857,
+   14.40902,
+   "11:31"
+  ],
+  [
+   52.86177,
+   14.40916,
+   "11:36"
+  ],
+  [
+   52.861682,
+   14.409299,
+   "11:41"
+  ],
+  [
+   52.861595,
+   14.409439,
+   "11:46"
+  ],
+  [
+   52.861508,
+   14.409578,
+   "11:51"
+  ],
+  [
+   52.861421,
+   14.409718,
+   "11:56"
+  ],
+  [
+   52.861333,
+   14.409857,
+   "12:01"
+  ],
+  [
+   52.861246,
+   14.409997,
+   "12:06"
+  ],
+  [
+   52.861159,
+   14.410136,
+   "12:11"
+  ],
+  [
+   52.861072,
+   14.410276,
+   "12:16"
+  ],
+  [
+   52.860984,
+   14.410415,
+   "12:21"
+  ],
+  [
+   52.860949,
+   14.410471,
+   "12:23"
+  ]
+ ],
+ "distKmFromIpp": 0.14,
+ "trackOffsetM": 577,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt kayak, faktycznie person_pfd"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 6,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0189",
+ "region": "morzycko",
+ "seed": 3
+}

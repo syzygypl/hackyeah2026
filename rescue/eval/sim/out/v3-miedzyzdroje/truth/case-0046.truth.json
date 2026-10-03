@@ -1,0 +1,66 @@
+{
+ "find": [
+  53.912236,
+  14.441655
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.914331,
+  14.439127
+ ],
+ "lostClock": "13:05",
+ "stopReason": "ashore_walked",
+ "reportClock": "14:20",
+ "pfd": true,
+ "object": "person_pfd",
+ "env": "sea",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.914331,
+   14.439127,
+   "13:05"
+  ],
+  [
+   53.912236,
+   14.441655,
+   "14:20"
+  ],
+  [
+   53.912236,
+   14.441655,
+   "14:20"
+  ]
+ ],
+ "distKmFromIpp": 0.286,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person_pfd"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  }
+ ],
+ "case": "case-0046",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

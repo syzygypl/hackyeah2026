@@ -1,0 +1,127 @@
+{
+ "find": [
+  52.872613,
+  14.407676
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "float_drift",
+ "lostAt": [
+  52.869597,
+  14.406404
+ ],
+ "lostClock": "13:32",
+ "stopReason": "ashore",
+ "reportClock": "15:08",
+ "pfd": true,
+ "object": "person_pfd",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.869597,
+   14.406404,
+   "13:32"
+  ],
+  [
+   52.869871,
+   14.40652,
+   "13:37"
+  ],
+  [
+   52.870145,
+   14.406636,
+   "13:42"
+  ],
+  [
+   52.870419,
+   14.406751,
+   "13:47"
+  ],
+  [
+   52.870693,
+   14.406867,
+   "13:52"
+  ],
+  [
+   52.870968,
+   14.406982,
+   "13:57"
+  ],
+  [
+   52.871242,
+   14.407098,
+   "14:02"
+  ],
+  [
+   52.871516,
+   14.407213,
+   "14:07"
+  ],
+  [
+   52.87179,
+   14.407329,
+   "14:12"
+  ],
+  [
+   52.872065,
+   14.407444,
+   "14:17"
+  ],
+  [
+   52.872339,
+   14.40756,
+   "14:22"
+  ],
+  [
+   52.872613,
+   14.407676,
+   "14:27"
+  ],
+  [
+   52.872613,
+   14.407676,
+   "15:08"
+  ],
+  [
+   52.872613,
+   14.407676,
+   "15:08"
+  ]
+ ],
+ "distKmFromIpp": 0.347,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person_pfd"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  },
+  {
+   "event": 6,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0026",
+ "region": "morzycko",
+ "seed": 3
+}

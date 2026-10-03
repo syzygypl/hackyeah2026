@@ -1,0 +1,66 @@
+{
+ "find": [
+  53.770372,
+  21.849271
+ ],
+ "inGrid": true,
+ "category": "swimmer",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.770561,
+  21.848292
+ ],
+ "lostClock": "18:43",
+ "stopReason": "ashore_walked",
+ "reportClock": "18:49",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.770561,
+   21.848292,
+   "18:43"
+  ],
+  [
+   53.770372,
+   21.849271,
+   "18:49"
+  ],
+  [
+   53.770372,
+   21.849271,
+   "18:49"
+  ]
+ ],
+ "distKmFromIpp": 0.068,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  }
+ ],
+ "case": "case-0106",
+ "region": "sniardwy",
+ "seed": 3
+}

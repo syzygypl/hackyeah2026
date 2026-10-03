@@ -1,0 +1,76 @@
+{
+ "find": [
+  52.856075,
+  14.414016
+ ],
+ "inGrid": true,
+ "category": "swimmer",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  52.855539,
+  14.409787
+ ],
+ "lostClock": "13:56",
+ "stopReason": "ashore",
+ "reportClock": "14:22",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.855539,
+   14.409787,
+   "13:56"
+  ],
+  [
+   52.855892,
+   14.411631,
+   "14:01"
+  ],
+  [
+   52.856077,
+   14.413628,
+   "14:06"
+  ],
+  [
+   52.856075,
+   14.414016,
+   "14:22"
+  ],
+  [
+   52.856075,
+   14.414016,
+   "14:22"
+  ]
+ ],
+ "distKmFromIpp": 0.29,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  }
+ ],
+ "case": "case-0002",
+ "region": "morzycko",
+ "seed": 3
+}

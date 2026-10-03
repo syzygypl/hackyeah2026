@@ -1,0 +1,66 @@
+{
+ "find": [
+  52.866774,
+  14.394105
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  52.867343,
+  14.396706
+ ],
+ "lostClock": "10:22",
+ "stopReason": "ashore_walked",
+ "reportClock": "11:49",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.867343,
+   14.396706,
+   "10:22"
+  ],
+  [
+   52.866774,
+   14.394105,
+   "11:49"
+  ],
+  [
+   52.866774,
+   14.394105,
+   "11:49"
+  ]
+ ],
+ "distKmFromIpp": 0.186,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  }
+ ],
+ "case": "case-0163",
+ "region": "morzycko",
+ "seed": 3
+}

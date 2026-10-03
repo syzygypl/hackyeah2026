@@ -1,0 +1,102 @@
+{
+ "find": [
+  53.924033,
+  14.425573
+ ],
+ "inGrid": true,
+ "category": "swimmer",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.926151,
+  14.424873
+ ],
+ "lostClock": "18:27",
+ "stopReason": "ashore_walked",
+ "reportClock": "19:05",
+ "pfd": false,
+ "object": "person",
+ "env": "sea",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.926151,
+   14.424873,
+   "18:27"
+  ],
+  [
+   53.927526,
+   14.424309,
+   "18:32"
+  ],
+  [
+   53.9289,
+   14.423745,
+   "18:37"
+  ],
+  [
+   53.927542,
+   14.423463,
+   "18:42"
+  ],
+  [
+   53.926115,
+   14.423472,
+   "18:47"
+  ],
+  [
+   53.925013,
+   14.423648,
+   "18:52"
+  ],
+  [
+   53.924198,
+   14.424358,
+   "18:57"
+  ],
+  [
+   53.924033,
+   14.425573,
+   "19:05"
+  ],
+  [
+   53.924033,
+   14.425573,
+   "19:05"
+  ]
+ ],
+ "distKmFromIpp": 0.24,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  },
+  {
+   "event": 6,
+   "kind": "sighting",
+   "truthful": false,
+   "note": "boja / inna osoba"
+  }
+ ],
+ "case": "case-0033",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

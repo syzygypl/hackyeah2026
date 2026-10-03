@@ -1,0 +1,71 @@
+{
+ "find": [
+  53.762447,
+  21.818481
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "stay_with_boat",
+ "lostAt": [
+  53.764285,
+  21.818961
+ ],
+ "lostClock": "10:29",
+ "stopReason": "ashore_walked",
+ "reportClock": "13:13",
+ "pfd": false,
+ "object": "kayak",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.764285,
+   21.818961,
+   "10:29"
+  ],
+  [
+   53.764119,
+   21.819948,
+   "10:34"
+  ],
+  [
+   53.762447,
+   21.818481,
+   "13:13"
+  ],
+  [
+   53.762447,
+   21.818481,
+   "13:13"
+  ]
+ ],
+ "distKmFromIpp": 0.207,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt kayak, faktycznie kayak"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  }
+ ],
+ "case": "case-0131",
+ "region": "sniardwy",
+ "seed": 3
+}

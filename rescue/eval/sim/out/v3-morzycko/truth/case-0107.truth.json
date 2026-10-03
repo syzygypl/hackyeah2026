@@ -1,0 +1,81 @@
+{
+ "find": [
+  52.858703,
+  14.403331
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  52.860157,
+  14.408622
+ ],
+ "lostClock": "17:49",
+ "stopReason": "ashore",
+ "reportClock": "20:15",
+ "pfd": true,
+ "object": "person_pfd",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.860157,
+   14.408622,
+   "17:49"
+  ],
+  [
+   52.859632,
+   14.406972,
+   "17:54"
+  ],
+  [
+   52.859154,
+   14.40528,
+   "17:59"
+  ],
+  [
+   52.858786,
+   14.403744,
+   "18:04"
+  ],
+  [
+   52.858703,
+   14.403331,
+   "20:15"
+  ],
+  [
+   52.858703,
+   14.403331,
+   "20:15"
+  ]
+ ],
+ "distKmFromIpp": 0.391,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person_pfd"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0107",
+ "region": "morzycko",
+ "seed": 3
+}

@@ -1,0 +1,100 @@
+{
+ "find": [
+  53.955646,
+  14.486657
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "stay_with_boat",
+ "lostAt": [
+  53.953966,
+  14.47304
+ ],
+ "lostClock": "13:00",
+ "stopReason": "ashore",
+ "reportClock": "16:27",
+ "pfd": true,
+ "object": "kayak",
+ "env": "sea",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.953966,
+   14.47304,
+   "13:00"
+  ],
+  [
+   53.954161,
+   14.474624,
+   "13:05"
+  ],
+  [
+   53.954356,
+   14.476207,
+   "13:10"
+  ],
+  [
+   53.954552,
+   14.47779,
+   "13:15"
+  ],
+  [
+   53.954747,
+   14.479374,
+   "13:20"
+  ],
+  [
+   53.954942,
+   14.480957,
+   "13:25"
+  ],
+  [
+   53.955138,
+   14.482541,
+   "13:30"
+  ],
+  [
+   53.955333,
+   14.484124,
+   "13:35"
+  ],
+  [
+   53.955528,
+   14.485707,
+   "13:40"
+  ],
+  [
+   53.955646,
+   14.486657,
+   "16:27"
+  ],
+  [
+   53.955646,
+   14.486657,
+   "16:27"
+  ]
+ ],
+ "distKmFromIpp": 0.912,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt kayak, faktycznie kayak"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  }
+ ],
+ "case": "case-0004",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

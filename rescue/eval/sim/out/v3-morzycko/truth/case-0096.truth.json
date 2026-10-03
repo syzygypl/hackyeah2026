@@ -1,0 +1,88 @@
+{
+ "find": [
+  52.866919,
+  14.403747
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "float_drift",
+ "lostAt": [
+  52.866345,
+  14.403007
+ ],
+ "lostClock": "11:39",
+ "stopReason": "drowned",
+ "reportClock": "14:54",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.866345,
+   14.403007,
+   "11:39"
+  ],
+  [
+   52.866537,
+   14.403254,
+   "11:44"
+  ],
+  [
+   52.866728,
+   14.403501,
+   "11:49"
+  ],
+  [
+   52.866919,
+   14.403747,
+   "11:54"
+  ],
+  [
+   52.866919,
+   14.403747,
+   "14:54"
+  ]
+ ],
+ "distKmFromIpp": 0.081,
+ "trackOffsetM": 557,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt dinghy, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 6,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  },
+  {
+   "event": 7,
+   "kind": "sighting",
+   "truthful": false,
+   "note": "boja / inna osoba"
+  }
+ ],
+ "case": "case-0096",
+ "region": "morzycko",
+ "seed": 3
+}

@@ -1,0 +1,107 @@
+{
+ "find": [
+  53.938911,
+  14.45917
+ ],
+ "inGrid": true,
+ "category": "angler",
+ "behaviour": "float_drift",
+ "lostAt": [
+  53.935804,
+  14.450729
+ ],
+ "lostClock": "17:46",
+ "stopReason": "ashore",
+ "reportClock": "19:55",
+ "pfd": false,
+ "object": "person",
+ "env": "sea",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.935804,
+   14.450729,
+   "17:46"
+  ],
+  [
+   53.936213,
+   14.45184,
+   "17:51"
+  ],
+  [
+   53.936621,
+   14.45295,
+   "17:56"
+  ],
+  [
+   53.93703,
+   14.454061,
+   "18:01"
+  ],
+  [
+   53.937439,
+   14.455172,
+   "18:06"
+  ],
+  [
+   53.937848,
+   14.456282,
+   "18:11"
+  ],
+  [
+   53.938257,
+   14.457393,
+   "18:16"
+  ],
+  [
+   53.938665,
+   14.458504,
+   "18:21"
+  ],
+  [
+   53.938911,
+   14.45917,
+   "19:55"
+  ],
+  [
+   53.938911,
+   14.45917,
+   "19:55"
+  ]
+ ],
+ "distKmFromIpp": 0.652,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt kayak, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": false,
+   "note": "telefon został na brzegu"
+  },
+  {
+   "event": 6,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0028",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

@@ -1,0 +1,82 @@
+{
+ "find": [
+  53.940351,
+  14.463033
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "swim_to_shore",
+ "lostAt": [
+  53.943083,
+  14.460131
+ ],
+ "lostClock": "10:53",
+ "stopReason": "ashore_walked",
+ "reportClock": "12:06",
+ "pfd": false,
+ "object": "person",
+ "env": "sea",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.943083,
+   14.460131,
+   "10:53"
+  ],
+  [
+   53.942162,
+   14.461866,
+   "10:58"
+  ],
+  [
+   53.941625,
+   14.462915,
+   "11:03"
+  ],
+  [
+   53.940351,
+   14.463033,
+   "12:06"
+  ],
+  [
+   53.940351,
+   14.463033,
+   "12:06"
+  ]
+ ],
+ "distKmFromIpp": 0.359,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": false
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 6,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0175",
+ "region": "miedzyzdroje",
+ "seed": 3
+}

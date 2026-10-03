@@ -1,0 +1,100 @@
+{
+ "find": [
+  52.873224,
+  14.411588
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "stay_with_boat",
+ "lostAt": [
+  52.866293,
+  14.402836
+ ],
+ "lostClock": "16:36",
+ "stopReason": "ashore_walked",
+ "reportClock": "18:12",
+ "pfd": true,
+ "object": "kayak",
+ "env": "lake",
+ "inWater": false,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   52.866293,
+   14.402836,
+   "16:36"
+  ],
+  [
+   52.867015,
+   14.404007,
+   "16:41"
+  ],
+  [
+   52.867737,
+   14.405178,
+   "16:46"
+  ],
+  [
+   52.868459,
+   14.406349,
+   "16:51"
+  ],
+  [
+   52.869181,
+   14.40752,
+   "16:56"
+  ],
+  [
+   52.869904,
+   14.408691,
+   "17:01"
+  ],
+  [
+   52.870626,
+   14.409862,
+   "17:06"
+  ],
+  [
+   52.871348,
+   14.411033,
+   "17:11"
+  ],
+  [
+   52.87207,
+   14.412203,
+   "17:16"
+  ],
+  [
+   52.873224,
+   14.411588,
+   "18:12"
+  ],
+  [
+   52.873224,
+   14.411588,
+   "18:12"
+  ]
+ ],
+ "distKmFromIpp": 0.97,
+ "trackOffsetM": 0,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt kayak, faktycznie kayak"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  }
+ ],
+ "case": "case-0137",
+ "region": "morzycko",
+ "seed": 3
+}

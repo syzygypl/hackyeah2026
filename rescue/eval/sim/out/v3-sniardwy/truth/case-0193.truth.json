@@ -1,0 +1,122 @@
+{
+ "find": [
+  53.775775,
+  21.782828
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "float_drift",
+ "lostAt": [
+  53.771992,
+  21.777913
+ ],
+ "lostClock": "13:06",
+ "stopReason": "in_water",
+ "reportClock": "14:05",
+ "pfd": false,
+ "object": "person",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  144,
+  520
+ ],
+ "path": [
+  [
+   53.771992,
+   21.777913,
+   "13:06"
+  ],
+  [
+   53.772312,
+   21.778329,
+   "13:11"
+  ],
+  [
+   53.772633,
+   21.778746,
+   "13:16"
+  ],
+  [
+   53.772953,
+   21.779162,
+   "13:21"
+  ],
+  [
+   53.773274,
+   21.779579,
+   "13:26"
+  ],
+  [
+   53.773595,
+   21.779996,
+   "13:31"
+  ],
+  [
+   53.773915,
+   21.780412,
+   "13:36"
+  ],
+  [
+   53.774236,
+   21.780829,
+   "13:41"
+  ],
+  [
+   53.774556,
+   21.781245,
+   "13:46"
+  ],
+  [
+   53.774877,
+   21.781662,
+   "13:51"
+  ],
+  [
+   53.775198,
+   21.782078,
+   "13:56"
+  ],
+  [
+   53.775518,
+   21.782495,
+   "14:01"
+  ],
+  [
+   53.775775,
+   21.782828,
+   "14:05"
+  ]
+ ],
+ "distKmFromIpp": 0.531,
+ "trackOffsetM": 979,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt dinghy, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "bts",
+   "truthful": true,
+   "note": ""
+  },
+  {
+   "event": 6,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0193",
+ "region": "sniardwy",
+ "seed": 3
+}

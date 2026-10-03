@@ -1,0 +1,80 @@
+{
+ "find": [
+  53.760868,
+  21.786714
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "stay_with_boat",
+ "lostAt": [
+  53.763,
+  21.782746
+ ],
+ "lostClock": "17:32",
+ "stopReason": "drowned",
+ "reportClock": "19:53",
+ "pfd": false,
+ "object": "dinghy",
+ "env": "lake",
+ "inWater": true,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.763,
+   21.782746,
+   "17:32"
+  ],
+  [
+   53.76262,
+   21.783455,
+   "17:37"
+  ],
+  [
+   53.762239,
+   21.784163,
+   "17:42"
+  ],
+  [
+   53.761858,
+   21.784872,
+   "17:47"
+  ],
+  [
+   53.761478,
+   21.78558,
+   "17:52"
+  ],
+  [
+   53.761097,
+   21.786289,
+   "17:57"
+  ],
+  [
+   53.760868,
+   21.786714,
+   "19:53"
+  ]
+ ],
+ "distKmFromIpp": 0.353,
+ "trackOffsetM": 1488,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": false,
+   "note": "modelowany obiekt person, faktycznie dinghy"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  }
+ ],
+ "case": "case-0184",
+ "region": "sniardwy",
+ "seed": 3
+}

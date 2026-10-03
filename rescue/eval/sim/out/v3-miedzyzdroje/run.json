@@ -1,0 +1,42 @@
+{
+ "generator": "sim_water.py",
+ "region": "miedzyzdroje",
+ "env": "sea",
+ "seed": 3,
+ "n": 200,
+ "tries": 265,
+ "dropped": {
+  "out_of_grid": 20,
+  "ipp_edge": 45
+ },
+ "commit": "2403bfb",
+ "mislead": {
+  "wrong_witness": 0.15,
+  "witness_time_off": 0.2,
+  "phone_on_shore": 0.6,
+  "false_sighting": 0.1,
+  "no_bts": 0.35
+ },
+ "categories": {
+  "angler": 31,
+  "boater": 45,
+  "swimmer": 124
+ },
+ "behaviours": {
+  "float_drift": 27,
+  "stay_with_boat": 29,
+  "swim_to_shore": 144
+ },
+ "stopReasons": {
+  "ashore": 28,
+  "ashore_walked": 22,
+  "drowned": 21,
+  "in_water": 129
+ },
+ "distKmQ25_50_75_95": [
+  0.239,
+  0.365,
+  0.624,
+  2.139
+ ]
+}

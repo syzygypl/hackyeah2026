@@ -1,0 +1,91 @@
+{
+ "find": [
+  53.932408,
+  14.435863
+ ],
+ "inGrid": true,
+ "category": "boater",
+ "behaviour": "float_drift",
+ "lostAt": [
+  53.928901,
+  14.425659
+ ],
+ "lostClock": "18:45",
+ "stopReason": "drowned",
+ "reportClock": "22:12",
+ "pfd": false,
+ "object": "person",
+ "env": "sea",
+ "inWater": true,
+ "driftAfterReportMh": [
+  0,
+  0
+ ],
+ "path": [
+  [
+   53.928901,
+   14.425659,
+   "18:45"
+  ],
+  [
+   53.929432,
+   14.427205,
+   "18:50"
+  ],
+  [
+   53.929963,
+   14.428751,
+   "18:55"
+  ],
+  [
+   53.930495,
+   14.430297,
+   "19:00"
+  ],
+  [
+   53.931026,
+   14.431843,
+   "19:05"
+  ],
+  [
+   53.931558,
+   14.433389,
+   "19:10"
+  ],
+  [
+   53.932089,
+   14.434935,
+   "19:15"
+  ],
+  [
+   53.932408,
+   14.435863,
+   "22:12"
+  ]
+ ],
+ "distKmFromIpp": 0.774,
+ "trackOffsetM": 422,
+ "elevChangeM": 0,
+ "clues": [
+  {
+   "event": 3,
+   "kind": "drift",
+   "truthful": true,
+   "note": "modelowany obiekt person, faktycznie person"
+  },
+  {
+   "event": 4,
+   "kind": "witness",
+   "truthful": true
+  },
+  {
+   "event": 5,
+   "kind": "boat",
+   "truthful": false,
+   "note": "łódź dryfuje inaczej niż osoba"
+  }
+ ],
+ "case": "case-0143",
+ "region": "miedzyzdroje",
+ "seed": 3
+}
