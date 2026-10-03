@@ -11,7 +11,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 // share of the search area, "1,8%" (no POA % on screen: najmocniejsze-funkcje.md "Czego NIE pokazywać", as in Akcja top 3)
 const areaTxt = (a) => (+a || 0).toFixed(1).replace(".", ",") + "%";
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-const POLL_MS = 5000;
+const POLL_MS = 10000;   // 10 s: /api/incidents + /api/teams per tick (perf round 3, wydajnosc.md)
 const openURL = (sc) => `./?role=operator&mode=akcja&sc=${encodeURIComponent(sc)}`;
 function toast(t, ms = 3000) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = "none", ms); }
 
