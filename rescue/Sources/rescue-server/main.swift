@@ -184,6 +184,7 @@ func liveScenario(_ name: String, live: Bool, features: String? = nil) async -> 
         nLive = ev.count
         d["events"] = ((d["events"] as? [[String: Any]]) ?? []) + ev
     }
+    if live { d["clueWeightOverrides"] = await clueWeightStore.weights(name) }   // MARK: clue weights (operator overrides)
     if let rs = await roster.resources(for: name) { d["resources"] = rs.compactMap { try? JSONSerialization.jsonObject(with: $0) } }   // live mode: touched incident plans with its roster teams only
     guard let data = try? JSONSerialization.data(withJSONObject: d), var s = try? JSONDecoder().decode(Scenario.self, from: data) else { return nil }
     s.enable(features)
@@ -1351,6 +1352,53 @@ func timelineRoute(_ q: Req) async -> Data? {
     return nil
 }
 
+// MARK: clue weights (CONTRACT.md "Clue weights"): operator override per clue, POST /api/clue/weight {sc, clueId, weight|null, by}
+// Stored per incident like other live state: shared deploy = document "cw:<sc>" (Neon; /api/reset clears it), laptop = out/live-cw-<sc>.json
+// next to the live file (FileStore.reset removes live-*.json). Folded into runScenario (live only) as scenario.clueWeightOverrides.
+// Operator key only: the field key is not a field write here (isFieldWrite), and by "ratownik" is refused.
+struct ClueWeightStore: Sendable {   // stateless: reads the store / file per request
+    func file(_ sc: String) -> URL { URL(fileURLWithPath: livePath).deletingLastPathComponent().appendingPathComponent("live-cw-\(sc).json") }
+    /// clueId -> {weight, by, at}
+    func all(_ sc: String) async -> [String: [String: Any]] {
+        let d = store.shared ? await store.doc("cw:" + sc)?.data : try? Data(contentsOf: file(sc))
+        return (d.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: [String: Any]]) ?? [:]
+    }
+    func weights(_ sc: String) async -> [String: Double] { (await all(sc)).compactMapValues { ($0["weight"] as? NSNumber)?.doubleValue } }
+    func set(_ sc: String, _ id: String, _ w: Double?, by: String) async -> Bool {
+        var m = await all(sc)
+        if let w { m[id] = ["weight": w, "by": by, "at": ISO8601DateFormatter().string(from: Date())] } else { m[id] = nil }
+        guard let d = try? JSONSerialization.data(withJSONObject: m, options: [.sortedKeys]) else { return false }
+        if store.shared { return await store.putDoc("cw:" + sc, d) > 0 }
+        return (try? d.write(to: file(sc), options: .atomic)) != nil
+    }
+}
+let clueWeightStore = ClueWeightStore()
+func clueWeightRoute(_ q: Req) async -> Data {
+    let o = jsonObject(q.body)
+    guard let sc = scParam(q, o), scenarioNames().contains(sc) else { return jsonErr("400 Bad Request", "unknown sc") }
+    if q.method == "GET" {
+        return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["sc": sc, "overrides": await clueWeightStore.all(sc)], options: [.sortedKeys])) ?? Data("{}".utf8))
+    }
+    guard let id = shortClean(o["clueId"], 20), id.range(of: #"^cw-[0-9a-f]{8}$"#, options: .regularExpression) != nil else { return jsonErr("400 Bad Request", "clueId: cw-xxxxxxxx (run clueWeights[].id)") }
+    let by = shortClean(o["by"], 40) ?? "operator"
+    if by == "ratownik" || q.headers["x-rescue-team"] != nil { return jsonErr("403 Forbidden", "wagę śladu zmienia tylko operator") }
+    var w: Double? = nil
+    if let n = o["weight"] as? NSNumber {
+        let x = n.doubleValue
+        guard x.isFinite, x >= 0, x <= 1 else { return jsonErr("400 Bad Request", "weight 0..1 or null (auto)") }
+        w = (x * 100).rounded() / 100
+    } else if o["weight"] != nil && !(o["weight"] is NSNull) { return jsonErr("400 Bad Request", "weight 0..1 or null (auto)") }
+    guard await clueWeightStore.set(sc, id, w, by: by) else { return jsonErr("503 Service Unavailable", "nie udało się zapisać wagi - spróbuj ponownie") }
+    let label = shortClean(o["title"], 80)
+    let ws = w.map { String(format: "%.2f", $0).replacingOccurrences(of: ".", with: ",") }
+    var e = LiveFeedEvent(kind: "weight", by: by, title: "Waga śladu\(label.map { " (\($0))" } ?? ""): \(ws.map { "\($0) (ręcznie)" } ?? "auto")")
+    e.type = "weight"; e.note = id; e.sc = sc
+    e = await liveFeed.add(e)
+    await assessCache.clear()
+    print("[clue weight \(by) sc=\(sc)] \(id) -> \(ws ?? "auto")")
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["ok": true, "sc": sc, "clueId": id, "weight": w.map { $0 as Any } ?? NSNull(), "seq": e.seq], options: [.sortedKeys])) ?? Data("{}".utf8))
+}
+
 // MARK: routing
 
 struct Req { let method: String; let path: String; let query: [String: String]; let headers: [String: String]; let body: Data; let peer: String }
@@ -1486,6 +1534,7 @@ func route(_ q: Req) async -> Data {
         let b = (try? JSONSerialization.data(withJSONObject: o)) ?? q.body
         await feedDispatch(b); return response("200 OK", json, await studio.assignTeam(b))
     case ("POST", "/api/clue"): return await addClue(q)
+    case ("POST", "/api/clue/weight"), ("GET", "/api/clue/weights"): return await clueWeightRoute(q)   // MARK: clue weights
     case ("POST", "/api/advance"): return await advance(q)
     case ("GET", "/api/live"): return await liveFeedData(Int(q.query["since"] ?? "") ?? 0, sc: scParam(q))
     case ("POST", "/api/ack"):   // {sc?, seq?}: operator confirms one feed event, or every event of the incident so far
