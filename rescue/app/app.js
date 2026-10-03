@@ -1284,6 +1284,8 @@ function tlPostOne(k, T, m, frame) {
   const msg = { type: "time", minute: m, t: tlClock(T, m), live: liveOn() }, now = performance.now(), last = TLP.sent[k];
   if (frame && last && frame !== last && playing && now - (TLP.sentAt[k] || 0) < 180 && last.minute <= m) frame = last;
   if (frame) { msg.frameMinute = frame.minute; if (last !== frame) { msg.frame = frame; TLP.sent[k] = frame; TLP.sentAt[k] = now; } }
+  // the panel's top 3 (tlSegments: the minute's frame in Historia, the step on Na żywo) - the views label the same sectors #1-#3
+  const S = curStep(); if (S) msg.top = tlSegments(S).slice(0, 3).map((g) => g.id);
   postTo(k, msg);
 }
 // throttled to ~30 messages per second (the last one always goes out); force = now

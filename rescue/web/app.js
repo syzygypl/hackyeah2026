@@ -737,7 +737,9 @@
     const p = compute(step), st = stats(p);
     S.lastStats = st; S.lastP = p;
     const prevSt = step > 0 ? stats(compute(step - 1)) : null;
-    const top3 = st.slice(0, 3);
+    // embedded in /app: the shell's top 3 (its panel) when it sent one, else this step's own ranking
+    const sTop = S.shellTop && !S.disabled.size ? S.shellTop.map((id) => st.find((x) => x.id === id)).filter(Boolean) : [];
+    const top3 = sTop.length === 3 ? sTop : st.slice(0, 3);
     const searched = searchedState(step);
     const ov = overlays(step, top3);
     // timeline mode: the minute's frame heat stays (tlDraw); the step heat only without a frame or with a signal switched off
@@ -858,6 +860,12 @@
     return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
   }
   // a minute from the shell: glide from the shown minute when it is a short step forward (play / drag), jump otherwise
+  // the shell's top 3 ({type:'time', top:[ids]}): one source of truth with its panel; a change relabels the map
+  function tlTop(top) {
+    const t = Array.isArray(top) && top.length && top.every((x) => typeof x === 'string') ? top : null;
+    if (String(t) === String(S.shellTop)) return;
+    S.shellTop = t; if (S.M && S.view) render();
+  }
   function tlTime(minute, frame, frameMinute) {
     const T = S.M && S.M.R.timeline; if (!T) return;
     // the shell sends the exact (per-minute) frame once, then only frameMinute while it stays in force
@@ -1126,7 +1134,7 @@
     try {
       if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
       else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
-      else if (m.type === 'time' && Number.isFinite(m.minute)) tlTime(m.minute, m.frame, m.frameMinute);
+      else if (m.type === 'time' && Number.isFinite(m.minute)) { tlTop(m.top); tlTime(m.minute, m.frame, m.frameMinute); }
       else if (m.type === 'highlight') highlightActor(m);   // actor drawer (CONTRACT "Zasoby i dziennik" 6)
       else if (m.type === 'focusArea') focusArea(m);        // an event click: zoom onto the area the event changed (dock.js focusTarget)
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
