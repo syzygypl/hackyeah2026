@@ -670,7 +670,11 @@ function syncFrame(k, why) {
   // still loading (the 3D view needs ~10 s): a step move must not restart it - its "ready" picks up the current step and minute
   if (why === "step" && F.src && !F.ready && !F.dirty) return;
   const u = frameURL(k); if (u === F.src && !F.dirty && why !== "edit" && why !== "run") return;
-  if (!F.visible() && F.src) { F.dirty = true; return; }   // a hidden warm view never reloads in the background (3D boot blocks the page ~1 s): it reloads when shown
+  if (!F.visible() && F.src) {   // a hidden warm view reloads in the background once the page idles (3D boot yields, 90c2681), so the next switch is instant
+    F.dirty = true; clearTimeout(F.rw);
+    F.rw = setTimeout(() => (window.requestIdleCallback || ((f) => f()))(() => { if (F.visible() || !F.dirty || store.mode !== "akcja") return; const v = frameURL(k); F.src = v; F.ready = false; F.el.src = v; F.dirty = false; }, { timeout: 4000 }), 1500);
+    return;
+  }
   clearTimeout(F.h);
   F.h = setTimeout(() => { F.src = u; F.ready = false; F.el.src = u; F.dirty = false; }, why === "step" ? 700 : 50);
   const R = D(), out = k === "3d" && R && R.bbox && (R.bbox.west > 20.09 || R.bbox.east < 20.0 || R.bbox.north < 49.19 || R.bbox.south > 49.25) && store.backend === "studio";
