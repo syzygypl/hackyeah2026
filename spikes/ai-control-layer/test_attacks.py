@@ -350,6 +350,35 @@ class InjectionNotHiddenByPii(unittest.TestCase):
         self.assertNotIn("4111 1111", r["output"])
 
 
+class PackageTyposquat(unittest.TestCase):
+    """SIG-PKG-TYPOSQUAT: data-driven watchlist in the feed, applied to install commands only."""
+
+    def _d(self, code):
+        layer, s, _ = fresh()
+        return layer.call(s, "run_python", {"code": code})
+
+    def test_blocked(self):
+        for cmd, why in [("!pip install reqeusts", "requests"), ("!npm i lodahs", "lodash"), ("!poetry add langchian", "langchain"),
+                         ("!pip install requests-tools", "impostor"), ("!uv pip install colourama", "known malicious"),
+                         ("!pip install -U numpy==1.26 transformer", "transformers")]:
+            with self.subTest(cmd):
+                r = self._d(cmd)
+                self.assertEqual(r["decision"], DENY, r["event"]["reasons"])
+                self.assertIn("SIG-PKG-TYPOSQUAT", " ".join(r["event"]["reasons"]))
+                self.assertIn(why, " ".join(r["event"]["reasons"]))
+
+    def test_legit_installs_pass(self):
+        for cmd in ["!pip install requests", "!pip install -U numpy==1.26 pandas>=2", "!npm install preact",
+                    "!pip install -r requirements.txt torch", "!npm i @types/node", "!pip install requests-toolbelt",
+                    "!yarn add react-dom", "# we use the reqeusts-like API of the requests library"]:
+            with self.subTest(cmd):
+                self.assertEqual(self._d(cmd)["decision"], ALLOW)
+
+    def test_in_prompt_too(self):
+        layer, s, _ = fresh()
+        self.assertEqual(layer.check_prompt(s, "Run: pip install anthropicc")["decision"], DENY)
+
+
 class StatefulControls(unittest.TestCase):
     def test_indirect_injection_taints_session(self):
         layer, s, _ = fresh(approve=False)
@@ -1106,7 +1135,7 @@ def measure_overhead(n=5000):
 
 
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization", "InjectionNotHiddenByPii": "injection not hidden behind PII",
-          "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
+          "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
           "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "Performance": "performance"}

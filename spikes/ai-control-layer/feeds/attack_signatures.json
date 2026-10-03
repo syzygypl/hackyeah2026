@@ -1,6 +1,6 @@
 {
  "_doc": "Externally managed attack-signature feed (stand-in for a threat-intel system). The control layer reloads it when it changes. Each signature: id, name, category, severity (low|medium|high|critical), regex (case-insensitive, matched on normalized tool args, prompts and outputs), ref.",
- "feed_version": "2026-10-03.2",
+ "feed_version": "2026-10-03.3",
  "signatures": [
   {
    "id": "SIG-PICKLE-RCE",
@@ -130,5 +130,63 @@
    "regex": "!\\[[^\\]]{0,100}\\]\\(\\s*https?://[^)\\s]*\\?[^)\\s]*=[^)\\s]+|\\[[^\\]]{0,100}\\]\\(\\s*https?://[^)\\s]*\\?[^)\\s]*=[A-Za-z0-9+/_=-]{16,}",
    "ref": "Markdown image exfiltration (Bing Chat, ChatGPT plugins, Slack AI 2023-24)"
   }
- ]
+ ],
+ "package_watchlist": {
+  "_doc": "Data-driven package typosquat check (SIG-PKG-TYPOSQUAT): applied to names in pip/uv/poetry/npm/pnpm/yarn install commands found in tool args and prompts. A name within edit distance max_distance of a popular package (and not itself popular or on allow_near) is flagged; so are known_bad names and popular-name + impostor_suffixes.",
+  "popular": [
+   "requests",
+   "numpy",
+   "pandas",
+   "torch",
+   "transformers",
+   "langchain",
+   "openai",
+   "anthropic",
+   "urllib3",
+   "boto3",
+   "django",
+   "flask",
+   "fastapi",
+   "pydantic",
+   "scipy",
+   "matplotlib",
+   "lodash",
+   "react",
+   "express",
+   "axios",
+   "chalk",
+   "commander",
+   "webpack",
+   "typescript"
+  ],
+  "known_bad": [
+   "colourama",
+   "python3-dateutil",
+   "jeilyfish",
+   "python-sqlite",
+   "crossenv",
+   "discordpydebug",
+   "noblox.js-proxy",
+   "torchtriton"
+  ],
+  "impostor_suffixes": [
+   "-tools",
+   "-dev"
+  ],
+  "allow_near": [
+   "preact",
+   "numba",
+   "openapi",
+   "pandas-stubs",
+   "request",
+   "axion",
+   "flask-cors",
+   "types-requests",
+   "django-rest",
+   "reactor"
+  ],
+  "max_distance": 2,
+  "min_length": 4,
+  "severity": "high"
+ }
 }

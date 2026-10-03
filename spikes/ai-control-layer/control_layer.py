@@ -151,6 +151,72 @@ def redact(text, secrets=True, pii_types=()):
     return t, labels
 
 
+INSTALL_CMD = re.compile(r"(?i)\b(?:pip3?|python3?\s+-m\s+pip|uv\s+pip|poetry|npm|pnpm|yarn)\s+(?:install|add|i)\s+([^\n;&|`]+)")
+
+
+def edit_distance(a, b):
+    """Optimal string alignment distance (Levenshtein + adjacent transposition)."""
+    d = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
+    for i in range(len(a) + 1):
+        d[i][0] = i
+    for j in range(len(b) + 1):
+        d[0][j] = j
+    for i in range(1, len(a) + 1):
+        for j in range(1, len(b) + 1):
+            c = 0 if a[i - 1] == b[j - 1] else 1
+            d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c)
+            if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1]:
+                d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
+    return d[-1][-1]
+
+
+def installed_packages(text):
+    """Package names from install commands: flags, -r files, URLs and version specifiers dropped."""
+    names = []
+    for m in INSTALL_CMD.finditer(text):
+        toks = m.group(1).split()
+        skip = False
+        for t in toks:
+            if skip:
+                skip = False
+                continue
+            if t in ("-r", "--requirement", "-c", "--constraint", "-i", "--index-url", "--extra-index-url", "-e"):
+                skip = True
+                continue
+            if t.startswith("-") or "://" in t or t.startswith((".", "/")):
+                continue
+            name = re.split(r"[=<>!~\[;]", t.split("@")[0] if not t.startswith("@") else "@" + t[1:].split("@")[0])[0]
+            name = name.strip("'\",").lower().replace("_", "-")
+            if name:
+                names.append(name)
+    return names
+
+
+def typosquat_hits(names, wl):
+    hits = []
+    popular = {p.lower() for p in wl.get("popular", [])}
+    allow = {p.lower() for p in wl.get("allow_near", [])}
+    bad = {p.lower() for p in wl.get("known_bad", [])}
+    for n in names:
+        if n in bad:
+            hits.append(f"'{n}' is a known malicious package")
+            continue
+        if n in popular or n in allow:
+            continue
+        for suf in wl.get("impostor_suffixes", []):
+            if n.endswith(suf) and n[: -len(suf)] in popular:
+                hits.append(f"'{n}' impersonates '{n[:-len(suf)]}' ({suf} impostor)")
+                break
+        else:
+            if len(n) >= wl.get("min_length", 4):
+                near = [(edit_distance(n, p), p) for p in popular if abs(len(p) - len(n)) <= wl.get("max_distance", 2)]
+                near = [x for x in near if 0 < x[0] <= wl.get("max_distance", 2)]
+                if near:
+                    dist, p = min(near)
+                    hits.append(f"'{n}' is {dist} edit(s) from popular '{p}'")
+    return hits
+
+
 def _strings(obj):
     if isinstance(obj, str):
         yield obj
@@ -187,6 +253,7 @@ class PolicyStore:
         self.path = path
         self.policy, self.version, self.mtime = None, None, None
         self.signatures, self.feed_version, self._feed_key = [], None, None
+        self.package_watchlist = {}
         self.reloads, self.errors = 0, []
 
     @staticmethod
@@ -263,6 +330,7 @@ class PolicyStore:
                 data = json.load(open(path))
             sigs = [dict(s, rx=re.compile(s["regex"], re.I)) for s in data["signatures"]]
             self.signatures, self.feed_version, self._feed_key = sigs, data.get("feed_version"), key
+            self.package_watchlist = data.get("package_watchlist") or {}
         except Exception as e:
             self._feed_key = key
             self.errors.append(f"{time.strftime('%H:%M:%S')} signature feed error, keeping last good: {e}")
@@ -644,12 +712,16 @@ class ControlLayer:
             return
         floor = SEV.get(c.get("min_severity", "low"), 1)
         texts = [l for s in _strings(args) for l in layers(s)]
-        hits = [sig for sig in self.store.signatures
+        hits = [f"{sig['id']} {sig['name']} [{sig['category']}, {sig['severity']}] ref: {sig.get('ref', '')}"
+                for sig in self.store.signatures
                 if SEV.get(sig.get("severity"), 2) >= floor and any(sig["rx"].search(t) for t in texts)]
+        wl = self.store.package_watchlist
+        if wl and SEV.get(wl.get("severity", "high"), 3) >= floor:
+            pk = typosquat_hits(sorted({n for t in texts for n in installed_packages(t)}), wl)
+            if pk:
+                hits.append(f"SIG-PKG-TYPOSQUAT Package typosquatting [supply_chain, {wl.get('severity', 'high')}]: {'; '.join(pk)}")
         if hits:  # report every matching signature in one decision
-            self._block(ev, "attack_signature", "; ".join(
-                f"{sig['id']} {sig['name']} [{sig['category']}, {sig['severity']}] ref: {sig.get('ref', '')}" for sig in hits),
-                c.get("action", "block"))
+            self._block(ev, "attack_signature", "; ".join(hits), c.get("action", "block"))
 
     def _dlp_inputs(self, name, rule, args, ev):
         sec, pii = self._c("secrets"), self._c("pii")
