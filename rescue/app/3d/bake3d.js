@@ -21,7 +21,9 @@ function lerpTo(stops, v, o) {
 const contour = (e, right, down, st) => Math.floor(e / st) !== Math.floor(right / st) || Math.floor(e / st) !== Math.floor(down / st);
 
 // p: { full: {lat0, lon0, step, stepLat, rows, cols, z: Float64Array row-major}, dem: {same, decimated mesh grid},
-//      TS, KX, KM, EX, LOW, WM: {m: Uint8Array, rows, cols, b: {north, south, east, west}} | null }
+//      TS, KX, KM, EX, LOW, WM: {m: Uint8Array, rows, cols, b: {north, south, east, west}} | null,
+//      part: {rows: [y0, y1]} = base colours of those texture rows only | {nao: true} = normal map + AO only | absent = all }
+// Parts let app3d.js run the bake on three workers at once; every pixel is computed exactly as in the whole bake.
 export function bakeTerrain(p) {
   const { full: F, TS, KX, KM, EX, LOW, WM } = p, D = p.dem || F; // dem: the decimated mesh grid, null when it is the full one
   const stLon = D.step, stLat = D.stepLat || D.step, TW = D.cols * TS, TH = D.rows * TS;
@@ -46,14 +48,16 @@ export function bakeTerrain(p) {
   }
 
   // printed-topo look: vegetation/rock tint, warm-lit / cool-shadow hillshade, brown contours every 50 m (bold every 250 m)
-  const base = new Uint8ClampedArray(TW * TH * 4), d = base;
-  const E = new Float32Array(TW * TH);
-  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) E[y * TW + x] = elevFull(D.lat0 - ((y + 0.5) / TS) * stLat, D.lon0 + ((x + 0.5) / TS) * stLon);
+  const part = p.part || {}, [y0, y1] = part.nao ? [0, 0] : part.rows || [0, TH];
+  const base = new Uint8ClampedArray(TW * (y1 - y0) * 4), d = base;
+  const ey0 = Math.max(0, y0 - 1), ey1 = Math.min(TH, y1 + 1); // elevation rows: the band plus one row each side (gradients)
+  const E = new Float32Array(TW * Math.max(0, ey1 - ey0));
+  for (let y = ey0; y < ey1; y++) for (let x = 0; x < TW; x++) E[(y - ey0) * TW + x] = elevFull(D.lat0 - ((y + 0.5) / TS) * stLat, D.lon0 + ((x + 0.5) / TS) * stLon);
   const px = (stLon * KX * KM * 1000) / TS, py = (stLat * KM * 1000) / TS;
-  for (let y = 0; y < TH; y++) for (let x = 0; x < TW; x++) {
-    const i = y * TW + x, e = E[i];
-    const right = E[y * TW + Math.min(x + 1, TW - 1)], left = E[y * TW + Math.max(x - 1, 0)];
-    const down = E[Math.min(y + 1, TH - 1) * TW + x], up = E[Math.max(y - 1, 0) * TW + x];
+  for (let y = y0; y < y1; y++) for (let x = 0; x < TW; x++) {
+    const i = (y - y0) * TW + x, ei = (y - ey0) * TW, e = E[ei + x];
+    const right = E[ei + Math.min(x + 1, TW - 1)], left = E[ei + Math.max(x - 1, 0)];
+    const down = E[(Math.min(y + 1, TH - 1) - ey0) * TW + x], up = E[(Math.max(y - 1, 0) - ey0) * TW + x];
     const gx = (right - left) / (2 * px), gy = (down - up) / (2 * py), slope = (Math.atan(Math.hypot(gx, gy)) * 180) / Math.PI;
     const len = Math.hypot(gx, gy, 1), shade = clamp((0.62 * gx - 0.62 * gy + 0.5) / len / 0.78, 0, 1.4);
     const wla = D.lat0 - ((y + 0.5) / TS) * stLat, wlo = D.lon0 + ((x + 0.5) / TS) * stLon;
@@ -71,6 +75,7 @@ export function bakeTerrain(p) {
     d[i * 4] = r; d[i * 4 + 1] = gr; d[i * 4 + 2] = b; d[i * 4 + 3] = 255;
   }
 
+  if (part.rows) return { base, y0, y1, TW, TH };
   // object-space normal map from the full-resolution DEM (the mesh is averaged 2x2 on wide cuts, the shading keeps every ridge)
   const k = FC / DC >= 1.5 ? 2 : 1, C = DC * k, Rr = DR * k;
   const sx = 2 * (F.step * KX * KM), sz = 2 * (fsl * KM), f = EX / 1000;
@@ -95,12 +100,12 @@ export function bakeTerrain(p) {
     const v = clamp(1 - (occ / 8) * 1.35, 0.25, 1) * 255, o = ((Rr - 1 - r) * C + c) * 4;
     ao[o] = ao[o + 1] = ao[o + 2] = v; ao[o + 3] = 255;
   }
-  return { base, normal, ao, TW, TH, C, Rr };
+  return { base, y0, y1, normal, ao, TW, TH, C, Rr };
 }
 
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
   self.onmessage = (e) => {
-    try { const r = bakeTerrain(e.data); self.postMessage(r, [r.base.buffer, r.normal.buffer, r.ao.buffer]); }
+    try { const r = bakeTerrain(e.data); self.postMessage(r, [r.base.buffer, r.normal?.buffer, r.ao?.buffer].filter(Boolean)); }
     catch (err) { self.postMessage({ error: String(err?.message || err) }); }
   };
 }

@@ -425,21 +425,28 @@ function elevFull(lat, lon) {
 }
 const TW = DEM.cols * TS, TH = DEM.rows * TS;
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-// base colours, normal map and AO are baked in a worker (bake3d.js) while the main thread builds the rest of the scene;
+// base colours, normal map and AO are baked in workers (bake3d.js) while the main thread builds the rest of the scene;
 // applyBake() puts the pixels in before the first frame (start). The worker code is the former inline bake: same pixels.
 const flatZ = (D) => { const z = new Float64Array(D.rows * D.cols); for (let r = 0; r < D.rows; r++) z.set(D.z[r].length > D.cols ? D.z[r].slice(0, D.cols) : D.z[r], r * D.cols); return z; };
 const demMsg = (D) => ({ lat0: D.lat0, lon0: D.lon0, step: D.step, stepLat: D.stepLat, rows: D.rows, cols: D.cols, z: flatZ(D) });
 const bakeIn = { full: demMsg(DEM_FULL), dem: DEM === DEM_FULL ? null : demMsg(DEM), TS, KX, KM, EX, LOW,
   WM: WM && { m: Uint8Array.from(WM.m, (v) => (v ? 1 : 0)), rows: WM.rows, cols: WM.cols, b: { north: WM.b.north, south: WM.b.south, east: WM.b.east, west: WM.b.west } } };
-const bakeJob = new Promise((resolve, reject) => {
-  const local = () => import('./bake3d.js').then((m) => resolve(m.bakeTerrain(bakeIn)), reject); // no worker: same code here
-  try {
-    const w = new Worker(new URL('./bake3d.js', import.meta.url), { type: 'module' });
-    w.onmessage = (e) => { w.terminate(); if (e.data?.error) local(); else resolve(e.data); };
-    w.onerror = (e) => { e.preventDefault?.(); w.terminate(); local(); };
-    w.postMessage(bakeIn);
-  } catch { local(); }
-});
+// four workers at once: the colours in three row bands, the normal map + AO in the fourth (one worker alone was the
+// critical path of the load, ~1.2 s on an efficiency core)
+const bakeJob = (() => {
+  const run = (part) => new Promise((resolve, reject) => {
+    const msg = { ...bakeIn, part };
+    const local = () => import('./bake3d.js').then((m) => resolve(m.bakeTerrain(msg)), reject); // no worker: same code here
+    try {
+      const w = new Worker(new URL('./bake3d.js', import.meta.url), { type: 'module' });
+      w.onmessage = (e) => { w.terminate(); if (e.data?.error) local(); else resolve(e.data); };
+      w.onerror = (e) => { e.preventDefault?.(); w.terminate(); local(); };
+      w.postMessage(msg);
+    } catch { local(); }
+  });
+  const n = 3, cut = (k) => Math.round((TH * k) / n);
+  return Promise.all([run({ nao: true }), ...Array.from({ length: n }, (_, k) => run({ rows: [cut(k), cut(k + 1)] }))]);
+})();
 const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; baseCanvas.height = TH;
 // land cover tints, building footprints and roads on the base texture (about 3 m per pixel, so streets read crisply)
 function paintOSM(g) {
@@ -2248,11 +2255,12 @@ if (ZOOM[0] > 0) {
 } else overview(2.6);
 renderer.shadowMap.needsUpdate = true;
 // shader programs link on the driver's threads (KHR_parallel_shader_compile) while the terrain bake finishes in its worker
-const [baked] = await Promise.all([bakeJob, renderer.compileAsync(scene, camera).catch(() => {})]);
+const [[nao, ...bands]] = await Promise.all([bakeJob, renderer.compileAsync(scene, camera).catch(() => {})]);
 {
-  const g = baseCanvas.getContext('2d'); g.putImageData(new ImageData(baked.base, baked.TW, baked.TH), 0, 0);
+  const g = baseCanvas.getContext('2d');
+  for (const b of bands) if (b.y1 > b.y0) g.putImageData(new ImageData(b.base, b.TW, b.y1 - b.y0), 0, b.y0);
   if (OSM) paintOSM(g);
-  normalTex.image.data = baked.normal; normalTex.needsUpdate = true; terrainAO.image.data = baked.ao; terrainAO.needsUpdate = true;
+  normalTex.image.data = nao.normal; normalTex.needsUpdate = true; terrainAO.image.data = nao.ao; terrainAO.needsUpdate = true;
   compose();
 }
 frame();
