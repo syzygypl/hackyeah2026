@@ -31,7 +31,20 @@ float fxNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 
   return mix(mix(fxHash(i), fxHash(i + vec2(1, 0)), f.x), mix(fxHash(i + vec2(0, 1)), fxHash(i + vec2(1, 1)), f.x), f.y); }
 // 4 octaves, the fine ones fade out with lod (0 near .. 1 far) so distant pixels do not shimmer
 float fxFbm(vec2 p, float lod) { float a = 0.0, w = 0.5; for (int k = 0; k < 4; k++) { a += w * fxNoise(p) * (1.0 - smoothstep(0.6, 1.0, lod * float(k + 1) * 0.35)); p *= 2.03; w *= 0.5; } return a; }
+// the same value noise from a 256 x 256 lattice of random values (uFxNoise, repeats every 256 cells): one bilinear fetch
+// at the smoothstep-warped coordinate instead of four sin() hashes. For the atmosphere, sky and cloud shadows.
+uniform sampler2D uFxNoise;
+float fxNoiseT(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return texture2D(uFxNoise, (i + f + 0.5) * (1.0 / 256.0)).r; }
+float fxFbmT(vec2 p, float lod) { float a = 0.0, w = 0.5; for (int k = 0; k < 4; k++) { a += w * fxNoiseT(p) * (1.0 - smoothstep(0.6, 1.0, lod * float(k + 1) * 0.35)); p *= 2.03; w *= 0.5; } return a; }
 `;
+// uFxNoise: random bytes (fixed seed), wrapped, linear, no mipmaps (the warped coordinate's derivatives jump at cell edges)
+export const FX_NOISE = (() => {
+  const d = new Uint8Array(256 * 256); let x = 0x2545f491;
+  for (let i = 0; i < d.length; i++) { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; d[i] = (x >>> 0) & 255; }
+  const t = new THREE.DataTexture(d, 256, 256, THREE.RedFormat, THREE.UnsignedByteType);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = t.minFilter = THREE.LinearFilter; t.generateMipmaps = false; t.needsUpdate = true;
+  return { value: t };
+})();
 
 const glslType = (v) => (typeof v === 'number' ? 'float' : typeof v === 'boolean' ? 'bool' : v?.isColor || v?.isVector3 ? 'vec3' : v?.isVector2 ? 'vec2'
   : v?.isVector4 ? 'vec4' : v?.isMatrix4 ? 'mat4' : v?.isMatrix3 ? 'mat3' : v?.isTexture ? 'sampler2D' : null);
@@ -53,8 +66,8 @@ export function applyFx(material, effects) {
   const chunks = {}; // chunk -> rewritten source (several effects may rewrite the same chunk, in order)
   for (const e of list) for (const [c, fn] of Object.entries(e.chunks || {})) chunks[c] = fn(chunks[c] ?? THREE.ShaderChunk[c]);
   const at = (stage, chunk) => list.map((e) => Object.entries(e.hooks || {}).filter(([h]) => HOOKS[h][0] === stage && HOOKS[h][1] === chunk).map(([, code]) => `// fx ${e.name}\n${code}`).join('\n')).join('\n');
-  const inject = (src, stage) => {
-    src = src.replace('#include <common>', `#include <common>\n${head}`);
+  const inject = (src, stage, fogV) => {
+    src = src.replace('#include <common>', `#include <common>\n${fogV ? '#define FOG_V 1\n' : ''}${head}`);
     for (const [c, body] of Object.entries(chunks)) src = src.replace(`#include <${c}>`, body);
     for (const [h, [st, c]] of Object.entries(HOOKS)) if (st === stage) {
       let code = at(stage, c);
@@ -69,9 +82,10 @@ export function applyFx(material, effects) {
     return src;
   };
   material.onBeforeCompile = (sh) => {
-    Object.assign(sh.uniforms, uniforms);
-    sh.vertexShader = inject(sh.vertexShader, 'v');
-    sh.fragmentShader = inject(sh.fragmentShader, 'f');
+    Object.assign(sh.uniforms, uniforms, { uFxNoise: FX_NOISE });
+    const fogV = !sh.instancing && list.some((e) => e.name === 'atmo'); // per-vertex haze (installHeightFog), not on instanced meshes
+    sh.vertexShader = inject(sh.vertexShader, 'v', fogV);
+    sh.fragmentShader = inject(sh.fragmentShader, 'f', fogV);
   };
   material.customProgramCacheKey = () => 'fx:' + list.map((e) => e.name).join('+');
   material.userData.fx = list.map((e) => e.name);
@@ -82,7 +96,7 @@ export function applyFx(material, effects) {
 // a full custom shader (no three.js lighting): uniforms declared automatically, FX_LIB available in both stages
 export function fxShader({ uniforms = {}, vertex, fragment, ...opts }) {
   const head = `${declareUniforms(uniforms)}\n${FX_LIB}\n`;
-  return new THREE.ShaderMaterial({ uniforms, vertexShader: head + vertex, fragmentShader: head + fragment, ...opts });
+  return new THREE.ShaderMaterial({ uniforms: { ...uniforms, uFxNoise: FX_NOISE }, vertexShader: head + vertex, fragmentShader: head + fragment, ...opts });
 }
 
 // ---------- global: aerial perspective, valley fog, alpenglow ----------
@@ -100,55 +114,85 @@ export function installHeightFog() {
     uAlpen: { value: new THREE.Color(0, 0, 0) }, uAlpenY: { value: new THREE.Vector2(1, 2) } };
   U.uValley.value.needsUpdate = true;
   FX_GLOBAL.push({ name: 'atmo', uniforms: U, glsl: '#define FX_ATMO 1' });
-  THREE.ShaderChunk.fog_pars_vertex = '#ifdef USE_FOG\n varying float vFogDepth; varying float vFogY; varying vec3 vFogW;\n#endif';
-  THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
- vFogDepth = - mvPosition.z;
- vFogW = vec3( dot( viewMatrix[0].xyz, mvPosition.xyz ), dot( viewMatrix[1].xyz, mvPosition.xyz ), dot( viewMatrix[2].xyz, mvPosition.xyz ) ); // R^T . view = world offset from the camera
- vFogY = dot(viewMatrix[1].xyz, mvPosition.xyz - viewMatrix[3].xyz); // world y = column 1 of R . (view - t)
+  // aerial perspective + weather fog as c * fogMul + fogAdd (both independent of the surface colour). Needs fogDist, fogCamY,
+  // fogV, fogY, fogWy (world offset y), fogDepth, fogSunD / fogSunC. Haze: density a * exp(-b y), integrated from the camera
+  // to the point; Henyey-Greenstein g = 0.7 towards the sun (x^1.5 as x * sqrt(x)).
+  const HAZE = `
+  #ifdef FOG_EXP2
+    float hzK = 1.0, fogFactor = 1.0 - exp( - fogDensity * fogDensity * fogDepth * fogDepth );
+  #else
+    float hzK = clamp( ( 14.0 - fogNear ) / 5.0, 1.0, 1.9 ), fogFactor = smoothstep( fogNear, fogFar, fogDepth );
+  #endif
+    float hzB = 0.45, hzF = abs( fogWy ) > 1e-3 ? ( exp( - hzB * fogCamY ) - exp( - hzB * fogY ) ) / ( hzB * fogWy ) : exp( - hzB * fogY );
+    vec3 hzT = exp( - 0.065 * hzK * fogDist * hzF * vec3( 0.45, 0.68, 1.0 ) );
+    float hzG = 1.49 - 1.4 * dot( fogV, fogSunD );
+    vec3 hzSun = fogSunC * ( 0.009 / ( hzG * sqrt( hzG ) ) );
+    vec3 fogMul = hzT * ( 1.0 - fogFactor ), fogAdd = ( fogColor * vec3( 0.86, 0.94, 1.06 ) + hzSun ) * ( 1.0 - hzT ) * ( 1.0 - fogFactor ) + ( fogColor + hzSun * 0.6 ) * fogFactor;`;
+  // per vertex (FOG_V) on applyFx meshes that are not instanced (terrain, sea, lakes, buildings): the haze varies over
+  // kilometres, their triangles span tens of metres, so the pixel shader only applies the two interpolated terms. Instanced
+  // trees and grass keep it per pixel: millions of vertices but few pixels each, and no extra varyings to store per vertex.
+  const FOG_PARS = `#ifdef USE_FOG
+ varying float vFogDepth; varying float vFogY; varying vec3 vFogW;
+ #ifdef FOG_V
+  varying vec3 vFogMul; varying vec3 vFogAdd;
+ #endif
 #endif`;
-  THREE.ShaderChunk.fog_pars_fragment = '#ifdef USE_FOG\n uniform vec3 fogColor; varying float vFogDepth; varying float vFogY; varying vec3 vFogW;\n #ifdef FOG_EXP2\n uniform float fogDensity;\n #else\n uniform float fogNear; uniform float fogFar;\n #endif\n#endif';
+  const FOG_UNI = `#ifdef USE_FOG
+ uniform vec3 fogColor;
+ #ifdef FOG_EXP2
+  uniform float fogDensity;
+ #else
+  uniform float fogNear; uniform float fogFar;
+ #endif
+#endif`;
+  THREE.ShaderChunk.fog_pars_vertex = `${FOG_PARS}\n#ifdef FOG_V\n${FOG_UNI}\n#endif`;
+  THREE.ShaderChunk.fog_vertex = `#ifdef USE_FOG
+ {
+ vec3 fogW = vec3( dot( viewMatrix[0].xyz, mvPosition.xyz ), dot( viewMatrix[1].xyz, mvPosition.xyz ), dot( viewMatrix[2].xyz, mvPosition.xyz ) ); // R^T . view = world offset from the camera
+ float fogY = dot( viewMatrix[1].xyz, mvPosition.xyz - viewMatrix[3].xyz ), fogDepth = - mvPosition.z; // world y = column 1 of R . (view - t)
+ vFogDepth = fogDepth; vFogW = fogW; vFogY = fogY;
+ #ifdef FOG_V
+  float fogDist = length( fogW ), fogCamY = fogY - fogW.y, fogWy = fogW.y;
+  vec3 fogV = fogW / max( fogDist, 1e-5 ), fogSunD = uAtmoSun, fogSunC = uAtmoSunCol;
+  ${HAZE}
+  vFogMul = fogMul; vFogAdd = fogAdd;
+ #endif
+ }
+#endif`;
+  THREE.ShaderChunk.fog_pars_fragment = `${FOG_PARS}\n${FOG_UNI}`;
   THREE.ShaderChunk.fog_fragment = `#ifdef USE_FOG
   {
-  float fogDist = length( vFogW ), fogCamY = vFogY - vFogW.y;
+  float fogDist = length( vFogW ), fogY = vFogY, fogWy = vFogW.y, fogCamY = fogY - fogWy, fogDepth = vFogDepth;
   vec3 fogV = vFogW / max( fogDist, 1e-5 );
   #ifdef FX_ATMO
-    vec3 fogSunD = uAtmoSun, fogSunC = uAtmoSunCol;
     vec2 fogXZ = cameraPosition.xz + vFogW.xz;
     // alpenglow: the last light of the day on the high peaks (pink, more on bright rock and snow)
-    gl_FragColor.rgb += uAlpen * smoothstep( uAlpenY.x, uAlpenY.y, vFogY ) * ( 0.3 + dot( gl_FragColor.rgb, vec3( 0.3, 0.5, 0.2 ) ) );
+    gl_FragColor.rgb += uAlpen * smoothstep( uAlpenY.x, uAlpenY.y, fogY ) * ( 0.3 + dot( gl_FragColor.rgb, vec3( 0.3, 0.5, 0.2 ) ) );
     // valley fog: the fog top is the local floor plus a patchy, slowly drifting thickness; a pixel under it is seen
-    // through the fog between it and the point where the view ray leaves the layer
+    // through the fog between it and the point where the view ray leaves the layer (noise from the uFxNoise texture)
     if ( uValleyP.x > 0.001 ) {
       float vfFloor = texture2D( uValley, ( fogXZ - uValleyRect.xy ) / uValleyRect.zw ).r * uValleyP.w;
-      if ( vFogY < vfFloor + uValleyP.y * 1.7 ) {
+      if ( fogY < vfFloor + uValleyP.y * 1.7 ) {
         vec2 vfq = fogXZ * 1.7 + vec2( uValleyP.z * 0.012, - uValleyP.z * 0.008 );
-        float vfTop = vfFloor + uValleyP.y * ( 0.3 + 1.4 * fxFbm( vfq + vec2( 0.6 * fxNoise( vfq * 0.45 - uValleyP.z * 0.02 ), 0.0 ), 0.4 ) );
-        float vfIn = vfTop - vFogY;
+        vfq.x += 0.6 * fxNoiseT( vfq * 0.45 - uValleyP.z * 0.02 );
+        float vfN = 0.5 * fxNoiseT( vfq ) + 0.25 * fxNoiseT( vfq * 2.03 ) + 0.125 * fxNoiseT( vfq * 4.1209 ) + 0.0625 * fxNoiseT( vfq * 8.3654 ); // fbm, 4 octaves
+        float vfIn = vfFloor + uValleyP.y * ( 0.3 + 1.4 * vfN ) - fogY;
         if ( vfIn > 0.0 ) {
           float vfLen = min( fogDist, vfIn / max( - fogV.y, 0.025 ) );
           gl_FragColor.rgb = mix( gl_FragColor.rgb, uValleyCol, ( 1.0 - exp( - uValleyP.x * 10.0 * vfLen ) ) * smoothstep( 0.0, uValleyP.y * 0.6, vfIn ) );
         }
       }
     }
+    vec3 fogSunD = uAtmoSun, fogSunC = uAtmoSunCol;
   #else
     vec3 fogSunD = vec3( 0.0, 1.0, 0.0 ), fogSunC = vec3( 0.0 );
   #endif
-  #ifdef FOG_EXP2
-    float hzK = 1.0;
+  #ifdef FOG_V
+    gl_FragColor.rgb = gl_FragColor.rgb * vFogMul + vFogAdd;
   #else
-    float hzK = clamp( ( 14.0 - fogNear ) / 5.0, 1.0, 1.9 );
+    ${HAZE}
+    gl_FragColor.rgb = gl_FragColor.rgb * fogMul + fogAdd;
   #endif
-  // aerial perspective: density a * exp(-b y), integrated from the camera to the pixel
-  float hzB = 0.45, hzF = abs( vFogW.y ) > 1e-3 ? ( exp( - hzB * fogCamY ) - exp( - hzB * vFogY ) ) / ( hzB * vFogW.y ) : exp( - hzB * vFogY );
-  vec3 hzT = exp( - 0.065 * hzK * fogDist * hzF * vec3( 0.45, 0.68, 1.0 ) );
-  vec3 hzSun = fogSunC * ( 0.009 / pow( 1.49 - 1.4 * dot( fogV, fogSunD ), 1.5 ) ); // Henyey-Greenstein g = 0.7
-  gl_FragColor.rgb = gl_FragColor.rgb * hzT + ( fogColor * vec3( 0.86, 0.94, 1.06 ) + hzSun ) * ( 1.0 - hzT );
-  #ifdef FOG_EXP2
-    float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );
-  #else
-    float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
-  #endif
-  gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor + hzSun * 0.6, fogFactor );
   }
 #endif`;
   return U;
@@ -216,7 +260,7 @@ export const FX = {
       uMoonDir: { value: new THREE.Vector3(0, 1, 0) }, uMoon: { value: 0 }, uFlash: { value: 0 } },
     vertex: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
     fragment: `varying vec3 vP;
-    float cloudN(vec2 uv, float lod) { return fxFbm(uv * 1.4, lod) + 0.22 * fxNoise(uv * 7.0); }
+    float cloudN(vec2 uv, float lod) { return fxFbmT(uv * 1.4, lod) + 0.22 * fxNoiseT(uv * 7.0); }
     void main(){
       vec3 v = normalize(vP);
       float y = v.y, yy = max(y, 0.0), mu = dot(v, sunDir), sy = sunDir.y;
@@ -231,7 +275,7 @@ export const FX = {
       c = mix(c, vec3(0.9, 0.58, 0.64) * (0.35 + 0.8 * dot(bottom, vec3(0.33))), dusk * smoothstep(0.02, 0.09, y) * (1.0 - smoothstep(0.12, 0.32, y)) * 0.55 * sunAmt);
       c = mix(c, c * vec3(0.7, 0.77, 0.95), dusk * (1.0 - smoothstep(0.0, 0.07, y)) * sunAmt);
       float up = smoothstep(-0.1, 0.02, sy);
-      float halo = (0.4224 / pow(1.5776 - 1.52 * mu, 1.5) * 0.016 + pow(max(mu, 0.0), 6.0) * 0.12) * sunAmt * up;
+      float hg = 1.5776 - 1.52 * mu, halo = (0.4224 / (hg * sqrt(hg)) * 0.016 + pow(max(mu, 0.0), 6.0) * 0.12) * sunAmt * up;
       c = mix(c, sunCol * 1.15, clamp(halo, 0.0, 0.85)); // blended, not added: no green where yellow meets blue
       c += (sunCol * 1.6 + 0.5) * smoothstep(0.99976, 0.99986, mu) * smoothstep(-0.01, 0.01, y) * sunAmt * up;
       float md = dot(v, uMoonDir);
@@ -242,7 +286,7 @@ export const FX = {
         float yc = max(y, 0.0), lod = 1.0 - smoothstep(0.03, 0.3, yc);
         vec2 uv = v.xz / (yc + 0.12) * 1.3 + uCloudOff;
         vec2 cu = uv * 0.45 + uCloudOff * 0.3;
-        float ci = fxNoise(vec2(cu.x * 0.7 + cu.y * 0.5, (cu.y - cu.x * 0.3) * 4.0)) * fxNoise(cu * 1.7 + 3.1);
+        float ci = fxNoiseT(vec2(cu.x * 0.7 + cu.y * 0.5, (cu.y - cu.x * 0.3) * 4.0)) * fxNoiseT(cu * 1.7 + 3.1);
         float cir = smoothstep(0.3, 0.68, ci) * smoothstep(0.03, 0.22, yc) * (0.35 + 0.5 * uCloud) * (1.0 - smoothstep(0.6, 0.9, uCloud));
         c = mix(c, uCloudLit + sunCol * tw * 0.45 * sunAmt, cir * 0.4);
         float n = cloudN(uv, lod);
@@ -502,7 +546,7 @@ export const FX = {
     hooks: { color: `
     {
       vec2 cp = (fxWorld.xz + uSunDir.xz / max(uSunDir.y, 0.2) * 1.2) * 0.32 + uCloudOff * 4.0;
-      float n = fxNoise(cp) * 0.62 + fxNoise(cp * 2.3 + 7.1) * 0.38;
+      float n = fxNoiseT(cp) * 0.62 + fxNoiseT(cp * 2.3 + 7.1) * 0.38;
       bakedSun *= 1.0 - uCloud * 0.6 * smoothstep(0.5 - uCloud * 0.2, 0.72 - uCloud * 0.15, n);
     }` } }),
 
