@@ -835,8 +835,9 @@ function drawTop(ranked) {
   if (R.synthetic && G.phase === 'off') return;
   ranked.slice(0, 3).forEach((sg, k) => {
     const g = segs.get(sg.id); if (!g) return;
-    drapeRuns(ringLL(g.polygon), 0.02, { color: k === 0 ? '#b8322a' : '#2b2f33', width: k === 0 ? 3.2 : 2, opacity: k === 0 ? 1 : 0.75 }, dyn.top);
-    dyn.top.add(label(`<span>${esc(sg.name)}</span><span class="p">${pct(sg.poa)}</span>`, k === 0 ? 'rank1' : '', v3(g.center[0], g.center[1], 0.14)));
+    // as in 2D: top 3 outlined white 3.2 px, chip "#1 Name - 21%" with the rank in red
+    drapeRuns(ringLL(g.polygon), 0.02, { color: '#ffffff', width: 3.2, opacity: 0.95 }, dyn.top);
+    dyn.top.add(label(`<b class="rk">#${k + 1}</b> ${esc(sg.name)} - ${pct(sg.poa)}`, 'top3', v3(g.center[0], g.center[1], 0.14)));
   });
 }
 function setStep(i, animate = true) {
@@ -1039,8 +1040,20 @@ if (EMB === 'scene') {
     <div class="stops">${STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
     <div class="lg-note">1× = średnio ${nf(avg, 3)}% na komórkę 100 x 100 m; poniżej 0,5× bez koloru</div>
     <div class="lg-keys"><span><i class="k-top"></i>top 3</span><span><i class="k-srch"></i>przeszukany</span></div>`;
-  const bd = $('btn-diff'); bd.innerHTML = '<input type="checkbox" tabindex="-1"> trudność'; bd.classList.add('chk');
-  $('btn-all').textContent = 'Cały obszar';
+  // control box like 2D #mapctl: segmented group, checkbox row, full-width button; it drives the regular HUD buttons
+  const ctl = document.createElement('div'); ctl.id = 'sceneCtl'; ctl.className = 'floating';
+  ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button></div>
+    <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label></div>
+    <button class="full" data-b="btn-all">Cały obszar</button>`;
+  document.body.appendChild(ctl);
+  ctl.addEventListener('click', (e) => { const t = e.target.closest('[data-b]'); if (!t) return; $(t.dataset.b).click(); syncCtl(); });
+  if ($('btn-diff').hidden) ctl.querySelector('[data-b="btn-diff"]').closest('label').hidden = true;
+  const syncCtl = () => {
+    ctl.querySelector('[data-b="btn-cine"]').classList.toggle('on', $('btn-cine').classList.contains('on'));
+    ctl.querySelector('[data-b="btn-rot"]').classList.toggle('on', $('btn-rot').classList.contains('on'));
+    for (const id of ['btn-diff', 'btn-trees', 'btn-fog']) ctl.querySelector(`input[data-b="${id}"]`).checked = $(id).classList.contains('on');
+  };
+  setInterval(syncCtl, 1000); // Kino ends on its own; keep the box honest
 }
 
 // ---------- camera ----------

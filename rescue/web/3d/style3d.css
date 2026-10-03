@@ -282,14 +282,14 @@ body.has-version #timeline { margin-bottom: 14px; }
 body.has-version #hud { bottom: 104px; }
 /* embed=scene: same overlay placement as the 2D screen (legend top-left, control box top-right, .floating style) */
 .floating { position: fixed; z-index: 5; background: color-mix(in srgb, var(--rl-bg, #0e1317) 90%, transparent); border: 1px solid var(--rl-line, var(--line)); border-radius: var(--rl-radius, 10px); backdrop-filter: blur(3px); color: var(--rl-ink, var(--ink)); }
-#sceneLegend { top: 10px; left: 10px; padding: 6px 9px; font-size: 12px; width: 250px; }
-#sceneLegend .lg-title { font-weight: 600; margin-bottom: 4px; }
-#sceneLegend .ramp { display: block; height: 8px; border-radius: 4px; }
+#sceneLegend { top: 10px; left: 10px; padding: 6px 9px; font-size: 12px; width: 377px; }
+#sceneLegend .lg-title { font-weight: 600; margin-bottom: 4px; white-space: nowrap; }
+#sceneLegend .ramp { display: block; height: 10px; border-radius: 4px; margin: 2px 0 3px; }
 #sceneLegend .stops { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--rl-ink-2, var(--mute)); margin-top: 2px; }
 #sceneLegend .lg-note { font-size: 10.5px; color: var(--rl-mute, var(--mute)); margin-top: 4px; line-height: 1.35; }
 #sceneLegend .lg-keys { display: flex; gap: 12px; font-size: 11px; margin-top: 4px; }
 #sceneLegend .lg-keys i { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 4px; }
-#sceneLegend .k-top { border-top: 3px solid var(--rl-danger, #b8322a); }
+#sceneLegend .k-top { border-top: 3px solid #ffffff; }
 #sceneLegend .k-srch { border-top: 2px dashed #8a929a; }
 body.embed-scene #hud { top: 10px; right: 10px; bottom: auto; flex-direction: column; align-items: stretch; gap: 4px; padding: 5px; font-size: 12.5px;
   background: color-mix(in srgb, var(--rl-bg, #0e1317) 90%, transparent); border: 1px solid var(--rl-line, #2b3741); border-radius: var(--rl-radius, 10px); backdrop-filter: blur(3px); }
@@ -297,3 +297,18 @@ body.embed-scene #hud .btn { font-size: 12.5px; padding: 4px 9px; text-align: le
 body.embed-scene #hud .btn.chk { display: flex; gap: 6px; align-items: center; }
 body.embed-scene #hud .btn.chk input { margin: 0; accent-color: var(--rl-accent, #5ce1e6); pointer-events: none; }
 body.embed-scene #feed { left: 10px; bottom: 10px; }
+
+/* 2D-style top-3 chips on the map */
+.lbl3d.top3 { font-size: 12px; }
+.lbl3d.top3 .rk { color: var(--rl-danger, #b8322a); margin-right: 2px; }
+/* embed=scene control box, same structure as 2D #mapctl */
+body.embed-scene #hud { display: none; }
+#sceneCtl { top: 10px; right: 10px; width: 176px; padding: 5px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+#sceneCtl .seg-switch { display: flex; border: 1px solid var(--rl-line, #2b3741); border-radius: 8px; overflow: hidden; }
+#sceneCtl .seg-switch button { flex: 1; background: transparent; color: var(--rl-ink-2, #b7c3cd); border: 0; border-right: 1px solid var(--rl-line, #2b3741); padding: 3px 6px; font: inherit; font-size: 12.5px; cursor: pointer; }
+#sceneCtl .seg-switch button:last-child { border-right: 0; }
+#sceneCtl .seg-switch button.on { background: var(--rl-accent, #5ce1e6); color: var(--rl-on-accent, #062126); font-weight: 700; }
+#sceneCtl .ctl-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 1px 2px; }
+#sceneCtl .chk { display: inline-flex; gap: 4px; align-items: center; cursor: pointer; color: var(--rl-ink, #eef2f5); }
+#sceneCtl .chk input { margin: 0; accent-color: var(--rl-accent, #5ce1e6); }
+#sceneCtl .full { width: 100%; background: transparent; color: var(--rl-ink, #eef2f5); border: 1px solid var(--rl-line, #2b3741); border-radius: 6px; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; }
