@@ -164,7 +164,7 @@
   $("lSweep").textContent = `${ev.truthHeadingSweep.truthInTop5pct} z ${ev.truthHeadingSweep.runs.length}`;
   $("eAcc").textContent = `±${Math.round(exif.point.accM)} m`;
   $("eErr").textContent = `${Math.round(ev.exif.errM)} m`;
-  $("toplist").innerHTML = clue.top.slice(0, 5).map((t, i) => `${i + 1}. ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)} · p=${fmt(t.p * 100, 1)}% · kier. ${Math.round(t.headingDeg)}°`).join("<br>");
+  $("toplist").innerHTML = clue.top.slice(0, 5).map((t, i) => `${i + 1}. ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)} · kierunek patrzenia ${Math.round(t.headingDeg)}°`).join("<br>");
   $("legend").innerHTML = legendHTML("Prawdopodobieństwo względem średniej komórki");
 
   // ---------- horizon line over the photo ----------
@@ -220,7 +220,7 @@
     const el = document.createElement("div"); el.className = cls; if (text) el.textContent = text; if (title) el.title = title;
     markers[group].push(new maplibregl.Marker({ element: el }).setLngLat(lngLat));
   }
-  clue.top.slice(0, 5).reverse().forEach((t, j) => { const i = 4 - j; mk("num" + (i === 0 ? " r1" : ""), String(i + 1), [t.lon, t.lat], "horizon", `Kandydat ${i + 1}: p=${fmt(t.p * 100, 1)}%, kierunek ${Math.round(t.headingDeg)}°`); });
+  clue.top.slice(0, 5).reverse().forEach((t, j) => { const i = 4 - j; mk("num" + (i === 0 ? " r1" : ""), String(i + 1), [t.lon, t.lat], "horizon", `Kandydat ${i + 1} (kolejność dopasowania), kierunek patrzenia ${Math.round(t.headingDeg)}°`); });
   mk("exifpt", "", [ep.lon, ep.lat], "exif", `EXIF GPS ±${ep.accM} m, ${ep.at}`);
   mk("truth", "", [clue.truth[1], clue.truth[0]], "truth", "Prawdziwe miejsce (fikcyjne, do oceny)");
 
