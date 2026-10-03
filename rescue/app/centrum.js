@@ -150,7 +150,8 @@ const ICON = {
 const icon = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k] || '<circle cx="12" cy="12" r="6"/>'}</svg>`;
 // short names for the map labels and card headings (incident text is long and not always "title - place")
 const SHORT = { zawrat: "Zawrat", "morskie-oko": "Morskie Oko", kasprowy: "Kasprowy Wierch", "bieszczady-wetlinska": "Połonina Wetlińska", "karkonosze-sniezka": "Śnieżka",
-  sniardwy: "Śniardwy", morzycko: "Morzycko", miedzyzdroje: "Międzyzdroje", mamry: "Mamry", krakow: "Kraków", "krakow-nowa-huta": "Kraków - Nowa Huta", "night-test": "Test nocny" };
+  sniardwy: "Śniardwy", morzycko: "Morzycko", miedzyzdroje: "Międzyzdroje", mamry: "Mamry", krakow: "Kraków", "krakow-nowa-huta": "Kraków - Nowa Huta", "night-test": "Test nocny",
+  "tragedia-w-moryniu": "Tragedia w Moryniu", "rodzina-dziecko-las": "Karpacz - dziecko w lesie" };
 const short = (x) => SHORT[x.sc] || (x.place && x.place !== x.sc ? x.place.split(/[,/]/)[0].trim() : x.sc);
 const longText = (x) => [x.title, x.place !== x.sc ? x.place : ""].filter(Boolean).join(" - ");
 const modeOf = (x) => x.found ? "found" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident
@@ -257,7 +258,7 @@ const map = new maplibregl.Map({
       { id: "pl-line", type: "line", source: "pl", maxzoom: 8, paint: { "line-color": css("--rl-line-strong"), "line-width": 1.5 } }] },
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-let mapReady = false; map.on("load", () => { mapReady = true; fitAll(); loadRegions(); });
+let mapReady = false; map.on("load", () => { mapReady = true; fitAll(); loadRegions(); stackLabels(); });
 const loaded = new Set();
 async function loadRegions() {
   if (!mapReady || map.getZoom() < 7) return;
@@ -278,12 +279,6 @@ map.on("moveend", loadRegions);
 map.on("zoom", () => document.body.classList.toggle("zin", map.getZoom() >= 9));   // zoomed in: labels next to their own dots
 const markers = new Map();
 function renderMarkers() {
-  const placed = [];   // Tatra incidents sit within a few km: stack their labels below each other (dot stays on the IPP)
-  for (const x of incidents.slice().sort((a, b) => a.sc.localeCompare(b.sc))) {
-    const p = meta[x.sc] && meta[x.sc].ipp; if (!p) continue;
-    const k = placed.filter((q) => Math.abs(q[0] - p[0]) < 0.2 && Math.abs(q[1] - p[1]) < 0.3).length; placed.push(p);
-    x._stack = k;
-  }
   for (const x of incidents) {
     const md = meta[x.sc]; if (!md || !md.ipp) continue;
     let m = markers.get(x.sc);
@@ -304,11 +299,36 @@ function renderMarkers() {
     el.title = `${short(x)}: ${longText(x)} - ${BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
     el.querySelector(".lbl").textContent = short(x);
     el.style.zIndex = mode === "live" ? 3 : 1;
-    el.style.setProperty("--k", x._stack || 0);
   }
   for (const [k, m] of markers) if (!incidents.some((x) => x.sc === k)) { m.remove(); markers.delete(k); }
   fitAll();
+  stackLabels();
 }
+// Labels that would overlap on screen (Tatra and Bieszczady incidents sit a few km apart) move down one row at a time
+// until they are free; dots stay on their IPP. Recomputed after every zoom, since overlaps depend on the scale.
+function stackLabels() {
+  if (!mapReady) return;
+  const ROW = 24, items = [...markers.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const pts = items.map(([, m]) => map.project(m.getLngLat()));
+  const boxes = pts.map((p) => ({ x: p.x - 9, y: p.y - 9, w: 18, h: 18 }));   // every dot is an obstacle for every label
+  // each dot's own label row is reserved for it: a shifted label never lands next to another incident's dot
+  const own = items.map(([, m], i) => { const l = m.getElement().querySelector(".lbl"); return { x: pts[i].x + 14, y: pts[i].y - 11, w: (l && l.offsetWidth) || 80, h: 22 }; });
+  const order = [0, 1, -1, 2, -2];   // at most two rows from the dot, else the label would sit next to a different dot
+  // live incidents first, so their labels win a contested spot
+  const idx = items.map((_, i) => i).sort((a, b) => (items[b][1].getElement().classList.contains("live") - items[a][1].getElement().classList.contains("live")) || a - b);
+  for (const i of idx) {
+    const el = items[i][1].getElement(), lbl = el.querySelector(".lbl"), p = pts[i];
+    const w = (lbl && lbl.offsetWidth) || 80, h = 22, x = p.x + 14;
+    const over = (b, kk) => x < b.x + b.w && x + w > b.x && p.y - 11 + kk * ROW < b.y + b.h && p.y - 11 + kk * ROW + h > b.y;
+    const hit = (kk) => boxes.some((b) => over(b, kk)) || own.some((b, j) => j !== i && over(b, kk));
+    const k = order.find((kk) => !hit(kk));
+    if (lbl) lbl.style.visibility = k === undefined ? "hidden" : "";   // no free row: dot only (name in the tooltip, shown again when zoomed in)
+    if (k !== undefined) boxes.push({ x, y: p.y - 11 + k * ROW, w, h });
+    el.style.setProperty("--k", k ?? 0);
+  }
+}
+map.on("zoomend", stackLabels);
+map.on("resize", stackLabels);
 function fitAll() {
   if (fitted || !mapReady) return;
   const pts = incidents.map((x) => meta[x.sc] && meta[x.sc].ipp).filter(Boolean);
