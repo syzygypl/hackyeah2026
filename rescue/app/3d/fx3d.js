@@ -573,6 +573,42 @@ export const FX = {
       }
     }` } }),
 
+  // lit windows at night (uNight 0..1): a window grid on the walls (floor km = one 3 m storey as drawn, bays 4 m wide), a
+  // random 42% of the windows warm-lit, fading to their average glow where a bay gets smaller than a pixel (no shimmer)
+  windows: (U, floorKm) => ({ name: 'windows', uniforms: { uNight: U.uNight },
+    hooks: { albedo: 'if (abs(fxObjNormal.y) < 0.3) diffuseColor.rgb *= 1.0 - 0.4 * uNight; // walls darker at night, so the windows read',
+      emissive: `
+    if (uNight > 0.01 && abs(fxObjNormal.y) < 0.3) {
+      vec2 wn = normalize(fxObjNormal.xz + 1e-5);
+      vec2 g = vec2(dot(fxWorld.xz, vec2(-wn.y, wn.x)) / 0.004, fxWorld.y / ${floorKm.toFixed(5)});
+      vec2 c = floor(g), f = fract(g), fw = fwidth(g) + 1e-4;
+      float win = smoothstep(0.2, 0.2 + fw.x, f.x) * (1.0 - smoothstep(0.8 - fw.x, 0.8, f.x)) * smoothstep(0.3, 0.3 + fw.y, f.y) * (1.0 - smoothstep(0.78 - fw.y, 0.78, f.y));
+      float w = mix(win * step(0.58, fxHash(c * vec2(1.0, 7.31) + wn * 13.7)), 0.12, smoothstep(0.35, 0.9, max(fw.x, fw.y)));
+      totalEmissiveRadiance += mix(vec3(1.0, 0.5, 0.16), vec3(1.0, 0.74, 0.42), fxHash(c + 3.1)) * w * uNight * 2.0;
+    }` } }),
+
+  // night glow: soft additive halos (screen-space size in px, slightly larger up close) around markers; per point colour
+  // aCol and size aSize, uAmt = night / fog amount. Depth-tested, so ridges in front still hide them; no fog on purpose.
+  halo: () => fxShader({
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uAmt: { value: 0 }, uPx: { value: 1 }, uTime: { value: 0 } },
+    vertex: `attribute vec3 aCol; attribute float aSize; varying vec3 vCol;
+    void main() {
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      float d = length(mv.xyz);
+      mv.xyz *= 1.0 - min(0.03, d * 0.5) / d; // 30 m towards the camera: the halo lies over its own marker, not behind it
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = aSize * uPx * clamp(2.5 / max(-mv.z, 0.01), 0.55, 1.35) * (1.0 + 0.04 * sin(uTime * 1.6 + position.x * 40.0));
+      vCol = aCol;
+    }`,
+    fragment: `varying vec3 vCol;
+    void main() {
+      float r = length(gl_PointCoord - 0.5) * 2.0;
+      float a = (exp(-r * r * 2.6) * 0.42 + exp(-r * r * 14.0) * 0.5) * (1.0 - smoothstep(0.75, 1.0, r));
+      gl_FragColor = vec4(vCol * a * uAmt, 1.0);
+    }`,
+  }),
+
   // rain / snow: GPU particles in a box around the orbit target (uCenter, size uBox), falling and drifting with the
   // wind entirely in the vertex shader; rain as slanted streaks, snow as soft flakes
   precip: (U) => fxShader({

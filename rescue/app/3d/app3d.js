@@ -486,7 +486,8 @@ const heatU = { uHeatFrom: { value: heatTex() }, uHeatTo: { value: heatTex() }, 
   uSnowY: { value: ((2350 - zMin) * EX) / 1000 }, uWind: { value: 0.03 },
   uDay: { value: 1 }, uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() }, uSunDir: { value: SUN_DIR }, // shared by every fx3d effect
   // water reflection (see "water reflection"): mirrored terrain, its texture projection, the mirror plane, on/off
-  uReflTex: { value: Object.assign(new THREE.DataTexture(new Uint8Array(4), 1, 1), { needsUpdate: true }) }, uReflMat: { value: new THREE.Matrix4() }, uReflY: { value: -99 }, uReflOn: { value: 0 } };
+  uReflTex: { value: Object.assign(new THREE.DataTexture(new Uint8Array(4), 1, 1), { needsUpdate: true }) }, uReflMat: { value: new THREE.Matrix4() }, uReflY: { value: -99 }, uReflOn: { value: 0 },
+  uNight: { value: 0 } }; // night glow (lit windows), from the mood in glowTick
 Object.assign(precipMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 Object.assign(snowNearMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 
@@ -764,11 +765,14 @@ function label(html, cls, pos) {
   const o = new CSS2DObject(el); o.position.copy(pos); return o;
 }
 const ballGeo = new THREE.SphereGeometry(1, 16, 12);
+// night glow halos (see "night glow"): [colour, size px] by pin class; any object with userData.glow gets one
+const GLOW = { ipp: ['#ffcf6e', 150], hut: ['#ffad5c', 105], found: ['#7dffb4', 175], target: ['#ff8070', 170] };
 function pin(lat, lon, color, h = 0.2, html = null, cls = '', r = 0.016) {
   const g = new THREE.Group(), p0 = v3(lat, lon, 0.004), p1 = p0.clone().add(new THREE.Vector3(0, h, 0));
   g.add(makeLine([p0, p1], { color: '#2b2f33', width: 1.4, opacity: 0.85 }));
   const head = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color, roughness: 0.5 }));
   head.scale.setScalar(r); head.position.copy(p1); g.add(head);
+  if (GLOW[cls.split(' ')[0]]) head.userData.glow = GLOW[cls.split(' ')[0]];
   if (html) g.add(label(html, cls, p1.clone().add(new THREE.Vector3(0, r, 0))));
   return g;
 }
@@ -1088,7 +1092,7 @@ const buildings = (() => {
   if (!pos.length) return null;
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, applyFx(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }), [FX.snowCover(heatU)]));
+  const m = new THREE.Mesh(geo, applyFx(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }), [FX.snowCover(heatU), FX.windows(heatU, (3 * EX) / 1000)])); // fx3d: lit windows at night
   m.castShadow = true; m.receiveShadow = true; scene.add(m);
   return m;
 })();
@@ -1203,6 +1207,34 @@ function palette(el) {
   for (const n of PAL_N) pal[n] = a[n] + (b[n] - a[n]) * t;
   return pal;
 }
+// ---------- night glow: halos around markers at night and in fog, lit windows ----------
+// One additive point cloud (fx3d.halo): every visible object tagged userData.glow ([colour, px]) gets a soft halo at its
+// world position, gathered only on rendered frames while it is dark or foggy. uNight drives the buildings' windows.
+const haloMat = FX.halo(), HALO_MAX = 256;
+const halos = (() => {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(HALO_MAX * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('aCol', new THREE.BufferAttribute(new Float32Array(HALO_MAX * 3), 3).setUsage(THREE.DynamicDrawUsage));
+  g.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array(HALO_MAX), 1).setUsage(THREE.DynamicDrawUsage));
+  const p = new THREE.Points(g, haloMat); p.frustumCulled = false; p.visible = false; p.renderOrder = 4; scene.add(p);
+  return p;
+})();
+const glowCol = new Map(), glowV = new THREE.Vector3();
+function glowTick() {
+  const night = clamp(heatU.uEmis.value * 4, 0, 1), fog = clamp((9 - scene.fog.near) / 3, 0, 1); // mood: emis 0.25 at night, fog near 9 clear .. 5 thick
+  heatU.uNight.value = night;
+  const amt = Math.max(night, fog * 0.65); haloMat.uniforms.uAmt.value = amt; haloMat.uniforms.uTime.value = heatU.uTime.value;
+  halos.visible = amt > 0.01; if (!halos.visible) return;
+  haloMat.uniforms.uPx.value = renderer.getPixelRatio();
+  const P = halos.geometry.attributes.position, C = halos.geometry.attributes.aCol, S = halos.geometry.attributes.aSize; let n = 0;
+  scene.traverseVisible((o) => {
+    const gl = o.userData.glow; if (!gl || n >= HALO_MAX) return;
+    let c = glowCol.get(gl[0]); if (!c) glowCol.set(gl[0], (c = new THREE.Color().setStyle(gl[0], THREE.LinearSRGBColorSpace))); // raw: the halo shader writes display values
+    o.getWorldPosition(glowV); P.setXYZ(n, glowV.x, glowV.y, glowV.z); C.setXYZ(n, c.r, c.g, c.b); S.setX(n, gl[1]); n++;
+  });
+  halos.geometry.setDrawRange(0, n); P.needsUpdate = C.needsUpdate = S.needsUpdate = true;
+}
+
 const C_HAZE = new THREE.Color(0.86, 0.94, 1.06), C_WHITE = new THREE.Color(1, 1, 1), C_MOONLIT = new THREE.Color('#7d8bab'), C_ALPEN = new THREE.Color('#ff5f7e');
 const C_SNOWFOG = new THREE.Color('#e7ecf1'), C_SNOWSKY = new THREE.Color('#eef1f4'), tmpC = new THREE.Color();
 const greyOf = (c, k) => { const l = (c.r * 0.3 + c.g * 0.59 + c.b * 0.11) * k; return tmpC.setRGB(l, l, l); };
@@ -1396,7 +1428,8 @@ function drawTop(ranked) {
     const g = segs.get(sg.id); if (!g) return;
     // as in 2D: top 3 outlined white 3.2 px, chip "#1 Name - 21%" with the rank in red
     drapeRuns(ringLL(g.polygon), 0.02, { color: '#ffffff', width: 3.2, opacity: 0.95 }, dyn.top);
-    dyn.top.add(label(`<b class="rk">#${k + 1}</b> ${esc(sg.name)}`, 'top3', v3(g.center[0], g.center[1], 0.14)));
+    const l = label(`<b class="rk">#${k + 1}</b> ${esc(sg.name)}`, 'top3', v3(g.center[0], g.center[1], 0.14));
+    l.userData.glow = ['#fff0c8', k ? 100 : 130]; dyn.top.add(l);
   });
 }
 function setStep(i, animate = true) {
@@ -1446,6 +1479,7 @@ function drawTeams(s) {
     const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2), pts = curve.getPoints(64);
     const line = makeLine(pts, { color: col, width: 1.8, opacity: 0.9, dashed: true, dash: 0.05, gap: 0.04 });
     const dot = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: col })); dot.scale.setScalar(0.014);
+    dot.userData.glow = ['#' + new THREE.Color(col).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(), 100];
     dyn.teams.add(line, dot, label(`${esc(res.name.split(' (')[0])} · ${Math.round(a.etaMin)} min`, 'team', p1.clone()));
     movers.push({ curve, dot, mat: line.material, t: Math.random() });
   }
@@ -1686,7 +1720,7 @@ async function sendPatrol(segId) {
   const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2);
   const line = makeLine(curve.getPoints(48), { color: '#b8322a', width: 1.8, opacity: 0.85, dashed: true, dash: 0.05, gap: 0.04 });
   const dot = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: '#b8322a' })); dot.scale.setScalar(0.016);
-  dyn.game.add(line, dot);
+  dot.userData.glow = ['#ff7a68', 110]; dyn.game.add(line, dot);
   await new Promise((res) => movers.push({ curve, dot, mat: line.material, t: 0, once: true, done: res }));
   dyn.game.remove(line, dot); lineMats.delete(line.material); line.geometry.dispose(); line.material.dispose();
   G.patrols.push({ id: segId, name: g.name, found, pod });
@@ -1885,6 +1919,7 @@ function frame() {
   const interval = now - lastRender; lastRender = now;
   if (active) adaptResolution(now, interval);
   const c0 = performance.now();
+  glowTick(); // night glow: halos and lit windows follow the mood
   reflRender(moved, now); // water reflection pass (throttled, reduced resolution)
   renderer.render(scene, camera);
   if (GPU_SYNC) renderer.getContext().finish(); // ?gpu=1: stats count the GPU time in "render" (diagnostic only)
@@ -1901,7 +1936,7 @@ function frame() {
 }
 
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, renderer, REFL, heatU, WATER, hAt, toX, toZ }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
