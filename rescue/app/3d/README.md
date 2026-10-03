@@ -25,6 +25,10 @@ The shell sends `{type:'time', minute, t}`; one-minute advances blend for 0.5 s,
 
 The controls select a unit and enter FPP at its eye height above the rendered terrain triangles (aircraft use their AGL height). The POA overlay is reduced to 30% during FPP; Esc or overview restores its opacity and the saved orbit camera.
 
+**Pole widzenia** toggles filled terrain footprints from `frame.actors[].fov` (closed `[lon,lat]` engine polygons). `fov3d.js` uses the rendered terrain height, token colors, and a half-second transition when a new forward frame arrives. A drone or helicopter has a transparent cone from `observerHeightM` to the footprint; dog polygons retain the engine's upwind extension. Earlier drone footprints fade over three simulation minutes, with at most four stored. This trail is a visual aid: cumulative POD still comes solely from the engine. Rewind clears the trail, and blind play hides the entire layer. Aircraft marker/FPP heights use the contract's `observerHeightM`.
+
+Continuous fractional-minute messages retain the shell's `frameMinute` and frame cache. Actor movement remains continuous; accuracy rings and historical traces rebuild only on an engine frame or integer-minute change. Fallback frame requests preserve `live=0` in History.
+
 Click a unit marker or its label (also Enter / Space on a focused label) to highlight that unit's track and send `{source:'rescue3d', type:'actor', id}` for the shell's log panel. Parent selection with `{type:'actor',id}` highlights it without echoing. The view does not calculate equipment health or invent log entries.
 
 Labels show short unit names; the tooltip gives the source and accuracy. Overlapping unit labels are hidden, prioritising the selected unit. Dragging from a label rotates the scene. A second click or Esc clears selection (`id:null`) and restores other tracks; the highlighted route uses the theme's danger colour with a pale border.

@@ -1,4 +1,5 @@
 // Display only: consume the engine's minute samples, never simulator truth or inferred coverage.
+import { createFov3D } from './fov3d.js';
 export function sampleAt(path, minute) {
   if (!path?.length || minute < path[0][2]) return null;
   let lo = 0, hi = path.length - 1;
@@ -46,11 +47,18 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     g.add(dot, tag); group.add(g);
     return { ...a, g, tag, dot, color: colors[a.kind] || '#555' };
   });
+  const fields = createFov3D({ THREE, scene, actors, eyeAt, wake });
+  let drawnMinute = null;
   let target = null, shown = null, from = null, blend = 1, lastFrame = null, held = null, lastSetAt = 0, request = 0, fpp = null, savedCamera = null, selected = null, visible = true;
   const panel = document.createElement('div'); panel.id = 'timeline3dCtl'; panel.className = 'floating';
   panel.innerHTML = `<div class="tl3d-title">Perspektywa jednostki</div><select aria-label="Jednostka dla kamery FPP">${actors.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)}</option>`).join('')}</select><button class="btn full" type="button" title="Kamera na wysokości oczu; Esc wraca do mapy">FPP</button><div class="tl3d-key">● ślad GPS · - - ślad szacowany<br>okrąg: dokładność · obrys: pole widzenia</div><div class="tl3d-clock" aria-live="polite"></div>`;
   (document.getElementById('sceneCtl') || document.body).appendChild(panel);
   const select = panel.querySelector('select'), button = panel.querySelector('button'), status = panel.querySelector('.tl3d-clock');
+  const toggle = document.createElement('label'); toggle.className = 'tl3d-key';
+  toggle.innerHTML = '<input type="checkbox" checked> Pole widzenia';
+  toggle.title = 'Zasięg widzenia lub zapachu z silnika, przycięty do terenu';
+  panel.insertBefore(toggle, status);
+  toggle.querySelector('input').onchange = (e) => fields.setEnabled(e.target.checked);
   function stopFpp() {
     if (!fpp) return;
     fpp = null; controls.enabled = true;
@@ -98,9 +106,6 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       const ring = Array.from({ length: 49 }, (_, i) => { const angle = i / 48 * Math.PI * 2;
         return [p.lat + Math.cos(angle) * p.accM / 111320, p.lon + Math.sin(angle) * p.accM / (111320 * Math.cos(p.lat * Math.PI / 180))]; });
       drape(ring, 0.014, { color: a.color, width: 1, opacity: 0.45, dashed: true }, area);
-      const outline = frame?.actors?.find((x) => x.id === a.id)?.fov;
-      if (outline?.length > 2) drape(outline.map(([lon, lat]) => [lat, lon]), 0.018,
-        { color: a.color, width: 1.7, opacity: 0.8 }, area);
     }
   }
   function trails(minute) {
@@ -135,7 +140,11 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     // the same frame again (the shell sends ~30 minutes per second while playing): no heat / ranking rebuild
     const same = frame && frame === lastFrame;
     lastFrame = frame; if (!same) onFrame(frame, minute);
-    rings(frame, minute); trails(minute); wake();
+    fields.setFrame(frame, minute);
+    if (!same || Math.floor(minute) !== drawnMinute) {
+      rings(frame, minute); trails(minute); drawnMinute = Math.floor(minute);
+    }
+    wake();
   }
   function setTime(minute, t, animate = true, suppliedFrame = null, frameMinute = null) {
     if (!Number.isFinite(minute)) return;
@@ -164,25 +173,25 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       const p = sampleAt(a.path, shown); a.g.visible = !!p;
       a.dot.visible = a.tag.visible = fpp !== a.id;
       if (!p) continue;
-      const lift = a.kind === 'dron' || a.kind === 'smiglowiec' ? (a.fov?.eyeM || 80) / 1000 : 0.023;
-      a.g.position.copy(v3(p.lat, p.lon, lift));
+      const air = a.kind === 'dron' || a.kind === 'smiglowiec';
+      a.g.position.copy(air ? eyeAt(p.lat, p.lon, a.fov?.observerHeightM || 80) : v3(p.lat, p.lon, 0.023));
       const short = (a.name || a.id).split(' (')[0].replace(/^Patrol /, '').replace('Zespół z psem', 'Pies').replace('Dron termowizyjny', 'Dron').replace('Śmigłowiec ', '');
       const text = esc(short);
       if (a.tag.element.innerHTML !== text) a.tag.element.innerHTML = text;
       a.tag.element.title = `${a.name || a.id} · ${p.est ? 'szacunek' : 'GPS'} · dokładność ±${nf(p.accM, 0)} m · pokaż ślad i dziennik`;
       if (fpp === a.id) {
         const next = sampleAt(a.path, Math.min(shown + 0.5, a.path.at(-1)[2]));
-        const eye = eyeAt(p.lat, p.lon, a.fov?.eyeM || 1.7);
+        const eye = eyeAt(p.lat, p.lon, a.fov?.observerHeightM || 1.7);
         const heading = lastFrame?.actors?.find((x) => x.id === a.id)?.headingDeg ?? 0;
-        let look = next ? eyeAt(next.lat, next.lon, a.fov?.eyeM || 1.7) : eye.clone();
+        let look = next ? eyeAt(next.lat, next.lon, a.fov?.observerHeightM || 1.7) : eye.clone();
         if (look.distanceTo(eye) < 0.001) { const rad = heading * Math.PI / 180; look = eye.clone().add(new THREE.Vector3(Math.sin(rad) * 0.05, 0, -Math.cos(rad) * 0.05)); }
         camera.position.copy(eye); controls.target.copy(look); camera.lookAt(look);
       }
     }
     if (fpp && !actors.find((a) => a.id === fpp)?.g.visible) stopFpp();
-    return moving || !!fpp;
+    return fields.tick(dt, fpp, shown) || moving || !!fpp;
   }
-  function setVisible(on) { visible = on; group.visible = trail.visible = area.visible = on; panel.hidden = !on; if (!on) stopFpp(); }
+  function setVisible(on) { visible = on; group.visible = trail.visible = area.visible = on; fields.setVisible(on); panel.hidden = !on; if (!on) stopFpp(); }
   function layoutLabels() {
     const placed = [];
     const order = [...actors].sort((a, b) => Number(b.id === selected) - Number(a.id === selected));
@@ -200,6 +209,6 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       if (!hide) placed.push(r);
     }
   }
-  return { setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
+  return { setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, fields, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
     get following() { return fpp; }, get actorCount() { return actors.filter((a) => a.g.visible).length; } };
 }

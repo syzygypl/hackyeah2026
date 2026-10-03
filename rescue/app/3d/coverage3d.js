@@ -9,7 +9,7 @@ export function createCoverage3D({ THREE, rows, cols, rect }) {
   const a = texture(from), b = texture(to), mix = { value: 1 }, enabled = { value: 1 };
   let previous = null, lastMinute = null;
   const effect = { name: 'pod', uniforms: { uPodFrom: { value: a }, uPodTo: { value: b }, uPodT: mix,
-    uPodRect: rect, uPodOn: enabled, uPodColor: { value: new THREE.Color('#4ba0a5') } }, hooks: { color: `
+    uPodRect: rect, uPodOn: enabled, uPodColor: { value: new THREE.Color(getComputedStyle(document.documentElement).getPropertyValue('--rl-ok').trim()) } }, hooks: { color: `
     if (uPodOn > 0.0) {
       vec2 pu = (vec2(vMapUv.x, 1.0 - vMapUv.y) - uPodRect.xy) / uPodRect.zw;
       if (pu.x >= 0.0 && pu.x <= 1.0 && pu.y >= 0.0 && pu.y <= 1.0) {
