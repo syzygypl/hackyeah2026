@@ -1,5 +1,6 @@
 // Rescue Locator - Ćwiczenia (training mode). API: CONTRACT.md "Exercise mode" (/api/exercises, /api/exercise/<sid>/...).
 // The page never sees the truth until the server says the exercise is over. Map = the 2D view (web/) embedded like in the app.
+import { evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML } from "./dock.js";   // the operator app's dock (dock.css)
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
@@ -64,8 +65,61 @@ $("briefGo").onclick = () => { show("scrPlay"); G.frameReady = false; G.runUrl =
 
 function feedHTML(feed, newestFirst) {
   const xs = newestFirst ? [...feed].reverse() : feed;
-  return xs.map((f) => `<li class="${esc(f.kind)}"><span class="t">${esc(f.clock)}</span><span>${esc(named(f.title))}</span></li>`).join("") || `<li class="mute">brak</li>`;
+  return xs.map((f) => `<li class="${esc(f.kind)} k-${dockKind(f)}" data-seq="${esc(f.seq)}"${f.segmentId ? ` data-seg="${esc(f.segmentId)}"` : ""}><i></i><span class="t">${esc(f.clock)}</span><span>${esc(named(f.title))}</span></li>`).join("") || `<li class="mute">brak</li>`;
 }
+
+// ---------- dock (same code as the operator app: dock.js): the exercise feed as the event list, the game minute as the cursor
+const FEED_KIND = { dispatch: "report", searched: "searched", clue: "clue", found: "found", info: "conditions" };   // feed kind -> run step kind
+const dockKind = (f) => f.kind === "dispatch" ? "zespol" : grpKind({ steps: [{ kind: FEED_KIND[f.kind] || "clue", label: f.title }] }, { ks: [1] });
+function dockDoc(s) {
+  const toMin = (c) => { const [h, m] = String(c).split(":").map(Number); return h * 60 + m; };
+  const f0 = s.feed[0], off = f0 ? toMin(f0.clock) - f0.minute : toMin(s.pickupClock);   // feed minutes count from the scenario start
+  const rel = (c) => { let m = toMin(c) - off; while (m < -720) m += 1440; return m; };
+  const steps = s.feed.map((e) => ({ t: e.clock, minute: e.minute, label: named(e.title), kind: FEED_KIND[e.kind] || "clue", feedKind: e.kind, seq: e.seq, segmentId: e.segmentId }));
+  const now = rel(s.clock), start = Math.min(rel(s.pickupClock), steps.length ? steps[0].minute : now);
+  return { R: { steps }, now, start, end: Math.max(now, rel(s.endClock)) };
+}
+function renderDock() {
+  const s = G.st; if (!s) return;
+  const D = dockDoc(s), Gs = evGroups(D.R), span = Math.max(1, D.end - D.start), frac = (m) => Math.max(0, Math.min(1, (m - D.start) / span));
+  let cg = -1; Gs.forEach((g, j) => { if (g.first != null && g.first <= D.now) cg = j; });
+  G.dock = { D, Gs, frac };
+  $("tlMarks").innerHTML = marksHTML(D.R, Gs, cg, (g) => g.first != null && g.first > D.now, (g) => (frac(g.minute ?? D.start) * 100).toFixed(2));
+  $("tlFill").style.width = `calc((100% - 16px) * ${frac(D.now).toFixed(4)})`;
+  $("dkStep").innerHTML = `gra <b>${esc(s.clock)}</b> · do ${esc(s.endClock)}`;
+  $("ticker").innerHTML = tickerHTML(Gs.slice(0, cg + 1).slice(-4).reverse().map((g) => {
+    const last = g.ks[g.ks.length - 1], st = D.R.steps[last - 1];
+    return { at: st.t, label: st.label, more: g.ks.length - 1, title: g.ks.map((k) => D.R.steps[k - 1].t + " · " + D.R.steps[k - 1].label).join("\n"),
+             k: st.feedKind === "dispatch" ? "zespol" : grpKind(D.R, g), step: last };
+  }));
+}
+// group card: hover = preview, click = pinned for a moment + the event's sector on the map (the game clock does not move)
+function dockTip(j) {
+  const tip = $("tlTip"), g = j && G.dock && G.dock.Gs[j - 1], m = g && $("tlMarks").children[j - 1];
+  if (!m) { tip.hidden = true; return; }
+  tip.innerHTML = tipHTML(G.dock.D.R, g); tip.hidden = false;
+  const r = m.getBoundingClientRect();
+  tip.style.left = Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left + r.width / 2 - tip.offsetWidth / 2)) + "px";
+  tip.style.top = Math.max(8, r.top - tip.offsetHeight - 10) + "px";
+}
+function dockIndexAt(x) {
+  const r = $("tlMarks").getBoundingClientRect(), f = Math.max(0, Math.min(1, (x - r.left) / (r.width || 1)));
+  let best = 0, bd = 1e9; (G.dock ? G.dock.Gs : []).forEach((g, j) => { const d = Math.abs(G.dock.frac(g.minute ?? 0) - f); if (d < bd) { bd = d; best = j + 1; } });
+  return best;
+}
+function previewEvent(k) {   // k = 1-based step (feed item) of the dock document
+  if (!G.dock) return;
+  const j = groupOf(G.dock.Gs, k) + 1, st = G.dock.D.R.steps[k - 1];
+  dockTip(j); clearTimeout(dockTip.h); dockTip.h = setTimeout(() => dockTip(0), 2600);
+  document.querySelectorAll("#pFeed li.cur").forEach((x) => x.classList.remove("cur"));
+  const li = st && document.querySelector(`#pFeed li[data-seq="${st.seq}"]`); if (li) li.classList.add("cur");
+  if (st && st.segmentId) post({ type: "select", segmentId: st.segmentId });
+}
+$("tl").addEventListener("pointermove", (e) => { if (G.dock) { clearTimeout(dockTip.h); dockTip(dockIndexAt(e.clientX)); } });
+$("tl").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") dockTip(0); });
+$("tl").addEventListener("click", (e) => { const j = dockIndexAt(e.clientX), g = G.dock && G.dock.Gs[j - 1]; if (g) previewEvent(g.ks[g.ks.length - 1]); });
+$("ticker").onclick = (e) => { const t = e.target.closest("[data-step]"); if (t) previewEvent(+t.dataset.step); };
+$("pFeed").onclick = (e) => { const li = e.target.closest("li[data-seq]"); if (!li || !G.dock) return; const k = G.dock.D.R.steps.findIndex((x) => String(x.seq) === li.dataset.seq) + 1; if (k) previewEvent(k); };
 function teamHTML(t, pick) {
   const st = t.status.replace(" ", "-");
   const free = pick && t.status === "wolny";
@@ -83,7 +137,8 @@ function mapURL(s) {
 }
 function insets() {
   const h = document.querySelector("header").getBoundingClientRect(), c = $("ctl").getBoundingClientRect();
-  return innerWidth > 700 ? [Math.round(h.height), Math.round(innerWidth - c.left), 0, 0] : [Math.round(h.height), 0, Math.round(innerHeight - c.top), 0];
+  const dk = $("exDock").getBoundingClientRect();   // the dock at the bottom covers the map like the operator app's dock
+  return innerWidth > 700 ? [Math.round(h.height), Math.round(innerWidth - c.left), dk.height ? Math.round(innerHeight - dk.top) : 0, 0] : [Math.round(h.height), 0, Math.round(innerHeight - c.top), 0];
 }
 function post(msg) { const w = $("map").contentWindow; if (G.frameReady && w) w.postMessage({ source: "rescue-app", ...msg }, location.origin); }
 // the map's team overlay = the run's last step "assignments"; rebuilt from the session state (+ one pending dispatch shown at once)
@@ -141,6 +196,7 @@ function renderPlay() {
       ${sel ? `<span class="eta">${etaTxt}</span>` : ""}</li>`;
   }).join("");
   $("pFeed").innerHTML = feedHTML(s.feed, true);
+  renderDock();
   for (const b of ["pWait", "pWait60"]) $(b).disabled = s.over || G.busy;
   $("pEnd").textContent = s.over ? "Zobacz ocenę" : "Zakończ i oceń";
   syncMap();

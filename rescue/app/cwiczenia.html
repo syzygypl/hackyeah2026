@@ -6,6 +6,7 @@
 <title>Rescue Locator - Ćwiczenia</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="dock.css">
 <link rel="stylesheet" href="cwiczenia.css">
 </head>
 <body>
@@ -65,6 +66,8 @@
 <section id="scrPlay" hidden>
   <iframe id="map" title="Mapa ćwiczenia"></iframe>
   <div id="mapBusy" class="mapbusy" hidden>Przeliczam mapę...</div>
+  <!-- the same compact dock as the operator app (dock.js / dock.css): event markers, group card, the game minute as the cursor -->
+  <div id="exDock" class="exdock"><span id="dkStep" class="dkstep" aria-live="polite"></span><span id="tl" class="tl" title="Zdarzenia ćwiczenia: najedź albo kliknij znacznik"><span id="tlFill" class="tlfill" aria-hidden="true"></span><span id="tlMarks" class="tlm" aria-hidden="true"></span></span><span id="ticker" class="ticker" aria-label="Ostatnie zdarzenia"></span></div>
   <aside id="ctl" class="float">
     <div class="clockrow">
       <div><div class="clock big" id="pClock">--:--</div><div class="mute small" id="pLeft"></div></div>
@@ -121,5 +124,6 @@
   </div>
 </section>
 <script type="module" src="cwiczenia.js"></script>
+<div id="tlTip" class="tltip" role="tooltip" hidden></div>
 </body>
 </html>

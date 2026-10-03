@@ -147,6 +147,13 @@ def main():
         t_first = c.until(MAP_READY, 60)
         check("map_ready", bool(t_first))
 
+        # step 1: the operator app's dock (dock.js) - one marker per event group, the game minute as the cursor, the group card on hover
+        marks = c.until("document.querySelectorAll('#tlMarks .tlk').length", 10)
+        check("dock_markers", bool(marks), f"{marks} markers")
+        check("dock_cursor", bool(c.until("parseFloat(getComputedStyle(document.getElementById('tlFill')).width)>0", 5)))
+        tip = c.js("(()=>{const m=document.querySelector('#tlMarks .tlk');const r=m.getBoundingClientRect();document.getElementById('tl').dispatchEvent(new PointerEvent('pointermove',{clientX:r.left+r.width/2,clientY:r.top,bubbles:true,pointerType:'mouse'}));const t=document.getElementById('tlTip');return t.hidden?'':t.innerText})()")
+        check("dock_group_card", bool(tip), (tip or "")[:80])
+        check("event_list_with_kinds", bool(c.js("document.querySelectorAll('#pFeed li[data-seq] > i').length")))
         team = c.js("(()=>{const li=document.querySelector('#pTeams li.free');if(!li)return null;li.click();return li.dataset.team})()")
         check("team_marked", bool(team) and bool(c.until(f"[...document.querySelectorAll('#pTeams li.sel')].some(l=>l.dataset.team==={json.dumps(team)})", 5)), str(team))
 

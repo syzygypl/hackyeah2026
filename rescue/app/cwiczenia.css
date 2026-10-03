@@ -100,3 +100,13 @@ ul.feed,ul.teamlist,ul.seglist,ul.declist{list-style:none;margin:0;padding:0}
 
 /* score: a part that does not apply (safety with no dispatched team) (AI Marcina) */
 .part.na .n,.part.na span:first-child{color:var(--rl-mute)}
+
+/* dock + events (AI Marcina): the operator app's compact dock (dock.css) at the bottom of the game screen, and the event list
+   with the same kind dots (k-* colours from the --rl-ev-* tokens) */
+.exdock{position:absolute;left:12px;right:calc(360px + 24px);bottom:12px;z-index:4;display:flex;align-items:center;gap:10px;height:44px;padding:0 12px;background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow)}
+.exdock .tl{flex:1 1 auto}
+.exdock .ticker{max-width:40%}
+@media (max-width:700px){.exdock{display:none}}
+.feed li[data-seq]{cursor:pointer;align-items:baseline}
+.feed li > i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--rl-accent));flex:none;align-self:center}
+.feed li.cur{background:var(--rl-panel-2);border-radius:var(--rl-radius-s)}
