@@ -320,6 +320,9 @@ actor Roster {
     func list() -> [RosterTeam] { teams }
     func team(_ id: String) -> RosterTeam? { teams.first { $0.id == id } }
     func isTouched(_ sc: String) -> Bool { touched.contains(sc) }
+    /// incidents already closed after a live find (release teams + one "found" feed event); true the first time
+    var ended: Set<String> = []
+    func markEnded(_ sc: String) -> Bool { let first = ended.insert(sc).inserted; if first { version += 1 }; return first }
     /// ended incident (live ZNALEZIONO): every team on it goes back to the free pool; returns the released ids
     func release(_ sc: String) -> [String] {
         var ids: [String] = []
@@ -342,13 +345,15 @@ actor Roster {
     }
     /// shared deploy: which incident each team is on, touched incidents, version (see SharedState)
     func exportState() -> Data {
-        let o: [String: Any] = ["sc": Dictionary(uniqueKeysWithValues: teams.compactMap { t in t.sc.map { (t.id, $0) } }), "touched": touched.sorted(), "version": version]
+        let o: [String: Any] = ["sc": Dictionary(uniqueKeysWithValues: teams.compactMap { t in t.sc.map { (t.id, $0) } }), "touched": touched.sorted(),
+                                "ended": ended.sorted(), "version": version]
         return (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data("{}".utf8)
     }
     func importState(_ d: Data) {
         let o = jsonObject(d), m = o["sc"] as? [String: String] ?? [:]
         for i in teams.indices { teams[i].sc = m[teams[i].id] }
         touched = Set(o["touched"] as? [String] ?? [])
+        ended = Set(o["ended"] as? [String] ?? [])
         version = o["version"] as? Int ?? 0
     }
     func resources(for sc: String) -> [Data]? { touched.contains(sc) ? teams.filter { $0.sc == sc }.map { $0.resByHome[sc] ?? $0.res } : nil }
@@ -468,9 +473,6 @@ actor IncidentCache {
     func put(_ k: String, _ v: Data) { if c.count > 200 { c.removeAll() }; c[k] = v }
 }
 let incidentCache = IncidentCache()
-/// incidents already closed after a live find (once per server run: release teams + one "found" feed event)
-actor EndedIncidents { var done: Set<String> = []; func mark(_ sc: String) -> Bool { done.insert(sc).inserted } }
-let endedIncidents = EndedIncidents()
 /// size+mtime of scenarios/<sc>.json and its terrain: a story re-saved in Studio or pulled by tools/sync-stories.sh invalidates the caches
 func scenarioStamp(_ sc: String) -> String {
     ["\(sc).json", "\(sc)-terrain.json"].map { f -> String in
@@ -513,7 +515,7 @@ func incidentsData() async -> Data {
         // current vs ended: a live ZNALEZIONO ends the incident; the first time, its teams are released and everyone is told
         let ended = (o["found"] as? Bool) == true
         o["ended"] = ended
-        if ended, await endedIncidents.mark(sc) {
+        if ended, await roster.markEnded(sc) {   // once per incident across instances: the ended set is in the roster document (SharedState)
             let freed = await roster.release(sc)
             for id in freed { _ = await studio.assign((try? JSONSerialization.data(withJSONObject: ["resourceId": id])) ?? Data()) }
             let place = o["place"] as? String ?? sc
@@ -557,7 +559,8 @@ func handle(_ q: Req) async -> Data {
     let stateful = q.method != "OPTIONS" && (q.path.hasPrefix("/api/") || q.path.hasPrefix("/story") || q.path == "/report" || q.path == "/live-events")
     if stateful { await shared.pull() }
     let out = await route(q)
-    if stateful && (isWrite(q) || q.path.hasPrefix("/story")) { await shared.push() }   // GET /story may create the default story
+    // GET /story may create the default story; GET /api/incidents may end an incident (releases its teams)
+    if stateful && (isWrite(q) || q.path.hasPrefix("/story") || q.path == "/api/incidents") { await shared.push() }
     return out
 }
 
