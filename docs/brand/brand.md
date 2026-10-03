@@ -112,7 +112,7 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Self-test | demo.py **129/129** cases (114 after the detection plan, 120 after IBAN tokenization); 81 unit tests + 7 proxy tests green on 00fea5a | sample-security-report.md at 0952c83, run ~12:25 | measured. Supersedes 95 |
 | Demo-run overhead | p50 73 µs, p99 155 µs, about 10,700 checks/s with 16 signatures | architecture README at d523cd6 | measured. 58 µs stays the benchmark headline |
 | Guard consensus | 3 families vote in parallel (Qwen, Llama, Granite); disagreement is settled by risk: arbiter (Granite 8B), then accuracy-weighted votes, then low/medium allow + flag, high/critical deny; a human only where a policy rule says so. Risk map in policy.json, toggled live. 0.16 s for two guards, 1.07 s p50 with Granite on high-risk calls; the 9k off-task payment (critical tool) is denied under the rule | 0952c83; rule decided 12:23, tested live on Marcin's Mac (4 models), commit pending | latencies measured, 1 live run (6 prompts + 3 calls). Opt-in mode |
-| Ollama proxy | protect any Ollama agent by changing one URL (:11434 to :11500); 7 tests | 917b83c | built. Approvals: admin-only API since 42be894 |
+| Ollama proxy | protect any Ollama agent by changing one URL (:11434 to :11500); 10 tests | 917b83c, 4ec9f90 | built. Approvals: admin-only API |
 | Dashboard | live console: 12 one-click attacks + 2 legit, verdict, reasons, µs per check; policy edits via authenticated PUT, atomic write, audited | f000cb6, 88f1934, 00fea5a | built |
 | IBAN in prompts | tokenized, resolved only inside payment tool calls | f3186a9 | built |
 | PII before models | models only ever see PII-redacted text; a hidden injection marks the session compromised even when the PII check already blocked the prompt | a0eda2b, 7468e6e | built |
@@ -121,6 +121,8 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Risk-tier escalation | arbiter, log-odds weighted votes, then allow + flag (low/medium) or deny (high/critical) | 2fcd99a | shipped in code |
 | Approval flow | admin-only `POST /v1/approvals/{id}`, payload-bound, single use, 10-min expiry; caller's `approved_by` ignored. Demo Mac: self-approved 15k held then DENY; fake approval_id DENY | 42be894 | verified. Four-eyes review, not PSD2 SCA |
 | Long inputs and judge failures | judge failure on tool output taints the session; models see head + tail of long input (injection on the last line of 24k chars caught); judge cap 2,000 chars; **108 tests** | fcba685 | built |
+| Proxy approvals | proxy and acl-agent ignore X-ACL-Approved-By / approved_by; release only via admin /v1/approvals (payload-bound, single use, 10 min); proxy tests 10/10. Limit: approvals in process memory, so proxy-held calls are approved on :11500 | 4ec9f90 | built |
+| Ollama down or slow | the configured fail mode applies instead of skipping checks | 6202a36 | built |
 | Model resilience | evicted or timed-out models re-warm in the background | 7ce31f9 | built |
 | Local only | committed policy allows only local models | d16de01 | true |
 | Pre-event code | nothing in the repo predates 11:00 (checked by AI Andrzeja) | thread | confirmed |
