@@ -344,9 +344,12 @@ const baseCanvas = document.createElement('canvas'); baseCanvas.width = TW; base
   g.putImageData(img, 0, 0);
 }
 const compCanvas = document.createElement('canvas'); compCanvas.width = TW; compCanvas.height = TH;
-const glowCanvas = document.createElement('canvas'); glowCanvas.width = TW; glowCanvas.height = TH;
 const compTex = new THREE.CanvasTexture(compCanvas); compTex.colorSpace = THREE.SRGBColorSpace; compTex.anisotropy = 8;
-const glowTex = new THREE.CanvasTexture(glowCanvas); glowTex.colorSpace = THREE.SRGBColorSpace;
+// POA heat drawn in the terrain shader: two canvas textures (previous / current step) crossfaded by uHeatT, with
+// contour edges at the 2x / 5x / 10x stops of the shared scale and a slow pulse on the hotspot
+const heatTex = () => { const t = new THREE.CanvasTexture(document.createElement('canvas')); t.colorSpace = THREE.SRGBColorSpace; return t; };
+const heatU = { uHeatFrom: { value: heatTex() }, uHeatTo: { value: heatTex() }, uHeatT: { value: 1 }, uHeatOn: { value: new THREE.Vector2() },
+  uHeatRect: { value: new THREE.Vector4() }, uHeatEdges: { value: new THREE.Vector3() }, uTime: { value: 0 }, uEmis: { value: 0 } };
 
 const terrainGeo = new THREE.PlaneGeometry(WKM, HKM, DEM.cols - 1, DEM.rows - 1);
 terrainGeo.rotateX(-Math.PI / 2);
@@ -386,15 +389,17 @@ const normalTex = (() => {
   terrainAO = a;
   return t;
 })();
-const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissiveMap: glowTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.96, metalness: 0,
+const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x000000, roughness: 0.96, metalness: 0,
   normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 });
 // close-up detail: procedural world-space noise on the albedo, fading in near the camera (meadow speckle on flat
 // ground, horizontal strata on cliffs, finer grain on scree), so the topo texture does not turn to mush when zoomed in
 terrainMat.onBeforeCompile = (sh) => {
+  Object.assign(sh.uniforms, heatU);
   sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vDW; varying vec3 vDN;')
     .replace('#include <begin_vertex>', '#include <begin_vertex>\nvDW = (modelMatrix * vec4(transformed, 1.0)).xyz; vDN = normal;');
   sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>
     varying vec3 vDW; varying vec3 vDN;
+    uniform sampler2D uHeatFrom; uniform sampler2D uHeatTo; uniform float uHeatT; uniform vec2 uHeatOn; uniform vec4 uHeatRect; uniform vec3 uHeatEdges; uniform float uTime; uniform float uEmis;
     float dHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
     float dNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       return mix(mix(dHash(i), dHash(i + vec2(1, 0)), f.x), mix(dHash(i + vec2(0, 1)), dHash(i + vec2(1, 1)), f.x), f.y); }
@@ -412,9 +417,28 @@ terrainMat.onBeforeCompile = (sh) => {
         vec3 tint = mix(vec3(1.06, 1.04, 0.9), vec3(0.92, 1.0, 1.02), fl); // dry / lush patches on meadows
         diffuseColor.rgb *= mix(vec3(1.0), mix(tint, vec3(1.0), rock) * (0.55 + 0.9 * d), near * 0.9);
       }
-    }`);
+    }
+    vec3 heatEmit = vec3(0.0);
+    {
+      vec2 hu = (vec2(vMapUv.x, 1.0 - vMapUv.y) - uHeatRect.xy) / uHeatRect.zw;
+      if (hu.x > 0.0 && hu.x < 1.0 && hu.y > 0.0 && hu.y < 1.0) {
+        vec2 st = vec2(hu.x, 1.0 - hu.y);
+        vec4 ha = texture2D(uHeatFrom, st); vec4 hb = texture2D(uHeatTo, st);
+        float wa = ha.a * uHeatOn.x * (1.0 - uHeatT), wb = hb.a * uHeatOn.y * uHeatT, al = wa + wb;
+        if (al > 0.002) {
+          vec3 col = (ha.rgb * wa + hb.rgb * wb) / al;
+          float fw = fwidth(al) * 1.3 + 1e-4;
+          float edge = max(max(1.0 - smoothstep(0.0, fw, abs(al - uHeatEdges.x)), 1.0 - smoothstep(0.0, fw, abs(al - uHeatEdges.y))), 1.0 - smoothstep(0.0, fw, abs(al - uHeatEdges.z)));
+          al = clamp(al * (1.0 + smoothstep(uHeatEdges.y, uHeatEdges.z + 0.04, al) * 0.1 * sin(uTime * 2.2)), 0.0, 1.0);
+          diffuseColor.rgb = mix(diffuseColor.rgb, col, al);
+          diffuseColor.rgb = mix(diffuseColor.rgb, min(col * 1.4 + 0.06, vec3(1.0)), edge * 0.45);
+          heatEmit = col * (al + edge * 0.5);
+        }
+      }
+    }`)
+    .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n    totalEmissiveRadiance += heatEmit * uEmis;');
 };
-terrainMat.customProgramCacheKey = () => 'terrain-detail-1';
+terrainMat.customProgramCacheKey = () => 'terrain-detail-heat-1';
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
@@ -445,6 +469,8 @@ const heatRect = {
   x: ((B.west - DEM.lon0) / stLon) * TS, y: ((DEM.lat0 - B.north) / stLat) * TS,
   w: ((B.east - B.west) / stLon) * TS, h: ((B.north - B.south) / stLat) * TS,
 };
+heatU.uHeatRect.value.set(heatRect.x / TW, heatRect.y / TH, heatRect.w / TW, heatRect.h / TH);
+heatU.uHeatEdges.value.set(STOPS[2].alpha, STOPS[3].alpha, STOPS[4].alpha); // 2x, 5x, 10x contours
 function heatCanvasGrid(p) {
   let mx = 0, mn = Infinity; for (const v of p) { if (v > mx) mx = v; if (v < mn) mn = v; }
   if (mx - mn < 1e-12) return null; // uniform (replay without engine output): no heat
@@ -465,16 +491,10 @@ const heatOf = (i) => { if (!heatCache.has(i)) heatCache.set(i, heatCanvasGrid(R
 let heatFrom = null, heatTo = null, heatT = 1, WASH = new Map(); // searched segment id -> times searched
 const llToTex = (la, lo) => [((lo - DEM.lon0) / stLon) * TS, ((DEM.lat0 - la) / stLat) * TS];
 function compose() {
-  const g = compCanvas.getContext('2d'), gg = glowCanvas.getContext('2d');
+  const g = compCanvas.getContext('2d');
   g.globalAlpha = 1; g.drawImage(baseCanvas, 0, 0);
-  gg.globalAlpha = 1; gg.fillStyle = '#000'; gg.fillRect(0, 0, TW, TH);
-  const draw = (cv, a) => {
-    if (!cv || a <= 0) return;
-    g.globalAlpha = a; g.drawImage(cv, heatRect.x, heatRect.y, heatRect.w, heatRect.h);
-    gg.globalAlpha = a; gg.drawImage(cv, heatRect.x, heatRect.y, heatRect.w, heatRect.h);
-  };
-  if (SHOW_DIFF) draw(diffLayer(), 1); else { draw(heatFrom, 1 - heatT); draw(heatTo, heatT); }
-  g.globalAlpha = 1; gg.globalAlpha = 1;
+  if (SHOW_DIFF) g.drawImage(diffLayer(), heatRect.x, heatRect.y, heatRect.w, heatRect.h); // the heat itself is drawn by the terrain shader
+  heatU.uHeatOn.value.set(!SHOW_DIFF && heatFrom ? 1 : 0, !SHOW_DIFF && heatTo ? 1 : 0);
   // searched ground: cool grey wash with hatching, stronger for repeated searches
   for (const [id, n] of WASH) {
     const sg = segs.get(id); if (!sg?.polygon?.length) continue;
@@ -484,7 +504,7 @@ function compose() {
     for (let x = -TH; x < TW; x += 9) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x + TH, TH); g.stroke(); }
     g.restore();
   }
-  compTex.needsUpdate = true; glowTex.needsUpdate = true;
+  compTex.needsUpdate = true;
 }
 let SHOW_DIFF = false, diffCanvas = null;
 function diffLayer() {
@@ -497,7 +517,14 @@ function diffLayer() {
   const go = out.getContext('2d'); go.imageSmoothingEnabled = false; go.drawImage(small, 0, 0, out.width, out.height);
   return (diffCanvas = out);
 }
-const showHeat = (cv, animate = true) => { heatFrom = animate ? heatTo : null; heatTo = cv; heatT = heatFrom ? 0 : 1; compose(); };
+const showHeat = (cv, animate = true) => {
+  heatFrom = animate ? heatTo : null; heatTo = cv; heatT = heatFrom ? 0 : 1; heatU.uHeatT.value = heatT;
+  for (const [u, c] of [[heatU.uHeatFrom, heatFrom], [heatU.uHeatTo, heatTo]]) if (c && u.value.image !== c) {
+    if (u.value.image.width !== c.width || u.value.image.height !== c.height) u.value.dispose(); // immutable GPU storage: re-allocate on size change
+    u.value.image = c; u.value.needsUpdate = true;
+  }
+  compose();
+};
 
 // ---------- lines, pins, labels ----------
 function densify(pts, maxKm = 0.03) {
@@ -647,7 +674,7 @@ function stepMood(dt) {
   skyMat.uniforms.top.value.copy(cur.top); skyMat.uniforms.bottom.value.copy(cur.bottom);
   scene.fog.color.copy(cur.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
   sun.color.copy(cur.sun); sun.intensity = cur.sunI; hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hI;
-  starMat.opacity = cur.stars; terrainMat.emissiveIntensity = cur.emis; renderer.toneMappingExposure = cur.exp;
+  starMat.opacity = cur.stars; heatU.uEmis.value = cur.emis; renderer.toneMappingExposure = cur.exp;
   skyMat.uniforms.sunCol.value.copy(cur.sun); skyMat.uniforms.sunAmt.value = clamp(1.4 - cur.stars * 1.6, 0.15, 1.2) * (cur.near < 7 ? 0.45 : 1);
   hemi.intensity = cur.hI * 0.45; // the sky environment map carries the rest of the ambient light
   if ((Math.abs(cur.top.r - tgt.top.r) + Math.abs(cur.bottom.g - tgt.bottom.g) + Math.abs(cur.fog.b - tgt.fog.b) > 0.004 && performance.now() - envAt > 250) || envAt < 0) updateEnv();
@@ -1250,7 +1277,8 @@ addEventListener('message', (e) => {
 const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
-  if (heatT < 1) { heatT = Math.min(1, heatT + dt / 0.7); compose(); }
+  if (heatT < 1) { heatT = Math.min(1, heatT + dt / 0.7); heatU.uHeatT.value = heatT; }
+  heatU.uTime.value += dt;
   stepMood(dt);
   if (fly) {
     fly.t += dt / fly.dur; const k = ease(Math.min(1, fly.t));
