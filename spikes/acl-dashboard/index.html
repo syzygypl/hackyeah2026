@@ -123,6 +123,14 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .pnum { display: grid; grid-template-columns: 1fr 110px; gap: 6px 10px; align-items: center; font-size: 13px; margin-top: 10px; }
 .pnum input, .pnum select { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font: inherit; font-size: 13px; }
 .dirty { color: var(--redact); }
+.votes { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin-top: 10px; }
+.votes > .hint { flex-basis: 100%; }
+.vote { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; display: grid; gap: 1px; min-width: 150px; font-size: 13px; }
+.vote span { font-weight: 650; text-transform: uppercase; font-size: 11.5px; letter-spacing: .4px; }
+.vote small { color: var(--muted); font-size: 11px; }
+.v-safe { border-color: var(--allow); } .v-safe span { color: var(--allow); }
+.v-unsafe { border-color: var(--deny); } .v-unsafe span { color: var(--deny); }
+.v-unknown { border-style: dashed; } .v-unknown span { color: var(--muted); }
 @media (max-width: 640px) { header, main { padding-left: 16px; padding-right: 16px; } .bar { grid-template-columns: 100px 1fr 28px; } }
 </style>
 </head>
@@ -427,6 +435,8 @@ function renderVerdict(j, ms) {
       ${j.final && j.final !== j.decision ? `→ <span class="dec d-${esc(j.final)}">${esc(LABELS[j.final] || j.final)}</span>` : ""}
       ${(j.guardrails || []).map(g => `<span class="chip">${esc(g)}</span>`).join("")} ${sem}
       <span class="spacer"></span><span class="hint">gateway ${fmt(j.overhead_us)} µs · round-trip ${fmt(ms)} ms · policy <span class="mono">${esc(j.policy_version || "")}</span> · audit #${j.audit_seq ?? "–"}</span></div>
+    ${j.semantic?.votes ? `<div class="votes"><span class="hint">Guard consensus: <b>${esc(j.semantic.outcome)}</b> · agreement ${Math.round(100 * (j.semantic.agreement || 0))}%</span>
+      ${j.semantic.votes.map(v => `<div class="vote v-${esc(v.vote)}"><b>${esc(v.model.split("/").pop())}</b><span>${esc(v.vote)}</span><small>${v.p_unsafe != null ? "p " + (+v.p_unsafe).toFixed(2) + " · " : ""}${v.latency_ms != null ? v.latency_ms + " ms" : ""}${v.cached ? " · cached" : ""}${(v.category_names || []).length ? " · " + esc(v.category_names.join(", ")) : ""}${v.error ? " · " + esc(v.error) : ""}</small></div>`).join("")}</div>` : ""}
     ${(j.reasons || []).length ? `<ul>${j.reasons.map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : `<div class="hint" style="margin-top:8px">No guardrail fired - passed every check.</div>`}
     ${j.output != null ? `<details style="margin-top:8px"><summary class="hint" style="cursor:pointer">Output returned to the agent</summary><pre class="mono" style="white-space:pre-wrap">${esc(typeof j.output === "string" ? j.output : JSON.stringify(j.output, null, 2))}</pre></details>` : ""}
     ${checks.length ? `<div class="trace">${checks.map(([k, v]) => `<div class="t ${[...hits].some(h => h && k.startsWith(h)) ? "hit" : ""}"><span>${esc(k.replace(/_/g, " "))}</span><div class="track"><div class="fill" style="width:${Math.max(2, 100 * Math.log10(1 + v) / Math.log10(1 + max))}%"></div></div><span>${fmt(v)} µs</span></div>`).join("")}</div>` : ""}
