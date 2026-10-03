@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Monitoring demo: rescue-field + 3 simulated patrol phones + one silent team + a bad-PIN attacker.
+"""Monitoring demo: rescue-server + 3 simulated patrol phones + one silent team + a bad-PIN attacker.
 
     python3 rescue/monitoring/demo.py              # ~3 min, then keeps the server up until Ctrl-C
     python3 rescue/monitoring/demo.py --fast       # same story in ~60 s (for the pitch video)
@@ -14,7 +14,7 @@ Reports go to a temp live-events file (RESCUE_LIVE_FILE), never to rescue/out/li
 import json, os, random, signal, subprocess, sys, tempfile, threading, time, urllib.request, urllib.error
 
 PKG = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PORT = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8772   # own port: never collides with a real rescue-field on 8770
+PORT = int(sys.argv[sys.argv.index("--port") + 1]) if "--port" in sys.argv else 8772   # own port: never collides with a real rescue-server on 8780
 PIN = str(random.randint(100000, 999999))
 FAST = "--fast" in sys.argv
 SCALE = 1 / 3 if FAST else 1.0                         # story time multiplier
@@ -105,20 +105,20 @@ def attacker(start, n, every):
 
 
 def main():
-    if not os.path.exists(os.path.join(PKG, ".build/debug/rescue-field")) or "--no-build" not in sys.argv:
+    if not os.path.exists(os.path.join(PKG, ".build/debug/rescue-server")) or "--no-build" not in sys.argv:
         say("swift build ...")
-        subprocess.run(["swift", "build", "--product", "rescue-field"], cwd=PKG, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["swift", "build", "--product", "rescue-server"], cwd=PKG, check=True, stdout=subprocess.DEVNULL)
     live = os.path.join(tempfile.mkdtemp(prefix="rescue-demo-"), "live-events.json")
     env = dict(os.environ, RESCUE_GUARD_STRICT="1", RESCUE_SILENT_SECONDS=str(SILENT), RESCUE_LIVE_FILE=live, RESCUE_RATE_PER_MIN="60")
     if "--rules" in sys.argv:
         env["RESCUE_LLM_OFF"] = "1"
     log = open(live + ".server.log", "w")
-    srv = subprocess.Popen([os.path.join(PKG, ".build/debug/rescue-field"), "serve", str(PORT), "--host", "127.0.0.1", "--pin", PIN],
+    srv = subprocess.Popen([os.path.join(PKG, ".build/debug/rescue-server"), str(PORT), "--host", "127.0.0.1", "--pin", PIN],
                            cwd=PKG, env=env, stdout=log, stderr=subprocess.STDOUT)
     signal.signal(signal.SIGINT, lambda *_: (srv.terminate(), sys.exit(0)))
     if not wait_up():
-        print(open(live + ".server.log").read()); srv.terminate(); sys.exit(f"rescue-field did not start on :{PORT} (port busy?)")
-    say(f"rescue-field na {BASE} (PIN {PIN}, próg ciszy {SILENT} s, live file {live})")
+        print(open(live + ".server.log").read()); srv.terminate(); sys.exit(f"rescue-server did not start on :{PORT} (port busy?)")
+    say(f"rescue-server na {BASE} (PIN {PIN}, próg ciszy {SILENT} s, live file {live})")
     say(f"Otwórz: {BASE}/ops.html   |   Grafana: http://127.0.0.1:3000 (jeśli docker compose up)")
 
     # story: 3 teams report; dog goes quiet at ~75 s; attacker at ~120 s; patrols continue to ~180 s

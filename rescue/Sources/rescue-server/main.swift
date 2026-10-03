@@ -17,8 +17,8 @@ import RescueStudioKit
 //   POST /api/run                             scenario JSON -> rescue-run/1
 //   GET  /api/assessment/<scenario>?step=N    "Ocena sytuacji" by the local model (rules fallback)
 //   POST /story/assessment {step}             same for the current Studio story
-//   POST /report, GET /live-events, POST /client-event, GET /health, GET /metrics   (as rescue-field)
-//   GET /modules, GET|POST /story, POST /story/new|event|edit|narrate|save          (as rescue-studio)
+//   POST /report, GET /live-events, POST /client-event, GET /health, GET /metrics
+//   GET /modules, GET|POST /story, POST /story/new|event|edit|narrate|save
 //   POST /api/reset                           clears field reports, the Studio story and assignments (needs the key)
 #if canImport(Darwin)
 setvbuf(stdout, nil, _IOLBF, 0)
@@ -57,7 +57,7 @@ let types = ["html": "text/html; charset=utf-8", "js": "text/javascript", "mjs":
              "glb": "model/gltf-binary", "bin": "application/octet-stream", "wasm": "application/wasm"]
 
 /// Static files: rescue/out/, rescue/web/, rescue/app/ (directories -> index.html; no ".."), plus read-only JSON the 3D view
-/// needs from scenarios/ and tools/terrain/data/ (never blind-test files) - same rule as rescue-studio.
+/// needs from scenarios/ and tools/terrain/data/ (never blind-test files).
 func staticFile(_ rawPath: String) -> Data? {
     let p = rawPath.removingPercentEncoding ?? rawPath
     if let e = EvalFiles.file(p) { return response("200 OK", e.1, e.0) }   // rescue/eval/ for the app's Walidacja mode
@@ -75,7 +75,7 @@ func staticFile(_ rawPath: String) -> Data? {
     return response("200 OK", types[url.pathExtension] ?? "application/octet-stream", d)
 }
 
-// MARK: field reports (same behaviour as rescue-field)
+// MARK: field reports
 
 let ratePerMin = Int(ProcessInfo.processInfo.environment["RESCUE_RATE_PER_MIN"] ?? "") ?? 10
 let reportLimiter = RateLimiter(max: ratePerMin, perSeconds: 60)
@@ -618,7 +618,7 @@ func route(_ q: Req) async -> Data {
         _ = await liveFeed.add(fe)
         return response("200 OK", json, Data(jsonString(r).utf8))
 
-    // Studio (same actor as rescue-studio)
+    // Studio
     case ("GET", "/modules"): return response("200 OK", json, StoryPipeline.modulesData())
     case ("GET", "/story"): return response("200 OK", json, await studio.get())
     case ("GET", "/story/scenario"): return response("200 OK", json, await studio.scenarioData())

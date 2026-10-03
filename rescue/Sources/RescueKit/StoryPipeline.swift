@@ -1,7 +1,7 @@
 import Foundation
 
 /// Same pipeline as rescue-demo, as a function: scenario -> run.json document (schema rescue-run/1).
-/// Used by rescue-studio. Copy of the demo logic on purpose (speed over structure).
+/// Used by rescue-server (Story Studio). Copy of the demo logic on purpose (speed over structure).
 public enum StoryPipeline {
     /// Index of the decisive hint: a found Clue (search found the person) or a Ratunek ping, whichever comes first.
     public static func decisiveIndex(_ hints: [LocationHint]) -> Int? {

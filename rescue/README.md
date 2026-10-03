@@ -197,20 +197,17 @@ python3 rescue/validate/validate_live_events.py rescue/validate/samples/live-eve
 <!-- BEGIN field-reports (offline, local LLM) -->
 ## Field reports and offline mode
 
-Rescuers type (or paste dictated) short Polish radio-style reports; a **local** model turns them into hints for the same stream. No cloud API is ever called.
+Rescuers type (or paste dictated) short Polish radio-style reports; a model turns them into hints for the same stream: OpenAI (`gpt-6-luna`) on the deployed server, a local Ollama model on a laptop, keyword rules when neither answers.
 
 ```sh
-swift run rescue-field "Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"   # parse one, print JSON + path used
-swift run rescue-field serve          # http://127.0.0.1:8770 : GET / (field page), POST /report, GET /live-events, GET /health
-swift run rescue-field serve 8770 --host 0.0.0.0 --pin 4821   # phone on OUR hotspot can reach it; PIN required (see Demo-day network)
-swift run rescue-field replay         # scenario + live-events.json through the grid, top 3 after each field hint
-open out/field.html                   # also works as file://, talks to 127.0.0.1:8770
+curl -X POST https://rescue-locator.vercel.app/report -H 'Content-Type: application/json' -H "X-Rescue-Pin: $RESCUE_PIN" \
+  -d '{"text":"Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m","at":"19:10"}'   # parsed hints back as JSON
+open https://rescue-locator.vercel.app/out/field.html   # field report page (same server; locally http://127.0.0.1:8780/out/field.html)
 ```
 
-`--host` beyond loopback always requires a PIN, see [Demo-day network](#demo-day-network).
-
-- Parser: `Sources/RescueKit/FieldReports/FieldReportParser.swift`. Ollama `/api/chat` with a JSON-schema `format` (segment ids as an enum), temperature 0, few-shot prompt with the scenario's segment names. Env: `RESCUE_LLM_MODEL` (default `qwen3:4b-instruct-2507-q4_K_M`, `gemma3:4b` also works), `RESCUE_LLM_URL` (default `http://localhost:11434`), `RESCUE_LLM_TIMEOUT` (s, default 30), `RESCUE_LLM_OFF=1`.
-- Fallback when Ollama is unreachable or returns bad JSON: keyword/regex rules (segment names + aliases, "nic"/"pusto" -> searched, "widoczność N m", "N m/s", "nie poleci"/"bateria" -> resource down). `parsedBy` says which path: `llm-local:<model>` or `rules`. If the local server itself is down, `field.html` parses with the same rules in the browser (marked "reguły awaryjne (przeglądarka)", kept in localStorage only).
+- Model calls: `Sources/RescueKit/LLM.swift`, one helper for the three uses (field reports, Studio narratives, assessment). `OPENAI_API_KEY` set -> OpenAI chat completions with a JSON schema (`RESCUE_OPENAI_MODEL`, default `gpt-6-luna`; `RESCUE_OPENAI_EFFORT`, default `none`). Otherwise Ollama `/api/chat` with a JSON-schema `format` (`RESCUE_LLM_MODEL`, default `qwen3:4b-instruct-2507-q4_K_M`; `RESCUE_LLM_URL`, default `http://localhost:11434`). `RESCUE_LLM_TIMEOUT` (s), `RESCUE_LLM_OFF=1`.
+- Parser: `Sources/RescueKit/FieldReports/FieldReportParser.swift`: segment ids as an enum, few-shot prompt with the scenario's segment names.
+- Fallback when the model is unreachable or returns bad JSON: keyword/regex rules (segment names + aliases, "nic"/"pusto" -> searched, "widoczność N m", "N m/s", "nie poleci"/"bateria" -> resource down). `parsedBy` says which path: `llm-openai:<model>`, `llm-local:<model>` or `rules`. If the local server itself is down, `field.html` parses with the same rules in the browser (marked "reguły awaryjne (przeglądarka)", kept in localStorage only).
 - Provider: `FieldReports/FieldReportProvider.swift` reads `out/live-events.json` (one-shot by default, `followSeconds` > 0 polls). Mapping: segmentSearched -> `.searched` (POD 0.4 poor / 0.6 / 0.8 good), clue -> soft `.sector` at the segment seed or lat/lon (300 / 500 / 800 m for strong / medium / weak), weatherObs -> `.weather` boost when visibility < 300 m, resourceStatus -> not spatial, not emitted. Reports without `at` land 5 scenario minutes after the last scripted event.
 - Measured on an M4 Pro laptop, qwen3 4B q4, model warm: **1.3-1.7 s per report** (first call after load ~3.5 s); gemma3:4b ~2-2.6 s; rules ~15 ms.
 
@@ -219,14 +216,14 @@ open out/field.html                   # also works as file://, talks to 127.0.0.
 | Works offline | Needs network |
 |---|---|
 | Swift engine, grid, all providers, `rescue-demo`, `run.json` | Map tiles in `out/index.html` (OpenTopoMap/OSM over the internet) |
-| Ollama + local model, `rescue-field` CLI and server | Model download (once, before going into the field) |
+| `swift run rescue-server` on the laptop, Ollama + local model | The deployed server (https://rescue-locator.vercel.app), OpenAI; model download (once) |
 | `out/field.html` (no CDN, inline CSS/JS) | |
 
 Follow-up: offline basemap from a local OSM extract (e.g. Protomaps PMTiles of the Tatras, ODbL attribution) served next to the page; coordinate with AI Marcina's MapLibre screen in `rescue/web/`.
 
 ### Contract: `out/live-events.json`
 
-Append-only JSON array written by `rescue-field serve` (POST /report), read by `FieldReportProvider` and `GET /live-events`. Runtime file, not committed.
+Append-only JSON array written by `rescue-server` (POST /report) on the laptop, read by `FieldReportProvider` and `GET /live-events`. Runtime file, not committed. On Vercel the same reports are rows in Neon (`rescue_reports`), and `GET /live-events` returns the same array.
 
 ```jsonc
 [
@@ -271,15 +268,25 @@ Planner caveat (plan backtest, from the clues moment): in zawrat the "smart" pla
 
 New run.json fields (all additive, `validate_run.py` passes): `steps[].dayOffset`, `steps[].resources[].busyUntil/arriveAt/position/currentSegment`, `steps[].segmentHistory`, `steps[].assignments[].why/whyLayers`, `value.coverage`, `value.find*`, `value.truthPlanned[Clues]/truthNaive[Clues]` (`firstSweepMin`, `p2h`, `p4h`, `sweeps`). New scenario fields: `events[].seenAt`, `events[].epilogue`, `resources[].vehicleFrom`, `terrain.roads`, `fixedBbox`, `lostTrail`, `ipp.seenAt`. New providers: `Found`, `LostTrail` (opt-in); corridor and last-known-point layers come from `Cell112Fix` / `Clue`.
 
-## Backend (one command)
+## Backend: one server, deployed on Vercel
+
+**Live: https://rescue-locator.vercel.app** (`/` -> `/app/`). Every push to `main` deploys to production, other branches get preview URLs (Vercel project `syzygy-warsaw/rescue-locator`, Root Directory `rescue`; to be deleted after the hackathon).
 
 ```sh
 cd rescue
-swift run rescue-server                                  # http://127.0.0.1:8780/  - everything below on one port
-swift run rescue-server 8780 --host 0.0.0.0 --pin 4821   # LAN / hotspot only, PIN required (see Demo-day network)
+swift run rescue-server                                  # laptop / offline fallback: http://127.0.0.1:8780/, everything below on one port
+swift run rescue-server 8780 --host 0.0.0.0 --pin 4821   # LAN without internet (own hotspot only), PIN required
 ```
 
-One process serves every frontend as static files and the live API. The engine runs on request, so no pre-generated `out/*.json` files are needed. The old `rescue-field serve` (8770) and `rescue-studio` (8771) still work. Their code is shared: Studio state lives in `Sources/RescueStudioKit`, and both servers import it.
+One process serves every frontend and the live API; the engine runs on request, so no pre-generated `out/*.json` files are needed. Studio state lives in `Sources/RescueStudioKit`.
+
+**On Vercel** (`vercel.json`, Services):
+- `web`: the frontends as static files from the CDN (`tools/vercel/static.sh` copies `app/`, `web/`, `out/`, `eval/` JSON/CSV and non-blind `scenarios/` + `tools/terrain/data/` JSON).
+- `api`: `rescue-server` as a Container Image (`Dockerfile.vercel`, Swift 6.2 on Linux; POSIX sockets, no Apple frameworks). Routes: `/api/*`, `/story*`, `/report`, `/live-events`, `/client-event`, `/health`, `/metrics`, `/modules`, `/eval/sim-runs`, `/scenarios/*` (so Studio saves are visible).
+- State: Functions are stateless and may run several instances, so everything that used to live in memory or `out/*.json` is in **Neon Postgres** (`rescue-locator-db`, fra1, `DATABASE_URL`): field reports and per-incident clues (`rescue_reports`), the live feed (`rescue_feed`, one `seq` for all instances), and documents with a version (`rescue_docs`: Studio story, operator assignments, team roster, Studio saves `scn:<name>`). `Sources/rescue-server/Store.swift`; without `DATABASE_URL` (laptop) the old file + memory store is used.
+- Access: `RESCUE_PUBLIC=1` (set in the image): reads are open to anyone with the URL, **every write needs the action key** (`RESCUE_PIN`, Vercel env, never in the repo) as `X-Rescue-Pin` or JSON `pin`; no loopback exemption. The app hands the key out with **"Udostępnij"**: QR codes / links for the rescuer's phone (`/app/?role=ratownik&sc=<sc>&key=...`), a second operator laptop and a read-only view for the jury. The key from `?key=` is kept on the device and removed from the address bar.
+- Env: `RESCUE_PIN`, `DATABASE_URL` (Neon integration), `OPENAI_API_KEY` (optional; without it reports and the assessment use rules).
+- `POST /api/reset` (key required): clears field reports, clues, the feed, assignments and the Studio story ("Wyczyść akcję" in Udostępnij).
 
 | Path | What |
 |---|---|
@@ -290,15 +297,17 @@ One process serves every frontend as static files and the live API. The engine r
 | `POST /api/run` | scenario JSON (shape of `scenarios/*.json`, terrain inline) -> `rescue-run/1` |
 | `GET /api/assessment/<scenario>?step=N[&wait=0][&llm=0][&live=0]` | "Ocena sytuacji" for step N (1-based, default last). `wait=0`: rules immediately with `pending: true`, the local model in the background, poll again. `llm=0`: rules only |
 | `POST /story/assessment {step}` | the same for the current Studio story |
-| `POST /report`, `GET /live-events`, `POST /client-event`, `GET /health`, `GET /metrics` | field reports and monitoring (as `rescue-field`) |
-| `GET /modules`, `GET/POST /story`, `GET /story/scenario`, `POST /story/new|event|edit|narrate|save` | Story Studio (as `rescue-studio`) |
+| `POST /report`, `GET /live-events`, `POST /client-event`, `GET /health`, `GET /metrics` | field reports and monitoring |
+| `GET /modules`, `GET/POST /story`, `GET /story/scenario`, `POST /story/new|event|edit|narrate|save` | Story Studio |
+| `POST /api/clue`, `GET /api/live`, `GET /api/incidents`, `GET /api/teams`, `POST /api/teams/assign`, `GET/POST /api/assignments` | live mode, see `app/CONTRACT.md` |
+| `POST /api/reset` | clears the live state (key required) |
 | `GET /scenarios/*.json`, `/tools/terrain/data/*.json` | read-only JSON for the 3D view (never blind-test files) |
 
 Screens on the live engine: `http://127.0.0.1:8780/web/?run=/api/run/zawrat` and the 3D view in the app, `http://127.0.0.1:8780/app/?mode=akcja&view=3d&sc=zawrat` (it loads `/api/run/zawrat` itself). Both already read `?run=<url>`, so no change to their code was needed.
 
-Guard: as before, loopback needs no PIN. With `--host` beyond loopback, every API call needs `X-Rescue-Pin` (or JSON `pin`); pages and static assets stay open, and `/metrics` from real loopback is open for Prometheus. Limits: `/report` 4 KB, 500 characters, 10/min per LAN IP; other bodies 64 KB; `POST /api/run` up to 4 MB.
+Guard (`Sources/RescueKit/ServerGuard.swift`): loopback needs no PIN. With `--host` beyond loopback, every API call needs `X-Rescue-Pin` (or JSON `pin`); pages and static assets stay open, and `/metrics` from real loopback is open for Prometheus. Public mode (Vercel): only writes need the key. Limits: `/report` 4 KB, 500 characters, 10/min per client IP; other bodies 64 KB; `POST /api/run` up to 4 MB. Wrong or missing key: `401`, logged as `[guard] <time> 401 <ip> <method> <path>`, nothing stored.
 
-## Ocena sytuacji (lokalny model)
+## Ocena sytuacji (model AI)
 
 `Sources/RescueKit/Assessment/Assessment.swift` reads one step of a run and writes a Polish operational assessment:
 - **sytuacja:** 2-3 sentences.
@@ -308,7 +317,7 @@ Guard: as before, loopback needs no PIN. With `--host` beyond loopback, every AP
 - **czego brakuje:** the information that would change the map most.
 
 - **Input:** top segments with POA/area and combined POD of searches, the evidence list (every non-terrain hint up to the step, numbered E1..), the planner's assignments with their "dlaczego" text and safety flags, team availability, weather and hypothermia, evidence coverage.
-- **Model:** local Ollama only (`RESCUE_LLM_URL`, must be localhost; `RESCUE_LLM_MODEL`, default `qwen3:4b-instruct-2507-q4_K_M`), temperature 0, JSON-schema output, timeout `RESCUE_LLM_TIMEOUT` (default 120 s).
+- **Model:** `LLM.swift`: OpenAI `gpt-6-luna` when `OPENAI_API_KEY` is set (the deployed server), else local Ollama (`RESCUE_LLM_MODEL`, default `qwen3:4b-instruct-2507-q4_K_M`); JSON-schema output, timeout `RESCUE_LLM_TIMEOUT` (default 120 s).
 - **Grounding:** the JSON is validated against the run, and the `dropped` list says what was removed or corrected.
   - Hypotheses and recommendations must name existing segment and team ids. "S2 Siklawa..." is resolved to S2; unknown ids are dropped.
   - Evidence ids must exist, and at most the 4 most recent are kept per hypothesis.
@@ -321,25 +330,21 @@ Guard: as before, loopback needs no PIN. With `--host` beyond loopback, every AP
 
 ## Story Studio (compose a new incident live)
 
-```sh
-cd rescue
-swift run rescue-studio                       # http://127.0.0.1:8771/  (offline page out/studio.html, MapLibre + local PMTiles from web/)
-swift run rescue-studio 8771 --host 0.0.0.0 --pin 4821   # LAN: PIN required, see Demo-day network
-```
+In the app: mode **Plan** (or "+ Nowa akcja"). The standalone Studio page is `/out/studio.html` (`/studio` redirects there) on the same server, e.g. https://rescue-locator.vercel.app/studio or http://127.0.0.1:8780/studio.
 
 The Studio builds a story from the same modules as the demo instead of hand-editing `zawrat.json`. Every change re-runs the full pipeline (grid, Bayes, team planner) and returns a `rescue-run/1` document.
 
 - **Module palette (left):** generated from `GET /modules`. Each provider declares its event schema in its own file (`extension XProvider: StudioModule { static let schema = ... }`, registry in `Sources/RescueKit/ModuleRegistry.swift`). Pick a module, fill the form, click "Dodaj". A map click fills lat/lon.
-- **"Opowiedz historię":** a Polish narrative goes to the local qwen3 (Ollama, localhost only), which returns event types, times and **place names, never coordinates**. Places resolve through a Tatra gazetteer, and a name not present in the text is dropped. Keyword/regex rules then fill numbers the small model dropped (POD %, m/s, °C, km) and add events it missed (`parsedBy: llm-local+rules`). With Ollama off, it falls back to rules only. TripPlan text in the Zawrat area goes through `tools/interview/interview.py` (trail routing), otherwise as a gazetteer polyline from the IPP.
+- **"Opowiedz historię":** a Polish narrative goes to the model (OpenAI on the deployed server, local Ollama on a laptop), which returns event types, times and **place names, never coordinates**. Places resolve through a Tatra gazetteer, and a name not present in the text is dropped. Keyword/regex rules then fill numbers the small model dropped (POD %, m/s, °C, km) and add events it missed (`parsedBy: llm-local+rules`). With Ollama off, it falls back to rules only. TripPlan text in the Zawrat area goes through `tools/interview/interview.py` (trail routing), otherwise as a gazetteer polyline from the IPP.
 - **FieldReport module:** the text goes through `FieldReportParser` (local LLM + rules) and becomes `SegmentSearched` / `Clue` / `WeatherConditions` events.
 - **New story:** "Nowa historia: Zawrat" (real OSM + DEM terrain, Zawrat segments and teams), or "wskaż IPP na mapie". Outside the Zawrat box this gives a 6 x 6 km box around the IPP, 5 x 5 grid segments (A1..E5), generic teams and **flat terrain**. The page then shows the command to fetch terrain (`python3 rescue/tools/terrain/osm_terrain.py --scenario rescue/scenarios/<name>.json`). Nothing is downloaded automatically. The offline basemap covers the Zawrat area only.
 - **Event list (bottom):** reorder (swaps scenario times, since the stream is time-ordered), delete, and a timeline slider over the steps. The right panel shows the top 3 segments, team assignment and the hypothermia clock for the selected step.
-- **Save:** `POST /story/save {name}` writes `rescue/scenarios/<name>.json` (terrain inlined, `"studio": true`). It then runs with `swift run rescue-demo scenarios/<name>.json` (-> `out/<name>.html`). The name is sanitised to `[a-z0-9-]`, max 60 characters, and written only under `rescue/scenarios/`. `zawrat` and `*-terrain` are refused, as is overwriting a scenario that did not come from the Studio.
+- **Save:** `POST /story/save {name}` writes `rescue/scenarios/<name>.json` (terrain inlined, `"studio": true`); on Vercel it is also stored in Neon (`scn:<name>`) and appears on every instance. It then runs with `swift run rescue-demo scenarios/<name>.json` (-> `out/<name>.html`). The name is sanitised to `[a-z0-9-]`, max 60 characters, and written only under `rescue/scenarios/`. `zawrat` and `*-terrain` are refused, as is overwriting a scenario that did not come from the Studio.
 - Event times before `startClock` are clamped to `startClock`. "Last seen at 12:10" sets `subject.lastContact` (hypothermia clock) and puts the IPP at the story start.
 
 ### Contracts: `/modules` and `/story`
 
-All bodies are JSON (`Content-Type: application/json`, else 415). Max body 64 KB (413). On LAN every `/modules` and `/story*` call needs the PIN.
+All bodies are JSON (`Content-Type: application/json`, else 415). Max body 64 KB (413). Every `POST /story*` needs the action key on Vercel; on a LAN server every `/modules` and `/story*` call needs the PIN.
 
 | Call | Body | Returns |
 |---|---|---|
@@ -359,29 +364,16 @@ Run document = `out/run.json` schema `rescue-run/1` (validates with `validate/va
 
 ## Demo-day network
 
-The hall Wi-Fi at Tauron Arena carries thousands of hackers, CTF players among them. Treat it as hostile.
-
-- **Run the phone demo only over our own phone hotspot**, never the hall Wi-Fi. Laptop and phone both join the hotspot; nothing else should be on it.
-- Default bind is `127.0.0.1` (only this laptop). Exposing beyond loopback is opt-in with `--host`, and **any non-loopback `--host` requires a PIN**:
-  ```sh
-  swift run rescue-field serve 8770 --host 0.0.0.0 --pin 4821   # or omit --pin: a random 6-digit PIN is generated and printed
-  ```
-  The server prints the LAN URLs, the PIN and a warning.
-- **How clients send the PIN:** HTTP header `X-Rescue-Pin: 4821` (preferred, allowed by CORS), or a JSON body field `"pin": "4821"`. Compared in constant time. Loopback clients (pages opened on the laptop itself) need no PIN.
-  The patrol view (`web/patrol/`) and `out/field.html` must add the header to their `fetch` calls when talking to a LAN address, e.g. `headers: { "Content-Type": "application/json", "X-Rescue-Pin": pin }`, with the PIN typed once on the phone and kept in `localStorage`. Never put the PIN in the URL (it ends up in history). `out/field.html` does this: a PIN box appears only when the page is not on loopback.
-- What a wrong or missing PIN gets: `401`, logged to stderr as `[guard] <time> 401 <ip> <method> <path>`. Nothing is written to `out/live-events.json`. Without a PIN only `GET /`, `GET /field.html`, `GET /ops.html`, `GET /health` and CORS preflight answer (`GET /metrics` too, but only from loopback).
-- `POST /report` limits (`rescue-field`): body over 4 KB -> `413`; text over 500 characters -> `413`; content type other than `application/json` / `text/plain` -> `415`; more than 10 reports per minute from one LAN IP -> `429`. Loopback is not rate limited.
-- The same guard (`Sources/RescueKit/ServerGuard.swift`) is used by every local server we add; mutating endpoints always need the PIN on LAN.
-- Testing the PIN rules on one machine: `RESCUE_GUARD_STRICT=1` makes loopback clients behave like LAN clients.
-- After the demo: stop the server (Ctrl-C). Never leave it bound to `0.0.0.0`.
-
+- **Default: the deployed URL** (https://rescue-locator.vercel.app). Phones join with the "Udostępnij" QR code over mobile data; the hall Wi-Fi is not needed and nothing on a laptop is exposed. Reads are public, writes need the action key (see Backend).
+- **Without internet:** `swift run rescue-server 8780 --host 0.0.0.0 --pin 4821` on a laptop, phones on **our own phone hotspot only**, never the hall Wi-Fi (thousands of hackers, CTF players among them). Any non-loopback `--host` requires a PIN (omit `--pin` and a random 6-digit one is printed). Clients send it as `X-Rescue-Pin` (typed once, kept in `localStorage`); loopback clients need none. `RESCUE_GUARD_STRICT=1` makes loopback behave like LAN for testing. After the demo: Ctrl-C, never leave it bound to `0.0.0.0`.
+- `POST /report` limits: body over 4 KB -> `413`; text over 500 characters -> `413`; content type other than `application/json` / `text/plain` -> `415`; more than 10 reports per minute from one client IP -> `429`.
 
 ## Monitoring
 
-"Which team reported, and when?" Every local server exposes Prometheus metrics; `out/ops.html` shows them offline, and Prometheus + Grafana (Docker) add history and alerts.
+"Which team reported, and when?" `rescue-server` exposes Prometheus metrics (on Vercel per instance, so counters reset when an instance scales down); `out/ops.html` shows them offline, and Prometheus + Grafana (Docker) add history and alerts.
 
-- `GET /metrics` on `rescue-field` (:8770) and `rescue-studio` (:8771), Prometheus text format, written by hand in `Sources/RescueKit/Metrics.swift` (no dependencies). Loopback scrapes need no PIN (even with `RESCUE_GUARD_STRICT=1`); a LAN client needs `X-Rescue-Pin`.
-- Metrics (prefix `rescue_`): `reports_received_total{source,team,parsed_by="llm|rules|browser"}`, `report_parse_seconds` histogram `{parsed_by}`, `reports_rejected_total{reason="pin|size|type|rate"}`, `client_last_report_timestamp_seconds{client_id,team}`, `client_reports_total{client_id,team}`, `live_events_total`, `llm_up` (Ollama `/api/tags` probed every 30 s), `llm_requests_total{model,result="ok|error|off"}`, `story_events_total{module}` (studio), `http_requests_total{path,code}` (unknown paths are `other`), `build_info{version}`, `silent_threshold_seconds`, `server_time_seconds`.
+- `GET /metrics` on `rescue-server` (:8780 locally), Prometheus text format, written by hand in `Sources/RescueKit/Metrics.swift` (no dependencies). Loopback scrapes need no PIN (even with `RESCUE_GUARD_STRICT=1`); a LAN client needs `X-Rescue-Pin`.
+- Metrics (prefix `rescue_`): `reports_received_total{source,team,parsed_by="llm|rules|browser"}`, `report_parse_seconds` histogram `{parsed_by}`, `reports_rejected_total{reason="pin|size|type|rate"}`, `client_last_report_timestamp_seconds{client_id,team}`, `client_reports_total{client_id,team}`, `live_events_total`, `llm_up` (1 with OpenAI; else Ollama `/api/tags` probed every 30 s), `llm_requests_total{model,result="ok|error|off"}`, `story_events_total{module}` (studio), `http_requests_total{path,code}` (unknown paths are `other`), `build_info{version}`, `silent_threshold_seconds`, `server_time_seconds`.
 - Who is a client: header `X-Rescue-Client` (a random id the page keeps in `localStorage`), team from `X-Rescue-Team`, source from `X-Rescue-Source`. Without the header the id is `ip-` + an 8-hex hash of the IP. **Raw IPs never go into labels.** Label values are cut to `[a-z0-9._:-]`, 40 chars; at most 200 client ids, then `overflow`.
 - `parsed_by="browser"`: `field.html` counts reports it parsed with in-browser rules while the server was down and sends the count to `POST /client-event` once the server is back.
 - Env: `RESCUE_SILENT_SECONDS` (default 600 = a team is "silent" after 10 min), `RESCUE_VERSION`, `RESCUE_LIVE_FILE` (alternative live-events file, used by the demo), `RESCUE_RATE_PER_MIN` (default 10).
@@ -389,7 +381,7 @@ The hall Wi-Fi at Tauron Arena carries thousands of hackers, CTF players among t
 ### Built-in, no Docker: `out/ops.html`
 
 ```sh
-swift run rescue-field serve       # then open http://127.0.0.1:8770/ops.html  (also linked from field.html as "monitoring")
+swift run rescue-server            # then open http://127.0.0.1:8780/ops.html  (also linked from field.html as "monitoring"); deployed: /ops.html
 ```
 
 Polls `/metrics` every 5 s, no CDN: teams in contact vs silent ("ostatni meldunek X min temu", red "CISZA" past the threshold), reports/min sparkline, LLM vs rules share, parse latency p50/p95, rejects by reason, alert banners with the same rules as `alerts.yml`. On a phone (LAN) it asks for the PIN like `field.html`.
@@ -402,7 +394,7 @@ docker compose up -d          # Grafana http://127.0.0.1:3000 (anonymous viewer;
 docker compose down           # after the demo
 ```
 
-- `prom/prometheus:v3.15.0` and `grafana/grafana-oss:12.4.3`, ports bound to `127.0.0.1` only. Prometheus scrapes `host.docker.internal:8770` (field), `:8771` (studio), `:8772` (demo.py) every 5 s.
+- `prom/prometheus:v3.15.0` and `grafana/grafana-oss:12.4.3`, ports bound to `127.0.0.1` only. Prometheus scrapes `host.docker.internal:8780` (rescue-server) and `:8772` (demo.py) every 5 s.
 - Alerts (`alerts.yml`, see Prometheus /alerts): `ClientSilent` (reported in the last 2 h, now quiet longer than `rescue_silent_threshold_seconds`), `FieldServerDown`, `LLMDown` (= parsing fell back to rules), `RejectSpike` (> 5 rejected requests/min = possible attack on the PIN), `ReportBurst` (> 20 reports/min).
 - Dashboard: reports/min by team, last-report age per client (red > 10 min), LLM vs rules share, parse p50/p95, rejects by reason, LLM up timeline, firing alerts, HTTP by path/code.
 - **Offline:** the images are ~110 MB (Prometheus) and ~290 MB (Grafana) compressed. Pull them **before going into the mountains / before the hall Wi-Fi**: `cd rescue/monitoring && docker compose pull`. Without Docker, `out/ops.html` covers the same questions.
@@ -424,11 +416,11 @@ const r = await fetch(API + "/report", { method: "POST",
   body: JSON.stringify({ text, at }), signal: AbortSignal.timeout(20000) });
 ```
 
-Both servers allow these headers in CORS. Over the LAN the PIN header (`X-Rescue-Pin`) is still needed, see [Demo-day network](#demo-day-network).
+The server allows these headers in CORS. Writes still need the key/PIN header (`X-Rescue-Pin`), see [Demo-day network](#demo-day-network).
 
 ### Monitoring demo
 
-`monitoring/demo.py` (stdlib only) starts `rescue-field` on **:8772** (loopback only, never touches a real server on :8770, writes a temp live-events file), then plays a story: three phones `topr-a`, `topr-b`, `dog` send realistic Polish reports, `dog` goes silent, and an attacker tries 40 wrong PINs. `RESCUE_GUARD_STRICT=1` + `--pin` make the laptop's own clients behave like phones on the hotspot, so the attacker hits the real PIN guard.
+`monitoring/demo.py` (stdlib only) starts `rescue-server` on **:8772** (loopback only, never touches a real server on :8780, writes a temp live-events file), then plays a story: three phones `topr-a`, `topr-b`, `dog` send realistic Polish reports, `dog` goes silent, and an attacker tries 40 wrong PINs. `RESCUE_GUARD_STRICT=1` + `--pin` make the laptop's own clients behave like phones on the hotspot, so the attacker hits the real PIN guard.
 
 ```sh
 python3 rescue/monitoring/demo.py --fast      # ~60 s, silent threshold 20 s (pitch video)
@@ -449,4 +441,4 @@ Shot list for the pitch agent:
 - B: close-up of the client table when `dog` turns red ("ostatni meldunek ... temu", "CISZA").
 - C: close-up of the rejects card and the "możliwy atak" banner, then terminal `{401: 40}`.
 - D (if Docker): Grafana "Rescue Locator - Teren" dashboard, then Prometheus `/alerts` with `ClientSilent` + `RejectSpike` firing.
-- E: phone on the hotspot: `field.html` with the "monitoring" link -> `ops.html` asking for the PIN.
+- E: phone with the "Udostępnij" QR: `field.html` with the "monitoring" link -> `ops.html`.

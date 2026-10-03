@@ -26,8 +26,8 @@ The header has a **Scenariusz** select: Zawrat (`../out/run.json`), Morskie Oko 
 
 ### Field server PIN
 
-When `rescue-field` runs on the LAN (`serve --host 0.0.0.0 --pin NNNN`), its endpoints need the PIN:
-- **Input:** the "Nowy meldunek" form shows a **PIN serwera** field only when `field` is not a loopback host (127.0.0.1 / localhost / ::1).
+Writes to rescue-server need the action key (deployed) or the PIN (`--host 0.0.0.0 --pin NNNN` on a LAN):
+- **Input:** the "Nowy meldunek" form shows a **Klucz akcji** field only when `field` is not a loopback host (127.0.0.1 / localhost / ::1).
 - **Storage:** the PIN is kept in `localStorage` (`rescue-pin`, shared with `out/field.html`).
 - **Use:** it's sent as `X-Rescue-Pin` on `POST /report` and on `GET /live-events` when `?live=` points at the field server. A 401 shows a Polish hint.
 - **`?pin=`:** **not supported** (it would land in browser history). The page ignores it and removes it from the address bar.
@@ -100,7 +100,7 @@ For the combined app (`rescue/app/`). It uses the same contract as the 3D view (
 ## Data contracts
 
 - `out/run.json`: `rescue-run/1`, see [`../README.md`](../README.md#contracts). Used fields: `bbox, cellM, rows, cols, ipp, segOf, difficulty?, difficultyClasses?, steps[].{t, label, source, kind, hintId, poaGrid, segments[].{id, name, poa, areaPct, polygon}, weather?, resources?, assignments?}, value`. The page checks schema id and array sizes on load; full validation: `python3 rescue/validate/validate_run.py rescue/out/run.json`.
-- `out/live-events.json`: append-only array written by `swift run rescue-field serve`, shape in [`../README.md`](../README.md) ("Contract: out/live-events.json"). Markers: `clue` at its `lat/lon` or the segment centre, `segmentSearched` at the segment centre (segment outlined in yellow). Missing file = "czekam".
+- `/live-events` (rescue-server; `out/live-events.json` on a laptop): append-only array of field reports, shape in [`../README.md`](../README.md) ("Contract: out/live-events.json"). Markers: `clue` at its `lat/lon` or the segment centre, `segmentSearched` at the segment centre (segment outlined in yellow). Missing file = "czekam".
 - `scenarios/<name>.json` events are matched to steps by `title == label`.
 
 ## Backgrounds (all offline)

@@ -4,14 +4,14 @@ One screen for a rescue team in the field: their assigned segment, the offline m
 and big buttons that send a field report to the incident commander's laptop.
 
 ```sh
-cd rescue && swift run rescue-field serve          # field report server, 127.0.0.1:8770
+cd rescue && swift run rescue-server               # one server, 127.0.0.1:8780 (deployed: https://rescue-locator.vercel.app)
 cd rescue && python3 -m http.server 8772           # then http://127.0.0.1:8772/web/patrol/?team=dog
 ```
 
 - Team picker in the header (`?team=topr-a|topr-b|dog|heli`), remembered on the phone.
 - Assignment from the last step of `rescue/out/run.json` (`steps[].assignments`): segment, POA, approach and sweep time,
   safety flags, hypothermia warning.
-- Buttons build a Polish report and `POST /report {text, at}` to `rescue-field`: "Przeszukane" (good coverage),
+- Buttons build a Polish report and `POST /report {text, at}` to `rescue-server`: "Przeszukane" (good coverage),
   "Częściowo" (poor coverage), "ŚLAD / ZNALEZIONO" (what + note + GPS if available), "Pogoda" (visibility, wind,
   precipitation), "Status zespołu", plus free text. The laptop parses it with the local model (or the rules fallback)
   and the reply shows what was understood (`segmentSearched S4 POD 0.8`).
@@ -20,13 +20,12 @@ cd rescue && python3 -m http.server 8772           # then http://127.0.0.1:8772/
 - Map: offline basemap from `../basemap/`, zero internet requests.
 
 Every request carries the monitoring headers from `rescue/README.md`: `X-Rescue-Client` (random id kept on the phone),
-`X-Rescue-Team`, `X-Rescue-Source: patrol`. On the team network `rescue-field` also wants `X-Rescue-Pin`: on the first
+`X-Rescue-Team`, `X-Rescue-Source: patrol`. Writes need the action key / PIN as `X-Rescue-Pin`: on the first
 401/403 the page asks for the PIN once and keeps it on the phone.
 
-Options: `?api=http://<laptop>:8770` (field server address), `?run=<path to run.json>`.
+Options: `?api=<server origin>` (default: the origin that serves the page), `?run=<path to run.json>`.
 
-On a real phone the field server must be reachable on the team network (today `rescue-field` binds 127.0.0.1);
-exposing it is a decision for the team, hotspot only.
+On a real phone: open the deployed URL through the app's "Udostępnij" QR (carries the key). Offline: `rescue-server --host 0.0.0.0 --pin` on our hotspot only.
 
 ## Embedding (rescue/app role "ratownik")
 

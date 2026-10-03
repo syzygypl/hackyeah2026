@@ -117,14 +117,14 @@ Wartość planera to ETA, bramki bezpieczeństwa (dron przy wietrze ponad 12 m/s
 ## 6. Linki
 
 - **Repozytorium:** https://github.com/syzygypl/hackyeah2026 (kod w `rescue/`, dokumentacja w `docs/rescue-locator/`, walidacja w `rescue/eval/`).
-- **Demo:** **[UZUPEŁNIJ: link do nagrania MP4]**. Aplikacja działa lokalnie i offline. Uruchomienie jednym skryptem:
+- **Demo:** **[UZUPEŁNIJ: link do nagrania MP4]**. Aplikacja działa pod adresem **https://rescue-locator.vercel.app** (telefony dołączają kodem QR z „Udostępnij”), a także lokalnie i offline. Uruchomienie lokalne jednym skryptem:
 
 ```sh
 bash docs/submission/hackathon/rescue-locator/v2/start.sh        # build, out/, serwery, wypisuje URL-e
 bash docs/submission/hackathon/rescue-locator/v2/start.sh stop
 ```
 
-  Skrypt sprawdza wymagania (Swift 6.2, python3; Ollama opcjonalnie, bez niej meldunki parsują reguły). Jest idempotentny. Uruchamia `swift build`, `rescue-demo --fast scenarios/zawrat.json`, potem `rescue-server` (:8780), statyczny serwer (:8000), `rescue-field` (:8770) i `rescue-studio` (:8771). Główny adres to `http://127.0.0.1:8780/app/?role=operator&sc=zawrat`.
+  Skrypt sprawdza wymagania (Swift 6.2, python3; Ollama opcjonalnie, bez niej meldunki parsują reguły). Jest idempotentny. Uruchamia `swift build`, `rescue-demo --fast scenarios/zawrat.json`, potem `rescue-server` (:8780) i statyczny serwer (:8000). Główny adres lokalny to `http://127.0.0.1:8780/app/?role=operator&sc=zawrat`.
 - **Prezentacja PDF (maks. 10 slajdów):** **[UZUPEŁNIJ: wgrać `rescue-locator.pdf`, eksport z `docs/submission/hackathon/rescue-locator/v2/deck.html`]**
 
 ## 7. Co jest zamockowane

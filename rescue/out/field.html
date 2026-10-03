@@ -66,7 +66,7 @@ const EXAMPLES = [
 const API = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8780";
 const SEG = {S1:"Dolina Roztoki (dolna)",S2:"Siklawa / Roztoka górna",S3:"Schronisko i Przedni Staw",S4:"Wielki Staw",S5:"Czarny i Zadni Staw",S6:"Szlak niebieski pod Zawratem",S7:"Żleb pod Zawratem",S8:"Zawrat - Świnica, grań",S9:"Zmarzły Staw / Kozia Dolinka",S10:"Kozi Wierch - Orla Perć",S11:"Granaty / Buczynowa Dolinka",S12:"Szpiglasowa Przełęcz",S13:"Morskie Oko",S14:"Droga do Morskiego Oka",S15:"Hala Gąsienicowa / Murowaniec",S16:"Wołoszyn",S17:"Czarny Staw Gąsienicowy",S18:"Dolina za Mnichem",S19:"Las nad Wodogrzmotami"};
 const $ = id => document.getElementById(id);
-// PIN: needed only when the page talks to the server over the LAN (rescue-field serve --host ... --pin)
+// Key / PIN for writes: on the deployed server (from the app's Udostepnij link) and over a LAN (rescue-server --host ... --pin)
 const LOOPBACK = !location.protocol.startsWith("http") || ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
 let PIN = "";
 try { PIN = localStorage.getItem("rescue-pin") || ""; } catch (e) {}

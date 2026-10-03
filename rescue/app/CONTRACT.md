@@ -3,7 +3,8 @@
 `rescue/app/index.html` is one shell: Story Studio editing, the 2D map screen and the 3D view in iframes, shared side panels. Open it from the Studio server:
 
 ```sh
-cd rescue && swift run rescue-studio          # then http://127.0.0.1:8771/app/   (?view=2d|3d|split, ?sc=<scenario>)
+https://rescue-locator.vercel.app/app/                # deployed; locally: cd rescue && swift run rescue-server, http://127.0.0.1:8780/app/
+# (?view=2d|3d|split, ?sc=<scenario>, ?role=operator|ratownik, ?key=<action key> from "Udostępnij")
 ```
 
 The shell owns the state (story/run, current step, selected segment). Embedded views draw it and report **user** actions back.
@@ -16,8 +17,8 @@ Shared look: `rescue/app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default
 |---|---|
 | Akcja | 2D analysis screen (`web/`, embed) / 3D (`app/3d/`, embed) / Podział; shared panels: top segments, team plan + "dlaczego", Ocena sytuacji, progress, alerts, timeline |
 | Edycja | Story Studio drag-and-drop on the app's own MapLibre map (switches to the live Studio story); "Mapa + 3D" split |
-| Teren | `web/patrol/` (patrol phone, `?api=http://<host>:8770&run=<run url>`) and `http://<host>:8770/field.html` (field report entry) |
-| Monitoring | `http://<host>:8770/ops.html` (live `/metrics` of rescue-field) |
+| Teren | `web/patrol/` (patrol phone, `?run=<run url>`, same origin) and `/out/field.html` (field report entry) |
+| Monitoring | `/out/ops.html` (live `/metrics` of rescue-server) |
 | Walidacja | read-only charts from `rescue/eval/` (section "eval" below) |
 
 ## Transport
@@ -65,10 +66,12 @@ Before a view says `ready` (older build), the shell falls back to reloading the 
 ## Backends the shell talks to
 
 1. **rescue-server** (`GET /api/scenarios` -> `{ scenarios: [{ name, incident, run, assessment, realTerrain, ... }] }`, `GET /api/run/<sc>`, `GET /api/assessment/<sc>`): scenarios in the picker (read-only), "Ocena sytuacji" panel. Blind-test scenarios are never listed.
-2. **rescue-studio** (`/modules`, `/story*`): "Studio (edycja na żywo)", the only editable source. `POST /story/event`, `POST /story/edit {id, op: delete|up|down|update, input}`, `POST /story/edit {op: "undo"}`, `POST /story/new`, `POST /story/save`, `GET /story/scenario`.
-3. **static**: `out/run.json` (Zawrat demo, read-only).
+2. **Story Studio on rescue-server** (`/modules`, `/story*`): "Studio (edycja na żywo)", the only editable source. `POST /story/event`, `POST /story/edit {id, op: delete|up|down|update, input}`, `POST /story/edit {op: "undo"}`, `POST /story/new`, `POST /story/save`, `GET /story/scenario`.
+3. **static**: `out/blind-01-replay.run.json` (blind-test replay, read-only). Every other run comes from `/api/run/<sc>`.
 
-Alerts poll `/metrics` of the serving host and `http://<host>:8770/metrics` (rescue-field) every 10 s: silent teams, rejected requests since the page opened, LLM down, planner safety flags.
+One origin for everything: the app, 2D, 3D, patrol, field and ops pages all talk to the server that serves them (deployed: https://rescue-locator.vercel.app). Writes need the action key (`X-Rescue-Pin`); the app sends it from localStorage `rescue-pin`, set by `?key=` in an "Udostępnij" link.
+
+Alerts poll `/metrics` of the serving host every 10 s: silent teams, rejected requests since the page opened, LLM down, planner safety flags.
 
 ## eval: files the Walidacja mode reads (served at `/eval/...`, json and csv only)
 
@@ -117,7 +120,7 @@ Shown: headline numbers, grouped top-1/3/5 bars, area-to-find histogram (engine 
 
 ### 3. Fallback: simulator runs (AI Michała, `rescue/eval/sim/README.md`)
 
-When `results.json` is missing, the shell lists `rescue/eval/sim/out/<run>/` folders that have `manifest.csv` (`GET /eval/sim-runs` -> `[{ id, manifest, run }]`, served by rescue-studio; rescue-server should offer the same route) and shows counts by category / behaviour / stop reason, share with misleading clues and with a cell fix, and the case table from `manifest.csv`. Truth files are not read.
+When `results.json` is missing, the shell lists `rescue/eval/sim/out/<run>/` folders that have `manifest.csv` (`GET /eval/sim-runs` -> `[{ id, manifest, run }]`, served by rescue-server) and shows counts by category / behaviour / stop reason, share with misleading clues and with a cell fix, and the case table from `manifest.csv`. Truth files are not read.
 
 ## Patrol view (web/patrol, AI Michała) and operator assignments
 
@@ -125,7 +128,7 @@ When `results.json` is missing, the shell lists `rescue/eval/sim/out/<run>/` fol
 - The assignment is persisted on the server so phones outside the shell get it:
   - `POST /story/assign { resourceId, segmentId, at?, scenario?, segmentName?, note? }` -> `{ assignments: [{ resourceId, segmentId, segmentName, at, by, t, scenario?, note? }] }`; `segmentId: null` clears. `GET /story/assign` returns the same list (the app).
   - `GET /api/assignments` -> `{ "<team>": { segmentId, by, at, why? } }` (patrol polls every 15 s); `POST /api/assignments { team, segmentId, at?, why? }` writes the same store.
-  - Both on rescue-studio and rescue-server (RescueStudioKit `Studio.assign*`), PIN-guarded on LAN. In memory: a server restart clears them.
+  - On rescue-server (RescueStudioKit `Studio.assign*`), writes need the key. Deployed: stored in Neon, survive restarts; laptop: in memory, a restart clears them.
 
 ## Roles (`?role=ratownik|operator`, remembered in localStorage, picker on first open)
 

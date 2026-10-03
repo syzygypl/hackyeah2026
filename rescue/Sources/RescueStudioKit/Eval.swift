@@ -1,6 +1,6 @@
 import Foundation
 
-/// Read-only rescue/eval/ outputs for the app's Walidacja mode, served by rescue-studio and rescue-server alike.
+/// Read-only rescue/eval/ outputs for the app's Walidacja mode, served by rescue-server.
 public enum EvalFiles {
     /// `/eval/<path>.json|.csv` -> (body, content type); nil when not an eval file or missing. No "..".
     public static func file(_ rawPath: String) -> (Data, String)? {

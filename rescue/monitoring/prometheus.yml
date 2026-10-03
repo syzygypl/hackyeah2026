@@ -9,14 +9,10 @@ scrape_configs:
   # Docker Desktop forwards host.docker.internal to the host's loopback, so /metrics needs no PIN.
   # If a server runs with --host 0.0.0.0 and the scrape arrives from a LAN address, add the PIN:
   #   http_headers: { X-Rescue-Pin: { values: ["4821"] } }
-  - job_name: rescue-field
+  - job_name: rescue-server
     static_configs:
-      - targets: ["host.docker.internal:8770"]
-        labels: { service: field }
-  - job_name: rescue-studio
-    static_configs:
-      - targets: ["host.docker.internal:8771"]
-        labels: { service: studio }
+      - targets: ["host.docker.internal:8780"]
+        labels: { service: server }
   - job_name: rescue-demo        # python3 rescue/monitoring/demo.py
     static_configs:
       - targets: ["host.docker.internal:8772"]

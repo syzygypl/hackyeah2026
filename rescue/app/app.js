@@ -1,6 +1,6 @@
 // Rescue Locator - one app: Story Studio editing on the 2D map + the 3D view (iframe, postMessage contract in CONTRACT.md)
-// + shared panels. Backends: unified rescue-server (/api/*) when it answers, else rescue-studio (/story*, /modules),
-// else static run files from out/. Offline: MapLibre + basemap from ../web/, no CDN.
+// + shared panels. Backend: rescue-server on the same origin (/api/*, /story*, /modules; deployed on Vercel or
+// `swift run rescue-server` on a laptop). Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/basemap/basemap.js";
 import { paintGrid, legendHTML } from "./scale.js";
