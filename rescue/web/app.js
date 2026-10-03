@@ -423,11 +423,12 @@
     for (const g of M.segList) {
       const r = rank.get(g.id), sr = searched[g.id], st = S.lastStats.find((x) => x.id === g.id);
       const top = r && r <= 3;
-      const nm = top || S.fullNames || g.id === S.selected ? `${esc(g.name)} - ${pctAuto(st.poa)}` : `${esc(g.id)} · ${pctAuto(st.poa)}`;
+      // no POA % on the map (as the app panels, 7a56e92): a juror reads it as a chance - rank for the top 3, the name/id for the rest
+      const nm = top || S.fullNames || g.id === S.selected ? esc(g.name) : esc(g.id);
       const asg = (M.R.steps[step].assignments || []).filter((a) => a.segmentId === g.id).map((a) => { const r = (M.R.steps[step].resources || []).find((x) => x.id === a.resourceId); return RES_SHORT[r && r.type] || a.resourceId; });
       const extra = (sr ? `<span class="srch">przeszukany${sr.pod != null ? ', POD ' + pct(sr.pod) : ''}</span>` : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');
       chips.push({ key: 'seg:' + g.id, at: g.center, cls: 'chip seg' + (top ? ' top top' + r : '') + (sr ? ' searched' : '') + (g.id === S.selected ? ' sel' : ''),
-        html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}: POA ${pct(st.poa, 1)}, obszar ${nf(g.areaPct, 1)}%`, seg: g.id });
+        html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}${r ? `: #${r} z ${M.segList.length} w rankingu` : ''}, obszar ${nf(g.areaPct, 1)}%`, seg: g.id });
     }
     return { fc: FC(f), chips, weather };
   }
