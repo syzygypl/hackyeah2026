@@ -176,6 +176,11 @@ def main():
         kept = c.until(f"(()=>{{try{{return {MAP}.__rescue.S.M.R.steps.at(-1).assignments.some(a=>a.segmentId==={json.dumps(seg)}&&a.reason!=='wysyłam...')}}catch(e){{return false}}}})()", 10)
         check("decision_on_map_without_reload", bool(kept) and c.js(MAP_READY) == t_first, f"confirmed={bool(kept)}, same frame={c.js(MAP_READY) == t_first}")
         t_after = c.js(MAP_READY)
+        # B: the map chip names the team ("Patrol GOPR B" -> "Patrol B"), not just the kind
+        tname = c.js(f"(document.querySelector('#pTeams li[data-team={json.dumps(team)}] .nm')||{{}}).innerText||''")
+        letter = (tname or "").strip().split("\n")[0].split()[-1:] or [""]
+        chip = c.until(f"(()=>{{try{{return [...{MAP}.document.querySelectorAll('.chip')].map(x=>x.innerText).find(t=>/ {letter[0]}\\b/.test(t))||''}}catch(e){{return ''}}}})()", 5) if len(letter[0]) <= 2 else "n/a"
+        check("map_chip_names_team", bool(chip), f"{tname!r} -> {chip!r}")
         check("decision_sector_marked_in_list", bool(c.until(f"{LIST_SEL}.includes({json.dumps(seg)})", 5)), f"{seg} list={c.js(LIST_SEL)}")
         check("decision_sector_selected_on_map_after_reload", c.until(f"{MAP_SEL}==={json.dumps(seg)}", 10) is True, f"map={c.js(MAP_SEL)}")
 

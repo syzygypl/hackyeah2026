@@ -437,7 +437,7 @@
       const top = r && r <= 3;
       // no POA % on the map (as the app panels, 7a56e92): a juror reads it as a chance - rank for the top 3, the name/id for the rest
       const nm = top || S.fullNames || g.id === S.selected ? esc(g.name) : esc(g.id);
-      const asg = (M.R.steps[step].assignments || []).filter((a) => a.segmentId === g.id).map((a) => { const r = (M.R.steps[step].resources || []).find((x) => x.id === a.resourceId); return RES_SHORT[r && r.type] || a.resourceId; });
+      const asg = (M.R.steps[step].assignments || []).filter((a) => a.segmentId === g.id).map((a) => { const r = (M.R.steps[step].resources || []).find((x) => x.id === a.resourceId); return resLabel(r) || a.resourceId; });
       const extra = (sr ? `<span class="srch">przeszukany${sr.pod != null ? ', POD ' + pct(sr.pod) : ''}</span>` : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');
       chips.push({ key: 'seg:' + g.id, at: g.center, cls: 'chip seg' + (top ? ' top top' + r : '') + (sr ? ' searched' : '') + (g.id === S.selected ? ' sel' : ''),
         html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}${r ? `: #${r} z ${M.segList.length} w rankingu` : ''}, obszar ${nf(g.areaPct, 1)}%`, seg: g.id });
@@ -962,6 +962,8 @@
   }
 
   const RES_SHORT = { ground: 'Patrol', dog: 'Pies', drone: 'Dron', heli: 'Śmigłowiec', boat: 'Łódź', diver: 'Nurek' };
+  // map chip: the kind plus the team's letter / number when its name ends with one ("Patrol GOPR B" -> "Patrol B"), so two patrols differ
+  const resLabel = (r) => { const s = RES_SHORT[r && r.type]; if (!s) return null; const tail = String(r.name || '').replace(/\s*\(.*\)\s*$/, '').trim().split(/\s+/).pop(); return /^[A-Z0-9]{1,2}$/.test(tail) ? `${s} ${tail}` : s; };
   const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')} min` : `${Math.round(m)} min`);
   function renderPlan() {
     const st = S.M.R.steps[S.step], A = st.assignments, Rs = st.resources;
