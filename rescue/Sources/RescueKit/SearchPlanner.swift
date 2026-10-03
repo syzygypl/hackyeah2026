@@ -194,8 +194,13 @@ public enum SearchPlanner {
 
     // MARK: plan
 
-    public static func plan(grid: ProbabilityGrid, poa: [Double], conditions c: LocationHint.Conditions, minute: Int) -> Plan {
+    public static func plan(grid: ProbabilityGrid, poa: [Double], conditions c: LocationHint.Conditions, minute: Int, closed: Bool = false) -> Plan {
         let s = grid.scenario
+        if closed {
+            let surv = survival(s, minute: minute, c)
+            return Plan(conditions: c, resources: resources(s).map { ResourceStatus(id: $0.id, name: $0.name, type: $0.type, available: false, reason: "akcja zamknięta: znaleziono") },
+                        assignments: [], survival: Survival(hoursOut: surv.hoursOut, level: "znaleziono", text: "Znaleziono po \(String(format: "%.1f", surv.hoursOut)) h od ostatniego kontaktu - ewakuacja."))
+        }
         let ctx = Ctx(grid)
         let res = resources(s)
         let surv = survival(s, minute: minute, c)

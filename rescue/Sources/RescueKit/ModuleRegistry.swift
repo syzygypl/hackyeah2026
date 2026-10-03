@@ -40,6 +40,6 @@ let fieldReportSchema = ModuleSchema(name: "FieldReport", label: "Meldunek z ter
 public func allModuleSchemas() -> [ModuleSchema] {
     [KoesterRingsProvider.schema, TripPlanProvider.schema, TrailheadCarProvider.schema, Cell112FixProvider.schema,
      WeatherProvider.schema, WeatherConditionsProvider.schema, SegmentSearchedProvider.schema,
-     DronePassEmptyProvider.schema, ClueProvider.schema, RatunekPingProvider.schema, fieldReportSchema,
+     DronePassEmptyProvider.schema, ClueProvider.schema, RatunekPingProvider.schema, FoundProvider.schema, fieldReportSchema,
      TerrainProvider.schema, TerrainDifficultyProvider.schema]
 }

@@ -1125,9 +1125,8 @@
    "precip": "rain"
   },
   {
-   "provider": "Clue",
+   "provider": "Found",
    "at": "20:03",
-   "found": true,
    "point": [
     49.2158,
     20.0188

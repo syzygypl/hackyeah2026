@@ -16,6 +16,8 @@ public struct LocationHint: Sendable {
         case sector(center: Coord, radiusM: Double)
         /// Precise point fix (Ratunek / AML) with accuracy radius.
         case point(at: Coord, accuracyM: Double)
+        /// The person is found here: the case is closed, probability collapses onto this spot.
+        case found(at: Coord, accuracyM: Double)
         /// Negative evidence: segments searched, nothing found. POA *= (1 - POD).
         case searched(segments: [String], pod: Double)
         /// Something rules out an area (e.g. car still at trailhead: he did not walk out).
@@ -57,6 +59,7 @@ public struct LocationHint: Sendable {
         case .route: "route"
         case .sector: "sector"
         case .point: "point"
+        case .found: "found"
         case .searched: "searched"
         case .containment: "containment"
         case .weather: "weather"

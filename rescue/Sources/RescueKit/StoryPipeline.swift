@@ -5,12 +5,17 @@ import Foundation
 public enum StoryPipeline {
     /// Index of the decisive hint: a found Clue (search found the person) or a Ratunek ping, whichever comes first.
     public static func decisiveIndex(_ hints: [LocationHint]) -> Int? {
-        hints.firstIndex { ($0.source == "Clue" && $0.kind == "point") || $0.source == "RatunekPing" }
+        hints.firstIndex { $0.kind == "found" || $0.source == "RatunekPing" }
     }
 
     /// How the case was closed and whether the map/plan had it before: segment, since when #1, which team was sent.
     public static func findInfo(grid: ProbabilityGrid, hints: [LocationHint], plans: [SearchPlanner.Plan], poas: [[Double]]) -> [String: Any] {
-        guard let d = decisiveIndex(hints), d > 0, case let .point(at, _) = hints[d].evidence else { return [:] }
+        guard let d = decisiveIndex(hints), d > 0 else { return [:] }
+        let at: Coord
+        switch hints[d].evidence {
+        case let .point(c, _), let .found(c, _): at = c
+        default: return [:]
+        }
         let seg = grid.scenario.segments[grid.segmentOf[grid.cellIndex(at)]]
         var since: Int? = nil
         for k in stride(from: d - 1, through: 0, by: -1) {
@@ -53,12 +58,14 @@ public enum StoryPipeline {
         var plans: [SearchPlanner.Plan] = []
         var poas: [[Double]] = []
         var cond = LocationHint.Conditions()
+        var closed = false
         for h in arrived {
             grid.add(h)
             if case let .conditions(c) = h.evidence { cond = c }
+            if h.kind == "found" { closed = true }
             let poa = grid.poa()
             poas.append(poa)
-            plans.append(SearchPlanner.plan(grid: grid, poa: poa, conditions: cond, minute: h.minute))
+            plans.append(SearchPlanner.plan(grid: grid, poa: poa, conditions: cond, minute: h.minute, closed: closed))
         }
         if arrived.isEmpty {
             return ["schema": "rescue-run/1", "error": "no events"]
@@ -102,7 +109,7 @@ public enum StoryPipeline {
             var d: [String: Any] = ["id": h.id, "source": h.source, "clock": h.clock, "title": h.title, "kind": h.kind]
             switch h.evidence {
             case let .sector(c, r): d["center"] = [c.lat, c.lon]; d["radiusM"] = r
-            case let .point(c, a): d["center"] = [c.lat, c.lon]; d["radiusM"] = a
+            case let .point(c, a), let .found(c, a): d["center"] = [c.lat, c.lon]; d["radiusM"] = a
             case let .rings(c, q): d["center"] = [c.lat, c.lon]; d["quantilesKm"] = q
             case let .route(p, _): d["points"] = p.map { [$0.lat, $0.lon] }
             case let .containment(p, _, _): d["points"] = p.map { [$0.lat, $0.lon] }

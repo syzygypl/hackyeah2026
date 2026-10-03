@@ -51,13 +51,15 @@ struct Snap { let segs: [ProbabilityGrid.SegmentScore]; let poa: [Double] }
 var snaps: [Snap] = []
 var plans: [SearchPlanner.Plan] = []
 var conditions = LocationHint.Conditions()
+var closedCase = false
 for h in arrived {
     grid.add(h)
     if case let .conditions(c) = h.evidence { conditions = c }
+    if h.kind == "found" { closedCase = true }
     let poa = grid.poa()
     let segs = grid.segments(poa)
     snaps.append(Snap(segs: segs, poa: poa))
-    let plan = SearchPlanner.plan(grid: grid, poa: poa, conditions: conditions, minute: h.minute)
+    let plan = SearchPlanner.plan(grid: grid, poa: poa, conditions: conditions, minute: h.minute, closed: closedCase)
     plans.append(plan)
     print("[\(h.clock)] \(h.source.padding(toLength: 17, withPad: " ", startingAt: 0)) \(h.title)")
     print("        top3: \(top3Line(segs))")
@@ -84,7 +86,7 @@ func areaToFind(_ poa: [Double]) -> Double {
 let ringsPoa = grid.poa(upTo: ringsOnlyIdx + 1, disabled: Set(arrived.filter { $0.source != "KoesterRings" }.map(\.id)))
 let areaFused = areaToFind(snaps[beforePing].poa), areaRings = areaToFind(ringsPoa)
 
-print("\n== VALUE (state at \(arrived[beforePing].clock), before \(StoryPipeline.decisiveIndex(arrived).map { arrived[$0].source == "Clue" ? "the find" : "the Ratunek ping" } ?? "the end")) ==")
+print("\n== VALUE (state at \(arrived[beforePing].clock), before \(StoryPipeline.decisiveIndex(arrived).map { arrived[$0].kind == "found" ? "the find" : "the Ratunek ping" } ?? "the end")) ==")
 print("Top 3 segments hold \(pct(top3poa)) of probability in \(pct(top3area)) of the area (36 km2 box).")
 print("  1. \(fused[0].id) \(fused[0].name): \(pct(fused[0].poa)) in \(pct(fused[0].areaFrac)) area")
 print("  2. \(fused[1].id) \(fused[1].name): \(pct(fused[1].poa)) in \(pct(fused[1].areaFrac)) area")

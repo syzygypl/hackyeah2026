@@ -137,7 +137,8 @@ func parseNarrativeRules(_ text: String) -> [NarrItem] {
         if let km = firstMatch("(\\d+(?:[.,]\\d+)?)\\s*km", s) { it.radiusM = (num(km[1]) ?? 1.5) * 1000 }
         else if let m = firstMatch("(\\d+)\\s*m\\b(?!/)", s) { it.radiusM = num(m[1]) }
         if let p = firstMatch("pod\\s*(\\d+)\\s*%", n) ?? firstMatch("(\\d+)\\s*%", n) { it.pod = (num(p[1]) ?? 60) / 100 }
-        if has(["112", "bts", "logowal", "logowani", "sektor", "operator"]) { it.type = "cell112" }
+        if has(["znalezion", "odnalezion", "znalezli", "znalezlismy"]) && !has(["nie znal", "nic nie"]) { it.type = "found" }
+        else if has(["112", "bts", "logowal", "logowani", "sektor", "operator"]) { it.type = "cell112" }
         else if has(["ratunek", "gps", "ping", "aplikacj"]) { it.type = "ratunek" }
         else if has(["dron"]) && has(["nic", "pust", "brak", "bez wynik", "nie znal"]) { it.type = "drone" }
         else if has(["przeszuk", "sprawdz", "patrol", "zespol", "druzyn"]) && has(["nic", "pust", "brak", "bez wynik", "nie znal"]) { it.type = "searched" }
@@ -173,12 +174,13 @@ func parseNarrativeLLM(_ text: String, segs: [[String]]) async -> ([NarrItem], S
     Zamieniasz polską relację o zaginięciu w górach na listę zdarzeń JSON. Nie wymyślaj niczego, czego nie ma w tekście.
     Typy: lastSeen (ostatnio widziany / wpis w książce), tripPlan (planowana trasa: lista miejsc po kolei), car (auto na parkingu),
     cell112 (lokalizacja z sieci / 112 / BTS), ratunek (pozycja z aplikacji Ratunek / GPS), searched (zespół przeszukał segment, nic),
-    drone (przelot drona, nic), weather (mgła, wiatr, temperatura, zmrok, lód, opad), clue (ślad: przedmiot, świadek).
+    drone (przelot drona, nic), weather (mgła, wiatr, temperatura, zmrok, lód, opad), clue (ślad: przedmiot, świadek),
+    found (osoba ODNALEZIONA - tylko gdy tekst mówi wprost, że ją znaleziono).
     places: nazwy miejsc DOKŁADNIE jak w tekście. at: godzina HH:MM jeśli podana. radiusM: promień/dokładność w metrach jeśli podany.
     segments: identyfikatory segmentów z listy: \(segList). pod: 0-1 jeśli podano procent.
     """
     let item: [String: Any] = ["type": "object", "properties": [
-        "type": ["type": "string", "enum": ["lastSeen", "tripPlan", "car", "cell112", "ratunek", "searched", "drone", "weather", "clue"]],
+        "type": ["type": "string", "enum": ["lastSeen", "tripPlan", "car", "cell112", "ratunek", "searched", "drone", "weather", "clue", "found"]],
         "at": ["type": "string"], "places": ["type": "array", "items": ["type": "string"]],
         "segments": ["type": "array", "items": ["type": "string"]], "radiusM": ["type": "number"], "pod": ["type": "number"],
         "visibilityM": ["type": "number"], "windMs": ["type": "number"], "tempC": ["type": "number"],

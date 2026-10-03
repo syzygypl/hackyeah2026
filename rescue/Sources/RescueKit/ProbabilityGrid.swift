@@ -130,6 +130,13 @@ public final class ProbabilityGrid {
                 let d = Geo.meters(p, at)
                 return 0.002 + exp(-d * d / (2 * s * s))
             }
+        case let .found(at, acc):
+            // closes the case: everything else ~0 (floor only keeps the product well-defined)
+            let s = max(acc, scenario.cellM * 0.5)
+            return centers.map { p in
+                let d = Geo.meters(p, at)
+                return 1e-9 + exp(-d * d / (2 * s * s))
+            }
         case let .searched(ids, pod):
             let idx = Set(ids.compactMap { id in scenario.segments.firstIndex { $0.id == id } })
             return (0..<n).map { idx.contains(segmentOf[$0]) ? 1 - pod : 1 }

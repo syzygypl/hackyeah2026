@@ -159,6 +159,10 @@ actor Studio {
             guard let p = ll else { return ([], nil, "Cell112Fix: brak pozycji") }
             e["point"] = p; if e["radiusM"] == nil { e["radiusM"] = 1500 }
             title("CPR 112: sektor BTS, promień \(Int(num(e["radiusM"]) ?? 1500)) m")
+        case "Found":
+            guard let p = ll else { return ([], nil, "Found: brak pozycji") }
+            e["point"] = p; if e["radiusM"] == nil { e["radiusM"] = 30 }
+            title("ZNALEZIONO")
         case "RatunekPing":
             guard let p = ll else { return ([], nil, "RatunekPing: brak pozycji") }
             e["point"] = p; if e["radiusM"] == nil { e["radiusM"] = 25 }
@@ -323,6 +327,10 @@ actor Studio {
                 if let v = n.ice { inp["ice"] = v }
                 if let v = n.precip { inp["precip"] = v }
                 if let v = n.visibilityM, v < 300 { added.append(await add(["provider": "Weather", "at": at, "factor": 1.2])) }
+            case "found":
+                guard let p else { continue }
+                inp["provider"] = "Found"; inp["lat"] = p[0]; inp["lon"] = p[1]; inp["radiusM"] = n.radiusM ?? 50
+                inp["title"] = "ZNALEZIONO" + (ps.first.map { ": \($0.name)" } ?? "")
             case "clue":
                 guard let p else { continue }
                 inp["provider"] = "Clue"; inp["lat"] = p[0]; inp["lon"] = p[1]; inp["radiusM"] = n.radiusM ?? 400

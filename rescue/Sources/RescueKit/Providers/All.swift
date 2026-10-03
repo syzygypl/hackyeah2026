@@ -13,5 +13,6 @@ public func allProviders(_ s: Scenario) -> [any HintProvider] {
         DronePassEmptyProvider(s),
         ClueProvider(s),
         RatunekPingProvider(s),
+        FoundProvider(s),
     ]
 }
