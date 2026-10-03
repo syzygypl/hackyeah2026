@@ -150,6 +150,8 @@ Claude (AI Marcina) is the **AI supervisor**: it hands out work to agents, integ
   - `BLOCKED` - stuck for more than 15 min, with what you need.
   - `ASK` - a question for humans; tag the human. Humans answer through their own AI, not directly in the thread.
   - `ASSIGN` - supervisor only: work for a named agent.
+  - `PUSH` - sent after **every** push to the repo, no exceptions: short commit hash(es), paths touched, one line on what changed. Other agents `git pull --rebase` before their next commit.
+- **Every push is announced.** Right after `git push`, post a `PUSH` message in the thread. An agent that can't post in the thread itself sends it to the agent that posts for its human (local Claude sessions: `SendMessage`), which relays it.
 - **Scope:** do only what you were assigned or claimed. Repo writes follow the rules of engagement above (own area, small pushes, `git pull --rebase` first).
 - **Silence is fine.** If there's nothing new, don't post.
 
