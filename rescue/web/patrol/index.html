@@ -79,7 +79,9 @@
   #ended b { font-size: 22px; }
   #ended button { background: var(--rl-card); color: var(--rl-ink); min-height: 52px; }
   body.embed header h1, body.embed header select { display: none; }
-  body.embed header { justify-content: flex-end; padding: 6px 12px; }
+  /* inside the app (role Ratownik) the shell already has the title and team picker: float the two small controls over the map */
+  body.embed header { position: absolute; top: 8px; right: 54px; z-index: 6; background: none; border: 0; padding: 0; gap: 6px; }
+  body.embed { grid-template-rows: minmax(0, 1fr) auto; }
   @media (min-width: 700px) { #sheet { max-width: 640px; width: 100%; margin: -18px auto 0; } }
 </style>
 </head>
@@ -173,7 +175,12 @@
       const s = segById[o.segmentId];
       return { segmentId: s.id, segmentName: s.name, poa: s.poa, reason: `Przydział od operatora${o.by ? " (" + o.by + ")" : ""}${o.at ? ", " + atClock(o.at) : ""}`, safety: [], fromOperator: true };
     }
-    return planned();
+    const pl = planned();
+    if (pl) return pl;
+    // already busy on a sector ("przeszukuje S3 do 23:47" / "w drodze do S9"): that is its task, not "wait"
+    const r = teams.find((t) => t.id === team), m = (r && r.reason || "").match(/(?:przeszukuje|w drodze do)\s+([A-Z]+\d+)/);
+    if (m && segById[m[1]]) { const s = segById[m[1]]; return { segmentId: s.id, segmentName: s.name, poa: s.poa, reason: r.reason, safety: [] }; }
+    return null;
   };
   function setOverride(t, segmentId, by, at) {
     if (!segById[segmentId]) return false;
