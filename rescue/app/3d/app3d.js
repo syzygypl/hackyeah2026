@@ -1298,5 +1298,16 @@ renderer.shadowMap.needsUpdate = true;
 frame();
 pollLive();
 document.body.dataset.state = 'ready';
-if (FLAT) { const n = document.createElement('div'); n.className = 'toast'; n.textContent = 'Brak modelu terenu dla tego scenariusza: teren pokazany płasko. Mapa prawdopodobieństwa, sygnały i zespoły bez zmian.'; $('feed').prepend(n); }
+// no DEM: a clear panel at the top of the free area says why the ground is flat and what still holds; it stays until closed
+if (FLAT) {
+  const n = document.createElement('div'); n.id = 'flatNote'; n.className = 'floating'; n.setAttribute('role', 'status');
+  Object.assign(n.style, { top: 'calc(var(--inset-t, 0px) + 16px)', left: 'calc((100vw + var(--inset-l, 0px) - var(--inset-r, 0px)) / 2)', transform: 'translateX(-50%)',
+    width: 'min(440px, calc(100vw - 32px))', padding: '14px 16px', zIndex: 6, font: '13px/1.45 var(--rl-font, system-ui)' });
+  n.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:4px">Brak modelu terenu 3D dla tego scenariusza</div>
+    <div>Dla obszaru <b>${esc(SCENS[SC]?.name || SC)}</b> nie ma danych wysokości terenu, więc widok 3D pokazuje go <b>płasko</b>, bez gór i dolin.</div>
+    <div style="margin-top:6px">Mapa prawdopodobieństwa, sygnały i zespoły są aktualne. Ukształtowanie terenu zobaczysz w widoku <b>2D</b>.</div>
+    <button class="btn sm" style="margin-top:10px">Rozumiem</button>`;
+  n.querySelector('button').onclick = () => n.remove();
+  document.body.appendChild(n);
+}
 toParent({ type: 'ready', scenario: SC, steps: R.steps.length, step: STEP });
