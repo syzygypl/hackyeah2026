@@ -37,19 +37,9 @@ Priority = what the demo and pitch need.
 4. **"Zmiana lidera" / "Znaleziony w #rank"** lines in the step card.
 5. **Progress panel** (searched area, cumulative POA x POD, lead POA over time) - 3D `renderProgress()`; or the shell shows it once for both.
 
-## Layout (Andrzej, 16:00: "both features and layout")
+## Layout
 
-Standalone 3D takes the 2D screen 1:1 (measured on 2D at 1600x950, `131db52`); only the map is replaced by the 3D scene. 3D session implements, AI Marcina adds the two 2D items marked (2D).
-
-| Area | Spec (as 2D) |
-|---|---|
-| Theme | `app/tokens.css` dark by default in both views, `?theme=light` for print; docked panels with 1px borders, no floating cards; 2D font stack, 15px |
-| Grid | header 55px; left column 300px; right column 360px (270/330 under 1360px); scene/map in the middle; timeline bar 73px |
-| Header | "Rescue Locator" + tag "Gdzie szukać najpierw"; "Scenariusz" select; incident · date; "Dane fikcyjne"; mode switch [2D \| 3D] carrying `?sc=&step=` (2D and 3D, same spot); right: "Czas scenariusza" + clock |
-| Left column | "Wskazówki (moduły)": intro; "Zgłoszenia z terenu" box with status, list, "Nowy meldunek z terenu" form + PIN; one evidence card per hint (icon, time · provider, title, "uwzględnij", Przed / Po, plus "wpływ"); "Co jest liczone gdzie" |
-| Scene/map overlays | top-left step card (Krok n/N · t · kind, Nowa wskazówka, Zmiana pp, Prowadzi, weather, hipotermia); top-right control box (nazwy, trudność, Cały obszar; 3D adds Las / Pogoda / Lider / Obrót / Kino / Test na ślepo); bottom-left legend "POA komórki 100 x 100 m" with the shared scale; segment chips "S9 · 6,4%", "#1 name - 21%", "przeszukany, POD x%" |
-| Right column | Wartość; Przebieg akcji (2D: same spot); Przydział zespołów; Ranking segmentów table (#, Segment, POA, Obszar, Gęstość) for all segments |
-| Timeline bar | "Odtwórz/Pauza" text button, ‹ ›, slider, icon ticks with times, n/N; play 1800 ms |
+Layout parity lives in the shell `rescue/app/` (AI Mateusza, `1fd411d`): one header with the [2D | 2D analiza | 3D | Podział] switch, shared side panels and timeline, the views embedded with `?embed=1` on the shared tokens and heat scale. The standalone pages `/web/` and `/web/3d/` keep their own layouts (Andrzej, 16:00: the standalone 3D rebuild into the 2D layout was dropped in favour of the shell).
 
 ## Stays mode-specific (not parity gaps)
 
@@ -64,7 +54,7 @@ Standalone 3D takes the 2D screen 1:1 (measured on 2D at 1600x950, `131db52`); o
 | 3D gaps 1-5, 7-9 | done, `186c99f` (value block, full plan, hypothermia chip, "Zmiana" pp, "Trudność" layer + legend, prev/next + n/N, ranking area % + task line, "Meldunki z terenu" list) |
 | 3D gap 6 (evidence toggle + recompute) | requested by Andrzej 16:00, 3D session |
 | S1/S2 in 3D | done, `bd058fd` (scale.js colours and legend; tokens.css in `?embed=1`) |
-| Layout parity (section above) | requested 16:00: 3D session; 2D header switch + progress spot asked of AI Marcina |
+| Layout parity | in the shell `rescue/app/` (`1fd411d`); standalone 3D rebuild dropped |
 | S3, S5, S6 on 3D | done, `186c99f` (findSeg ?? truthSeg, pl-PL + "deszcz", "Widok 2D" link with ?sc=&step=) |
 | 2D lacks 1-5 + S3, S5, S6 on 2D | claimed by AI Marcina 15:39, one session, in list order |
 | S1 tokens | decided by AI Mateusza 15:41 (Teams 1791034899250): dark theme on the 2D palette, accent #5ce1e6, red #b8322a for alarms/finds, one latin-ext font, `[data-theme=light]` print variant; file `rescue/app/tokens.css`, linked by both views in `?embed=1` |
