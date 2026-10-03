@@ -19,6 +19,10 @@
     // blind tests replayed with the hidden answer revealed (same bbox as Zawrat for blind-01; blind-02 is Zakopane)
     { id: 'blind-01-replay', label: 'Test na ślepo 1 (powtórka)', run: '../out/blind-01-replay.run.json', scenario: '../scenarios/blind-01-replay.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
     { id: 'blind-02-replay', label: 'Test na ślepo 2 (powtórka)', run: '../out/blind-02-replay.run.json', scenario: '../scenarios/blind-02-replay.json', dem: '../tools/terrain/data/blind-02-dem.json', basemap: false },
+    // outside the Tatras (rescue/README "Scenarios outside the Tatras"); basemapFile = regional PMTiles in basemap/
+    ...[['bieszczady-wetlinska', 'Bieszczady - Połonina Wetlińska', 'bieszczady.pmtiles'], ['karkonosze-sniezka', 'Karkonosze - Śnieżka', 'karkonosze.pmtiles'],
+      ['sniardwy', 'Śniardwy (woda)', 'sniardwy.pmtiles'], ['morzycko', 'Morzycko (woda)', 'moryn.pmtiles'], ['miedzyzdroje', 'Międzyzdroje (Bałtyk)', 'miedzyzdroje.pmtiles']]
+      .map(([id, label, f]) => ({ id, label, run: `../out/${id}.run.json`, scenario: `../scenarios/${id}.json`, dem: `../tools/terrain/data/${id}-dem.json`, basemap: true, basemapFile: f })),
   ];
   const SC = SCENARIOS.find((x) => x.id === Q.get('sc')) || SCENARIOS[0];
   const CUSTOM_RUN = Q.has('run') || Q.has('runInline'); // ?run= (or a parent-supplied run) wins over the switcher
@@ -814,7 +818,7 @@
     $('#nowline').innerHTML = `Teraz (${esc(M.hints[S.step].t)}): top 3 = <b>${pct(tp)}</b> w <b>${nf(ta, 0)}%</b> obszaru` + (S.showTruth && tr ? `, ${esc(truth)} na <b>#${tr}</b>` : '');
   }
 
-  const RES_SHORT = { ground: 'Patrol', dog: 'Pies', drone: 'Dron', heli: 'Śmigłowiec' };
+  const RES_SHORT = { ground: 'Patrol', dog: 'Pies', drone: 'Dron', heli: 'Śmigłowiec', boat: 'Łódź', diver: 'Nurek' };
   const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')} min` : `${Math.round(m)} min`);
   function renderPlan() {
     const st = S.M.R.steps[S.step], A = st.assignments, Rs = st.resources;
@@ -1135,8 +1139,9 @@
       const head = await fetch(dir + 'basemap.js', { method: 'HEAD', cache: 'no-store' });
       if (head.ok) {
         const mod = await import(new URL(dir + 'basemap.js', location.href).href);
-        await mod.loadBasemap(window.maplibregl);
-        const style = mod.offlineStyle({ flavor: CFG.flavor });
+        const file = SC.basemapFile && (!CUSTOM_RUN || Q.get('sc') === SC.id) ? SC.basemapFile : undefined;   // regional PMTiles outside the Tatras (?sc= also with ?run=)
+        await mod.loadBasemap(window.maplibregl, file);
+        const style = mod.offlineStyle(file ? { flavor: CFG.flavor, file } : { flavor: CFG.flavor });
         if (style && style.layers) { S.basemapSrc = dir + 'basemap.js'; return style; }
       }
     } catch (e) { warn('basemap.js: ' + e.message); }
