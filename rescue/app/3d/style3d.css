@@ -340,7 +340,8 @@ body.embed #sceneLegend .stops, body.embed .legend .stops { font-family: var(--r
 body.embed #sceneLegend .k-top { border-top-color: var(--rl-ink, #23272a); }
 body.embed #sceneCtl { width: 196px; padding: 6px; gap: 6px; font-size: 13.5px; }
 body.embed #sceneCtl .seg-switch { border: 0; border-radius: 9px; padding: 3px; gap: 2px; background: color-mix(in srgb, var(--rl-ink, #23272a) 6%, transparent); }
-body.embed #sceneCtl .seg-switch button { border: 0; border-radius: 7px; min-height: 32px; font-size: 13.5px; font-weight: 600; color: var(--rl-ink-2, #4a5054); }
+body.embed #sceneCtl .seg-switch button { border: 0; border-radius: 7px; min-height: 32px; font-size: 13.5px; font-weight: 600; color: var(--rl-ink-2, #4a5054);
+  flex: 1 1 auto; padding: 3px 2px; white-space: nowrap; } /* width by label: "Spacer" no longer touches the edge */
 body.embed #sceneCtl .seg-switch button.on { background: var(--rl-chrome, #23272a); color: var(--rl-on-chrome, #faf8f3); }
 body.embed #sceneCtl .ctl-row { gap: 4px 12px; padding: 2px 4px; }
 body.embed #sceneCtl .chk { min-height: 28px; color: var(--rl-ink, #23272a); }
