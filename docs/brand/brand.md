@@ -58,7 +58,7 @@ The 58 µs line is about the deterministic path only (p50). Never use it for the
 6. **Honest by design.** We say "hackathon prototype", "measured on one MacBook", "not production-hardened". "Nie wiem" is a feature in Rój; humility is a feature in the brand.
 7. **No production-security claims.** Never "secure", "safe", "compliant", "certified". Say "blocks these attacks in our test suite" or "in the demo run".
 8. **Local is the headline, said precisely.** "Models run on your hardware; no prompt goes to a model provider." True since d16de01: the committed policy allows only local models. Never "nothing leaves": tools like `send_email` send data out by design.
-11. **Compliance is "supports", never "makes you".** "Supports AI Act Art. 12/14 and DORA logging." The log is "tamper-evident", never "immutable". Approvals are "four-eyes review (admin-gated)", never "authorises" or SCA. Source: `docs/research/legal-check-pl.md`.
+11. **Compliance is "supports", never "makes you".** "Supports AI Act Art. 12/14 and DORA logging." The log is "tamper-evident", never "immutable", and "pseudonymised" (HMAC tokens, b946027), never "anonymous". The hash-reversal risk from the legal check (low-entropy values like PESEL could be enumerated from plain hashes) is resolved by the keyed HMAC in b946027; the tokens are still personal data for whoever holds the key. Approvals are "four-eyes review (admin-gated)", never "authorises" or SCA. Source: `docs/research/legal-check-pl.md`.
 9. **Plain hyphens, no em dashes.** Sentence case for headings. No exclamation marks. No emoji in the deck.
 10. **Product names are proper nouns.** "Airlock blocks it", not "the Airlock tool" or "our ACL solution". Never the acronym on a slide.
 
@@ -126,6 +126,7 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Test count (latest) | **116** unit tests in the HEAD re-test (117 after c60da8c/fdd965e), **170/170** demo cases, still 19/20 with 1 false alarm on our test set | re-test at HEAD, 13:10 | measured. Supersedes 108 / 129 |
 | Polish benign false blocks | **4/42** (was 7/42) | re-test at HEAD | measured |
 | Fixes F7, F11, F12 | judge criterion by phase; multi-line injections; decoded layers (base64, URL, hex, entities) | thread refresh | built |
+| PII in logs | audit log and stored approvals keep PESEL, card, e-mail and IBAN only as HMAC tokens (key in .env), linkable, not reversible; before this fix they were stored in plain text | b946027 | built. Say "pseudonymised", never "anonymous" |
 | Known weak spots | instruction in the middle of very long text (models see head + tail); NEW-1/NEW-2 open with Marcin | thread refresh | open, speaker notes only |
 | Model resilience | evicted or timed-out models re-warm in the background | 7ce31f9 | built |
 | Local only | committed policy allows only local models | d16de01 | true |
@@ -143,4 +144,4 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Condorcet | three independent 90% voters: 2.8% majority error; with correlation 0.4 the floor is 4% | swarm-math §1-2 | *(theory)*, not measured on our letters |
 | Rój "% lokalnie", cost 5.7x cheaper | - | swarm-math §6 | *(theory, all inputs assumed)*. Don't put on a slide as a result |
 
-Not ours to claim: "compliant" / "AI Act-ready" / "nothing leaves", "protects all PII" (we redact PESEL, IBAN, card, e-mail on configured paths; stored hashes are pseudonymised, still personal data), production readiness, MCP proxy (planned), persistent shared audit store (planned), per-user authz (planned).
+Not ours to claim: "compliant" / "AI Act-ready" / "nothing leaves", "protects all PII" (we redact PESEL, IBAN, card, e-mail on configured paths; since b946027 the audit log and stored approvals keep PESEL, card, e-mail and IBAN only as HMAC tokens with a key in .env: linkable, not reversible, pseudonymised, still personal data; never call the log anonymous), production readiness, MCP proxy (planned), persistent shared audit store (planned), per-user authz (planned).

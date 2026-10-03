@@ -39,7 +39,7 @@ Best first target: a mid-size bank, a cooperative bank association or a regulate
 **What Airlock does**
 - It sits between every agent and every tool or model, as a gateway, an SDK or an Ollama-compatible proxy (change one URL).
 - Cheap rules first (payments, egress, PESEL/IBAN/card/e-mail redaction, 16 attack signatures), then local guard models, then an admin's four-eyes review where your policy says so.
-- Every decision goes into a tamper-evident, hash-chained log. That supports the record keeping of AI Act Art. 12, the human oversight of Art. 14, and DORA logging.
+- Every decision goes into a tamper-evident, hash-chained log. PESEL, card, e-mail and IBAN values appear there only as keyed HMAC tokens (b946027): pseudonymised, not reversible, still personal data. That supports the record keeping of AI Act Art. 12, the human oversight of Art. 14, and DORA logging.
 
 **Proof points:** 5 (local only), 3 (admin-only approvals), 1 (19/20 on our test set). Backup: 4 (fail closed when a model is down).
 
@@ -120,6 +120,8 @@ Honest caveat for this target: on a wider Polish check, 4 of 42 benign prompts w
 ---
 
 ## Don'ts for every client conversation
+
+- Never "anonymous logs" or "no personal data in logs". Say "PESEL, card, e-mail and IBAN are stored only as keyed tokens (pseudonymised)", per b946027.
 
 - Never "compliant", "certified", "secure", "production-ready", "nothing leaves" (tools like e-mail send data out by design).
 - Test numbers always come with "on our test set". Never "99%" or any extrapolated rate.
