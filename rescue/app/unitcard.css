@@ -1,0 +1,34 @@
+/* Rescue Locator - unit card (Zasoby): .unit and its parts. Shared by zasoby.html and cwiczenia.html; markup from unitcard.js.
+   Moved out of zasoby.css unchanged (refactor, AI Marcina 2026-10-04). Linked after zasoby.css: no rule there targets the card. */
+.unit{background:var(--rl-card);border:1px solid var(--rl-line);border-left:4px solid var(--rl-line-strong);border-radius:var(--rl-radius);padding:10px 12px;cursor:pointer}
+.unit:hover{border-color:var(--rl-accent)}
+.unit.red{border-left-color:var(--rl-danger)}
+.unit.amber{border-left-color:var(--rl-warn)}
+.unit.ok{border-left-color:var(--rl-ok)}
+.u-top{display:flex;gap:8px;align-items:baseline}
+.u-top h3{margin:0;font-size:var(--rl-fs-l);line-height:1.2}
+.u-top .id{font-family:var(--rl-mono);font-size:var(--rl-fs-xs);color:var(--rl-mute);margin-left:auto}
+.u-sub{font-size:var(--rl-fs-s);color:var(--rl-ink-2);margin:2px 0 6px}
+.st{font-size:var(--rl-fs-xs);font-weight:700;padding:1px 6px;border-radius:6px;border:1px solid var(--rl-line-strong);color:var(--rl-ink-2)}
+.st.akcja{border-color:var(--rl-accent);color:var(--rl-accent)}
+.st.wolny{border-color:var(--rl-ok);color:var(--rl-ok)}
+.crew{font-size:var(--rl-fs-xs);color:var(--rl-ink-2);margin:4px 0}
+.bar{margin:5px 0}
+.bar .lab{display:flex;justify-content:space-between;font-size:var(--rl-fs-xs);color:var(--rl-ink-2)}
+.bar .lab b{font-family:var(--rl-mono);font-variant-numeric:tabular-nums;color:var(--rl-ink)}
+.bar .tr{height:7px;background:var(--rl-panel-2);border-radius:4px;overflow:hidden}
+.bar .fi{height:100%;background:var(--rl-ok)}
+.bar.amber .fi{background:var(--rl-warn)}
+.bar.red .fi{background:var(--rl-danger)}
+.facts{font-size:var(--rl-fs-xs);color:var(--rl-mute);margin:4px 0}
+.warn{font-size:var(--rl-fs-s);padding:3px 7px;border-radius:var(--rl-radius-s);margin:4px 0;border-left:4px solid var(--rl-warn);background:var(--rl-panel-2)}
+.warn.red{border-left-color:var(--rl-danger);color:var(--rl-danger);font-weight:600}
+.feeds{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:var(--rl-fs-xs);color:var(--rl-ink-2);margin:6px 0 2px}
+.feeds span{display:inline-flex;align-items:center;gap:4px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--rl-mute);opacity:.45}
+.dot.live{background:var(--rl-ok);opacity:1}
+.dot.stale{background:var(--rl-warn);opacity:1}
+.acts{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.acts button{font:inherit;font-size:var(--rl-fs-xs);background:var(--rl-card);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-s);color:var(--rl-ink);cursor:pointer;padding:3px 8px}
+.acts button:hover{border-color:var(--rl-accent);color:var(--rl-accent)}
+.acts button.fault{color:var(--rl-danger)}
