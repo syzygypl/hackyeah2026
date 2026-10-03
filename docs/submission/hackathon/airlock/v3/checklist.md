@@ -18,7 +18,7 @@ Required by the rules: title, team name / ID, members, description and a PDF of 
 
 | # | Item | Status | Suggested owner | Deadline |
 |---|---|---|---|---|
-| A | Re-test findings NEW-7 (`a3437bf`), NEW-6 (`71c0a48`), F13 (`a31f635`), F16 (`2e04aae`), F15 (`1878c9c`) | **closed**; 138 tests and 193/193 demo self-test green at `4e48798` | AI Marcina (rule engine) | done |
+| A | Re-test findings NEW-7 (`a3437bf`), NEW-6 (`71c0a48`), F13 (`a31f635`), F16 (`2e04aae`), F15 (`1878c9c`) | **closed**; 138 tests green (5 skip without models), demo 188/188 without models and 193/193 with them (AI Marcina at `6e82ab6`) | AI Marcina (rule engine) | done |
 | B | Live re-test of the fixes that need real guard models (consensus, eviction, Granite on long input) on the demo Mac after the last rule-engine change | to do | AI Mateusza (demo Mac) | Sun 05:00 |
 | C | Landing page `spikes/airlock-landing/` (AI Rafała): not on main yet. Link it on slide 10 and in §6 when it lands | waiting | AI Rafała | Sun 07:00 |
 
@@ -28,7 +28,7 @@ Required by the rules: title, team name / ID, members, description and a PDF of 
 |---|---|---|---|---|
 | 6 | LICENSE file in the repo (MIT or Apache-2.0); check model licences | missing | integration owner (Marcin) | Sun 08:00 |
 | 7 | Repo is public, or the jury has access. README at the root points to `spikes/ai-control-layer/` and states the 3 commands | check | Marcin | Sat 20:00 |
-| 8 | Recount the numbers on the final code: tests (138), demo self-tests (193/193), labelled accuracy (19/20, 1/16), Polish false positives (7/42) | numbers move with every fix | AI Mateusza (demo Mac) | Sun 05:00 (feature freeze) |
+| 8 | Recount the numbers on the final code: tests (138), demo self-tests (188/188 without models, 193/193 with them), labelled accuracy (19/20, 1/16), Polish false positives (7/42) | numbers move with every fix | AI Mateusza (demo Mac) | Sun 05:00 (feature freeze) |
 | 9 | Mentor answer: can one team submit two different projects (Airlock + Rescue Locator)? | asked 11:59, no answer in the thread yet | Andrzej (pitch) | Sat 20:00 |
 | 10 | Deadline wording: "11:00" vs "11:00 PM" in the English rules | open question #6 from 12:30 | Andrzej | Sat 20:00 |
 | 11 | Demo Mac starts Ollama with `OLLAMA_MAX_LOADED_MODELS=4 OLLAMA_CONTEXT_LENGTH=4096 OLLAMA_KEEP_ALIVE=-1` and warms the models before judging | known demo risk | Mateusz | before judging, Sun 11:00 |
@@ -39,7 +39,7 @@ Required by the rules: title, team name / ID, members, description and a PDF of 
 ## Done in v3
 
 - [x] Status changed to active. All re-test findings are closed, and "raw PII never stored" is restored, checked on the v3 demo audit (0 hits for the test card number).
-- [x] Re-ran at `4e48798`: 138 unit tests, 193/193 demo self-test, 10 proxy tests and 3 client tests, all with the models loaded.
+- [x] Numbers from AI Marcina's independent run on clean `6e82ab6`; my run at `4e48798` with models agrees (138 tests, 193/193; 193 = 188 + 5 live-model cases).
 
 ## Done in v1.1
 

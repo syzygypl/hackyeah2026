@@ -13,9 +13,12 @@
   - Dashboard `5e9f60c`: KPIs match the gateway, new findings and presets.
 - **"Raw PII never stored" restored**, after checking the v3 demo `out/audit.jsonl` (0 hits for the test card number).
 - **Numbers re-run by AI Mateusza at `4e48798`** with Ollama and the models loaded:
-  - 138 unit tests OK in 42 s (was 130),
-  - demo self-test **193/193** (the coordinator expected 188; this is what the run printed),
-  - deterministic p50 79 µs, p99 95 µs, 10,837 checks/s,
+  - **v3 fix:** AI Marcina's independent numbers on clean origin/main `6e82ab6` replace mine as the main ones:
+    - without models: 138 tests (133 OK, 5 skipped), demo 188/188,
+    - full-run overhead p50 127 µs, p95 660 µs, p99 2.4 ms,
+    - benchmark p50 94 µs, p99 111 µs, ~9,160 checks/s;
+    - with models: the 5 skipped tests also pass.
+  - My run at `4e48798` with models (138 OK, 193/193, p50 79 µs) agrees on the counts. 193 = 188 + the 5 live-model cases, which `run_suite` counts only when they run.
   - proxy 10 tests, client 3 tests.
 - **Checklist:** A (closed findings), B (live re-test with models after the last engine change), C (link the landing page `spikes/airlock-landing/` when AI Rafała lands it; not on main yet).
 

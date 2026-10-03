@@ -239,12 +239,12 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
     </div>
     <div class="legend"><span><i></i>deterministic, microseconds</span><span><i class="s"></i>local guard models, milliseconds</span></div>
     <div class="tiers">
-      <div class="tier"><div class="n">79 µs</div><div class="l">deterministic p50 per call, 10,837 checks/s on 1 core</div></div>
+      <div class="tier"><div class="n">94 µs</div><div class="l">deterministic benchmark p50, ~9,160 checks/s on 1 core (full run without models: p50 127 µs)</div></div>
       <div class="tier"><div class="n">always</div><div class="l">heuristic injection scorer, English and Polish phrasing</div></div>
       <div class="tier"><div class="n">134 ms</div><div class="l">pre-filter qwen3guard 0.6b, p50 warm, on every call</div></div>
       <div class="tier"><div class="n">0.5-1.9 s</div><div class="l">granite3.3-guardian 8b judge, high-risk tools only</div></div>
     </div>
-    <div class="src">docs/architecture/README.md §1 · demo run at 4e48798 (out/security_report.md) · docs/research/demo-mac-test.md (M4 Pro)</div>
+    <div class="src">docs/architecture/README.md §1 · AI Marcina, independent run on origin/main 6e82ab6 · docs/research/demo-mac-test.md (M4 Pro)</div>
   </div>
 </section>
 
@@ -337,21 +337,21 @@ a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
           <thead><tr><th>Criterion</th><th>Evidence</th></tr></thead>
           <tbody>
             <tr><td>Guardrails 30%</td><td>19/20 attacks caught, 1/16 benign blocked (36 labelled items x 5 runs; a small sample)</td></tr>
-            <tr><td>Architecture 20%</td><td>79 µs deterministic p50; models only where needed; p50/p95/p99 per check</td></tr>
+            <tr><td>Architecture 20%</td><td>94 µs deterministic p50 (benchmark); models only where needed; p50/p95/p99 per check</td></tr>
             <tr><td>Reporting 20%</td><td>dashboard, verified hash chain, report for management and security</td></tr>
-            <tr><td>Self-tests 15%</td><td>138 tests and a 193-case demo self-test, positive and negative: budgets, exploits, live policy edits, model fail modes</td></tr>
+            <tr><td>Self-tests 15%</td><td>138 tests (133 pass + 5 skip without models, 138 with models) and a 188-case demo self-test (193 with models), positive and negative: budgets, exploits, live policy edits, model fail modes</td></tr>
             <tr><td>Implementability 15%</td><td>Python stdlib only, 3 commands, 1 URL for Ollama clients</td></tr>
           </tbody>
         </table>
       </div>
       <div style="display:grid; gap: calc(var(--u) * 1.6)">
-        <div><div class="hero-n">138</div><p>tests pass in 42 s, plus a 193/193 demo self-test, 10 proxy tests and 3 client tests</p></div>
+        <div><div class="hero-n">138</div><p>tests: all pass with models, 5 skip without them. Demo self-test 188/188 without models, 193/193 with them. Plus 10 proxy and 3 client tests</p></div>
         <div class="limits"><h3>Honest limits</h3><ul>
           <li>The 95k hijack is a scripted agent against the real gateway. The real qwen3:4b agent resisted the injection in 3 runs.</li>
           <li>The tools are mocks. Everything was measured on one MacBook.</li><li>All re-test findings closed (NEW-7, NEW-6, F13, F15, F16).</li></ul></div>
       </div>
     </div>
-    <div class="src">test run at 4e48798, 2026-10-03 20:40 · docs/research/airlock-retest-2026-10-03.md · docs/research/demo-mac-test.md</div>
+    <div class="src">AI Marcina, clean origin/main 6e82ab6; AI Mateusza at 4e48798 · docs/research/airlock-retest-2026-10-03.md · docs/research/demo-mac-test.md</div>
   </div>
 </section>
 

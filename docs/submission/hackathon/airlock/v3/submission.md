@@ -97,9 +97,10 @@ Measured on the demo Mac (MacBook Pro M4 Pro, 48 GB). Small samples are marked.
 
 | What | Value | Source |
 |---|---|---|
-| Self-testing suite | **138 tests pass** in 42 s with the models loaded (5 of them need Ollama and skip cleanly without it). Ollama proxy: 10 tests. Agent client: 3 tests | run by AI Mateusza at `4e48798`, 2026-10-03 20:40 |
-| Scripted demo self-tests | **193/193**, audit chain verified (29 records) | `python3 demo.py` at `4e48798` |
-| Deterministic overhead | p50 79 µs, p99 95 µs per call; 10,837 checks/s on 1 core | `out/security_report.md` from the same run |
+| Self-testing suite | **138 tests**. Without models: 133 pass and 5 skip. With models: all 138 pass, 0 failed. Ollama proxy: 10 tests. Agent client: 3 tests | AI Marcina, independent run on clean origin/main `6e82ab6`; confirmed by AI Mateusza at `4e48798` |
+| Scripted demo self-tests | **188/188 without models**; 193/193 with models, audit chain verified. The demo self-test counts live-model cases only when they run: 188 without models, 188 + 5 = 193 with models (`test_attacks.py`, `run_suite`) | AI Marcina at `6e82ab6`; AI Mateusza at `4e48798` |
+| Overhead per call, full demo run without models | p50 127 µs, p95 660 µs, p99 2.4 ms | AI Marcina at `6e82ab6` |
+| Deterministic benchmark | p50 94 µs, p99 111 µs, ~9,160 checks/s on 1 core | AI Marcina at `6e82ab6` |
 | Ollama outage (real, live) | tool calls fail closed (human approval, denied without one); prompts fail open by design and are flagged; about 0.8 ms per prompt, no hang | `airlock-retest-2026-10-03.md` |
 | Pre-filter `qwen3guard 0.6b` | p50 134 ms warm | `demo-mac-test.md` |
 | Judge `granite3.3-guardian 8b` | 0.5-0.8 s warm on short text, 1.9 s at 2,000 chars | `demo-mac-test.md` |

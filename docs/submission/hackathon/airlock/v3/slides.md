@@ -55,7 +55,7 @@ Pipeline per tool call, in order (`docs/architecture/README.md` section 1):
 
 policy loaded -> tool authz -> budget -> loop detection -> attack signatures -> business rules (payments, SQL, egress) -> DLP (secrets, PII) -> semantic scan -> taint escalation -> approval -> **execute** -> output scan (injection, signatures, redaction, UNTRUSTED marker) -> hash-chained audit
 
-- Deterministic: p50 **79 µs** per call, 10,837 checks/s on 1 core (demo run at `4e48798`).
+- Deterministic benchmark: p50 **94 µs**, p99 111 µs, ~9,160 checks/s on 1 core. Full demo run without models: p50 127 µs, p99 2.4 ms per call (AI Marcina, `6e82ab6`).
 - Semantic tiers:
   - heuristic scorer, always on, English and Polish
   - pre-filter `qwen3guard 0.6b`, p50 **134 ms**
@@ -110,9 +110,9 @@ Source: `spikes/acl-dashboard/README.md`, `spikes/ai-control-layer/sample-securi
 | Criterion (weight) | Evidence |
 |---|---|
 | Guardrails (30%) | 19/20 attacks caught, 1/16 benign blocked on a labelled set (36 items x 5 runs, small sample) |
-| Architecture and performance (20%) | 79 µs deterministic p50; models only where needed; per-check p50/p95/p99 telemetry |
+| Architecture and performance (20%) | 94 µs deterministic p50 (benchmark); models only where needed; per-check p50/p95/p99 telemetry |
 | Security reporting (20%) | dashboard, verified hash chain, management + security report |
-| Self-testing suite (15%) | **138 tests pass**, demo self-test 193/193. Positive and negative tests cover budgets, exploits, live policy edits, model fail modes. Plus 10 proxy and 3 client tests |
+| Self-testing suite (15%) | **138 tests**: 133 pass and 5 skip without models; all 138 pass with models. Demo self-test 188/188 without models, 193/193 with models (5 live-model cases). Positive and negative tests cover budgets, exploits, live policy edits, model fail modes. Plus 10 proxy and 3 client tests |
 | Implementability (15%) | Python stdlib only, 3 commands, 1 URL for Ollama clients |
 
 **Honest limits:**
