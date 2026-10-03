@@ -118,12 +118,12 @@ function seedMock(scs) {
   }
   return [...by.values()];
 }
-async function loadTeams(scs) {
+async function loadTeams(scsP) {   // scsP: promise of incident ids, needed only by the mock
   if (tryReal("teams")) {
     try { const a = await api("/api/teams"); has.teams = true; return Array.isArray(a) ? a : a.teams || []; }
     catch (e) { if (e.status === 404) missing("teams"); else throw e; }
   }
-  if (!mock || !mock.length) mock = seedMock(scs);
+  if (!mock || !mock.length) mock = seedMock(await scsP);
   return mock;
 }
 async function assignTeam(team, sc) {
@@ -158,8 +158,12 @@ const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLoca
 function sortIncidents(a) {
   return a.slice().sort((x, y) => (y.live - x.live) || String(y.lastEventAt || "").localeCompare(String(x.lastEventAt || "")) || (x.found - y.found) || x.place.localeCompare(y.place, "pl"));
 }
+let shown = "";   // what the cards / roster / markers were last built from: a poll that brings nothing new touches no DOM
 function render() {
-  if (!dragging) { renderCards(); renderTeams(); }
+  const sig = JSON.stringify([incidents, teams, Object.keys(meta).filter((k) => meta[k]).length, has.incidents, has.teams]);
+  if (sig === shown) return;
+  const selectOpen = $("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT";   // renderTeams skips then: build again next poll
+  if (!dragging) { renderCards(); renderTeams(); if (!selectOpen) shown = sig; }
   renderMarkers();
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
   $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
@@ -322,16 +326,33 @@ async function tick() {
   if (busy) return; busy = true;
   try {
     const wasFound = new Set(incidents.filter((x) => x.found).map((x) => x.sc)), first = !incidents.length;
-    incidents = await loadIncidents();
-    if (!first) for (const x of incidents) if (x.found && !wasFound.has(x.sc)) announceEnded(x);
-    await Promise.all(incidents.map((x) => loadMeta(x.sc)));
-    teams = await loadTeams(incidents.map((x) => x.sc));
+    // teams and the incident list in parallel; on the first load the cards, map and roster show up from the fast
+    // /api/scenarios while /api/incidents still computes every incident (cold server: 10-20 s)
+    const incP = loadIncidents(), teamP = loadTeams(incP.then((a) => a.map((x) => x.sc)));
+    if (first && has.incidents !== false) skeleton(teamP);
+    const fresh = await incP;
+    if (!first) for (const x of fresh) if (x.found && !wasFound.has(x.sc)) announceEnded(x);
+    await Promise.all(fresh.map((x) => loadMeta(x.sc)));
+    incidents = fresh; teams = await teamP;
     render();
   } catch (e) {
     console.warn(e);
     toast(e.status === 401 ? "Podaj PIN akcji (pole PIN u góry)." : "Brak połączenia z serwerem akcji - ponawiam co 5 s.");
   }
   busy = false;
+}
+// first paint: scenario list (titles, places) + scenario files (map dots) + roster, cards marked "liczę mapę" until the real data lands
+async function skeleton(teamP) {
+  try {
+    const a = await api("/api/scenarios");
+    const list = (Array.isArray(a) ? a : a.scenarios || []).map((s) => typeof s === "string" ? { name: s } : s).filter((s) => s.name && !/blind/i.test(s.name));
+    await Promise.all(list.map((s) => loadMeta(s.name)));
+    if (incidents.length) return;   // /api/incidents was faster
+    incidents = list.map((s) => ({ sc: s.name, ...splitIncident(s.incident, s.name), live: false, found: false, replayFound: false, mode: null, lastEventAt: null,
+      lastClock: s.startClock || null, top3: [], teams: null, pending: true }));
+    teams = await teamP.catch(() => teams);
+    if (incidents.every((x) => x.pending)) render();
+  } catch (e) {}
 }
 setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("pl-PL"); }, 1000);
 setInterval(tick, POLL_MS);
