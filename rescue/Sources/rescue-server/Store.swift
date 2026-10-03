@@ -167,6 +167,6 @@ struct NeonStore: Store {
     func reset() async throws {
         _ = try await sql("DELETE FROM rescue_reports")
         _ = try await sql("DELETE FROM rescue_feed")
-        _ = try await sql("DELETE FROM rescue_docs")
+        _ = try await sql("DELETE FROM rescue_docs WHERE k NOT LIKE 'scn:%'")   // saved Studio stories stay
     }
 }
