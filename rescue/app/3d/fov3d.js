@@ -46,7 +46,7 @@ export function createFov3D({ THREE, scene, actors, eyeAt, wake, initiallyEnable
     const set = (attr, vectors) => { vectors.forEach((p, i) => attr.setXYZ(i, p.x, p.y, p.z)); attr.needsUpdate = true; };
     set(layer.fill.geometry.attributes.position, points);
     const boundary = points.slice(-layer.n); set(layer.edge.geometry.attributes.position, boundary);
-    if (layer.cone) set(layer.cone.geometry.attributes.position, [eyeAt(ll[0][0], ll[0][1], layer.a.fov.observerHeightM), ...boundary]);
+    if (layer.cone) set(layer.cone.geometry.attributes.position, [eyeAt(ll[0][0], ll[0][1], layer.a.fov?.observerHeightM || 80), ...boundary]);
   }
   function remove(layer) { group.remove(layer.g); layer.g.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }); if (layer.ghost) { layer.edge.geometry.dispose(); layer.edge.material.dispose(); } }
   function setFrame(next, at, animate = true) {
