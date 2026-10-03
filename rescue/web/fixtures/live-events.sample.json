@@ -1,0 +1,27 @@
+[
+  {
+    "t": "2026-10-03T17:52:10Z",
+    "at": "19:52",
+    "source": "field",
+    "text": "Pies zaznaczył przy Czarnym Stawie, sprawdzamy brzeg",
+    "parsedBy": "rules",
+    "latencyMs": 14,
+    "note": "przykład (fixture), nie z serwera",
+    "hints": [
+      { "type": "clue", "segmentId": "S5", "lat": null, "lon": null, "description": "pies zaznaczył", "strength": "medium", "resource": "pies" }
+    ]
+  },
+  {
+    "t": "2026-10-03T17:58:40Z",
+    "at": "19:58",
+    "source": "field",
+    "text": "Patrol 2: przeszukaliśmy Zmarzły Staw, nic, widoczność 20 m",
+    "parsedBy": "llm-local:qwen3:4b-instruct-2507-q4_K_M",
+    "latencyMs": 1350,
+    "hints": [
+      { "type": "segmentSearched", "segmentId": "S9", "pod": 0.4, "resource": "Patrol 2" },
+      { "type": "weatherObs", "visibilityM": 20, "windMs": 12, "precip": "snow" },
+      { "type": "resourceStatus", "resource": "śmigłowiec", "available": false, "reason": "wiatr na grani 20 m/s" }
+    ]
+  }
+]

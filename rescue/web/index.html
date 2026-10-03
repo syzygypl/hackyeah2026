@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rescue Locator - mapa prawdopodobieństwa</title>
+<link rel="stylesheet" href="basemap/vendor/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:,">
+</head>
+<body data-state="loading">
+<div id="app">
+  <header id="top">
+    <div class="brand">
+      <h1>Rescue Locator</h1>
+      <span class="tag">Gdzie szukać najpierw</span>
+    </div>
+    <div class="incident"><span id="incident">Wczytywanie danych...</span> <span class="fict">Dane fikcyjne</span></div>
+    <div class="clock-wrap"><span class="clock-label">Czas scenariusza</span><span id="clock">--:--</span></div>
+  </header>
+
+  <aside id="left" aria-label="Wskazówki">
+    <h2>Wskazówki (moduły)</h2>
+    <p class="hint-help">Każda karta to jeden moduł silnika. <b>Uwzględnij</b> wyłącza ją z mapy, <b>Przed / Po</b> skacze na osi czasu.</p>
+    <div id="live"></div>
+    <div id="cards"></div>
+    <div class="honest" id="honest">
+      <h3>Co jest liczone gdzie</h3>
+      <p><b>Oś czasu:</b> każdy krok przeliczył silnik Swift (RescueKit) i zapisał w <code>run.json</code> (stan skumulowany).</p>
+      <p><b>Uwzględnij:</b> przeglądarka odtwarza warstwę wskazówki jako iloraz kroków k / k-1, dzieli przez nią mapę i renormalizuje. Model to iloczyn warstw, więc wynik jest dokładny do zaokrągleń w <code>run.json</code> (ok. 1%). Silnik nie działa w przeglądarce.</p>
+      <p><b>Przydział zespołów</b> to plan silnika dla danego kroku; nie jest przeliczany po wyłączeniu wskazówki.</p>
+      <p><b>Warstwy na mapie</b> (trasa, sektor BTS, pierścienie, przeszukane segmenty) pochodzą z pliku scenariusza, jeśli jest dostępny. Wszystko działa offline.</p>
+    </div>
+  </aside>
+
+  <main id="mapwrap">
+    <div id="map"></div>
+    <div id="stepcard" class="floating" aria-live="polite"></div>
+    <div id="modbanner" class="floating" hidden></div>
+    <div id="mapctl" class="floating">
+      <div class="seg-switch" role="group" aria-label="Podkład">
+      </div>
+      <div class="ctl-row"><label class="chk"><input type="checkbox" id="fullnames"> nazwy</label>
+      <label class="chk" id="diffwrap" hidden><input type="checkbox" id="difficulty"> trudność</label></div>
+      <button id="fitall" class="ghost sm">Cały obszar</button>
+    </div>
+    <div id="netnote" class="floating" hidden></div>
+    <div id="legend" class="floating"></div>
+    <div id="tip" class="tip" hidden></div>
+    <div id="fatal" hidden></div>
+  </main>
+
+  <aside id="right" aria-label="Ranking segmentów">
+    <section id="value" class="value"></section>
+    <section id="plan"></section>
+    <h2>Ranking segmentów <span id="rankmode" class="mode"></span></h2>
+    <div id="nowline" class="nowline"></div>
+    <table id="ranking">
+      <thead><tr><th>#</th><th>Segment</th><th class="n">POA</th><th class="n">Obszar</th><th class="n" title="POA / udział w obszarze (1 = średnia)">Gęstość</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </aside>
+
+  <footer id="timeline">
+    <div class="tl-controls">
+      <button id="play" class="primary" aria-label="Odtwórz">Odtwórz</button>
+      <button id="prev" class="ghost" aria-label="Poprzedni krok">&lsaquo;</button>
+      <button id="next" class="ghost" aria-label="Następny krok">&rsaquo;</button>
+    </div>
+    <div class="tl-track">
+      <input type="range" id="slider" min="0" max="0" step="1" value="0" aria-label="Krok osi czasu">
+      <div id="ticks"></div>
+    </div>
+    <div class="tl-step" id="stepno"></div>
+  </footer>
+</div>
+<pre id="diag" hidden></pre>
+<script type="module">
+  // MapLibre GL JS 6.11.2 (ESM) and pmtiles 4.5.0 are shipped with the offline basemap in basemap/vendor/ (one copy, not duplicated).
+  // Missing or broken -> app.js falls back to its Canvas 2D view.
+  window.__mlFailed = false;
+  try { window.maplibregl = await import('./basemap/vendor/maplibre-gl.mjs'); }
+  catch (e) { window.__mlFailed = true; console.warn('[rescue] MapLibre not loaded:', e && e.message); }
+  try { if (!window.__mlFailed) await import('./basemap/vendor/pmtiles.js'); } catch (e) { console.warn('[rescue] pmtiles not loaded:', e && e.message); }
+  const s = document.createElement('script'); s.src = 'app.js'; document.body.appendChild(s);
+</script>
+</body>
+</html>
