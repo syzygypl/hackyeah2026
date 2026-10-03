@@ -22,6 +22,7 @@ let types = ["html": "text/html; charset=utf-8", "js": "text/javascript", "mjs":
 /// Static files: only under rescue/out/ and rescue/web/ (no "..").
 func staticFile(_ path: String) -> Data? {
     // /app/ = the combined app; /scenarios/ and /tools/terrain/data/ = read-only JSON the 3D view needs (never blind-test files)
+    if let e = EvalFiles.file(path) { return response("200 OK", e.1, e.0) }   // rescue/eval/ for the Walidacja mode
     let jsonOnly = path.hasPrefix("/scenarios/") || path.hasPrefix("/tools/terrain/data/")
     guard (path.hasPrefix("/out/") || path.hasPrefix("/web/") || path.hasPrefix("/app/") || jsonOnly), !path.contains(".."),
           !(jsonOnly && (!path.hasSuffix(".json") || path.lowercased().contains("blind"))) else { return nil }
@@ -59,6 +60,9 @@ func handle(method: String, path: String, headers: [String: String], body: Data,
     case ("GET", "/"), ("GET", "/studio"): return staticFile("/out/studio.html") ?? response("404 Not Found", "text/plain", Data("no out/studio.html".utf8))
     case ("GET", "/modules"): return response("200 OK", json, StoryPipeline.modulesData())
     case ("GET", "/app"), ("GET", "/app/"): return Data("HTTP/1.1 302 Found\r\nLocation: /app/index.html\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8)
+    case ("GET", "/eval/sim-runs"): return response("200 OK", json, EvalFiles.simRuns())
+    case ("GET", "/story/assign"): return response("200 OK", json, await studio.assignments())
+    case ("POST", "/story/assign"): return response("200 OK", json, await studio.assign(body))
     case ("GET", "/story/scenario"): return response("200 OK", json, await studio.scenarioData())
     case ("GET", "/story"): return response("200 OK", json, await studio.get())
     case ("POST", "/story"): return response("200 OK", json, await studio.setStory(body))
@@ -120,7 +124,7 @@ final class Conn: @unchecked Sendable {
 }
 
 let guardian = ServerGuard(args: args, defaultPort: 8771)
-let studioPaths: Set<String> = ["/", "/studio", "/modules", "/story", "/story/new", "/story/event", "/story/edit", "/story/narrate", "/story/save", "/story/scenario", "/metrics"]
+let studioPaths: Set<String> = ["/", "/studio", "/modules", "/story", "/story/new", "/story/event", "/story/edit", "/story/narrate", "/story/save", "/story/scenario", "/story/assign", "/eval/sim-runs", "/metrics"]
 Metrics.shared.startLLMProbe(url: ProcessInfo.processInfo.environment["RESCUE_LLM_URL"] ?? "http://localhost:11434")
 let params = NWParameters.tcp
 params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(guardian.host), port: NWEndpoint.Port(rawValue: guardian.port ?? 8771)!)

@@ -9,6 +9,7 @@ func jsonObj(_ d: Data) -> [String: Any] { (try? JSONSerialization.jsonObject(wi
 
 public actor Studio {
     public init() {}
+    var manual: [String: [String: Any]] = [:]   // operator assignments by resource id (app: rola operator -> ratownik)
     var base: [String: Any] = [:]          // scenario without events
     var items: [[String: Any]] = []        // {id, input, events, parsedBy?, note?}
     var terrainInfo: [String: Any] = [:]
@@ -81,6 +82,7 @@ public actor Studio {
             if var subj = base["subject"] as? [String: Any] { subj["category"] = cat; base["subject"] = subj }
         }
         items = []
+        manual = [:]
         let ippAt = (base["ipp"] as? [String: Any])?["at"] as? [Double] ?? ipp
         // modules every story starts with
         for inp: [String: Any] in [["provider": "Terrain", "at": start], ["provider": "TerrainDifficulty", "at": start],
@@ -458,6 +460,21 @@ public actor Studio {
     }
 
     /// The current story as a scenario file (events with titles), for the 3D view's ?scenario= parameter.
+    /// Operator (re)assignment of a team to a segment; the rescuer app polls GET /story/assign. Unknown/null segmentId clears it.
+    public func assign(_ body: Data) -> Data {
+        let o = jsonObj(body)
+        guard let rid = o["resourceId"] as? String, !rid.isEmpty, rid.count < 64 else { return jsonData(["error": "resourceId required"]) }
+        if let seg = o["segmentId"] as? String, let sd = segments.first(where: { ($0["id"] as? String) == seg }) {
+            var a: [String: Any] = ["resourceId": rid, "segmentId": seg, "by": "operator", "t": ISO8601DateFormatter().string(from: Date())]
+            a["segmentName"] = sd["name"]
+            if let at = o["at"] as? String { a["at"] = at }
+            if let n = o["note"] as? String { a["note"] = String(n.prefix(300)) }
+            manual[rid] = a
+        } else { manual[rid] = nil }
+        return assignments()
+    }
+    public func assignments() -> Data { jsonData(["assignments": Array(manual.values)]) }
+
     public func scenarioData() async -> Data {
         if base.isEmpty { _ = await newStory(jsonData(["template": "zawrat"])) }
         var d = scenarioDict()

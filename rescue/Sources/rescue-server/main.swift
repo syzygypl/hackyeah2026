@@ -45,6 +45,7 @@ let types = ["html": "text/html; charset=utf-8", "js": "text/javascript", "mjs":
 /// needs from scenarios/ and tools/terrain/data/ (never blind-test files) - same rule as rescue-studio.
 func staticFile(_ rawPath: String) -> Data? {
     let p = rawPath.removingPercentEncoding ?? rawPath
+    if let e = EvalFiles.file(p) { return response("200 OK", e.1, e.0) }   // rescue/eval/ for the app's Walidacja mode
     let jsonOnly = p.hasPrefix("/scenarios/") || p.hasPrefix("/tools/terrain/data/")
     guard p.hasPrefix("/out/") || p.hasPrefix("/web/") || p.hasPrefix("/app/") || p == "/web" || p == "/app" || jsonOnly, !p.contains(".."),
           !(jsonOnly && (!p.hasSuffix(".json") || p.lowercased().contains("blind"))) else { return nil }
@@ -252,6 +253,9 @@ func handle(_ q: Req) async -> Data {
     case ("GET", "/modules"): return response("200 OK", json, StoryPipeline.modulesData())
     case ("GET", "/story"): return response("200 OK", json, await studio.get())
     case ("GET", "/story/scenario"): return response("200 OK", json, await studio.scenarioData())
+    case ("GET", "/story/assign"): return response("200 OK", json, await studio.assignments())
+    case ("POST", "/story/assign"): return response("200 OK", json, await studio.assign(q.body))
+    case ("GET", "/eval/sim-runs"): return response("200 OK", json, EvalFiles.simRuns())
     case ("POST", "/story"): return response("200 OK", json, await studio.setStory(q.body))
     case ("POST", "/story/new"): return response("200 OK", json, await studio.newStory(q.body))
     case ("POST", "/story/event"):
