@@ -50,10 +50,10 @@ function envBlock(env, e) {
   return `<div data-env="${env}" style="flex:1 1 180px;min-width:0">
     <div style="font-size:var(--rl-fs-s,13px);color:var(--rl-mute)">${esc(e.label)} <span style="opacity:.8">(N=${e.n})</span></div>
     <div style="display:flex;align-items:baseline;gap:var(--rl-sp-2,8px);flex-wrap:wrap">
-      <span style="font-size:calc(var(--rl-fs-xl,28px) * 1.5);font-weight:700;color:${ENV_COL[env] || "var(--rl-ink)"};line-height:1.1">${pct(t.engine && t.engine.share)}</span>
+      <span style="font-family:var(--rl-font-num,inherit);font-size:calc(var(--rl-fs-xl,28px) * 1.5);font-weight:700;color:${ENV_COL[env] || "var(--rl-ink)"};line-height:1.1">${pct(t.engine && t.engine.share)}</span>
       <span style="font-size:var(--rl-fs-s,13px);color:var(--rl-mute)">vs <b style="color:var(--rl-ink-2,inherit)">${pct(t.naive && t.naive.share)}</b> ${esc(e.baselineLabel)}</span>
     </div>
-    <div style="font-size:var(--rl-fs-xs,12px);color:var(--rl-mute)">silnik ${ci(t.engine)} · odniesienie ${ci(t.naive)} (95% CI)</div>
+    <div style="font-family:var(--rl-mono,inherit);font-size:var(--rl-fs-xs,12px);color:var(--rl-mute)">silnik ${ci(t.engine)} · odniesienie ${ci(t.naive)} (95% CI)</div>
     ${exp}
   </div>`;
 }
