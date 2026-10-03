@@ -341,6 +341,15 @@ const precip = (() => {
   const p = new THREE.Points(g, precipMat); p.frustumCulled = false; p.visible = false; p.renderOrder = 2; scene.add(p);
   return p;
 })();
+// near snow (fx3d.snowNear): world-anchored flakes around the camera, on top of the far layer above
+const snowNearMat = FX.snowNear({ uTime: { value: 0 }, uWind: { value: 0.03 }, uDay: { value: 1 } });
+const snowNear = (() => {
+  const n = 7000, pos = new Float32Array(n * 3), rnd = new Float32Array(n);
+  for (let i = 0; i < n; i++) { pos[i * 3] = Math.random(); pos[i * 3 + 1] = Math.random(); pos[i * 3 + 2] = Math.random(); rnd[i] = Math.random(); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aRnd', new THREE.BufferAttribute(rnd, 1));
+  const p = new THREE.Points(g, snowNearMat); p.frustumCulled = false; p.visible = false; p.renderOrder = 3; scene.add(p);
+  return p;
+})();
 const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.castShadow = true;
@@ -436,6 +445,7 @@ const heatU = { uHeatFrom: { value: heatTex() }, uHeatTo: { value: heatTex() }, 
   uSnowY: { value: ((2350 - zMin) * EX) / 1000 }, uWind: { value: 0.03 },
   uDay: { value: 1 }, uCloud: { value: 0.35 }, uCloudOff: { value: new THREE.Vector2() }, uSunDir: { value: SUN_DIR } }; // shared by every fx3d effect
 Object.assign(precipMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
+Object.assign(snowNearMat.uniforms, { uTime: heatU.uTime, uWind: heatU.uWind, uDay: heatU.uDay });
 
 const terrainGeo = new THREE.PlaneGeometry(WKM, HKM, DEM.cols - 1, DEM.rows - 1);
 terrainGeo.rotateX(-Math.PI / 2);
@@ -504,7 +514,8 @@ const terrainMat = new THREE.MeshStandardMaterial({ map: compTex, emissive: 0x00
   normalMap: normalTex, normalMapType: THREE.ObjectSpaceNormalMap, aoMap: terrainAO, aoMapIntensity: 0.8 });
 heatU.uSunMask = { value: sunMask };
 // fx3d: close-up detail, POA heat layer, baked + near sun shadow, drifting cloud shadows, snow glints
-applyFx(terrainMat, [FX.terrainDetail(), FX.poaHeat(heatU), FX.bakedSun(heatU), FX.cloudShadows(heatU), FX.snowGlints(heatU)]);
+heatU.uSnowCover = heatU.uSnowCover || { value: 0 };
+applyFx(terrainMat, [FX.terrainDetail(), FX.snowCover(heatU), FX.poaHeat(heatU), FX.bakedSun(heatU), FX.cloudShadows(heatU), FX.snowGlints(heatU)]);
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
@@ -827,7 +838,7 @@ const forest = new THREE.Group(); scene.add(forest);
     if (sp) list[sp].push([la, lo]);
   }
   const treeMat = new THREE.MeshStandardMaterial({ roughness: 0.92, flatShading: true, vertexColors: true });
-  applyFx(treeMat, [FX.treeWind(heatU)]); // fx3d: crowns sway with the step's wind
+  applyFx(treeMat, [FX.treeWind(heatU), FX.snowCover(heatU, 0.62)]); // fx3d: crowns sway with the step's wind
   const o = new THREE.Object3D(), c = new THREE.Color();
   for (const [k, sp] of Object.entries(SP)) {
     const pts = list[k]; if (!pts.length) continue;
@@ -873,7 +884,7 @@ const buildings = (() => {
   if (!pos.length) return null;
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); geo.computeVertexNormals();
-  const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }));
+  const m = new THREE.Mesh(geo, applyFx(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, metalness: 0 }), [FX.snowCover(heatU)]));
   m.castShadow = true; m.receiveShadow = true; scene.add(m);
   return m;
 })();
@@ -894,7 +905,7 @@ const MOODS = {
   fog: { top: '#7f9bb8', bottom: '#ece5d8', fog: '#cdd6df', sun: '#fff5e8', sunI: 2.3, hs: '#dbe6f2', hg: '#6f6656', hI: 1.0, stars: 0, emis: 0, exp: 1.12 },
   night: { top: '#2a3d63', bottom: '#a0aecb', fog: '#8291b3', sun: '#e3eaff', sunI: 2.9, hs: '#cad7f0', hg: '#5c5c68', hI: 1.65, stars: 0.6, emis: 0.25, exp: 1.2 },
 };
-const cur = { cloud: 0.35, rain: 0, snow: 0, top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60, wind: 0.02 };
+const cur = { cloud: 0.35, rain: 0, snow: 0, top: new THREE.Color('#86aacb'), bottom: new THREE.Color('#e6ebe8'), fog: new THREE.Color('#dde3e4'), sun: new THREE.Color('#fff'), hs: new THREE.Color('#fff'), hg: new THREE.Color('#666'), sunI: 2.6, hI: 1, stars: 0, emis: 0, exp: 1, near: 12, far: 60, wind: 0.02, cover: 0 };
 let tgt = { ...cur }, weatherOn = true;
 function setMood(w) {
   const vis = w?.visibilityM ?? 10000, dark = !!w?.dark && weatherOn;
@@ -907,7 +918,12 @@ function setMood(w) {
     // cloud cover and precipitation from the step's weather (off with "Pogoda")
     cloud: !weatherOn ? 0.3 : w?.precip && w.precip !== 'none' ? 0.85 : vis < 500 ? 0.7 : 0.35,
     rain: weatherOn && w?.precip === 'rain' ? 1 : 0, snow: weatherOn && w?.precip === 'snow' ? 1 : 0,
+    // snow cover: full while it snows, a dusting in hard frost (accumulates slowly in stepMood)
+    cover: !weatherOn ? 0 : w?.precip === 'snow' ? 1 : (w?.tempC ?? 5) <= -3 ? 0.5 : (w?.tempC ?? 5) <= 0 ? 0.25 : 0,
   };
+  if (weatherOn && w?.precip === 'snow' && !dark) { // whiteout: white fog, closer, flat light
+    tgt.fog = new THREE.Color('#e7ecf1'); tgt.bottom = new THREE.Color('#eef1f4'); tgt.near *= 0.8; tgt.far *= 0.75; tgt.sunI *= 0.7;
+  }
 }
 function stepMood(dt) {
   const k = 1 - Math.exp(-dt * 1.8);
@@ -918,6 +934,8 @@ function stepMood(dt) {
   skyMat.uniforms.uCloud.value = cur.cloud; skyMat.uniforms.uCloudOff.value.copy(heatU.uCloudOff.value);
   const pk = cur.snow > cur.rain ? 1 : 0, pa = Math.max(cur.rain, cur.snow);
   precip.visible = pa > 0.01; precipMat.uniforms.uKind.value = pk; precipMat.uniforms.uAmt.value = pa;
+  snowNear.visible = cur.snow > 0.01; snowNearMat.uniforms.uAmt.value = cur.snow;
+  cur.cover += ((tgt.cover ?? 0) - cur.cover) * (1 - Math.exp(-dt * 0.35)); heatU.uSnowCover.value = cur.cover; // snow builds up over a few seconds
   skyMat.uniforms.top.value.copy(cur.top); skyMat.uniforms.bottom.value.copy(cur.bottom);
   scene.fog.color.copy(cur.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
   sun.color.copy(cur.sun); sun.intensity = cur.sunI; hemi.color.copy(cur.hs); hemi.groundColor.copy(cur.hg); hemi.intensity = cur.hI;
@@ -990,7 +1008,7 @@ function drawTop(ranked) {
     const g = segs.get(sg.id); if (!g) return;
     // as in 2D: top 3 outlined white 3.2 px, chip "#1 Name - 21%" with the rank in red
     drapeRuns(ringLL(g.polygon), 0.02, { color: '#ffffff', width: 3.2, opacity: 0.95 }, dyn.top);
-    dyn.top.add(label(`<b class="rk">#${k + 1}</b> ${esc(sg.name)} - ${pct(sg.poa)}`, 'top3', v3(g.center[0], g.center[1], 0.14)));
+    dyn.top.add(label(`<b class="rk">#${k + 1}</b> ${esc(sg.name)}`, 'top3', v3(g.center[0], g.center[1], 0.14)));
   });
 }
 function setStep(i, animate = true) {
@@ -1469,6 +1487,7 @@ function frame() {
     u.uBox.value = clamp(camera.position.distanceTo(controls.target) * 0.9, 0.8, 8);
     u.uPx.value = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360));
   }
+  if (snowNear.visible) snowNearMat.uniforms.uPx.value = renderer.domElement.height / (2 * Math.tan((camera.fov * Math.PI) / 360));
   flushLines();
   const moved = cameraMoved();
   const active = moved || fly || CINE.on || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;

@@ -17,6 +17,7 @@ const HOOKS = {
   vertex: ['v', 'begin_vertex'], // object space: edit `transformed` (before projection, shadows ignore it)
   view: ['v', 'project_vertex'], // `mvPosition` (view space) and `gl_Position` are set
   color: ['f', 'map_fragment'], // albedo: edit `diffuseColor`; declare values later hooks use here
+  albedo: ['f', 'color_fragment'], // albedo after vertex / instance colours (snow cover must come after the foliage tint)
   normal: ['f', 'normal_fragment_maps'], // shading normal `normal` (view space)
   emissive: ['f', 'emissivemap_fragment'], // add light to `totalEmissiveRadiance`
   output: ['f', 'opaque_fragment'], // final `gl_FragColor`, before tone mapping and fog
@@ -225,6 +226,51 @@ export const FX = {
     chunks: { lights_fragment_begin: (src) => src
       .replace('? getShadow( directionalShadowMap[ i ],', '? min( bakedSun, getShadow( directionalShadowMap[ i ],')
       .replace('vDirectionalShadowCoord[ i ] ) : 1.0;', 'vDirectionalShadowCoord[ i ] ) ) : bakedSun;') } }),
+
+  // snow cover, the way open-world games do it (RDR2, Horizon): coverage from the up-facing normal, broken up by fbm noise,
+  // thicker above the snowline, wind-scoured on steep rock, cold blue in the thin patches; uSnowCover (0..1) grows while it
+  // snows (app3d accumulates it slowly). bias lifts thin geometry: tree crowns and roofs catch snow on their tops.
+  snowCover: (U, bias = 0) => ({ name: 'snowcover', uniforms: { uSnowCover: U.uSnowCover, uSnowY: U.uSnowY },
+    hooks: { albedo: `
+    {
+      if (uSnowCover > 0.001) {
+        float up = clamp(fxObjNormal.y + ${bias.toFixed(2)}, 0.0, 1.0);
+        float n = fxFbm(fxWorld.xz * 38.0, clamp(length(fxWorld - cameraPosition) / 6.0, 0.0, 1.0));
+        float lvl = uSnowCover * mix(0.8, 1.15, smoothstep(uSnowY - 0.6, uSnowY, fxWorld.y));
+        float cov = smoothstep(0.55, 0.85, up + (lvl - 0.75) * 0.9 + (n - 0.5) * 0.45) * clamp(lvl, 0.0, 1.0);
+        vec3 snowCol = mix(vec3(0.78, 0.85, 0.95), vec3(0.97, 0.98, 1.0), smoothstep(0.3, 0.8, n));
+        diffuseColor.rgb = mix(diffuseColor.rgb, snowCol, cov);
+      }
+    }` } }),
+
+  // near snow: flakes anchored in world space in a small box that tiles around the camera (parallax when the camera
+  // moves, as in games), big soft out-of-focus flakes close by, fine ones further away, swirling with the wind
+  snowNear: (U) => fxShader({
+    transparent: true, depthWrite: false,
+    uniforms: { uTime: U.uTime, uWind: U.uWind, uDay: U.uDay, uAmt: { value: 0 }, uPx: { value: 1000 }, uBox: { value: 0.3 } },
+    vertex: `attribute float aRnd; varying float vA; varying float vSoft;
+    void main() {
+      vec3 p = position;
+      p.y = fract(p.y - uTime * (0.012 + 0.01 * aRnd) / uBox);
+      p.x = fract(p.x + uTime * uWind * 0.25 / uBox + 0.05 * sin(uTime * (0.8 + aRnd) + aRnd * 50.0));
+      p.z = fract(p.z + 0.04 * cos(uTime * (0.6 + aRnd) + aRnd * 20.0));
+      vec3 rel = mod(p * uBox - cameraPosition, vec3(uBox)) - 0.5 * uBox;
+      vec4 mv = viewMatrix * vec4(cameraPosition + rel, 1.0);
+      gl_Position = projectionMatrix * mv;
+      float d = max(-mv.z, 0.0005);
+      float sz = 0.00016 * (0.6 + 0.8 * aRnd) * uPx / d;
+      gl_PointSize = min(sz, 12.0);
+      vSoft = smoothstep(5.0, 12.0, sz); // close flakes are out of focus: softer and fainter
+      vA = uAmt * step(aRnd, 0.15 + 0.85 * uAmt) * smoothstep(0.006, 0.02, d) * (1.0 - smoothstep(0.1, 0.15, d));
+    }`,
+    fragment: `varying float vA; varying float vSoft;
+    void main() {
+      float r = length(gl_PointCoord - 0.5) * 2.0;
+      float a = exp(-r * r * mix(5.0, 2.2, vSoft)) * (1.0 - smoothstep(0.9, 1.0, r));
+      gl_FragColor = vec4(vec3(1.0) * mix(0.5, 1.0, uDay), a * vA * mix(0.95, 0.45, vSoft));
+      if (gl_FragColor.a < 0.01) discard;
+    }`,
+  }),
 
   // snow glints: sparse sunlit cells on gentle snowfields near the camera, twinkling as the camera moves
   snowGlints: (U) => ({ name: 'glints', requires: ['sun'], uniforms: { uSnowY: U.uSnowY },
