@@ -1,0 +1,178 @@
+{
+ "round": "blind-02",
+ "at": [
+  49.27003,
+  19.93961
+ ],
+ "salt": "015f869f614028292cef1826ca988a5a",
+ "detect": {
+  "ground": 0.45,
+  "dog": 0.6,
+  "drone": 0.25,
+  "heli": 0.15
+ },
+ "detect_note": "Gęsty młodnik nad potokiem, zmierzch i deszcz, osoba siedzi skulona pod gałęziami: termowizja z góry słabo widzi przez korony, pies na świeżym tropie dobrze (deszcz osłabia), tyraliera wolno ale skutecznie.",
+ "detect_commit_check": "16d6659a3639a43d0e7bb3456b8fb002ff412d38292a2eafff6ec3fa69fbbcd8",
+ "story": "Senior z demencją poszedł Drogą pod Reglami na zachód (dalej niż zwykle), skręcił w niebieski szlak do Doliny ku Dziurze, zgubił czapkę przy wejściu, potem zszedł ze szlaku w las w górę Potoku ku Dziurze, zaplątał się w młodnik nad potokiem i usiadł zmarznięty ok. 200 m od szlaku.",
+ "state": "alive, hypothermic, cannot answer calls (no phone)",
+ "timeline": [
+  {
+   "provider": "SegmentSearched",
+   "at": "17:45",
+   "resource": "drone",
+   "title": "drone: D13 przeszukany, nic",
+   "detail": "Patrol przeszukał D13, POD 72%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D13"
+   ],
+   "pod": 0.72,
+   "wave": 1
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "18:00",
+   "resource": "heli",
+   "title": "heli: D12 przeszukany, nic",
+   "detail": "Patrol przeszukał D12, POD 25%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D12"
+   ],
+   "pod": 0.25,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "18:00",
+   "resource": "dog",
+   "title": "dog: D13 przeszukany, nic",
+   "detail": "Patrol przeszukał D13, POD 70%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D13"
+   ],
+   "pod": 0.7,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "18:00",
+   "resource": "gopr-a",
+   "title": "gopr-a: D13 przeszukany, nic",
+   "detail": "Patrol przeszukał D13, POD 55%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D13"
+   ],
+   "pod": 0.55,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "18:00",
+   "resource": "gopr-b",
+   "title": "gopr-b: D12 przeszukany, nic",
+   "detail": "Patrol przeszukał D12, POD 50%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D12"
+   ],
+   "pod": 0.5,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "18:00",
+   "resource": "gopr-b",
+   "title": "gopr-b: D17 przeszukany, nic",
+   "detail": "Patrol przeszukał D17, POD 50%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D17"
+   ],
+   "pod": 0.5,
+   "wave": 2
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:10",
+   "resource": "dog",
+   "title": "dog: D8 przeszukany, nic",
+   "detail": "Patrol przeszukał D8, POD 70%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D8"
+   ],
+   "pod": 0.7,
+   "wave": 3
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "19:30",
+   "resource": "gopr-a",
+   "title": "gopr-a: D14 przeszukany, nic",
+   "detail": "Patrol przeszukał D14, POD 50%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D14"
+   ],
+   "pod": 0.5,
+   "wave": 3
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "20:15",
+   "resource": "gopr-b",
+   "title": "gopr-b: D7 przeszukany, nic",
+   "detail": "Patrol przeszukał D7, POD 55%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D7"
+   ],
+   "pod": 0.55,
+   "wave": 3
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "20:25",
+   "resource": "dog",
+   "title": "dog: D3 przeszukany, nic",
+   "detail": "Patrol przeszukał D3, POD 65%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D3"
+   ],
+   "pod": 0.65,
+   "wave": 4
+  },
+  {
+   "provider": "Found",
+   "at": "21:20",
+   "title": "gopr-a: ZNALEZIONO w D18",
+   "detail": "Odnaleziony przez patrol (test na ślepo, odsłonięte).",
+   "point": [
+    49.27003,
+    19.93961
+   ],
+   "radiusM": 30,
+   "resource": "gopr-a",
+   "segment": "D18",
+   "wave": 4
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "22:30",
+   "resource": "gopr-b",
+   "title": "gopr-b: D12 przeszukany, nic",
+   "detail": "Patrol przeszukał D12, POD 45%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D12"
+   ],
+   "pod": 0.45,
+   "wave": 4
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "22:30",
+   "resource": "gopr-b",
+   "title": "gopr-b: D11 przeszukany, nic",
+   "detail": "Patrol przeszukał D11, POD 45%. Nic (sędzia testu na ślepo).",
+   "segments": [
+    "D11"
+   ],
+   "pod": 0.45,
+   "wave": 4
+  }
+ ]
+}
