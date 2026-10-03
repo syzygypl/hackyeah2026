@@ -351,3 +351,11 @@ body.role-ratownik #newActionBtn{display:none}
 .na-act{margin-top:14px}
 .na-act button{min-height:44px;border-radius:22px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);font:inherit;font-weight:600}
 .na-act button.primary{background:var(--rl-danger);border-color:var(--rl-danger);color:var(--rl-on-danger)}
+/* app bar under 1500 px: logo without the name, "Centrum" short label, narrower title and picker, so the bar stays one row */
+@media (max-width:1499px){
+  header h1{font-size:0;gap:0;margin-right:0}
+  #centrumLink{font-size:0;padding:0 14px}
+  #centrumLink::after{content:"Centrum";font-size:14px}
+  #scen{max-width:150px}
+  header .livehead b{max-width:18vw}
+}
