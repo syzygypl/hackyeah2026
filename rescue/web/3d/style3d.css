@@ -20,6 +20,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #d9e1e6; col
 #scene::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; background: radial-gradient(ellipse 80% 75% at 50% 48%, transparent 55%, rgba(20, 24, 30, 0.22) 100%); }
 body.embed #scene::after { background: radial-gradient(ellipse 80% 75% at 50% 48%, transparent 50%, rgba(0, 0, 0, 0.38) 100%); }
 #scene > div { z-index: 2; }
+#ortho-attrib { position: fixed; z-index: 5; left: 12px; bottom: 2px; font-size: 10.5px; color: var(--mute); background: var(--paper-solid); border-radius: 5px; padding: 2px 7px; opacity: 0.9; }
+#ortho-attrib a { color: inherit; }
 
 .panel {
   position: fixed; z-index: 5;

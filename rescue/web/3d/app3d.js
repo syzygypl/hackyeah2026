@@ -14,11 +14,11 @@ import { colorFor, gradientCSS, STOPS } from '../../app/scale.js'; // shared hea
 // ---------- config ----------
 const Q = new URLSearchParams(location.search);
 const SCENS = {
-  zawrat: { name: 'Zawrat', run: '../../out/run.json', demWide: 'data/zawrat-dem-wide.json' },
+  zawrat: { name: 'Zawrat', run: '../../out/run.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg' },
   'morskie-oko': { name: 'Morskie Oko', run: '../../out/morskie-oko.run.json' },
   kasprowy: { name: 'Kasprowy', run: '../../out/kasprowy.run.json' },
   'blind-01': { name: 'Test na ślepo: runda 1 (replay)', run: '../../out/blind-01-replay.run.json', scenario: '../../scenarios/blind-01-replay.json',
-    terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', demWide: 'data/zawrat-dem-wide.json', reveal: '../../blindtest/blind-01.reveal.json' },
+    terrain: '../../scenarios/blind-01-replay-terrain.json', dem: '../../tools/terrain/data/zawrat-dem.json', demWide: 'data/zawrat-dem-wide.json', ortho: 'data/zawrat-ortho-wide.jpg', reveal: '../../blindtest/blind-01.reveal.json' },
 };
 const SC = SCENS[Q.get('sc')] ? Q.get('sc') : 'zawrat';
 const P = {
@@ -532,7 +532,7 @@ let heatFrom = null, heatTo = null, heatT = 1, WASH = new Map(); // searched seg
 const llToTex = (la, lo) => [((lo - DEM.lon0) / stLon) * TS, ((DEM.lat0 - la) / stLat) * TS];
 function compose() {
   const g = compCanvas.getContext('2d');
-  g.globalAlpha = 1; g.drawImage(baseCanvas, 0, 0);
+  g.globalAlpha = 1; g.drawImage(ORTHO.on && ORTHO.canvas ? ORTHO.canvas : baseCanvas, 0, 0);
   if (SHOW_DIFF) g.drawImage(diffLayer(), heatRect.x, heatRect.y, heatRect.w, heatRect.h); // the heat itself is drawn by the terrain shader
   heatU.uHeatOn.value.set(!SHOW_DIFF && heatFrom ? 1 : 0, !SHOW_DIFF && heatTo ? 1 : 0);
   // searched ground: cool grey wash with hatching, stronger for repeated searches
@@ -547,6 +547,26 @@ function compose() {
   compTex.needsUpdate = true;
 }
 let SHOW_DIFF = false, diffCanvas = null;
+// aerial photo layer (button "Zdjęcie"): Sentinel-2 cloudless 2016 resampled onto the wide DEM grid by data/make_ortho.py,
+// drawn instead of the topo base, so the searched wash, the difficulty layer and the shader heat stay on top
+const ORTHO = { on: false, canvas: null };
+if (SCENS[SC].ortho && DEM_FULL.cols > 600) {
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = TW; c.height = TH;
+    const g = c.getContext('2d'); g.filter = 'brightness(1.45) contrast(1.08) saturate(1.15)'; // satellite photos are dark next to the topo tint
+    const sw = img.width * (DEM.cols * stLon) / (DEM_FULL.cols * DEM_FULL.step), sh = img.height * (DEM.rows * stLat) / (DEM_FULL.rows * (DEM_FULL.stepLat || DEM_FULL.step));
+    g.drawImage(img, 0, 0, sw, sh, 0, 0, TW, TH);
+    ORTHO.canvas = c; $('btn-ortho').hidden = false;
+  };
+  img.src = SCENS[SC].ortho;
+}
+$('btn-ortho').addEventListener('click', () => {
+  ORTHO.on = !ORTHO.on; $('btn-ortho').classList.toggle('on', ORTHO.on); compose();
+  let a = $('ortho-attrib');
+  if (!a) { a = document.createElement('div'); a.id = 'ortho-attrib'; a.innerHTML = 'Zdjęcie: <a href="https://cloudless.eox.at" target="_blank" rel="noopener">EOxCloudless</a> 2016, EOX IT Services GmbH (zmodyfikowane dane Copernicus Sentinel 2016), CC BY 4.0'; document.body.appendChild(a); }
+  a.hidden = !ORTHO.on;
+});
 function diffLayer() {
   if (diffCanvas) return diffCanvas;
   const small = document.createElement('canvas'); small.width = R.cols; small.height = R.rows;
