@@ -16,9 +16,8 @@
     { id: 'zawrat', label: 'Zawrat', run: '/api/run/zawrat', scenario: '../scenarios/zawrat.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
     { id: 'morskie-oko', label: 'Morskie Oko', run: '/api/run/morskie-oko', scenario: '../scenarios/morskie-oko.json', dem: '../tools/terrain/data/morskie-oko-dem.json', basemap: false },
     { id: 'kasprowy', label: 'Kasprowy', run: '/api/run/kasprowy', scenario: '../scenarios/kasprowy.json', dem: '../tools/terrain/data/kasprowy-dem.json', basemap: false },
-    // blind tests replayed with the hidden answer revealed (same bbox as Zawrat for blind-01; blind-02 is Zakopane)
+    // blind test 1 replayed with the hidden answer revealed (same bbox as Zawrat; out/blind-01-replay.run.json is committed)
     { id: 'blind-01-replay', label: 'Test na ślepo 1 (powtórka)', run: '../out/blind-01-replay.run.json', scenario: '../scenarios/blind-01-replay.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
-    { id: 'blind-02-replay', label: 'Test na ślepo 2 (powtórka)', run: '../out/blind-02-replay.run.json', scenario: '../scenarios/blind-02-replay.json', dem: '../tools/terrain/data/blind-02-dem.json', basemap: false },
     // outside the Tatras (rescue/README "Scenarios outside the Tatras"); basemapFile = regional PMTiles in basemap/
     ...[['bieszczady-wetlinska', 'Bieszczady - Połonina Wetlińska', 'bieszczady.pmtiles'], ['karkonosze-sniezka', 'Karkonosze - Śnieżka', 'karkonosze.pmtiles'],
       ['sniardwy', 'Śniardwy (woda)', 'sniardwy.pmtiles'], ['morzycko', 'Morzycko (woda)', 'moryn.pmtiles'], ['miedzyzdroje', 'Międzyzdroje (Bałtyk)', 'miedzyzdroje.pmtiles'],
@@ -1206,8 +1205,9 @@
       if (sel.value !== SCENARIOS[0].id) q.set('sc', sel.value);
       location.search = q.toString(); // reload: the map is built for one scenario bbox at boot
     });
-    // discover which run.json files exist; missing ones are greyed out
-    SCENARIOS.forEach(async (x) => {
+    // grey out missing committed run files (out/*.run.json); /api/run/<id> is computed on request, and HEAD runs the
+    // whole engine on the server, so those are never probed
+    SCENARIOS.filter((x) => !x.run.startsWith('/api/')).forEach(async (x) => {
       let ok = false;
       try { ok = (await fetch(x.run, { method: 'HEAD', cache: 'no-store', headers: runPin(x.run) })).ok; } catch (e) { ok = false; }
       const o = sel.querySelector(`option[value="${x.id}"]`);
