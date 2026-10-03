@@ -57,6 +57,7 @@ public enum StoryPipeline {
         arrived.sort { ($0.minute, order.firstIndex(of: $0.source) ?? 0, $0.id) < ($1.minute, order.firstIndex(of: $1.source) ?? 0, $1.id) }
 
         let grid = ProbabilityGrid(scenario)
+        grid.clueWeights = ClueWeights(scenario: scenario, hints: arrived, grid: grid)   // nil without weightable clues
         var plans: [SearchPlanner.Plan] = []
         var poas: [[Double]] = []
         var cond = LocationHint.Conditions()
@@ -129,6 +130,13 @@ public enum StoryPipeline {
             }
             if let mk = h.marker { d["marker"] = [mk.lat, mk.lon] }
             return d
+        }
+        if let cw = grid.clueWeights, let now = arrived.last?.minute {   // CONTRACT "Clue weights": list at the live moment + per-step map
+            doc["clueWeights"] = cw.json(at: now, scenario: scenario)
+            if var st = doc["steps"] as? [[String: Any]] {
+                for k in st.indices { st[k]["clueWeights"] = cw.map(at: arrived[k].minute) }
+                doc["steps"] = st
+            }
         }
         if let timeline, let tl = TimelineEngine(scenario: scenario, grid: grid, hints: arrived, input: timeline) {
             doc["timeline"] = tl.json(frameMin: frameMin, frames: frames)

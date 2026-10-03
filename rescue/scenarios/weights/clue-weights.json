@@ -1,0 +1,56 @@
+{
+  "schema": "rescue-clue-weights/1",
+  "doc": "docs/rescue-locator/pole-widzenia.md, section 'Wagi śladów: wiarygodność i zanik w czasie' (sources [1]-[25]); values from clue-weights.proposal.json (AI Michała, f5aeadf). Contract: rescue/app/CONTRACT.md 'Clue weights'. Engine: RescueKit/ClueWeights.swift (Swift defaults = this file).",
+  "formula": "weight = sources[source] * accuracy(type) * 0.5^(ageH / halfLifeH) * corroboration, clamped to 0..1; accuracy = clamp((accuracy.refM / accuracyM)^accuracy.exponent, accuracy.min, 1); halfLifeH null = no decay. The clue's map layer enters as layer^weight (1 = full effect as before, 0 = none). Operator override replaces the weight.",
+  "note": "Illustrative defaults, not TOPR/GOPR procedures. 'est' = estimate without a direct source.",
+  "applyToScripted": false,
+  "sources": {
+    "operator": 1.0,
+    "ratownik": 0.9,
+    "obywatel-niezweryfikowany": 0.3,
+    "swiadek": 0.6,
+    "gps": 0.95,
+    "bts": 0.8,
+    "aml": 0.9,
+    "dron": 0.5,
+    "pies": 0.5,
+    "pies-terenowy": 0.7
+  },
+  "sourceLabels": {
+    "operator": "operator", "ratownik": "ratownik w terenie", "obywatel-niezweryfikowany": "obywatel, niezweryfikowane", "swiadek": "świadek naoczny",
+    "gps": "GPS telefonu", "bts": "BTS / 112", "aml": "AML 112", "dron": "dron (termowizja)", "pies": "pies tropiący", "pies-terenowy": "pies terenowy"
+  },
+  "types": {
+    "trop-psa":     { "label": "Trop psa",                "accuracyM": 50,   "halfLifeH": 24,   "source": "pies" },
+    "pies-alert":   { "label": "Wskazanie psa",           "accuracyM": 75,   "halfLifeH": 2,    "source": "pies-terenowy" },
+    "swiadek":      { "label": "Świadek",                 "accuracyM": 200,  "halfLifeH": 6,    "source": "swiadek" },
+    "zgloszenie":   { "label": "Zgłoszenie obywatela",    "accuracyM": 500,  "halfLifeH": 4,    "source": "obywatel-niezweryfikowany" },
+    "gps":          { "label": "GPS telefonu",            "accuracyM": 10,   "halfLifeH": 2,    "source": "gps" },
+    "bts":          { "label": "Sektor BTS / 112",        "accuracyM": 5000, "halfLifeH": 3,    "source": "bts" },
+    "aml":          { "label": "AML 112",                 "accuracyM": 50,   "halfLifeH": 2,    "source": "aml" },
+    "slad-buta":    { "label": "Ślad buta",               "accuracyM": 5,    "halfLifeH": 12,   "source": "ratownik" },
+    "przedmiot":    { "label": "Przedmiot / odzież",      "accuracyM": 5,    "halfLifeH": 24,   "source": "ratownik" },
+    "dron-termo":   { "label": "Detekcja z drona",        "accuracyM": 15,   "halfLifeH": 1,    "source": "dron" },
+    "meldunek":     { "label": "Meldunek ratownika",      "accuracyM": 30,   "halfLifeH": 6,    "source": "ratownik" },
+    "przeszukanie": { "label": "Przeszukanie bez wyniku", "accuracyM": null, "halfLifeH": 6,    "source": "ratownik", "note": "est; negative evidence: layer (1 - POD)^weight; decays like a rescuer report (the person may walk into a searched segment)" },
+    "operator":     { "label": "Wpis operatora",          "accuracyM": null, "halfLifeH": null, "source": "operator" }
+  },
+  "clueTypes": {
+    "about": "POST /api/clue type and the engine's event classes -> type above",
+    "odziez": "przedmiot", "znalezisko": "przedmiot", "slad": "slad-buta", "swiadek": "swiadek", "telefon": "aml",
+    "pies": "pies-alert", "sighting-citizen": "zgloszenie", "cell112": "bts", "ratunek": "gps", "searched": "przeszukanie", "drone": "dron-termo"
+  },
+  "accuracy": { "refM": 100, "exponent": 0.35, "min": 0.4, "note": "est; 100 m or better = 1, 200 m 0.78, 500 m 0.57, 5 km 0.4 (floor)" },
+  "recency": { "floor": 0, "note": "decay 0.5^(ageH / halfLifeH) as in the proposal; floor > 0 keeps a residual weight" },
+  "corroboration": {
+    "agreeBoost": 1.25,
+    "agreeBoostMax": 1.5,
+    "conflictPenalty": 0.7,
+    "radiusM": 500,
+    "maxSubjectSpeedKmh": 3,
+    "requireDifferentSources": true,
+    "searchedPenalty": 0.8,
+    "note": "est; agree = independent clues (different source or team) within max(radiusM, 0.8 x the larger radius) and observation gap <= the shorter halfLife: x agreeBoost each, max agreeBoostMax. conflict = observed within the shorter halfLife but farther apart than maxSubjectSpeedKmh allows (+ mean radius) from a clue of higher base weight: x conflictPenalty each. searchedPenalty (est, engine extension): a no-find search of the clue's segment after the observation. Operator override always wins."
+  },
+  "scentHalfLifeMultipliers": { "hotOrStrongSun": 0.5, "heavyRain": 0.5, "windOver8ms": 0.7, "coolHumidForest": 1.5, "note": "est; from the proposal, not applied by the engine yet" }
+}

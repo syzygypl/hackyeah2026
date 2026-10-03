@@ -114,10 +114,12 @@ public final class TimelineEngine {
     /// Cumulative POD cap (fov-params.json pod.cap, 0.95).
     var podCap: Double { tracks.actors.filter { $0.fov.type != "none" }.map(\.fov.podCap).min() ?? 0.95 }
 
-    func stepPOA(_ step: Int) -> [Double] {
-        if let p = stepPOACache[step] { return p }
-        let p = grid.poa(upTo: step + 1, disabled: searchedIds)
-        stepPOACache[step] = p
+    /// With clue weights the step POA depends on the frame minute too (recency decay), cached per (step, minute).
+    func stepPOA(_ step: Int, minute: Int? = nil) -> [Double] {
+        let key = grid.clueWeights == nil ? step : step * 100_000 + (minute ?? 0)
+        if let p = stepPOACache[key] { return p }
+        let p = grid.poa(upTo: step + 1, disabled: searchedIds, at: grid.clueWeights == nil ? nil : minute)
+        stepPOACache[key] = p
         return p
     }
 
@@ -153,7 +155,7 @@ public final class TimelineEngine {
     public func frame(_ minute: Int, pod podIn: [Double]? = nil) -> [String: Any] {
         let pod = podIn ?? self.pod(at: minute)
         let step = stepIndex(minute)
-        let base = stepPOA(step)
+        let base = stepPOA(step, minute: minute)
         var post = (0..<grid.count).map { base[$0] * (1 - pod[$0]) }
         let sum = post.reduce(0, +)
         if sum > 0 { post = post.map { $0 / sum } }
@@ -168,6 +170,7 @@ public final class TimelineEngine {
         return ["t": scenario.clock(minute), "minute": minute, "dayOffset": scenario.dayOffset(minute), "step": step,
                 "actors": actorsJSON(at: minute), "cov": cov.map { [Int($0[0]), $0[1]] as [Any] }, "poaGrid": post.map(r4g),
                 "segments": segs, "pos": (pos * 1000).rounded() / 1000]
+            .merging(grid.clueWeights.map { ["clueWeights": $0.map(at: minute)] } ?? [:]) { a, _ in a }
     }
 
     /// The run document's `timeline` key (CONTRACT section 4).
@@ -184,7 +187,7 @@ public final class TimelineEngine {
             if frames { fr.append(frame(m, pod: pod)) }
             m += max(1, frameMin)
         }
-        let lastBase = stepPOA(stepIndex(endMinute))
+        let lastBase = stepPOA(stepIndex(endMinute), minute: endMinute)
         let finalPos = (0..<grid.count).reduce(0.0) { $0 + lastBase[$1] * finalPod[$1] }
         let actors: [[String: Any]] = tracks.actors.map { a in
             var extra: [String: Any] = [:]

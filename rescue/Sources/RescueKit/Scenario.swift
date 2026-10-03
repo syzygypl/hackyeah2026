@@ -145,6 +145,8 @@ public struct Scenario: Codable, Sendable {
     /// true = include events marked epilogue (default off).
     public var showEpilogue: Bool? = nil
     public var resources: [Resource]? = nil
+    /// Clue weights (ClueWeights.swift): operator overrides, stable clue id ("cw-1a2b3c4d") -> weight 0..1. Set by rescue-server (live).
+    public var clueWeightOverrides: [String: Double]? = nil
 
     public static func load(_ path: String) throws -> Scenario {
         let data = try Data(contentsOf: URL(fileURLWithPath: path))

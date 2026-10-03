@@ -9,6 +9,8 @@ public final class ProbabilityGrid {
     public let centers: [Coord]
     public let segmentOf: [Int]                 // index into scenario.segments
     public private(set) var layers: [(hint: LocationHint, factor: [Double])] = []
+    /// Clue weights (CONTRACT "Clue weights"); nil = every layer at full strength (old behaviour)
+    public var clueWeights: ClueWeights? = nil
 
     // Precomputed terrain distances (metres)
     let dTrail: [Double], dStream: [Double], dRidge: [Double], dHut: [Double]
@@ -219,9 +221,17 @@ public final class ProbabilityGrid {
     }
 
     /// Fused, normalised POA per cell using the first `upTo` layers, skipping disabled ids.
-    public func poa(upTo: Int? = nil, disabled: Set<String> = []) -> [Double] {
+    /// With `clueWeights` set, each weighted clue layer enters as layer^weight evaluated at `minute` (default: the minute of the
+    /// last included layer, i.e. the step's own time), so recency decay shows over time. Without it: the plain product.
+    public func poa(upTo: Int? = nil, disabled: Set<String> = [], at minute: Int? = nil) -> [Double] {
         var p = [Double](repeating: 1, count: count)
-        for (h, f) in layers.prefix(upTo ?? layers.count) where !disabled.contains(h.id) {
+        let inc = layers.prefix(upTo ?? layers.count)
+        let m = minute ?? inc.last?.hint.minute ?? 0
+        for (h, f) in inc where !disabled.contains(h.id) {
+            if let w = clueWeights?.exponent(h.id, at: m), w < 0.9995 {
+                for i in 0..<count { p[i] *= pow(f[i], w) }
+                continue
+            }
             for i in 0..<count { p[i] *= f[i] }
         }
         let sum = p.reduce(0, +)
