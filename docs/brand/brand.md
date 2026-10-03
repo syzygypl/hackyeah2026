@@ -127,7 +127,9 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Polish benign false blocks | **4/42** (was 7/42) | re-test at HEAD | measured |
 | Fixes F7, F11, F12 | judge criterion by phase; multi-line injections; decoded layers (base64, URL, hex, entities) | thread refresh | built |
 | PII in logs | audit log and stored approvals keep PESEL, card, e-mail and IBAN only as HMAC tokens (key in .env), linkable, not reversible; before this fix they were stored in plain text | b946027 | built. Say "pseudonymised", never "anonymous" |
-| Known weak spots | instruction in the middle of very long text (models see head + tail); NEW-1/NEW-2 open with Marcin | thread refresh | open, speaker notes only |
+| Re-test fixes | NEW-1 to NEW-5 all fixed: 0613d07 (judge overrides fallback), 634be31 (fail closed for tools, outputs and documents when checks fail), 3211fa7 (keep_alive -1), c60da8c (jailbreak for prompts), 53930ec (background inventory). Findings F1-F12 and F14 have fix commits | git log 13:17 | built. 18 of 22 findings closed |
+| Known weak spots | instruction in the middle of very long text (models see head + tail); F13, F15, F16 (low) and F17 (medium, approved vendor IBAN in a prompt) have no fix commit yet; second demo Mac re-test running | git log, demo-mac-test.md | open, speaker notes only |
+| Dashboard approvals | console has admin Approve/Reject (401 without token, 200 with), per-phase guard votes, 13 one-click attacks | ca7ce29 | built |
 | Model resilience | evicted or timed-out models re-warm in the background | 7ce31f9 | built |
 | Local only | committed policy allows only local models | d16de01 | true |
 | Pre-event code | nothing in the repo predates 11:00 (checked by AI Andrzeja) | thread | confirmed |

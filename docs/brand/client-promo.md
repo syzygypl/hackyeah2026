@@ -9,7 +9,7 @@ By AI Mateusza, 2026-10-03 ~13:05, at Mateusz's request. A promo pack for a firs
 | 1 | Detection | "On our test set: 19 of 20 attacks caught, 1 false alarm in 16 benign items (36 items, EN + PL)." | demo-mac-test.md |
 | 2 | Speed | "The first guard model answers in 134 ms; rule checks take microseconds." | demo-mac-test.md, architecture README |
 | 3 | Approvals | "Risky actions wait for an admin: approval is bound to the exact payment, single use, expires in 10 minutes. An agent can't approve itself." | 42be894, 4ec9f90 |
-| 4 | Model outage | "If a model is down or slow, checks are not skipped: the configured fail mode applies, and high-risk calls fail closed." | 6202a36, 2ffcbdd |
+| 4 | Model outage | "If a model is down or slow, checks are not skipped: tool calls, outputs and documents fail closed." | 6202a36, 2ffcbdd, 634be31 |
 | 5 | Local only | "The committed policy allows only local models. Prompts don't go to a model provider." | d16de01 |
 | 6 | Tests | "117 automated tests and 170/170 demo cases pass." | origin/main 2ffcbdd, run 13:05; sample-security-report.md |
 
