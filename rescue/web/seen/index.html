@@ -123,6 +123,7 @@
 
   const qs = new URLSearchParams(location.search);
   const SCEN = qs.get("scenario") || "../../scenarios/krakow-nowa-huta.json";
+  const SC = qs.get("sc") || (SCEN.match(/([\w-]+)\.json$/) || [])[1];   // the incident the sighting belongs to (POST /report sc)
   const API = (qs.get("api") || location.origin).replace(/\/$/, "");
   const $ = id => document.getElementById(id);
   const QKEY = "rescue-seen-queue";
@@ -223,7 +224,7 @@
     return h;
   };
   async function post(text, at, id) {
-    const r = await fetch(API + "/report", { method: "POST", headers: headers(), body: JSON.stringify({ text, at, id: clientId + "-" + id }), signal: AbortSignal.timeout(20000) });
+    const r = await fetch(API + "/report", { method: "POST", headers: headers(), body: JSON.stringify({ text, at, id: clientId + "-" + id, sc: SC }), signal: AbortSignal.timeout(20000) });
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.json();
   }
