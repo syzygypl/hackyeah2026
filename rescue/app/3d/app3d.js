@@ -1497,20 +1497,25 @@ function stepMood(dt, snap = false) {
     renderer.shadowMap.needsUpdate = true;
   }
   if (!snap) tickBake(dt);
-  // sky light (PMREM) re-baked while the sky changes, at most every 250 ms
+  // Sky light follows weather transitions at most once a second; retain the smooth palette each frame.
   const sig = [p.top.r, p.top.g, p.top.b, p.bottom.r, p.bottom.g, p.bottom.b, cur.cloud, sunAmt * 0.3, el * 0.01];
   let d = 0; for (let k = 0; k < sig.length; k++) d = Math.max(d, Math.abs(sig[k] - envSig[k]));
-  if (!snap && d > 0.004 && now - envAt > 250) { envSig.set(sig); updateEnv(); }
+  if (!snap && d > 0.004 && now - envAt > 1000) { envSig.set(sig); updateEnv(); }
 }
 // image-based light from the sky dome: prefiltered with PMREM, re-baked only while the mood (time, weather) is changing
 const pmrem = new THREE.PMREMGenerator(renderer), envScene = new THREE.Scene(), envSkyMat = skyMat.clone();
 envScene.add(new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), envSkyMat));
+// Sky lighting is smooth: capture 64px cube faces instead of fromScene's fixed 256px faces.
+// Reuse the capture target; keep the same weather-driven PMREM updates and HDR lighting.
+const envCube = new THREE.WebGLCubeRenderTarget(64, { type: THREE.HalfFloatType, generateMipmaps: false });
+const envCamera = new THREE.CubeCamera(0.1, 50, envCube);
 let envRT = null;
 function updateEnv() {
   const u = envSkyMat.uniforms, s = skyMat.uniforms;
   for (const k in s) { const v = s[k].value; if (v?.copy) u[k].value.copy(v); else u[k].value = v; }
   u.bottom.value.lerp(hemi.groundColor, 0.55); u.sunAmt.value = s.sunAmt.value * 0.15; u.uMoon.value *= 0.3; u.uFlash.value = 0;
-  const rt = pmrem.fromScene(envScene, 0, 0.1, 50);
+  envCamera.update(renderer, envScene);
+  const rt = pmrem.fromCubemap(envCube.texture);
   scene.environment = rt.texture; envRT?.dispose(); envRT = rt; envAt = performance.now();
 }
 scene.environmentIntensity = 0.7;
