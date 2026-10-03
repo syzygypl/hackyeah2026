@@ -16,26 +16,49 @@ Zasada dla autorów silnika: nikt z szukających (ludzie ani AI) nie zagląda do
 
 ## Zasady
 
+Pełne zasady AI Marcina z 14:35.
+
 | Rola | Kto | Co robi |
 |---|---|---|
-| Chowający | AI Marcina | Wybiera tajne miejsce i zachowanie zaginionego. Przed startem publikuje tylko zobowiązanie: SHA-256 z miejsca i losowej soli. Daje wyłącznie realistyczne, zaszumione wskazówki (plan wycieczki, auto, sektor 112, pogoda, puste przeszukania). Bez pingu GPS. |
-| Szukający | aplikacja + AI Mateusza + AI Denisa | Szukają tylko aplikacją. Każdą decyzję patrolu wysyłają w wątku jako `ASSIGN-PATROL` z uzasadnieniem. Nie zaglądają do `rescue/blindtest/`. |
-| Sędzia | AI Marcina (? do potwierdzenia, czy osobna rola) | Odpowiada na każdy `ASSIGN-PATROL` tym, co patrol realnie by znalazł przy danym POD: nic, ŚLAD albo ZNALEZIONO. |
-| Odsłonięcie | wszyscy | Po zakończeniu rundy chowający podaje miejsce i sól. Każdy może policzyć SHA-256 i sprawdzić, że miejsce nie zmieniło się po fakcie. |
+| Chowający | AI Marcina | Wybiera tajne miejsce i historię zachowania (np. zejście ze szlaku we mgle, upadek, zabłądzenie). Miejsca nie są losowane z pierścieni Koestera: generator nie używa żadnych parametrów silnika. Wybiera je jak prawdziwe błędy turystów, czasem "złośliwie", poza strefą 50%. |
+| Sędzia | AI Marcina (ta sama rola co chowający) | Odpowiada na każdy patrol tak, jak odpowiedziałby teren: "nic" albo "ślad / znaleziony", z prawdopodobieństwem wykrycia (POD) dla prawdziwego segmentu. Odpowiedzi wracają jako live-events, więc po każdym "nic" silnik przelicza plan. |
+| Szukający | silnik + AI Mateusza + AI Denisa | Uruchamiają aplikację na samych wskazówkach i wysyłają patrole do segmentów. Autorzy silnika nie zaglądają do generatora ani do prawdy przed odsłonięciem. |
 
-- Seria: 3-5 rund. Porażki raportujemy na równi z sukcesami.
-- Metryki rundy: czy znaleziono, po ilu patrolach i po jakim czasie scenariusza, ranga miejsca w POA w chwili znalezienia (albo końca), procent obszaru przeszukany przed znalezieniem.
+**Wskazówki: tylko realistyczne i zaszumione**, takie, które naprawdę by istniały:
+- plan wycieczki od rodziny, który różni się od faktycznej trasy,
+- auto na parkingu przy szlaku,
+- ostatni sektor BTS z błędem,
+- świadek w schronisku z godziną,
+- telefon gaśnie o godzinie T,
+- pogoda.
+
+Bez pingu GPS.
+
+**Zobowiązanie:** w repo ląduje scenariusz bez prawdy oraz SHA-256(miejsce + sól). Prawda zostaje poza repo.
+
+**Odsłonięcie:** prawda i sól (każdy sam sprawdza hash) oraz metryki:
+1. ranga prawdziwego segmentu przed pierwszym patrolem,
+2. procent obszaru przeszukany do znalezienia,
+3. czas do znalezienia w porównaniu z naiwnym przeszukiwaniem,
+4. odległość od szczytu mapy prawdopodobieństwa.
+
+**Seria:** 3-5 ukrytych miejsc. Porażki raportujemy uczciwie. Ta liczba idzie do pitchu.
+
+## Przebieg
+
+- **Runda 1 na main:** b628d8a (ukryty scenariusz, zobowiązanie, sędzia, odsłonięcie) i 291a655 (prawdziwy teren OSM + DEM, ten sam obszar co zawrat). Agent szukający uruchamia silnik.
 
 ## Runda blind-01
 
 *Szablon. Uzupełniane na żywo z wątku.*
 
 - **Zobowiązanie (SHA-256):** `...` (opublikowane o ...)
-- **Kategoria i zachowanie zaginionego:** ... (tylko to, co ujawnił chowający)
+- **Commity:** b628d8a, 291a655 (teren OSM + DEM, obszar jak zawrat)
+- **Kategoria zaginionego:** ... (tylko to, co jest w scenariuszu bez prawdy; historia zachowania dopiero po odsłonięciu)
 
 ### Wskazówki
 
-| Czas | Wskazówka | Źródło (fikcyjne) | Niepewność |
+| Czas | Wskazówka | Typ (plan, auto, BTS, świadek, telefon gaśnie, pogoda) | Niepewność |
 |---|---|---|---|
 | ... | ... | ... | ... |
 
@@ -47,7 +70,7 @@ Zasada dla autorów silnika: nikt z szukających (ludzie ani AI) nie zagląda do
 
 ### Patrole
 
-| # | Czas | ASSIGN-PATROL (segment, zespół) | Dlaczego tam | Odpowiedź sędziego | POD |
+| # | Czas | Patrol (segment, zespół) | Dlaczego tam | Odpowiedź sędziego (nic / ślad / znaleziony) | POD |
 |---|---|---|---|---|---|
 | 1 | ... | ... | ... | ... | ... |
 
@@ -63,9 +86,10 @@ Zasada dla autorów silnika: nikt z szukających (ludzie ani AI) nie zagląda do
 |---|---|
 | Znaleziony | ... |
 | Liczba patroli do znalezienia | ... |
-| Czas scenariusza do znalezienia | ... |
-| Ranga miejsca w POA (przy znalezieniu lub na koniec) | ... |
-| Procent obszaru przeszukany przed znalezieniem | ... |
+| Ranga prawdziwego segmentu przed pierwszym patrolem | ... |
+| Procent obszaru przeszukany do znalezienia | ... |
+| Czas do znalezienia vs naiwne przeszukiwanie | ... |
+| Odległość od szczytu mapy | ... |
 
 ### Co z tego wynika
 
@@ -87,8 +111,8 @@ Zasada dla autorów silnika: nikt z szukających (ludzie ani AI) nie zagląda do
 
 *(po odsłonięciu wszystkich rund)*
 
-| Runda | Znaleziony | Patrole | Ranga | Obszar | Uwagi |
-|---|---|---|---|---|---|
-| blind-01 | | | | | |
-| blind-02 | | | | | |
-| blind-03 | | | | | |
+| Runda | Znaleziony | Patrole | Ranga przed 1. patrolem | Obszar do znalezienia | Czas vs naiwne | Odległość od szczytu |
+|---|---|---|---|---|---|---|
+| blind-01 | | | | | | |
+| blind-02 | | | | | | |
+| blind-03 | | | | | | |
