@@ -149,6 +149,7 @@
   $("theme").onclick = () => { store.set("rescue-patrol-theme", THEME === "dark" ? "light" : "dark"); location.reload(); };
 
   let run, step, team, map, queue = store.get(QKEY, []), log = store.get(LKEY, []), online = true;
+  $("net").textContent = navigator.onLine ? "łączność OK" : "BEZ ŁĄCZNOŚCI"; $("net").classList.toggle("off", !navigator.onLine);
 
   // ---------- data ----------
   // LAN server with --pin: the run (/api/run/<sc>, /story) needs X-Rescue-Pin too. The app stores it raw, this page JSON-quoted - accept both.
@@ -382,7 +383,10 @@
     store.set(QKEY, queue); store.set(LKEY, log.slice(0, 50)); renderLog();
   }
   setInterval(flush, 8000);
-  async function ping() { try { await fetch(API + "/health", { headers: { "X-Rescue-Client": clientId, "X-Rescue-Team": team || "", "X-Rescue-Source": "patrol" }, signal: AbortSignal.timeout(3000) }); setOnline(true); flush(); } catch { setOnline(false); } }
+  // offline only when the phone says so or after 2 failed pings in a row (a cold server / deploy is not "no signal")
+  let pingFails = 0;
+  async function ping() { try { await fetch(API + "/health", { headers: { "X-Rescue-Client": clientId, "X-Rescue-Team": team || "", "X-Rescue-Source": "patrol" }, signal: AbortSignal.timeout(8000) }); pingFails = 0; setOnline(true); flush(); } catch { pingFails++; if (!navigator.onLine || pingFails >= 2) setOnline(false); } }
+  addEventListener("online", ping); addEventListener("offline", () => setOnline(false));
   setInterval(ping, 15000); ping();
   function setOnline(v) { if (v !== online) tell("online", { online: v }); online = v; $("net").textContent = v ? "łączność OK" : "BEZ ŁĄCZNOŚCI"; $("net").classList.toggle("off", !v); }
 
