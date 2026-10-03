@@ -1,13 +1,13 @@
 // Offline basemap for the rescue screens: local PMTiles + local glyphs/sprites, zero network.
 //
-//   import * as maplibregl from "./basemap/vendor/maplibre-gl.mjs";
+//   import * as maplibregl from "./vendor/maplibre-gl.mjs";
 //   import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "./basemap/basemap.js";
 //   await loadBasemap(maplibregl);
 //   const map = new maplibregl.Map({ container: "map", style: offlineStyle(), bounds: ZAWRAT_BOUNDS });
 //
 // Then add your own sources/layers (POA heatmap, segments, events) on top in map.on("load").
-import "./vendor/pmtiles.js";      // IIFE, sets globalThis.pmtiles
-import "./vendor/basemaps.js";     // IIFE, sets globalThis.basemaps (Protomaps style layers)
+import "../vendor/pmtiles.js";      // IIFE, sets globalThis.pmtiles
+import "../vendor/basemaps.js";     // IIFE, sets globalThis.basemaps (Protomaps style layers)
 
 const BASE = new URL(".", import.meta.url).href;  // absolute URL of this folder, works from any page
 

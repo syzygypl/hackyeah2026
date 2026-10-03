@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mapa offline - Zawrat</title>
-<link rel="stylesheet" href="vendor/maplibre-gl.css">
+<link rel="stylesheet" href="../vendor/maplibre-gl.css">
 <style>
   html, body, #map { margin: 0; height: 100%; }
   body { font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
@@ -16,7 +16,7 @@
 <div id="map"></div>
 <div id="info"><b>Mapa bazowa offline</b><span id="net">sprawdzam sieć…</span></div>
 <script type="module">
-  import * as maplibregl from "./vendor/maplibre-gl.mjs";
+  import * as maplibregl from "../vendor/maplibre-gl.mjs";
   import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS } from "./basemap.js";
 
   await loadBasemap(maplibregl);
