@@ -632,6 +632,7 @@ class ControlLayer:
         try:
             if self.policy is None:
                 raise Denied("fail_closed", "no valid policy loaded")
+            self._timed(ev, "budget", self._budget, session, "llm", {}, ev)  # F16: prompt-side model time is enforced too
             try:
                 self._timed(ev, "attack_signatures", self._signatures, {"text": text}, ev)
             except Denied as d:

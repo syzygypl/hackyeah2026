@@ -444,6 +444,21 @@ class Budgets(unittest.TestCase):
         self.assertEqual(r["decision"], DENY)
         self.assertIn("budget", r["event"]["guardrails"])
 
+    def test_prompt_model_time_counts_against_compute_budget(self):  # F16
+        fake = FakeOllama({QWEN: "q"}, reply=SAFE[QWEN], delay=0.3)
+        try:
+            def edit(p):
+                semantic_env(fake.url, prefilter={"fallback_models": []})(p)
+                p["budgets"]["max_compute_ms"] = 200
+            layer, s, _ = fresh(edit=edit)
+            self.assertEqual(layer.check_prompt(s, "Summarize open complaints")["decision"], ALLOW)
+            self.assertGreater(s.compute_ms, 200)  # the prefilter call was charged to the session
+            r = layer.check_prompt(s, "And the ones from last week")
+            self.assertEqual(r["decision"], DENY, r["event"]["reasons"])
+            self.assertIn("budget", r["event"]["guardrails"])
+        finally:
+            fake.stop()
+
     def test_call_budget(self):
         layer, s, _ = fresh()
         for i in range(40):
