@@ -471,6 +471,7 @@ public actor Studio {
             if let sc = o["scenario"] as? String { a["scenario"] = String(sc.prefix(60)) }
             if let at = o["at"] as? String { a["at"] = at }
             if let n = o["note"] as? String { a["note"] = String(n.prefix(300)) }
+            if let by = o["by"] as? String, by.range(of: #"^[A-Za-z0-9 ._-]{1,40}$"#, options: .regularExpression) != nil { a["by"] = by }
             manual[rid] = a
         } else { manual[rid] = nil }
         return assignments()
