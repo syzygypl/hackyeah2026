@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Control Layer</title>
+<style>
+:root {
+  --bg: #0d1117; --panel: #161b22; --panel2: #1c2330; --line: #2a3340; --text: #e6edf3; --muted: #8b98a8;
+  --allow: #3fb950; --deny: #f85149; --redact: #d29922; --approve: #58a6ff; --accent: #a371f7;
+}
+:root[data-theme="light"] {
+  --bg: #f6f8fa; --panel: #ffffff; --panel2: #f0f3f6; --line: #d8dee4; --text: #1f2328; --muted: #59636e;
+  --allow: #1a7f37; --deny: #cf222e; --redact: #9a6700; --approve: #0969da; --accent: #8250df;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 14px 24px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 17px; margin: 0; letter-spacing: .2px; }
+header h1 span { color: var(--accent); }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.badge b { color: var(--text); font-weight: 600; }
+.badge.ok { border-color: color-mix(in srgb, var(--allow) 50%, transparent); color: var(--allow); }
+.badge.bad { border-color: color-mix(in srgb, var(--deny) 50%, transparent); color: var(--deny); }
+.badge.live { background: color-mix(in srgb, var(--allow) 15%, transparent); color: var(--allow); border-color: transparent; }
+.badge.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--allow); margin-right: 6px; animation: pulse 1.6s infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.spacer { flex: 1; }
+button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+main { padding: 20px 24px 40px; max-width: 1500px; margin: 0 auto; display: grid; gap: 16px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+.kpi .value { font-size: 28px; font-weight: 650; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.kpi .sub { color: var(--muted); font-size: 12px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+.controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.ctl { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--panel2); font-size: 13px; }
+.ctl i { width: 8px; height: 8px; border-radius: 50%; background: var(--allow); flex: none; }
+.ctl.off { opacity: .55; text-decoration: line-through; }
+.ctl.off i { background: var(--deny); }
+.ctl small { margin-left: auto; color: var(--muted); font-size: 11px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin-top: 12px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.bars { display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: 140px 1fr 34px; align-items: center; gap: 10px; font-size: 13px; }
+.bar .track { height: 10px; background: var(--panel2); border-radius: 5px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--deny); border-radius: 5px; transition: width .4s; }
+.bar .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.stack { display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin-bottom: 10px; }
+.stack div { display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 600; min-width: 2px; transition: flex .4s; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; background: var(--c); }
+.meter { margin-bottom: 12px; }
+.meter .top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.meter .top span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+.meter .track { height: 8px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+.meter .fill { height: 100%; background: var(--approve); transition: width .4s; }
+.meter .fill.hot { background: var(--redact); }
+.meter .fill.over { background: var(--deny); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.audit-wrap { max-height: 560px; overflow: auto; }
+.audit tr.row { cursor: pointer; }
+.audit tr.row:hover td { background: var(--panel2); }
+.audit tr.fresh td { animation: flash 2.5s ease-out; }
+@keyframes flash { from { background: color-mix(in srgb, var(--accent) 30%, transparent); } }
+.audit tr.detail td { background: var(--panel2); }
+.audit pre { margin: 0; white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto; }
+.dec { display: inline-block; border-radius: 6px; padding: 1px 7px; font-size: 11.5px; font-weight: 650; letter-spacing: .3px; color: #fff; white-space: nowrap; }
+.d-ALLOW { background: var(--allow); } .d-DENY { background: var(--deny); } .d-REDACT { background: var(--redact); } .d-REQUIRE_APPROVAL { background: var(--approve); }
+.chip { display: inline-block; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; font-size: 11.5px; color: var(--muted); margin: 1px 3px 1px 0; }
+.reason { color: var(--muted); max-width: 560px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.toolbar .f { border-radius: 999px; padding: 4px 11px; font-size: 12px; }
+.toolbar .f.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.toolbar input { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; min-width: 200px; flex: 1; max-width: 320px; }
+.findings { margin: 0; padding-left: 18px; }
+.findings li { margin-bottom: 6px; }
+.empty { color: var(--muted); padding: 30px; text-align: center; }
+.err { background: color-mix(in srgb, var(--deny) 12%, transparent); border: 1px solid var(--deny); border-radius: 10px; padding: 12px 16px; }
+@media (max-width: 640px) { header, main { padding-left: 16px; padding-right: 16px; } .bar { grid-template-columns: 100px 1fr 28px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>AI <span>Control Layer</span></h1>
+  <div class="badges" id="badges"></div>
+  <div class="spacer"></div>
+  <button id="btnRerun" title="Re-run the scripted attack demo (only when no live gateway)">Re-run demo</button>
+  <button id="btnReport">Report .md</button>
+  <button id="btnCsv">Export CSV</button>
+  <button id="btnExport" class="primary">Export audit log</button>
+  <button id="btnTheme" title="Toggle theme">◐</button>
+</header>
+<main>
+  <div id="error"></div>
+  <section class="kpis" id="kpis"></section>
+  <section class="grid">
+    <div class="card"><h2>Security posture</h2><div class="controls" id="controls"></div><dl class="kv" id="posture"></dl></div>
+    <div class="card"><h2>Blocked &amp; flagged by guardrail</h2><div class="bars" id="guardrails"></div></div>
+    <div class="card"><h2>Decisions</h2><div class="stack" id="stack"></div><div class="legend" id="legend"></div>
+      <h2 style="margin-top:18px">Budget per session</h2><div id="budgets"></div></div>
+  </section>
+  <section class="grid">
+    <div class="card"><h2>Findings</h2><ul class="findings" id="findings"></ul></div>
+    <div class="card"><h2>Check latency (µs)</h2><table id="latency"></table></div>
+  </section>
+  <section class="card">
+    <h2>Audit log <span id="auditCount" style="text-transform:none;letter-spacing:0"></span></h2>
+    <div class="toolbar" id="filters">
+      <button class="f on" data-f="all">All</button>
+      <button class="f" data-f="DENY">Blocked</button>
+      <button class="f" data-f="REDACT">Redacted</button>
+      <button class="f" data-f="REQUIRE_APPROVAL">Human approval</button>
+      <button class="f" data-f="ALLOW">Allowed</button>
+      <input id="search" placeholder="Search tool, guardrail, reason…">
+    </div>
+    <div class="audit-wrap"><table class="audit"><thead><tr><th>#</th><th>Time</th><th>Tool</th><th>Decision</th><th>Guardrails</th><th>Reason</th><th class="num">µs</th></tr></thead><tbody id="audit"></tbody></table></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = n => typeof n === "number" ? n.toLocaleString("en-US", {maximumFractionDigits: n < 10 ? 2 : 0}) : "–";
+const COLORS = {ALLOW: "var(--allow)", DENY: "var(--deny)", REDACT: "var(--redact)", REQUIRE_APPROVAL: "var(--approve)"};
+const LABELS = {ALLOW: "Allowed", DENY: "Blocked", REDACT: "Redacted", REQUIRE_APPROVAL: "Human approval"};
+
+let state = {metrics: null, audit: [], policy: null, source: "", filter: "all", q: "", open: new Set(), seen: new Set(), first: true};
+
+try { const t = localStorage.getItem("acl-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+$("btnTheme").onclick = () => {
+  const t = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("acl-theme", t); } catch (e) {}
+};
+
+async function load() {
+  try {
+    const [m, a, p] = await Promise.all([fetch("/api/metrics"), fetch("/api/audit"), fetch("/api/policy")]);
+    if (!m.ok) throw new Error("No metrics yet - run python3 spikes/ai-control-layer/demo.py or start the gateway");
+    state.source = m.headers.get("X-Data-Source");
+    state.metrics = await m.json();
+    state.audit = a.ok ? (await a.text()).split("\n").filter(Boolean).map(l => JSON.parse(l)) : [];
+    state.policy = p.ok ? (await p.json()).policy : null;
+    $("error").innerHTML = "";
+    render();
+  } catch (e) {
+    $("error").innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+function render() {
+  const m = state.metrics, audit = state.audit, pol = state.policy || {};
+  const dec = m.by_decision || {};
+  const approvals = audit.filter(e => e.decision === "REQUIRE_APPROVAL");
+  const redactedVals = audit.reduce((s, e) => s + (e.redactions?.length || 0), 0);
+  const tokens = (m.budgets || []).reduce((s, b) => s + (b.tokens || 0), 0);
+  const usd = (m.budgets || []).reduce((s, b) => s + (b.usd || 0), 0);
+  const lat = m.latency_us?._total_overhead || {};
+  const st = m.selftest;
+
+  // header badges
+  const p = m.policy || {};
+  $("badges").innerHTML = [
+    state.source === "live" ? `<span class="badge live">LIVE gateway</span>` : `<span class="badge">source: <b>last demo run</b></span>`,
+    `<span class="badge">policy <b class="mono">${esc(p.version || "–")}</b> · ${esc(p.mode || "")}${p.reloads ? ` · ${p.reloads} reload(s)` : ""}</span>`,
+    m.audit ? `<span class="badge ${m.audit.chain_verified ? "ok" : "bad"}">audit chain ${m.audit.chain_verified ? "verified ✓" : "BROKEN ✗"} · <span class="mono">${esc(m.audit.head || "")}</span></span>` : "",
+    st ? `<span class="badge ${st.passed === st.total ? "ok" : "bad"}">self-test ${st.passed}/${st.total}</span>` : "",
+    p.rejected_edits?.length ? `<span class="badge bad">${p.rejected_edits.length} rejected policy edit(s)</span>` : "",
+  ].join("");
+
+  // KPIs
+  const kpis = [
+    ["Interactions", fmt(m.interactions ?? audit.length), "tool calls + prompts checked"],
+    ["Blocked", fmt(dec.DENY || 0), `${m.interactions ? Math.round(100 * (dec.DENY || 0) / m.interactions) : 0}% of interactions`, "var(--deny)"],
+    ["Redacted", fmt(dec.REDACT || 0), `${redactedVals} sensitive value(s) masked`, "var(--redact)"],
+    ["Human approvals", fmt(approvals.length), `${approvals.filter(e => e.approved_by).length} approved`, "var(--approve)"],
+    ["Overhead p50", lat.p50 != null ? fmt(lat.p50) + " µs" : "–", lat.p95 != null ? `p95 ${fmt(lat.p95)} µs` : ""],
+    ["Spend", "$" + usd.toFixed(4), `${fmt(tokens)} tokens`],
+  ];
+  $("kpis").innerHTML = kpis.map(([l, v, s, c]) => `<div class="kpi"><div class="label">${l}</div><div class="value" ${c ? `style="color:${c}"` : ""}>${v}</div><div class="sub">${s}</div></div>`).join("");
+
+  // posture
+  const ctrls = pol.controls || {};
+  const names = Object.keys(ctrls).length ? Object.keys(ctrls) : [...(p.controls_enabled || []), ...(p.controls_disabled || [])];
+  $("controls").innerHTML = names.map(n => {
+    const c = ctrls[n] || {}; const on = ctrls[n] ? c.enabled !== false : !(p.controls_disabled || []).includes(n);
+    return `<div class="ctl ${on ? "" : "off"}" title="${esc(c._doc || "")}"><i></i>${esc(n.replace(/_/g, " "))}${c.action ? `<small>${esc(c.action)}</small>` : ""}</div>`;
+  }).join("");
+  const b = pol.budgets || {};
+  $("posture").innerHTML = [
+    ["Mode", `<b>${esc(p.mode || pol.mode || "–")}</b>`],
+    ["Signature feed", p.signature_feed ? `${esc(p.signature_feed.version)} · ${p.signature_feed.signatures} signatures` : "–"],
+    ["Allowed models", (pol.models?.allowed || []).map(x => `<span class="chip mono">${esc(x)}${(pol.models.local || []).includes(x) ? " · local" : ""}</span>`).join("") || "–"],
+    ["Session budget", b.max_tokens ? `${fmt(b.max_tokens)} tok · $${b.max_usd} · ${b.max_calls} calls` : "–"],
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+
+  // guardrail bars
+  const g = Object.entries(m.by_guardrail || {}).sort((a, b) => b[1] - a[1]);
+  const gmax = Math.max(1, ...g.map(x => x[1]));
+  $("guardrails").innerHTML = g.length ? g.map(([k, v]) => `<div class="bar"><span>${esc(k.replace(/_/g, " "))}</span><div class="track"><div class="fill" style="width:${100 * v / gmax}%"></div></div><span class="n">${v}</span></div>`).join("") : `<div class="empty">No guardrail fired yet</div>`;
+
+  // decisions stack
+  const order = ["DENY", "REDACT", "REQUIRE_APPROVAL", "ALLOW"];
+  $("stack").innerHTML = order.filter(k => dec[k]).map(k => `<div style="flex:${dec[k]};background:${COLORS[k]}" title="${LABELS[k]}: ${dec[k]}">${dec[k]}</div>`).join("");
+  $("legend").innerHTML = order.map(k => `<span style="--c:${COLORS[k]}">${LABELS[k]} ${dec[k] || 0}</span>`).join("");
+
+  // budgets
+  const meter = (label, v, max, unit) => {
+    const pct = max ? 100 * v / max : 0;
+    return `<div class="meter"><div class="top"><span>${label}</span><span>${unit === "$" ? "$" + v.toFixed(4) : fmt(v)} / ${unit === "$" ? "$" + max : fmt(max)}</span></div><div class="track"><div class="fill ${pct >= 100 ? "over" : pct >= 75 ? "hot" : ""}" style="width:${Math.min(100, pct)}%"></div></div></div>`;
+  };
+  $("budgets").innerHTML = (m.budgets || []).map(s => `
+    <div style="margin-bottom:10px"><div class="mono" style="margin-bottom:6px">${esc(s.session)}${s.tainted_by ? ` <span class="chip" style="color:var(--deny);border-color:var(--deny)">tainted by ${esc(s.tainted_by)}</span>` : ""}</div>
+    ${b.max_tokens ? meter("Tokens", s.tokens || 0, b.max_tokens) : ""}
+    ${b.max_usd ? meter("Cost", s.usd || 0, b.max_usd, "$") : ""}
+    ${b.max_calls ? meter("Calls", s.calls || 0, b.max_calls) : ""}</div>`).join("") || `<div class="empty">No sessions</div>`;
+
+  // findings (derived from the audit log)
+  const has = gr => audit.some(e => e.guardrails?.includes(gr));
+  const f = [];
+  if (has("prompt_injection")) f.push(`<b>Prompt injection</b> detected ${audit.filter(e => e.guardrails?.includes("prompt_injection")).length}×; tainted sessions now need human approval for sensitive tools.`);
+  if (has("egress_allowlist") || has("pii")) f.push(`<b>Data exfiltration</b> attempts blocked at egress (allowlist / PII).`);
+  if (has("business_rule")) f.push(`<b>Unauthorized payment</b> to an unapproved beneficiary blocked.`);
+  if (has("attack_signature")) f.push(`<b>Known attack signatures</b> matched: ${[...new Set(audit.filter(e => e.guardrails?.includes("attack_signature")).map(e => (e.reasons?.[0] || "").split(" ")[0]))].map(s => `<code>${esc(s)}</code>`).join(", ")}.`);
+  if (has("forbidden_action") || has("obfuscation") || has("sql_guard")) f.push(`<b>Destructive actions</b> (forbidden tools, obfuscated names, destructive SQL) denied.`);
+  if (has("budget") || has("loop_detection")) f.push(`<b>Cost runaway</b> stopped by loop detection and session budget.`);
+  if (has("model_allowlist")) f.push(`<b>Unapproved model</b> requested and denied (model allowlist).`);
+  if (redactedVals) f.push(`<b>${redactedVals} sensitive values</b> redacted from tool outputs before reaching the model.`);
+  $("findings").innerHTML = f.map(x => `<li>${x}</li>`).join("") || `<li class="empty">Nothing suspicious yet</li>`;
+
+  // latency
+  const L = Object.entries(m.latency_us || {}).filter(([k]) => k !== "_total_overhead").sort((a, b) => (b[1].p50 || 0) - (a[1].p50 || 0));
+  $("latency").innerHTML = `<tr><th>Check</th><th class="num">p50</th><th class="num">p95</th><th class="num">n</th></tr>` +
+    L.map(([k, v]) => `<tr><td>${esc(k.replace(/_/g, " "))}</td><td class="num">${fmt(v.p50)}</td><td class="num">${fmt(v.p95)}</td><td class="num">${v.n}</td></tr>`).join("") +
+    (lat.p50 != null ? `<tr><td><b>total overhead</b></td><td class="num"><b>${fmt(lat.p50)}</b></td><td class="num"><b>${fmt(lat.p95)}</b></td><td class="num">${lat.n}</td></tr>` : "");
+
+  renderAudit();
+}
+
+function renderAudit() {
+  const q = state.q.toLowerCase();
+  const rows = state.audit.slice().reverse().filter(e =>
+    (state.filter === "all" || e.decision === state.filter) &&
+    (!q || JSON.stringify([e.tool, e.guardrails, e.reasons, e.decision, e.agent_reasoning]).toLowerCase().includes(q)));
+  $("auditCount").textContent = `· ${rows.length} of ${state.audit.length} records`;
+  $("audit").innerHTML = rows.map(e => {
+    const key = e.hash || e.seq;
+    const fresh = !state.first && !state.seen.has(key);
+    const time = (e.ts || "").split("T")[1] || e.ts || "";
+    const tool = String(e.tool ?? e.kind ?? "").replace(/[​-‏⁠﻿]/g, m => `<span style="color:var(--deny)" title="hidden character U+${m.charCodeAt(0).toString(16).toUpperCase()}">⍰</span>`);
+    let html = `<tr class="row ${fresh ? "fresh" : ""}" data-k="${esc(key)}"><td class="mono">${e.seq}</td><td class="mono">${esc(time)}</td><td class="mono">${tool}</td>
+      <td><span class="dec d-${esc(e.decision)}">${esc(LABELS[e.decision] || e.decision)}</span>${e.decision_final && e.decision_final !== e.decision ? ` → <span class="dec d-${esc(e.decision_final)}">${esc(LABELS[e.decision_final] || e.decision_final)}</span>` : ""}${e.approved_by ? `<div class="reason" style="font-size:12px">by ${esc(e.approved_by)}</div>` : ""}</td>
+      <td>${(e.guardrails || []).map(g => `<span class="chip">${esc(g)}</span>`).join("")}</td>
+      <td class="reason">${esc((e.reasons || []).join("; "))}</td><td class="num mono">${fmt(e.overhead_us)}</td></tr>`;
+    if (state.open.has(String(key))) html += `<tr class="detail"><td colspan="7"><pre class="mono">${esc(JSON.stringify(e, null, 2))}</pre></td></tr>`;
+    return html;
+  }).join("") || `<tr><td colspan="7" class="empty">No records</td></tr>`;
+  state.audit.forEach(e => state.seen.add(e.hash || e.seq));
+  state.first = false;
+}
+
+$("audit").onclick = ev => {
+  const tr = ev.target.closest("tr.row"); if (!tr) return;
+  const k = tr.dataset.k; state.open.has(k) ? state.open.delete(k) : state.open.add(k); renderAudit();
+};
+$("filters").onclick = ev => {
+  const b = ev.target.closest(".f"); if (!b) return;
+  document.querySelectorAll(".f").forEach(x => x.classList.toggle("on", x === b));
+  state.filter = b.dataset.f; renderAudit();
+};
+$("search").oninput = ev => { state.q = ev.target.value; renderAudit(); };
+
+function download(name, text, type) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const stamp = () => new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+$("btnExport").onclick = () => download(`acl-audit-${stamp()}.jsonl`, state.audit.map(e => JSON.stringify(e)).join("\n") + "\n", "application/x-ndjson");
+$("btnCsv").onclick = () => {
+  const cols = ["seq", "ts", "session", "user", "tool", "decision", "decision_final", "guardrails", "reasons", "approved_by", "overhead_us", "policy_version", "hash", "prev_hash"];
+  const cell = v => `"${String(Array.isArray(v) ? v.join("; ") : v ?? "").replace(/"/g, '""')}"`;
+  download(`acl-audit-${stamp()}.csv`, [cols.join(","), ...state.audit.map(e => cols.map(c => cell(e[c])).join(","))].join("\n"), "text/csv");
+};
+$("btnReport").onclick = async () => { const r = await fetch("/api/report"); if (r.ok) download(`acl-security-report-${stamp()}.md`, await r.text(), "text/markdown"); };
+$("btnRerun").onclick = async () => { $("btnRerun").textContent = "Running…"; await fetch("/api/rerun"); $("btnRerun").textContent = "Re-run demo"; state.first = true; state.seen.clear(); load(); };
+
+load();
+setInterval(load, 3000);
+</script>
+</body>
+</html>
