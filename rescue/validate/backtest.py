@@ -104,6 +104,9 @@ def main():
     for path in scenario_paths:
         name = path.stem
         scenario = load(path)
+        if not scenario.get("truth"):   # blind scenario (no find spot): nothing to backtest
+            print(f"skipping {name}: no truth (blind)", file=sys.stderr)
+            continue
         terrain_src = path.with_name(f"{name}-terrain.json")
         terrain_src = terrain_src if terrain_src.exists() else None
         for variant_slug, pod, variant_display in drone_pod_variants(scenario):

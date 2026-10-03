@@ -8,16 +8,26 @@ scenario includes a thermal-drone pass, both POD assumptions used in the demo se
 
 | Scenariusz | Kategoria | POD drona | Ranga: fuzja | Ranga: same ringi | Obszar: fuzja | Obszar: ringi | Teren |
 |---|---|---|---|---|---|---|---|
+| bieszczady-wetlinska | gatherer | 0.6 | #2 | #15 | 1.36% | 33.6% | prawdziwy (OSM+DEM) |
+| bieszczady-wetlinska | gatherer | 0.75 | #2 | #15 | 1.36% | 33.6% | prawdziwy (OSM+DEM) |
+| blind-01-replay | hiker | n/a | #2 | #5 | 4.08% | 51.4% | prawdziwy (OSM+DEM) |
+| karkonosze-sniezka | hiker | n/a | #5 | #8 | 2.86% | 1.8% | prawdziwy (OSM+DEM) |
 | kasprowy | ski-tourer | n/a | #2 | #5 | 4.94% | 4.2% | prawdziwy (OSM+DEM) |
+| miedzyzdroje | swimmer | 0.6 | #3 | #10 | 1.58% | 17.2% | prawdziwy (OSM+DEM) |
+| miedzyzdroje | swimmer | 0.75 | #3 | #10 | 1.58% | 17.2% | prawdziwy (OSM+DEM) |
 | morskie-oko | child | 0.6 | #1 | #1 | 0.03% | 0.2% | prawdziwy (OSM+DEM) |
 | morskie-oko | child | 0.75 | #1 | #1 | 0.03% | 0.2% | prawdziwy (OSM+DEM) |
-| zawrat | hiker | 0.6 | #1 | #19 | 0.22% | 41.0% | prawdziwy (OSM+DEM) |
-| zawrat | hiker | 0.75 | #1 | #19 | 0.11% | 41.0% | prawdziwy (OSM+DEM) |
+| morzycko | boater | 0.6 | #1 | #7 | 0.94% | 5.0% | prawdziwy (OSM+DEM) |
+| morzycko | boater | 0.75 | #1 | #7 | 0.94% | 5.0% | prawdziwy (OSM+DEM) |
+| sniardwy | boater | 0.6 | #1 | #3 | 3.53% | 31.8% | prawdziwy (OSM+DEM) |
+| sniardwy | boater | 0.75 | #1 | #3 | 3.53% | 31.8% | prawdziwy (OSM+DEM) |
+| zawrat | hiker | 0.6 | #2 | #20 | 0.28% | 34.3% | prawdziwy (OSM+DEM) |
+| zawrat | hiker | 0.75 | #1 | #20 | 0.07% | 34.3% | prawdziwy (OSM+DEM) |
 
 ## Liczba do pitchu
 
-N = 3 scenariusze fikcyjne (nie warianty POD drona - scenariusz z dwiema wersjami POD liczy sie raz, po gorszym z dwoch wynikow).
+N = 9 scenariusze fikcyjne (nie warianty POD drona - scenariusz z dwiema wersjami POD liczy sie raz, po gorszym z dwoch wynikow).
 
-Miejsce odnalezienia w top 3 segmentow po fuzji w **3/3 scenariuszach**. Metryka: % obszaru przeszukanego w kolejnosci POA do miejsca odnalezienia. Srednio **1.73%** po fuzji wszystkich dowodow, wobec **15.2%** gdybysmy uzyli tylko pierscieni Koestera (bez fuzji pozostalych dowodow).
+Miejsce odnalezienia w top 3 segmentow po fuzji w **8/9 scenariuszach**. Metryka: % obszaru przeszukanego w kolejnosci POA do miejsca odnalezienia. Srednio **2.18%** po fuzji wszystkich dowodow, wobec **20.0%** gdybysmy uzyli tylko pierscieni Koestera (bez fuzji pozostalych dowodow).
 
 Uwaga: liczby zalezne od terenu - scenariusze bez jeszcze wygenerowanego prawdziwego terenu (OSM+DEM, AI Marcina) uzywaja reczne narysowanego fallbacku ze scenariusza i moga sie zmienic po dolozeniu <nazwa>-terrain.json (tak jak dla zawrat: ranga #1 -> #2).
