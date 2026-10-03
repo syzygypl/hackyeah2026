@@ -1,0 +1,33 @@
+/* Rescue Locator design tokens - DECISION S1: dark operational theme (night use) from the 2D palette,
+   accent cyan, danger red from 3D, one latin-ext font stack; light print/paper variant under [data-theme=light].
+   Use: <link rel="stylesheet" href="/app/tokens.css"> then var(--rl-*). No webfont download (offline): system fonts with Polish glyphs. */
+:root{
+  --rl-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial,sans-serif; /* all cover latin-ext (ąćęłńóśźż) */
+  --rl-mono:ui-monospace,Menlo,Consolas,"Noto Sans Mono",monospace;
+  --rl-fs-xs:11px;--rl-fs-s:12px;--rl-fs:14px;--rl-fs-l:17px;--rl-fs-xl:22px;
+  /* surfaces */
+  --rl-bg:#0e1317;--rl-panel:#151c22;--rl-panel-2:#1b242c;--rl-line:#2b3741;
+  /* text */
+  --rl-ink:#eef2f5;--rl-ink-2:#b7c3cd;--rl-mute:#8797a4;
+  /* roles */
+  --rl-accent:#5ce1e6;--rl-on-accent:#062126;
+  --rl-ok:#3ee08f;--rl-warn:#f2b134;
+  --rl-danger:#b8322a;--rl-on-danger:#ffffff;   /* alerts, ZNALEZIONO, safety flags */
+  --rl-select:#ffd84d;                          /* selected segment / evidence in both views */
+  /* spacing + shape */
+  --rl-sp-1:4px;--rl-sp-2:8px;--rl-sp-3:12px;--rl-sp-4:16px;--rl-sp-5:24px;
+  --rl-radius-s:6px;--rl-radius:9px;--rl-radius-l:14px;
+  --rl-shadow:0 6px 20px rgba(0,0,0,.55);
+  color-scheme:dark;
+}
+[data-theme=light]{
+  --rl-bg:#f4f1ea;--rl-panel:#ffffff;--rl-panel-2:#f7f5f0;--rl-line:#d9d4c7;
+  --rl-ink:#1d2327;--rl-ink-2:#3d4a52;--rl-mute:#6b7680;
+  --rl-accent:#0e7c86;--rl-on-accent:#ffffff;
+  --rl-ok:#2d6a4f;--rl-warn:#b7791f;
+  --rl-danger:#b8322a;--rl-on-danger:#ffffff;
+  --rl-select:#c99700;
+  --rl-shadow:0 2px 8px rgba(0,0,0,.15);
+  color-scheme:light;
+}
+@media print{:root:not([data-theme=dark]){--rl-bg:#fff;--rl-panel:#fff;--rl-panel-2:#fff;--rl-line:#bbb;--rl-ink:#000;--rl-ink-2:#222;--rl-mute:#555;--rl-accent:#0e7c86;--rl-select:#c99700;color-scheme:light}}
