@@ -574,6 +574,22 @@ export function createChat(root, host, opts = {}) {
   return { say, onText, ensureCtx, resetSim: () => { sim.events = []; sim.last = null; sim.base = null; }, get simActive() { return sim.events.length > 0; }, renderChips, hello };
 }
 
+// the embedded 2D view (same origin, web/ untouched): a what-if run lives at a blob: URL, and the view's 5 s HEAD poll of its run
+// URL fails on blob: (net::ERR_METHOD_NOT_SUPPORTED) - answer those HEADs locally; on phones shrink the legend, hide the map panel
+export function tameFrame(f, narrow) {
+  const go = () => {
+    try {
+      const w = f.contentWindow, d = f.contentDocument; if (!w || !d) return;
+      if (!w.__chatFetch) { const of = w.fetch.bind(w); w.__chatFetch = of; w.fetch = (u, o) => (String(u && u.url || u).startsWith("blob:") && o && String(o.method).toUpperCase() === "HEAD") ? Promise.resolve(new w.Response(null, { status: 200 })) : of(u, o); }
+      if (narrow && narrow() && !d.getElementById("chCompact") && d.head) {
+        const st = d.createElement("style"); st.id = "chCompact";
+        st.textContent = "#mapctl{display:none!important}#legend{padding:4px 7px!important;font-size:10px!important}#legend .lg-title{font-size:10.5px;margin-bottom:1px}#legend .lg-ramp,#legend .lg-stops{width:140px!important}#legend .lg-ramp{height:6px}#legend .lg-stops{font-size:9px}#legend .lg-keys{display:none}.maplibregl-ctrl-scale,#rl-version{display:none!important}";
+        d.head.appendChild(st);
+      }
+    } catch (e) { /* not reachable: leave the frame as is */ }
+  };
+  f.addEventListener("load", go); go();
+}
 // Historia "teraz": the shown step, but never at or past the scripted find (an event added after ZNALEZIONO changes nothing)
 function beforeFind(R, i) { const f = R.steps.findIndex((s) => s.kind === "found"); let k = Math.max(0, Math.min(i, R.steps.length - 1)); if (f >= 0 && k >= f) k = Math.max(0, f - 1); return R.steps[k]; }
 // ---------------------------------------------------------------- host 1: the /app shell (drawer + floating button)
@@ -584,6 +600,7 @@ export function mountAppChat() {
   const dr = document.createElement("aside"); dr.id = "chDrawer"; dr.setAttribute("aria-label", "Czat - dodaj zdarzenie");
   dr.innerHTML = `<div class="ch-head"><b>Czat</b><span class="ch-mode"></span><button class="ch-x" type="button" aria-label="Zamknij">✕</button></div><div class="ch-sim" hidden>Symulacja: mapa pokazuje Twoje dodane zdarzenia. <button type="button" class="ch-lnk" data-back>Wróć do nagrania</button></div><div class="ch-body"></div>`;
   document.body.append(btn, dr);
+  const f2 = document.getElementById("frame2d"); if (f2) tameFrame(f2);
   let simRun = null, restoring = false, blob = null;
   const S = () => st();
   const live = () => S().time === "live" && S().backend === "api" && S().mode !== "edycja";
@@ -627,6 +644,7 @@ export async function mountStandalone() {
   const q = new URLSearchParams(location.search), sc = q.get("sc") || "zawrat";
   const frame = document.getElementById("czMap"), body = document.getElementById("czChat");
   let run = null, ready = false, pending = [], blob = null, liveWanted = false;
+  tameFrame(frame, () => matchMedia("(max-width:760px)").matches);
   const post = (m) => { if (ready) frame.contentWindow.postMessage({ source: "rescue-app", ...m }, location.origin); else pending.push(m); };
   addEventListener("message", (e) => {
     if (e.source !== frame.contentWindow || e.origin !== location.origin || !e.data || e.data.source !== "rescue2d") return;

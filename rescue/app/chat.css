@@ -73,3 +73,17 @@
 .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--rl-line-strong);border-top-color:var(--rl-accent);border-radius:50%;animation:chspin .8s linear infinite;vertical-align:-2px}
 @keyframes chspin{to{transform:rotate(360deg)}}
 @media (max-width:700px){#chBtn{bottom:84px;right:10px}}
+body.role-ratownik #chBtn,body.role-ratownik #chDrawer{display:none}   /* rescuers report from their own screen (patrol) */
+/* touch: 44 px targets, 16 px input (no iOS zoom on focus), the version stamp never over the input */
+#chDrawer .ch-in textarea,.ch-in textarea{font-size:16px}
+@media (pointer:coarse),(max-width:760px){
+  #chBtn{min-height:44px;padding:0 18px}
+  #chDrawer .ch-x{min-width:44px;min-height:44px}
+  .ch-send{width:48px;height:48px}
+  .ch-acts button,.ch-acts .ch-lnk{min-height:44px}
+  .ch-chip{min-height:44px;padding:0 14px}
+  .ch-fields input,.ch-fields select{min-height:40px}
+  .ch-edit summary{padding:10px 0}
+  .ch-top li{padding:10px 8px}
+  body:has(#chDrawer.open) #rl-version{display:none}
+}
