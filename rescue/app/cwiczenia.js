@@ -44,7 +44,11 @@ $("exList").onclick = (e) => { const b = e.target.closest("button[data-id]"); if
 async function start(id) {
   $("exList").querySelectorAll("button").forEach((b) => { b.disabled = true; if (b.dataset.id === id) b.textContent = "Przygotowuję odprawę..."; });
   G.team = null; G.seg = null; G.sent = null; G.pending = null; G.shownEnd = false; msg("");
-  try { G.st = await api("/api/exercise/start", { id }); } catch (e) { alert("Nie udało się rozpocząć: " + e.message); loadList(); return; }
+  // B4: the start takes a few seconds (the engine computes the first map); opened via ?ex= there is no list button to relabel
+  $("hdrInfo").textContent = "Uruchamiam sesję ćwiczenia...";
+  if (!$("exList").querySelector(`button[data-id="${CSS.escape(id)}"]`)) $("exList").innerHTML = `<p class="mute">Uruchamiam sesję ćwiczenia, to potrwa kilka sekund...</p>`;
+  try { G.st = await api("/api/exercise/start", { id }); } catch (e) { $("hdrInfo").textContent = ""; alert("Nie udało się rozpocząć: " + e.message); loadList(); return; }
+  $("hdrInfo").textContent = "";
   const s = G.st;
   try { history.replaceState(null, "", "?ex=" + encodeURIComponent(id)); } catch (e) {}
   $("bTitle").textContent = s.title; $("bPlace").textContent = `${s.place} · ${s.date} · scenariusz fikcyjny`;

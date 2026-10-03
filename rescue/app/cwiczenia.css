@@ -50,7 +50,7 @@ ul.feed,ul.teamlist,ul.seglist,ul.declist{list-style:none;margin:0;padding:0}
 .teamlist.pick li.sel:hover{border-color:var(--rl-accent)}
 .teamlist.pick li.sent{border-color:var(--rl-accent);box-shadow:inset 4px 0 0 var(--rl-accent)}
 .teamlist.pick li.sent .tag{color:var(--rl-accent)}
-.seglist{max-height:220px;overflow:auto}
+.seglist{max-height:none}  /* B6: the panel scrolls; a 220 px inner box hid sectors #8+ */
 .seglist li{display:flex;gap:8px;align-items:center;padding:3px 6px;border-radius:var(--rl-radius-s);cursor:pointer;font-size:var(--rl-fs-s)}
 .seglist li:hover{background:var(--rl-panel-2)}
 .seglist li.sel{outline:2px solid var(--rl-accent);outline-offset:-2px;background:var(--rl-panel-2)}
