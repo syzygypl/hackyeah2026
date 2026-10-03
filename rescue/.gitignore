@@ -1,3 +1,5 @@
 .build/
 .swiftpm/
 version.json
+out/live-events.json
+out/live-*.json
