@@ -419,6 +419,7 @@ async fn serve(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -> Resp
         peer_sock
     };
     let head = method == "HEAD";
+    let inm = headers.get("if-none-match").cloned();
     let q = Req { method: if head { "GET".into() } else { method.clone() }, path, query, headers, body, peer };
     let t0 = Instant::now();
     let (m, p) = (method.clone(), q.path.clone());
@@ -434,6 +435,26 @@ async fn serve(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -> Resp
     m_inc("http_requests_total", &[("path", &path_label(&p)), ("code", &code.to_string())], 1.0);
     if p.starts_with("/api/") || (m == "POST" && p != "/report") {
         println!("{m} {p} {code} {} ms", t0.elapsed().as_millis());
+    }
+    // ETag on GET 200 answers (bodies unchanged, byte-identical): a page change re-fetching the same run gets an empty 304
+    // instead of up to 2.6 MB. Cache-Control no-cache (revalidate every time) instead of Swift's no-store.
+    if (m == "GET" || m == "HEAD") && out.status == 200 && out.location.is_none() && !out.body.is_empty() {
+        use std::hash::{Hash, Hasher};
+        let mut hs = std::collections::hash_map::DefaultHasher::new();
+        out.body.hash(&mut hs);
+        let tag = format!("\"{:016x}{:x}\"", hs.finish(), out.body.len());
+        if inm.as_deref() == Some(tag.as_str()) {
+            let mut r = Response::new(Body::empty());
+            *r.status_mut() = StatusCode::NOT_MODIFIED;
+            r.headers_mut().insert("etag", HeaderValue::from_str(&tag).unwrap());
+            r.headers_mut().insert("cache-control", HeaderValue::from_static("no-cache"));
+            r.headers_mut().insert("access-control-allow-origin", HeaderValue::from_static("*"));
+            return r;
+        }
+        let mut r = to_http(out, head);
+        r.headers_mut().insert("etag", HeaderValue::from_str(&tag).unwrap());
+        r.headers_mut().insert("cache-control", HeaderValue::from_static("no-cache"));
+        return r;
     }
     to_http(out, head)
 }
