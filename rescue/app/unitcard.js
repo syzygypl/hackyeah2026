@@ -17,7 +17,9 @@ export function bar(label, pct, value, level) {
   return `<div class="bar ${level || ""}"><div class="lab"><span>${esc(label)}</span><b>${esc(value)}</b></div><div class="tr"><div class="fi" style="width:${p}%"></div></div></div>`;
 }
 export function codeLevel(u, codes) { const w = (u.warnings || []).filter((x) => codes.includes(x.code)); return w.some((x) => x.level === "red") ? "red" : w.length ? "amber" : ""; }
-export function unitCard(u) {
+// opts (Ćwiczenia): acts: false hides the event buttons, title replaces the tooltip. Zasoby calls it without opts (array.map index is ignored).
+export function unitCard(u, opts) {
+  const o = opts && typeof opts === "object" ? opts : {};
   const h = u.health || {}, kind = u.kind;
   const bars = [];
   if (h.batteryPct != null) bars.push(bar(`Bateria (~${h.flightMinLeft} min lotu, zapas ${h.spareBatteries} szt.)`, h.batteryPct, h.batteryPct + "%", codeLevel(u, ["battery"])));
@@ -35,7 +37,7 @@ export function unitCard(u) {
   const st = plan ? "akcja" : u.status === "wolny" ? "wolny" : u.status === "w akcji" ? "akcja" : "";
   const where = u.sc ? `${esc(u.sc)}${u.segmentId ? " · " + esc(u.segmentId) : ""}` : (u.atSc ? `w planie ${esc(u.atSc)} (ze scenariusza)` : (u.home || []).length ? "baza w: " + esc(u.home.slice(0, 3).join(", ")) : "");
   const spares = (u.spares || []).map((s) => `${esc(s.item)} × ${esc(s.qty)}`).join(", ");
-  return `<article class="unit ${esc(u.level)}" data-id="${esc(u.id)}" data-sc="${esc(u.atSc || u.sc || "")}" tabindex="0" title="Kliknij: dziennik i źródła danych">
+  return `<article class="unit ${esc(u.level)}" data-id="${esc(u.id)}" data-sc="${esc(u.atSc || u.sc || "")}" tabindex="0" title="${esc(o.title ?? "Kliknij: dziennik i źródła danych")}">
     <div class="u-top"><h3>${esc(u.name)}</h3><span class="id">${esc(u.id)}${u.callsign ? " · " + esc(u.callsign) : ""}</span></div>
     <div class="u-sub">${esc(KIND_LABEL[kind] || kind)} · <span class="st ${st}">${esc(status)}</span> ${where}${u.base ? ` · ${esc(u.base)}` : ""}</div>
     ${warns}${bars.join("")}
@@ -43,6 +45,6 @@ export function unitCard(u) {
     ${spares || u.model ? `<div class="facts">${u.model ? esc(u.model) : ""}${spares ? `${u.model ? " · " : ""}zapas: ${spares}` : ""}</div>` : ""}
     <div class="feeds">${feeds}</div>
     ${u.inventory === false ? '<div class="facts">Brak wpisu w inwentarzu (tylko dane z listy zespołów).</div>' : ""}
-    <div class="acts">${eventsFor(kind).map(([t, l]) => `<button data-ev="${t}" class="${t === "fault" ? "fault" : ""}" title="Zapisz zdarzenie: ${esc(l)} (trafia do dziennika i kanału na żywo)">${esc(l)}</button>`).join("")}</div>
+    ${o.acts === false ? "" : `<div class="acts">${eventsFor(kind).map(([t, l]) => `<button data-ev="${t}" class="${t === "fault" ? "fault" : ""}" title="Zapisz zdarzenie: ${esc(l)} (trafia do dziennika i kanału na żywo)">${esc(l)}</button>`).join("")}</div>`}
   </article>`;
 }
