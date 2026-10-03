@@ -184,6 +184,10 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 #modbanner { right: 10px; top: 104px; padding: 6px 10px; font-size: 13px; border-color: var(--warn); color: var(--ink); max-width: 240px; }
 #netnote { left: 50%; transform: translateX(-50%); top: 10px; padding: 6px 12px; font-size: 13px; border-color: var(--warn); color: var(--ink); z-index: 6; }
 #legend { left: 10px; bottom: 26px; padding: 6px 9px; font-size: 12px; }
+/* same box as the 3D #sceneLegend (377px wide, ramp across it), so switching 2D/3D in the shell doesn't resize the legend */
+body.embed-scene #legend { width: 377px; }
+body.embed-scene .lg-title { white-space: nowrap; }
+body.embed-scene .lg-ramp, body.embed-scene .lg-stops { width: 100%; }
 .lg-title { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
 .lg-row { display: grid; grid-template-columns: repeat(6, 44px); }
 .lg-ramp { height: 10px; width: 264px; border-radius: 4px; margin: 2px 0 3px; }
