@@ -261,6 +261,7 @@ let shared = SharedState()
 func isWrite(_ q: Req) -> Bool {
     if q.method == "GET" && q.path == "/api/join" { return true }
     guard q.method == "POST" else { return false }
+    if q.path.hasPrefix("/api/exercise/") { return false }   // exercise mode: a sandboxed training session, no action key (MARK: exercise)
     return !["/api/run", "/story/assessment", "/client-event"].contains(q.path)
 }
 /// What a rescuer's phone may do with the field key (RESCUE_FIELD_PIN): send reports and clues. Everything else
@@ -659,6 +660,412 @@ func incidentsData() async -> Data {
     return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])) ?? Data("[]".utf8))
 }
 
+// MARK: exercise (training mode, CONTRACT.md "Exercise mode"): pick up a fictional search mid-way, decide, get scored.
+// Scenarios rescue/scenarios/exercises/<id>.json (not incidents), hidden truth rescue/exercises/<id>.truth.json (never served).
+// Team search outcomes use the engine's own numbers (ExerciseProbe: planner POD / travel / sweep per team and segment);
+// the dice are deterministic per (exercise, team, segment, start), so the trainee and the baselines face the same luck.
+
+final class ExJob {
+    let team: String, seg: String, start: Int, arrive: Int, end: Int, pod: Double, truthPod: Double, poa: Double, cells: [Int]
+    var done = false
+    init(team: String, seg: String, start: Int, arrive: Int, end: Int, pod: Double, truthPod: Double, poa: Double, cells: [Int]) {
+        self.team = team; self.seg = seg; self.start = start; self.arrive = arrive; self.end = end; self.pod = pod; self.truthPod = truthPod; self.poa = poa; self.cells = cells
+    }
+}
+final class ExSession {
+    let sid: String, id: String, meta: [String: Any], find: [Double]
+    var base: [String: Any]
+    var events: [[String: Any]], future: [[String: Any]]
+    let startHM: Int, pickup: Int, end: Int, stepMin: Int
+    var minute: Int
+    var jobs: [ExJob] = []
+    var decisions: [[String: Any]] = []
+    var feed: [[String: Any]] = []
+    var found = false, foundMinute: Int? = nil, foundBy: String? = nil
+    var cells = Set<Int>(), nCells = 1, coverage = 0.0
+    var probeCache: (key: String, doc: [String: Any])? = nil
+    var centroid: [String: [Double]] = [:]
+    init(sid: String, id: String, base: [String: Any], truth: [String: Any]) {
+        self.sid = sid; self.id = id; self.base = base
+        meta = base["exercise"] as? [String: Any] ?? [:]
+        find = truth["find"] as? [Double] ?? [0, 0]
+        events = base["events"] as? [[String: Any]] ?? []
+        future = truth["future"] as? [[String: Any]] ?? []
+        startHM = exHM(base["startClock"] as? String ?? "00:00")
+        pickup = exRel(meta["pickupClock"] as? String ?? "00:00", startHM)
+        end = pickup + (meta["budgetMin"] as? Int ?? 240)
+        stepMin = meta["stepMin"] as? Int ?? 30
+        minute = pickup
+    }
+    func clock(_ m: Int) -> String { let t = ((startHM + m) % 1440 + 1440) % 1440; return String(format: "%02d:%02d", t / 60, t % 60) }
+    func note(_ m: Int, _ kind: String, _ title: String, team: String? = nil, seg: String? = nil) {
+        var e: [String: Any] = ["seq": feed.count + 1, "clock": clock(m), "minute": m, "kind": kind, "title": title]
+        if let team { e["team"] = team }; if let seg { e["segmentId"] = seg }
+        feed.append(e)
+    }
+    func teamState() -> [String: SearchPlanner.TeamState] {
+        var out: [String: SearchPlanner.TeamState] = [:]
+        for j in jobs {   // jobs in start order: the last one per team wins
+            let c = centroid[j.seg] ?? find
+            out[j.team] = SearchPlanner.TeamState(busyUntil: j.end, position: Coord(c), segment: j.seg, arriveAt: j.arrive, from: out[j.team]?.position)
+        }
+        return out
+    }
+    /// everything that changes during play, for the shared store (Vercel: the next request may land on another instance)
+    func dump() -> Data {
+        let j: [[String: Any]] = jobs.map { ["team": $0.team, "seg": $0.seg, "start": $0.start, "arrive": $0.arrive, "end": $0.end, "pod": $0.pod,
+                                            "truthPod": $0.truthPod, "poa": $0.poa, "cells": $0.cells, "done": $0.done] }
+        let o: [String: Any] = ["sid": sid, "id": id, "events": events, "future": future, "minute": minute, "jobs": j, "decisions": decisions, "feed": feed,
+                                "found": found, "foundMinute": foundMinute ?? NSNull(), "foundBy": foundBy ?? NSNull(), "cells": Array(cells), "nCells": nCells,
+                                "coverage": coverage, "centroid": centroid]
+        return (try? JSONSerialization.data(withJSONObject: o)) ?? Data("{}".utf8)
+    }
+    func restore(_ o: [String: Any]) {
+        events = o["events"] as? [[String: Any]] ?? events; future = o["future"] as? [[String: Any]] ?? future
+        minute = o["minute"] as? Int ?? minute; decisions = o["decisions"] as? [[String: Any]] ?? []; feed = o["feed"] as? [[String: Any]] ?? []
+        found = o["found"] as? Bool ?? false; foundMinute = o["foundMinute"] as? Int; foundBy = o["foundBy"] as? String
+        cells = Set(o["cells"] as? [Int] ?? []); nCells = o["nCells"] as? Int ?? 1; coverage = o["coverage"] as? Double ?? 0
+        centroid = o["centroid"] as? [String: [Double]] ?? [:]
+        jobs = ((o["jobs"] as? [[String: Any]]) ?? []).map { j in
+            let x = ExJob(team: j["team"] as? String ?? "", seg: j["seg"] as? String ?? "", start: j["start"] as? Int ?? 0, arrive: j["arrive"] as? Int ?? 0,
+                          end: j["end"] as? Int ?? 0, pod: j["pod"] as? Double ?? 0, truthPod: j["truthPod"] as? Double ?? 0, poa: j["poa"] as? Double ?? 0,
+                          cells: j["cells"] as? [Int] ?? [])
+            x.done = j["done"] as? Bool ?? false
+            return x
+        }
+    }
+    func scenario() -> Scenario? {
+        var d = base; d["events"] = events
+        return (try? JSONSerialization.data(withJSONObject: d)).flatMap { try? JSONDecoder().decode(Scenario.self, from: $0) }
+    }
+}
+func exHM(_ s: String) -> Int { let p = s.split(separator: ":").compactMap { Int($0) }; return p.count == 2 ? p[0] * 60 + p[1] : 0 }
+func exRel(_ s: String, _ start: Int) -> Int { (exHM(s) - start + 1440) % 1440 }
+/// deterministic dice in [0, 1): FNV-1a of the key
+func exRoll(_ k: String) -> Double {
+    var h: UInt64 = 0xcbf29ce484222325
+    for b in k.utf8 { h ^= UInt64(b); h = h &* 0x100000001b3 }
+    return Double(h % 1_000_000) / 1_000_000
+}
+func exDist(_ a: [Double], _ b: [Double]) -> Double {
+    let kx = 111_320 * cos((a[0] + b[0]) / 2 * .pi / 180)
+    return (((a[1] - b[1]) * kx) * ((a[1] - b[1]) * kx) + ((a[0] - b[0]) * 111_320) * ((a[0] - b[0]) * 111_320)).squareRoot()
+}
+
+actor Exercises {
+    var sessions: [String: ExSession] = [:]
+    var baselines: [String: Data] = [:]
+    var baselineRunning: Set<String> = []
+    var runCache: [String: Data] = [:]
+
+    static let dir = scenariosDir.appendingPathComponent("exercises")
+    static let truthDir = pkgDir.appendingPathComponent("exercises")
+    static func ids() -> [String] {
+        ((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).filter { $0.hasSuffix(".json") }.map { String($0.dropLast(5)) }.sorted()
+    }
+    static func load(_ id: String) -> (base: [String: Any], truth: [String: Any])? {
+        guard validName(id), var b = (try? Data(contentsOf: dir.appendingPathComponent("\(id).json"))).map(jsonObject), !b.isEmpty,
+              let t = (try? Data(contentsOf: truthDir.appendingPathComponent("\(id).truth.json"))).map(jsonObject), !t.isEmpty else { return nil }
+        let region = (b["exercise"] as? [String: Any])?["region"] as? String ?? ""
+        if let tr = (try? Data(contentsOf: scenariosDir.appendingPathComponent("\(region)-terrain.json"))).flatMap({ try? JSONSerialization.jsonObject(with: $0) }) { b["terrain"] = tr }
+        return (b, t)
+    }
+    func list() -> Data {
+        for id in Exercises.ids() where baselines[id] == nil && !baselineRunning.contains(id) { Task.detached { _ = await exercises.baseline(id) } }   // precompute while the trainee reads the list
+        let out: [[String: Any]] = Exercises.ids().compactMap { id in
+            guard let d = (try? Data(contentsOf: Exercises.dir.appendingPathComponent("\(id).json"))).map(jsonObject), let m = d["exercise"] as? [String: Any] else { return nil }
+            return ["id": id, "title": m["title"] ?? id, "place": m["place"] ?? "", "kind": m["kind"] ?? "", "pickupClock": m["pickupClock"] ?? "",
+                    "budgetMin": m["budgetMin"] ?? 240, "who": m["who"] ?? "", "teams": ((d["resources"] as? [Any]) ?? []).count, "date": d["date"] ?? ""]
+        }
+        return (try? JSONSerialization.data(withJSONObject: out, options: [.sortedKeys])) ?? Data("[]".utf8)
+    }
+
+    // engine view at the session's clock (cached per clock + events + jobs)
+    func probe(_ s: ExSession, plan: Bool) async -> [String: Any] {
+        let key = "\(s.minute)|\(s.events.count)|\(s.jobs.count)|\(plan)"
+        if let c = s.probeCache, c.key == key || (!plan && c.key == "\(s.minute)|\(s.events.count)|\(s.jobs.count)|true") { return c.doc }
+        guard let sc = s.scenario() else { return [:] }
+        let d = jsonObject(await ExerciseProbe.probe(sc, minute: s.minute, state: s.teamState(), truth: s.find, withPlan: plan))
+        s.nCells = d["cells"] as? Int ?? 1
+        for g in (d["segments"] as? [[String: Any]]) ?? [] { if let id = g["id"] as? String, let c = g["centroid"] as? [Double] { s.centroid[id] = c } }
+        s.probeCache = (key, d)
+        return d
+    }
+
+    func newSession(_ id: String, sid: String) async -> ExSession? {
+        guard let (b, t) = Exercises.load(id) else { return nil }
+        let s = ExSession(sid: sid, id: id, base: b, truth: t)
+        // the team already out at pickup: its job uses the engine's numbers for that segment (as if sent from base)
+        let d = await probe(s, plan: false)
+        for p in (s.meta["inProgress"] as? [[String: Any]]) ?? [] {
+            guard let team = p["team"] as? String, let seg = p["segmentId"] as? String,
+                  let o = ((d["teams"] as? [[String: Any]])?.first { $0["id"] as? String == team }?["options"] as? [[String: Any]])?.first(where: { $0["segmentId"] as? String == seg }) else { continue }
+            let since = exRel(p["since"] as? String ?? "", s.startHM), until = exRel(p["until"] as? String ?? "", s.startHM)
+            s.jobs.append(ExJob(team: team, seg: seg, start: since, arrive: min(until, since + 15), end: until, pod: o["pod"] as? Double ?? 0.5,
+                                truthPod: o["truthPod"] as? Double ?? 0, poa: o["poa"] as? Double ?? 0, cells: o["cells"] as? [Int] ?? []))
+            s.note(since, "dispatch", "\(team) -> \(seg) (przed przejęciem, wróci ok. \(s.clock(until)))", team: team, seg: seg)
+        }
+        s.probeCache = nil
+        for e in s.events where e["provider"] as? String == "SegmentSearched" || e["provider"] as? String == "Clue" {
+            s.note(exRel(e["at"] as? String ?? "", s.startHM), e["provider"] as? String == "Clue" ? "clue" : "searched", e["title"] as? String ?? "")
+        }
+        s.feed.sort { ($0["minute"] as? Int ?? 0) < ($1["minute"] as? Int ?? 0) }
+        for i in s.feed.indices { s.feed[i]["seq"] = i + 1 }
+        return s
+    }
+
+    /// one decision: team -> segment at the session clock. nil error = ok.
+    func dispatch(_ s: ExSession, team: String, seg: String, record: Bool = true) async -> (String?, [String: Any]) {
+        if s.found || s.minute >= s.end { return ("ćwiczenie zakończone", [:]) }
+        let d = await probe(s, plan: true)
+        guard let t = (d["teams"] as? [[String: Any]])?.first(where: { $0["id"] as? String == team }) else { return ("nieznany zespół", [:]) }
+        guard t["available"] as? Bool == true else { return ("\(t["name"] as? String ?? team): \(t["reason"] as? String ?? "niedostępny")", [:]) }
+        let opts = (t["options"] as? [[String: Any]]) ?? []
+        guard let o = opts.first(where: { $0["segmentId"] as? String == seg }) else { return ("\(team) nie może przeszukać \(seg) w tych warunkach (brak drogi lub zakaz)", [:]) }
+        let segs = (d["segments"] as? [[String: Any]]) ?? []
+        let sg = segs.first { $0["id"] as? String == seg } ?? [:]
+        let rank = sg["rank"] as? Int ?? 99, weight = sg["poa"] as? Double ?? 0
+        let planned = ((d["plan"] as? [[String: Any]]) ?? []).first { $0["resourceId"] as? String == team }?["segmentId"] as? String
+        let bestRate = opts.compactMap { $0["rate"] as? Double }.max() ?? 0, rate = o["rate"] as? Double ?? 0
+        let safety = (o["safety"] as? [String]) ?? []
+        let top = segs.first
+        let busySegs = Set(s.jobs.filter { !$0.done && $0.end > s.minute && $0.team != team }.map(\.seg))
+        // engine's own yardstick for THIS team: expected find rate (waga x skuteczność / czas); the map rank alone ignores the team
+        let verdict = planned == seg || rate >= 0.6 * bestRate ? "dobra" : rate >= 0.25 * bestRate ? "ok" : "słaba"
+        func pct(_ x: Double) -> String { x < 0.01 && x > 0 ? String(format: "%.1f%%", x * 100) : "\(Int((x * 100).rounded()))%" }
+        var why = "\(seg) był #\(rank) na mapie (waga \(pct(weight))), dla \(team) to \(Int((rate / max(bestRate, 1e-9) * 100).rounded()))% szansy na godzinę najlepszego wyboru"
+        if planned == seg { why += ", silnik proponował to samo" }
+        else if let p = planned, let pg = segs.first(where: { $0["id"] as? String == p }) { why += ", silnik proponował \(p) (#\(pg["rank"] ?? "?"), \(pct(pg["poa"] as? Double ?? 0)))" }
+        else if let top { why += ", najwyżej był \(top["id"] ?? "?") (\(pct(top["poa"] as? Double ?? 0)))" }
+        if busySegs.contains(seg) { why += "; inny zespół już tam szuka" }
+        if !safety.isEmpty { why += "; uwaga: " + safety.joined(separator: ", ") }
+        let tr = o["travelMin"] as? Double ?? 0, sw = o["sweepMin"] as? Double ?? 0
+        // re-tasking a team cancels its unfinished job
+        s.jobs.removeAll { $0.team == team && !$0.done && $0.end > s.minute }
+        s.jobs.append(ExJob(team: team, seg: seg, start: s.minute, arrive: s.minute + Int(tr.rounded()), end: s.minute + max(1, Int((tr + sw).rounded())),
+                            pod: o["pod"] as? Double ?? 0, truthPod: o["truthPod"] as? Double ?? 0, poa: o["poa"] as? Double ?? 0, cells: o["cells"] as? [Int] ?? []))
+        s.probeCache = nil
+        let dec: [String: Any] = ["t": s.clock(s.minute), "minute": s.minute, "action": "dispatch", "team": team, "segment": seg, "segmentName": sg["name"] ?? seg,
+                                  "rankAtDecision": rank, "weightAtDecision": weight, "enginePlanned": planned ?? NSNull(), "safety": safety,
+                                  "verdict": verdict, "why": why, "etaMin": Int(tr.rounded()), "sweepMin": Int(sw.rounded())]
+        if record { s.decisions.append(dec) }
+        s.note(s.minute, "dispatch", "\(team) -> \(seg) (dojście \(Int(tr.rounded())) min, przeszukanie \(Int(sw.rounded())) min)", team: team, seg: seg)
+        return (nil, dec)
+    }
+
+    /// moves the clock: scripted events and finished searches, in time order; stops at the find
+    func advance(_ s: ExSession, minutes: Int) {
+        let target = min(s.end, s.minute + max(1, min(minutes, 240)))
+        while !s.found {
+            let nextEv = s.future.map { exRel($0["at"] as? String ?? "", s.startHM) }.filter { $0 <= target }.min()
+            let nextJob = s.jobs.filter { !$0.done && $0.end <= target }.min { $0.end < $1.end }
+            if nextEv == nil && nextJob == nil { break }
+            if let m = nextEv, nextJob == nil || m <= nextJob!.end {
+                let i = s.future.firstIndex { exRel($0["at"] as? String ?? "", s.startHM) == m }!
+                let e = s.future.remove(at: i)
+                s.events.append(e)
+                s.note(m, e["provider"] as? String == "Clue" ? "clue" : "info", "Nowa informacja: \(e["title"] as? String ?? "")")
+                continue
+            }
+            let j = nextJob!
+            j.done = true
+            s.cells.formUnion(j.cells)
+            s.coverage += j.poa * j.pod
+            if j.truthPod > 0 && exRoll("\(s.id)|\(j.team)|\(j.seg)|\(j.start)") < j.truthPod {
+                s.found = true; s.foundMinute = j.end; s.foundBy = j.team
+                s.note(j.end, "found", "ZNALEZIONO: \(j.team) w \(j.seg)", team: j.team, seg: j.seg)
+                s.minute = j.end
+                break
+            }
+            s.events.append(["provider": "SegmentSearched", "at": s.clock(j.end), "title": "\(j.team): \(j.seg) przeszukany, nic",
+                             "detail": "Meldunek zespołu (ćwiczenie).", "segments": [j.seg], "pod": (j.pod * 100).rounded() / 100])
+            s.note(j.end, "searched", "\(j.team): \(j.seg) przeszukany, nic (skuteczność \(Int((j.pod * 100).rounded()))%)", team: j.team, seg: j.seg)
+        }
+        if !s.found { s.minute = target }
+        s.probeCache = nil
+    }
+
+    func scoreOf(_ s: ExSession) -> [String: Any] {
+        let budget = Double(s.end - s.pickup)
+        let ttf = s.foundMinute.map { $0 - s.pickup }
+        let pts: [String: Double] = ["dobra": 1, "ok": 0.6, "słaba": 0.15]
+        let nDec = s.decisions.count
+        let decQ = nDec == 0 ? 0 : s.decisions.reduce(0) { $0 + (pts[$1["verdict"] as? String ?? ""] ?? 0) } / Double(nDec)
+        let unsafe = s.decisions.filter { !(($0["safety"] as? [String]) ?? []).isEmpty }.count
+        let nDisp = s.decisions.filter { $0["action"] as? String == "dispatch" }.count
+        let parts: [String: Double] = [
+            "found": s.found ? 50 * (1 - 0.5 * Double(ttf ?? 0) / budget) : 0,
+            "coverage": s.found ? 15 : 15 * min(1, s.coverage / 0.5),   // found = the searches did their job
+            "decisions": 25 * decQ,
+            "safety": nDisp == 0 ? 0 : 10 * (1 - Double(unsafe) / Double(nDisp)),
+        ]
+        return ["found": s.found, "timeToFind": ttf ?? NSNull(), "foundAt": s.foundMinute.map(s.clock) ?? NSNull(), "foundBy": s.foundBy ?? NSNull(),
+                "areaSearchedPct": (Double(s.cells.count) / Double(max(1, s.nCells)) * 1000).rounded() / 10,
+                "coverage": (s.coverage * 1000).rounded() / 1000, "searches": s.jobs.filter(\.done).count, "decisionsCount": nDec, "unsafeDecisions": unsafe,
+                "parts": parts.mapValues { ($0 * 10).rounded() / 10 }, "total": Int(parts.values.reduce(0, +).rounded())]
+    }
+
+    /// automatic policies on a fresh copy of the exercise, same budget and dice: every stepMin, idle available teams get a segment
+    func simulate(_ id: String, policy: String) async -> Data {
+        guard let s = await newSession(id, sid: "baseline-\(policy)") else { return Data("{}".utf8) }
+        while !s.found && s.minute < s.end {
+            let d = await probe(s, plan: policy == "engine")
+            let busy = Set(s.jobs.filter { !$0.done && $0.end > s.minute }.map(\.team))
+            let taken = Set(s.jobs.map(\.seg))
+            var lkp = s.base["ipp"].flatMap { ($0 as? [String: Any])?["at"] as? [Double] } ?? s.find
+            if policy == "expert" {
+                for e in s.events where e["provider"] as? String == "Clue" && e["found"] as? Bool != true { if let p = e["point"] as? [Double] { lkp = p } }
+            }
+            let ipp = s.base["ipp"].flatMap { ($0 as? [String: Any])?["at"] as? [Double] } ?? s.find
+            var used = Set<String>()
+            for t in (d["teams"] as? [[String: Any]]) ?? [] {
+                guard let id = t["id"] as? String, t["available"] as? Bool == true, !busy.contains(id) else { continue }
+                var seg: String? = nil
+                if policy == "engine" {
+                    seg = ((d["plan"] as? [[String: Any]]) ?? []).first { $0["resourceId"] as? String == id }?["segmentId"] as? String
+                } else {
+                    let from = policy == "expert" ? lkp : ipp
+                    let cand = ((t["options"] as? [[String: Any]]) ?? []).compactMap { $0["segmentId"] as? String }.filter { !used.contains($0) }
+                    let fresh = cand.filter { !taken.contains($0) }
+                    seg = (fresh.isEmpty ? cand : fresh).min { exDist(s.centroid[$0] ?? from, from) < exDist(s.centroid[$1] ?? from, from) }
+                }
+                if let seg, !used.contains(seg) {
+                    used.insert(seg)
+                    _ = await dispatch(s, team: id, seg: seg)
+                    _ = await probe(s, plan: policy == "engine")
+                }
+            }
+            advance(s, minutes: s.stepMin)
+        }
+        var out = scoreOf(s)
+        out["policy"] = policy
+        out["decisions"] = s.decisions.map { ["t": $0["t"] ?? "", "team": $0["team"] ?? "", "segment": $0["segment"] ?? "", "verdict": $0["verdict"] ?? ""] }
+        return (try? JSONSerialization.data(withJSONObject: out)) ?? Data("{}".utf8)
+    }
+    func baseline(_ id: String) async -> Data? {
+        if let b = baselines[id] { return b }
+        if baselineRunning.contains(id) { return nil }
+        baselineRunning.insert(id)
+        var out: [String: Any] = [:]
+        async let e = simulate(id, policy: "engine"), x = simulate(id, policy: "expert"), n = simulate(id, policy: "naive")
+        for (p, d) in [("engine", await e), ("expert", await x), ("naive", await n)] { out[p] = jsonObject(d) }
+        let d = (try? JSONSerialization.data(withJSONObject: out)) ?? Data("{}".utf8)
+        baselines[id] = d; baselineRunning.remove(id)
+        return d
+    }
+
+    func stateDoc(_ s: ExSession) async -> [String: Any] {
+        let d = await probe(s, plan: false)
+        let teams: [[String: Any]] = ((d["teams"] as? [[String: Any]]) ?? []).map { t in
+            let id = t["id"] as? String ?? ""
+            let j = s.jobs.last { $0.team == id }
+            let active = j.map { !$0.done && $0.end > s.minute } ?? false
+            var o: [String: Any] = ["id": id, "name": t["name"] ?? id, "type": t["type"] ?? "", "available": t["available"] ?? false, "reason": t["reason"] ?? "",
+                                    "status": active ? (s.minute < j!.arrive ? "w drodze" : "szuka") : (t["available"] as? Bool == true ? "wolny" : "niedostępny"),
+                                    "segmentId": active ? j!.seg : NSNull(), "busyUntil": active ? s.clock(j!.end) : NSNull()]
+            o["eta"] = ((t["options"] as? [[String: Any]]) ?? []).reduce(into: [String: Int]()) { $0[$1["segmentId"] as? String ?? ""] = Int((($1["travelMin"] as? Double ?? 0) + ($1["sweepMin"] as? Double ?? 0)).rounded()) }
+            return o
+        }
+        let over = s.found || s.minute >= s.end
+        return ["sid": s.sid, "id": s.id, "title": s.meta["title"] ?? s.id, "place": s.meta["place"] ?? "", "kind": s.meta["kind"] ?? "", "who": s.meta["who"] ?? "",
+                "region": s.meta["region"] ?? "", "source": s.meta["source"] ?? "", "date": s.base["date"] ?? "",
+                "clock": s.clock(s.minute), "pickupClock": s.clock(s.pickup), "endClock": s.clock(s.end), "minutesLeft": max(0, s.end - s.minute),
+                "budget": ["teams": teams.count, "hours": Double(s.end - s.pickup) / 60], "stepMin": s.stepMin,
+                "over": over, "found": s.found, "dark": d["dark"] ?? false, "survival": d["survival"] ?? [:],
+                "segments": ((d["segments"] as? [[String: Any]]) ?? []).map { ["id": $0["id"] ?? "", "name": $0["name"] ?? "", "weight": $0["poa"] ?? 0, "rank": $0["rank"] ?? 0] },
+                "teams": teams, "feed": s.feed, "decisions": s.decisions.count, "run": "/api/exercise/\(s.sid)/run?v=\(s.events.count)"]
+    }
+
+    /// Sessions: in memory on the laptop; with a shared store (Vercel + Neon) every change is written as document "ex:<sid>"
+    /// and read back on each request, so any instance can serve the next click. Baselines stay per instance (recomputed).
+    func session(_ sid: String) async -> ExSession? {
+        guard store.shared else { return sessions[sid] }
+        guard validName(sid), let d = await store.doc("ex:" + sid)?.data else { return nil }
+        let o = jsonObject(d)
+        guard let id = o["id"] as? String, let (b, t) = Exercises.load(id) else { return nil }
+        let s = sessions[sid].flatMap { $0.id == id ? $0 : nil } ?? ExSession(sid: sid, id: id, base: b, truth: t)
+        s.restore(o); s.probeCache = nil
+        sessions[sid] = s
+        return s
+    }
+    func save(_ s: ExSession) async {
+        if store.shared { _ = await store.putDoc("ex:" + s.sid, s.dump()) }
+    }
+    /// "Czekaj" while free teams could search is a decision too (the baselines never leave a team idle)
+    func waitDecision(_ s: ExSession, minutes: Int) async {
+        if s.found || s.minute >= s.end { return }
+        let st = await stateDoc(s)
+        let idle = ((st["teams"] as? [[String: Any]]) ?? []).filter { $0["status"] as? String == "wolny" && $0["available"] as? Bool == true && !(($0["eta"] as? [String: Int]) ?? [:]).isEmpty }
+        guard !idle.isEmpty else { return }
+        let names = idle.map { $0["id"] as? String ?? "?" }.joined(separator: ", ")
+        s.decisions.append(["t": s.clock(s.minute), "minute": s.minute, "action": "wait", "team": NSNull(), "segment": NSNull(), "segmentName": NSNull(),
+                            "rankAtDecision": NSNull(), "weightAtDecision": NSNull(), "enginePlanned": NSNull(), "safety": [String](),
+                            "verdict": idle.count >= 2 ? "słaba" : "ok",
+                            "why": "czekanie \(minutes) min, gdy \(idle.count == 1 ? "wolny był zespół" : "wolne były zespoły") \(names) - mógł\(idle.count == 1 ? "" : "y") już szukać"])
+    }
+
+    func route(_ q: Req) async -> Data {
+        let parts = q.path.split(separator: "/").map(String.init)   // api, exercise(s), sid, action
+        if q.method == "GET" && q.path == "/api/exercises" { return response("200 OK", json, list()) }
+        if q.method == "POST" && q.path == "/api/exercise/start" {
+            guard let id = shortClean(jsonObject(q.body)["id"], 60), let s = await newSession(id, sid: UUID().uuidString.prefix(8).lowercased()) else { return jsonErr("404 Not Found", "unknown exercise") }
+            if sessions.count > 100 { sessions.removeAll() }
+            sessions[s.sid] = s
+            await save(s)
+            Task.detached { _ = await exercises.baseline(id) }   // baselines in the background, ready by the end
+            return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: await stateDoc(s), options: [.sortedKeys])) ?? Data())
+        }
+        guard parts.count >= 3, parts[1] == "exercise", let s = await session(parts[2]) else { return jsonErr("404 Not Found", "unknown exercise session") }
+        let action = parts.count > 3 ? parts[3] : ""
+        func ok(_ o: [String: Any]) -> Data { response("200 OK", json, (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data()) }
+        switch (q.method, action) {
+        case ("GET", ""): return ok(await stateDoc(s))
+        case ("GET", "live"): return response("200 OK", json, Data("[]".utf8))   // 2D embed live= (no field reports in an exercise)
+        case ("GET", "run"):
+            let key = "\(s.sid)|\(s.events.count)"
+            if let c = runCache[key] { return response("200 OK", json, c) }
+            guard let sc = s.scenario() else { return jsonErr("500 Internal Server Error", "scenario") }
+            var doc = jsonObject(await StoryPipeline.runData(sc))
+            doc["scenario"] = s.meta["region"] ?? s.id; doc["exercise"] = s.id
+            let d = (try? JSONSerialization.data(withJSONObject: doc, options: [.sortedKeys])) ?? Data()
+            if runCache.count > 30 { runCache.removeAll() }
+            runCache[key] = d
+            return response("200 OK", json, d)
+        case ("POST", "act"):
+            let o = jsonObject(q.body)
+            guard let team = shortClean(o["team"], 64), let seg = shortClean(o["segmentId"], 16) else { return jsonErr("400 Bad Request", "team and segmentId required") }
+            let (err, dec) = await dispatch(s, team: team, seg: seg)
+            if let err { return jsonErr("409 Conflict", err.replacingOccurrences(of: "\"", with: "'")) }
+            await save(s)
+            var st = await stateDoc(s); st["decision"] = ["t": dec["t"] ?? "", "team": team, "segment": seg, "etaMin": dec["etaMin"] ?? 0, "sweepMin": dec["sweepMin"] ?? 0]
+            return ok(st)
+        case ("POST", "advance"):
+            let before = s.feed.count, minutes = (jsonObject(q.body)["minutes"] as? Int) ?? s.stepMin
+            await waitDecision(s, minutes: minutes)
+            advance(s, minutes: minutes)
+            await save(s)
+            var st = await stateDoc(s); st["events"] = Array(s.feed.dropFirst(before))
+            return ok(st)
+        case ("GET", "score"):
+            var sc = scoreOf(s)
+            sc["over"] = s.found || s.minute >= s.end
+            sc["clock"] = s.clock(s.minute)
+            sc["decisions"] = s.decisions
+            // truth only once the exercise is over (or ?reveal=1 to give up)
+            if s.found || s.minute >= s.end || q.query["reveal"] == "1" {
+                let d = await probe(s, plan: false)
+                let ts = d["truthSeg"] as? String ?? "?"
+                let sg = ((d["segments"] as? [[String: Any]]) ?? []).first { $0["id"] as? String == ts }
+                sc["truth"] = ["lat": s.find[0], "lon": s.find[1], "segmentId": ts, "rankNow": sg?["rank"] ?? NSNull(), "weightNow": sg?["poa"] ?? NSNull()]
+                if let b = await baseline(s.id) { sc["vs"] = jsonObject(b) } else { sc["vs"] = NSNull(); sc["vsPending"] = true }
+            }
+            return ok(sc)
+        default: return jsonErr("404 Not Found", "unknown exercise action")
+        }
+    }
+}
+let exercises = Exercises()
+
 // MARK: routing
 
 struct Req { let method: String; let path: String; let query: [String: String]; let headers: [String: String]; let body: Data; let peer: String }
@@ -856,6 +1263,7 @@ func route(_ q: Req) async -> Data {
             await assessCache.put(key, a)
             return response("200 OK", json, a)
         }
+        if q.path == "/api/exercises" || q.path.hasPrefix("/api/exercise/") { return await exercises.route(q) }   // exercise mode
         if q.method == "GET", let d = staticFile(q.path) { return d }
         return response("404 Not Found", "text/plain", Data("not found".utf8))
     }

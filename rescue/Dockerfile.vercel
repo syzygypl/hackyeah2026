@@ -12,7 +12,9 @@ COPY --from=build /src/rescue/.build/release/rescue-server /app/rescue-server
 # engine inputs only: scenarios (blind rounds excluded by .dockerignore) and the simulator run list for Walidacja
 COPY scenarios /app/scenarios
 COPY eval/sim/out /app/eval/sim/out
+# exercise mode: hidden truth of the training exercises (read only by /api/exercise/*, never served)
+COPY exercises /app/exercises
 ENV RESCUE_DIR=/tmp/rescue RESCUE_PUBLIC=1 RESCUE_LIVE_FILE=/tmp/live-events.json
 EXPOSE 80
 # the image is read-only at runtime: work on a copy in /tmp (Studio saves land in scenarios/ and in the store)
-CMD ["sh", "-c", "mkdir -p /tmp/rescue && cp -R /app/scenarios /app/eval /tmp/rescue/ && exec /app/rescue-server 80 --host 0.0.0.0"]
+CMD ["sh", "-c", "mkdir -p /tmp/rescue && cp -R /app/scenarios /app/eval /app/exercises /tmp/rescue/ && exec /app/rescue-server 80 --host 0.0.0.0"]
