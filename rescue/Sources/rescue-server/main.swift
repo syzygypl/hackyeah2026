@@ -1399,6 +1399,545 @@ func clueWeightRoute(_ q: Req) async -> Data {
     return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: ["ok": true, "sc": sc, "clueId": id, "weight": w.map { $0 as Any } ?? NSNull(), "seq": e.seq], options: [.sortedKeys])) ?? Data("{}".utf8))
 }
 
+// MARK: inventory (CONTRACT.md "Zasoby i dziennik"): GET /api/actors/<id>/log, GET /api/actors/<id>/feeds,
+// GET /api/inventory?sc=&at=, POST /api/inventory/<id>/event. Data: scenarios/inventory/inventory.json + params.json (fictional,
+// AI Marcina; a built-in fallback seed when missing). Dynamic state = estimates from the timeline path (GET /api/tracks, never truth).
+// Own storage: inventory events only (local out/inventory-events.json, shared store doc "inventory-events").
+
+let invDir = scenariosDir.appendingPathComponent("inventory")
+let invBaseDefaults: [String: Double] = ["dutyLimitMin": 720, "dutyWarnMin": 60, "effortBudgetMin": 480, "wEffort": 0.7, "wDuty": 0.3,
+                                         "workLimitMin": 30, "workWarnMin": 5, "restMin": 15, "flightMinPerBattery": 35, "batteryHardPct": 20,
+                                         "batteryWarnPct": 35, "enduranceMin": 150, "fuelHardPct": 20, "fuelWarnPct": 35, "maintenanceEveryH": 50,
+                                         "maintenanceWarnH": 5, "homeRadiusM": 50]
+let invKindDefaults: [String: [String: Double]] = ["pieszy": [:], "pies": ["dutyLimitMin": 480], "dron": ["maintenanceEveryH": 50],
+                                                   "smiglowiec": ["dutyLimitMin": 600, "enduranceMin": 150, "maintenanceEveryH": 100],
+                                                   "lodz": ["enduranceMin": 300, "maintenanceEveryH": 100], "nurkowie": ["dutyLimitMin": 240]]
+let invEventTypes: [String: String] = ["maintenance": "przegląd / serwis", "battery_swap": "wymiana baterii", "refuel": "tankowanie",
+                                       "rest": "odpoczynek", "fault": "usterka"]
+let invKindNames: [String: String] = ["ground": "pieszy", "dog": "pies", "drone": "dron", "heli": "smiglowiec", "boat": "lodz", "diver": "nurkowie"]
+
+/// params.json merged over the Swift defaults: {staleMin, kinds: {kind: {key: value}}, sources}
+func invParams() -> [String: Any] {
+    let f = jsonObject((try? Data(contentsOf: invDir.appendingPathComponent("params.json"))) ?? Data())
+    let fk = f["kinds"] as? [String: Any] ?? [:]
+    var kinds: [String: Any] = [:]
+    for k in Set(invKindDefaults.keys).union(fk.keys) {
+        var m = invBaseDefaults.merging(invKindDefaults[k] ?? [:]) { $1 }
+        for (key, v) in (fk[k] as? [String: Any]) ?? [:] { if let n = (v as? NSNumber)?.doubleValue { m[key] = n } }
+        kinds[k] = m
+    }
+    return ["staleMin": (f["staleMin"] as? NSNumber)?.doubleValue ?? 10, "kinds": kinds, "sources": f["sources"] ?? [Any](),
+            "file": FileManager.default.fileExists(atPath: invDir.appendingPathComponent("params.json").path)]
+}
+func invP(_ params: [String: Any], _ kind: String, _ key: String) -> Double {
+    ((params["kinds"] as? [String: Any])?[kind] as? [String: Double])?[key] ?? invKindDefaults[kind]?[key] ?? invBaseDefaults[key] ?? 0
+}
+
+/// inventory.json units by id; nil = no file (the fallback seed is used)
+func invFileUnits() -> [String: [String: Any]]? {
+    guard let d = try? Data(contentsOf: invDir.appendingPathComponent("inventory.json")) else { return nil }
+    var out: [String: [String: Any]] = [:]
+    for u in (jsonObject(d)["units"] as? [[String: Any]]) ?? [] { if let id = u["id"] as? String { out[id] = u } }
+    return out
+}
+/// Fallback seed (no inventory.json yet): fictional crew and equipment derived from the roster id, deterministic.
+func invFallbackUnit(_ id: String, kind: String) -> [String: Any] {
+    let first = ["Kamil", "Ewa", "Tomasz", "Anna", "Paweł", "Marta", "Jakub", "Zofia", "Michał", "Agnieszka", "Piotr", "Karolina"]
+    let last = ["Nowak", "Zając", "Gąsienica", "Wójcik", "Krawczyk", "Mazur", "Kowalczyk", "Bukowski", "Sikora", "Bielecka", "Chowaniec", "Duda"]
+    let h = id.unicodeScalars.reduce(7) { ($0 &* 31 &+ Int($1.value)) & 0xffff }
+    let name = { (i: Int) -> String in "\(first[(h + i * 5) % first.count]) \(last[(h / 3 + i * 7) % last.count])" }
+    let roles: [String] = ["pies": ["przewodnik psa", "ratownik"], "dron": ["operator drona", "obserwator"],
+                           "smiglowiec": ["pilot", "drugi pilot", "ratownik pokładowy", "lekarz"], "lodz": ["sternik", "ratownik"],
+                           "nurkowie": ["kierownik nurkowania", "nurek", "nurek asekurujący"]][kind] ?? ["kierownik zespołu", "ratownik", "ratownik", "ratownik"]
+    var u: [String: Any] = ["id": id, "kind": kind, "fallback": true, "base": "baza (fikcyjna)",
+                            "crew": roles.enumerated().map { ["name": name($0.offset), "role": $0.element] }]
+    var eq: [String: Any] = [:]
+    switch kind {
+    case "dron": eq = ["spareBatteries": 3, "flightMinPerBattery": 35, "hoursTotal": 180 + Double(h % 40), "maintenanceEveryH": 50, "hoursAtLastMaintenance": 150 + Double(h % 40), "lastMaintenance": "2026-09-12"]
+        u["spares"] = [["item": "akumulator lotniczy", "qty": 3], ["item": "komplet śmigieł", "qty": 2]]
+    case "smiglowiec": eq = ["enduranceMin": 150, "hoursTotal": 4100 + Double(h % 300), "maintenanceEveryH": 100, "hoursAtLastMaintenance": 4030 + Double(h % 300), "lastMaintenance": "2026-09-01"]
+    case "lodz": eq = ["enduranceMin": 300, "hoursTotal": 620 + Double(h % 50), "maintenanceEveryH": 100, "hoursAtLastMaintenance": 560 + Double(h % 50), "lastMaintenance": "2026-08-20"]
+    case "pies": u["dog"] = ["name": ["Ares", "Luna", "Kira", "Bruno"][h % 4], "breed": "owczarek belgijski", "certified": "2025-05"]
+    default: break
+    }
+    if !eq.isEmpty { u["equipment"] = eq }
+    return u
+}
+
+struct InvEvent: Codable, Sendable { var id = "", unit = "", type = "", note: String?, at = "", sc: String?, by = "operator", wall = "" }
+actor InvEvents {
+    var local: [InvEvent]?
+    var file: URL { URL(fileURLWithPath: livePath).deletingLastPathComponent().appendingPathComponent("inventory-events.json") }
+    func all() async -> [InvEvent] {
+        if store.shared { return (await store.doc("inventory-events")?.data).flatMap { try? JSONDecoder().decode([InvEvent].self, from: $0) } ?? [] }
+        if let l = local { return l }
+        let l = (try? Data(contentsOf: file)).flatMap { try? JSONDecoder().decode([InvEvent].self, from: $0) } ?? []
+        local = l
+        return l
+    }
+    func add(_ e: InvEvent) async {
+        var l = await all(); l.append(e)
+        if l.count > 2000 { l.removeFirst(l.count - 2000) }
+        let d = (try? JSONEncoder().encode(l)) ?? Data("[]".utf8)
+        if store.shared { _ = await store.putDoc("inventory-events", d) } else { local = l; try? d.write(to: file) }
+    }
+    func reset() async {
+        if store.shared { if await store.doc("inventory-events") != nil { _ = await store.putDoc("inventory-events", Data("[]".utf8)) } }
+        else { try? FileManager.default.removeItem(at: file) }
+        local = []
+    }
+}
+let invEvents = InvEvents()
+actor InvDEMs {
+    var c: [String: DEM] = [:], miss: Set<String> = []
+    func get(_ sc: String) -> DEM? {
+        if let d = c[sc] { return d }
+        if miss.contains(sc) { return nil }
+        let url = scenariosDir.deletingLastPathComponent().appendingPathComponent("tools/terrain/data/\(sc)-dem.json")
+        guard let d = (try? Data(contentsOf: url)).flatMap({ try? JSONSerialization.jsonObject(with: $0) }).flatMap({ DEM(json: $0) }) else { miss.insert(sc); return nil }
+        c[sc] = d
+        return d
+    }
+}
+let invDEMs = InvDEMs()
+
+/// scenario clock helpers (minutes since startClock, wraps past midnight; "+1 HH:MM", plain minutes and ISO accepted)
+func invStart(_ sc: String) -> Int {
+    let d = jsonObject((try? Data(contentsOf: scenariosDir.appendingPathComponent("\(sc).json"))) ?? Data())
+    let p = (d["startClock"] as? String ?? "00:00").split(separator: ":").compactMap { Int($0) }
+    return p.count == 2 ? p[0] * 60 + p[1] : 0
+}
+func invMin(_ start: Int, _ t: String?) -> Int? {
+    guard var s = t?.trimmingCharacters(in: .whitespaces), !s.isEmpty else { return nil }
+    if let m = Int(s) { return m }
+    var day = 0
+    if s.hasPrefix("+"), let sp = s.firstIndex(of: " ") { day = Int(s[s.index(after: s.startIndex)..<sp]) ?? 0; s = String(s[s.index(after: sp)...]) }
+    if s.count >= 16, s.contains("T") { s = String(s.split(separator: "T")[1].prefix(5)) }
+    let p = s.split(separator: ":").compactMap { Int($0.prefix(2)) }
+    guard p.count >= 2 else { return nil }
+    return day * 1440 + ((p[0] * 60 + p[1] - start + 1440) % 1440)
+}
+func invClock(_ start: Int, _ m: Int) -> String { let a = ((start + m) % 1440 + 1440) % 1440; return String(format: "%02d:%02d", a / 60, a % 60) }
+func invKm(_ a: [Double], _ b: [Double]) -> Double {
+    let r = Double.pi / 180, dLat = (b[0] - a[0]) * r, dLon = (b[1] - a[1]) * r
+    let h = sin(dLat / 2) * sin(dLat / 2) + cos(a[0] * r) * cos(b[0] * r) * sin(dLon / 2) * sin(dLon / 2)
+    return 6371 * 2 * atan2(sqrt(h), sqrt(1 - h))
+}
+func invR1(_ x: Double) -> Double { (x * 10).rounded() / 10 }
+
+/// timeline of sc at `at` (nil = live moment): (at clock, minute, estimated path per actor [[lat, lon, minute, accM, est]])
+func invTimeline(_ sc: String, at: String?) async -> (String, Int, [String: [[Double]]])? {
+    guard FileManager.default.fileExists(atPath: scenariosDir.appendingPathComponent("tracks/\(sc).json").path),
+          let d = await timelineCache.tracks(sc, live: true, at: at) else { return nil }
+    let o = jsonObject(d)
+    var paths: [String: [[Double]]] = [:]
+    for a in (o["actors"] as? [[String: Any]]) ?? [] {
+        if let id = a["id"] as? String { paths[id] = ((a["path"] as? [[Any]]) ?? []).map { $0.compactMap { ($0 as? NSNumber)?.doubleValue } } }
+    }
+    return (o["at"] as? String ?? "", (o["minute"] as? NSNumber)?.intValue ?? 0, paths)
+}
+/// the incident's live moment (operator cursor / default) as a scenario minute
+func invLiveMinute(_ sc: String) async -> Int? {
+    if let t = await invTimeline(sc, at: nil) { return t.1 }
+    guard let at = await liveScenario(sc, live: true)?.2?["at"] as? String else { return nil }
+    return invMin(invStart(sc), at)
+}
+/// raw tracks file actor (fixes, legs; never truth)
+func invTrackActor(_ sc: String, _ id: String) -> [String: Any]? {
+    let d = jsonObject((try? Data(contentsOf: scenariosDir.appendingPathComponent("tracks/\(sc).json"))) ?? Data())
+    return ((d["actors"] ?? d["units"]) as? [[String: Any]])?.first { $0["id"] as? String == id }
+}
+/// fixes of one actor up to `upTo`: (minute, src, accM, lat, lon, text, origin tracks|livefix)
+func invFixes(_ sc: String, _ id: String, start: Int) async -> [(Int, String, Double, Double, Double, String?, String)] {
+    var out: [(Int, String, Double, Double, Double, String?, String)] = []
+    for f in (invTrackActor(sc, id)?["fixes"] as? [Any]) ?? [] {
+        if let a = f as? [Any], a.count >= 3, let m = (a[0] as? NSNumber)?.intValue {
+            out.append((m, "gps", (a.count > 3 ? (a[3] as? NSNumber)?.doubleValue : nil) ?? 20, (a[1] as? NSNumber)?.doubleValue ?? 0, (a[2] as? NSNumber)?.doubleValue ?? 0, nil, "tracks"))
+        } else if let o = f as? [String: Any], let m = (o["minute"] as? NSNumber)?.intValue ?? invMin(start, o["t"] as? String) {
+            out.append((m, o["src"] as? String ?? "gps", (o["accM"] as? NSNumber)?.doubleValue ?? 20, (o["lat"] as? NSNumber)?.doubleValue ?? 0, (o["lon"] as? NSNumber)?.doubleValue ?? 0, o["text"] as? String, "tracks"))
+        }
+    }
+    for f in await liveFixes.all(sc) where f.actor == id {
+        if let m = invMin(start, f.t) { out.append((m, f.src, f.accM, f.lat, f.lon, f.text, "livefix")) }
+    }
+    return out.sorted { $0.0 < $1.0 }
+}
+/// feed events of one actor (team == id) for sc; local: the whole in-memory feed, shared: the latest 50 of the incident
+func invFeedEvents(_ id: String, sc: String?) async -> [LiveFeedEvent] {
+    let all: [LiveFeedEvent] = store.shared ? await liveFeed.since(0, sc: sc).1 : await liveFeed.events
+    var out: [LiveFeedEvent] = []
+    for var e in all where e.team == id && (sc == nil || e.sc == nil || e.sc == sc) { e.acked = await acks.has(e.seq); out.append(e) }
+    return out
+}
+
+/// condition of one unit from its estimated path up to atMin (CONTRACT "Zasoby i dziennik" 3)
+func invHealth(kind: String, unit: [String: Any], path: [[Double]]?, atMin: Int, start: Int, events: [InvEvent], dem: DEM?, params: [String: Any]) -> ([String: Any], Bool) {
+    let P = { (k: String) -> Double in invP(params, kind, k) }
+    let eq = unit["equipment"] as? [String: Any] ?? [:]
+    let E = { (k: String) -> Double? in (eq[k] as? NSNumber)?.doubleValue }
+    let evs = events.compactMap { e -> (Int, InvEvent)? in invMin(start, e.at).map { ($0, e) } }.filter { $0.0 <= atMin }.sorted { $0.0 < $1.0 }
+    let flightPerBat = E("flightMinPerBattery") ?? P("flightMinPerBattery"), endurance = E("enduranceMin") ?? P("enduranceMin")
+    let hours0 = E("hoursTotal"), every = E("maintenanceEveryH") ?? P("maintenanceEveryH")
+    var hoursAtMaint = E("hoursAtLastMaintenance") ?? hours0
+    var lastMaint = eq["lastMaintenance"] as? String ?? (unit["maintenanceLog"] as? [[String: Any]])?.compactMap({ $0["date"] as? String }).max()
+    var h: [String: Any] = ["source": path == nil ? "static" : "timeline"]
+    var fault: String? = nil, lastRest: Int? = nil
+    var battery = 100.0, fuel = 100.0, flightMin = 0.0, airMinTotal = 0.0, workingNow = false
+    var effort = 0.0, dist = 0.0, climb = 0.0, work = 0.0, still = 0.0
+    var series: [[Double]] = []
+    let walker = kind == "pieszy" || kind == "pies" || kind == "nurkowie"
+    let dutyStart = invMin(start, unit["dutyStart"] as? String) ?? path?.first.map { Int($0[2]) }
+    let fatigueAt = { (m: Int) -> Double in
+        let duty = dutyStart.map { Double(max(0, m - $0)) } ?? 0
+        return min(100, 100 * (effort / P("effortBudgetMin") * P("wEffort") + duty / P("dutyLimitMin") * P("wDuty")))
+    }
+    var ei = 0
+    let apply = { (m: Int) in
+        while ei < evs.count, evs[ei].0 <= m {
+            let e = evs[ei].1
+            switch e.type {
+            case "battery_swap": battery = 100; flightMin = 0
+            case "refuel": fuel = 100
+            case "rest": effort = 0; work = 0; still = 0; lastRest = evs[ei].0
+            case "maintenance": fault = nil; hoursAtMaint = (hours0 ?? 0) + airMinTotal / 60; lastMaint = "dziś \(e.at)"
+            case "fault": fault = e.note ?? "usterka zgłoszona \(e.at)"
+            default: break
+            }
+            ei += 1
+        }
+    }
+    if let path, let p0 = path.first {
+        var prev = p0
+        for p in path where p.count >= 3 && Int(p[2]) <= atMin {
+            let m = Int(p[2])
+            apply(m)
+            if p[2] > prev[2] {
+                let km = invKm(prev, p), away = invKm(p0, p) * 1000 > P("homeRadiusM"), moved = km * 1000 > 10
+                let working = away || moved
+                workingNow = working
+                if walker && km > 0 {
+                    var slope = 0.0
+                    if let dem, let a = dem.h(Coord(prev[0], prev[1])), let b = dem.h(Coord(p[0], p[1])) { slope = (b - a) / (km * 1000); climb += max(0, b - a) }
+                    effort += km / (6 * exp(-3.5 * abs(slope + 0.05))) * 60
+                    dist += km
+                }
+                if working && (kind == "dron" || kind == "smiglowiec" || kind == "lodz") {
+                    airMinTotal += 1
+                    if kind == "dron" { flightMin += 1; battery = max(0, battery - 100 / flightPerBat) } else { fuel = max(0, fuel - 100 / endurance) }
+                }
+                if kind == "pies" { if moved { work += 1; still = 0 } else { still += 1; if still >= P("restMin") { work = 0 } } }
+            }
+            if m % 5 == 0 { series.append([Double(m), invR1(kind == "dron" ? battery : (kind == "smiglowiec" || kind == "lodz") ? fuel : fatigueAt(m))]) }
+            prev = p
+        }
+    }
+    apply(atMin)
+    let swaps = evs.filter { $0.1.type == "battery_swap" }.count
+    if let ds = dutyStart, path != nil || unit["dutyStart"] != nil { h["dutyMin"] = max(0, atMin - ds); h["dutyLimitMin"] = P("dutyLimitMin") }
+    if walker && path != nil {
+        h["distanceKm"] = (dist * 100).rounded() / 100; h["climbM"] = climb.rounded(); h["effortMin"] = effort.rounded()
+        h["fatiguePct"] = fatigueAt(atMin).rounded(); h["lastRest"] = lastRest.map { invClock(start, $0) } ?? NSNull()
+    }
+    if kind == "pies" { h["workMin"] = work; h["workLimitMin"] = P("workLimitMin"); h["restMin"] = P("restMin") }
+    if kind == "dron" {
+        h["flightMin"] = flightMin; h["batteryPct"] = battery.rounded(); h["flightMinLeft"] = (battery / 100 * flightPerBat).rounded()
+        h["spareBatteries"] = max(0, Int(E("spareBatteries") ?? 0) - swaps)
+    }
+    if kind == "smiglowiec" || kind == "lodz" { h["fuelPct"] = fuel.rounded(); h["enduranceMinLeft"] = (fuel / 100 * endurance).rounded() }
+    if let hours0 {
+        let tot = hours0 + airMinTotal / 60
+        h["hoursTotal"] = invR1(tot); h["maintenanceEveryH"] = every
+        h["maintenanceDueInH"] = invR1((hoursAtMaint ?? hours0) + every - tot)
+    }
+    h["lastMaintenance"] = lastMaint ?? NSNull()
+    h["fault"] = fault ?? NSNull()
+    h["series"] = series
+    return (h, workingNow)
+}
+func invWarnings(kind: String, _ h: [String: Any], params: [String: Any]) -> [[String: Any]] {
+    let P = { (k: String) -> Double in invP(params, kind, k) }
+    let N = { (k: String) -> Double? in (h[k] as? NSNumber)?.doubleValue ?? (h[k] as? Double) ?? (h[k] as? Int).map(Double.init) }
+    var w: [[String: Any]] = []
+    let add = { (l: String, c: String, t: String) in w.append(["level": l, "code": c, "text": t]) }
+    if let f = h["fault"] as? String { add("red", "fault", "Usterka: \(f)") }
+    if let b = N("batteryPct") {
+        if b < P("batteryHardPct") { add("red", "battery", "Bateria \(Int(b))% - wymień lub wracaj") } else if b < P("batteryWarnPct") { add("amber", "battery", "Bateria \(Int(b))% - zaplanuj wymianę") }
+        if N("spareBatteries") == 0 { add("amber", "spares", "Brak zapasowych baterii") }
+    }
+    if let f = N("fuelPct") {
+        if f < P("fuelHardPct") { add("red", "fuel", "Paliwo \(Int(f))% - powrót do bazy") } else if f < P("fuelWarnPct") { add("amber", "fuel", "Paliwo \(Int(f))% - zaplanuj tankowanie") }
+    }
+    if let d = N("dutyMin") {
+        let lim = P("dutyLimitMin"), hm = { (m: Double) -> String in "\(Int(m) / 60) h \(Int(m) % 60) min" }
+        if d > lim { add("red", "duty", "Załoga ponad limit służby: \(hm(d)) (limit \(hm(lim)))") } else if d > lim - P("dutyWarnMin") { add("amber", "duty", "Limit służby za \(Int(lim - d)) min") }
+    }
+    if let due = N("maintenanceDueInH") {
+        if due < 0 { add("red", "maintenance", "Przegląd zaległy o \(invR1(-due)) h lotu / pracy") } else if due < P("maintenanceWarnH") { add("amber", "maintenance", "Przegląd za \(invR1(due)) h") }
+    }
+    if let f = N("fatiguePct"), f >= 70 { add("amber", "fatigue", "Zmęczenie \(Int(f))% (szacunek) - rozważ zmianę") }
+    if kind == "pies", let wm = N("workMin") {
+        let lim = P("workLimitMin")
+        if wm > lim { add("red", "dogwork", "Pies pracuje \(Int(wm)) min bez przerwy (limit \(Int(lim))) - odpoczynek") } else if wm > lim - P("workWarnMin") { add("amber", "dogwork", "Pies: przerwa za \(Int(lim - wm)) min") }
+    }
+    return w
+}
+/// data feeds of one actor (CONTRACT "Zasoby i dziennik" 2)
+func invFeeds(id: String, kind: String, sc: String?, atMin: Int, liveMin: Int, start: Int, fixes: [(Int, String, Double, Double, Double, String?, String)],
+              feed: [LiveFeedEvent], telemetry: Bool, working: Bool, params: [String: Any]) -> [[String: Any]] {
+    let stale = (params["staleMin"] as? Double) ?? 10
+    let mk = { (k: String, label: String, items: [Int], href: String?, note: String?) -> [String: Any] in
+        let upTo = items.filter { $0 <= atMin }, last = upTo.max()
+        var o: [String: Any] = ["id": "\(id):\(k)", "kind": k, "label": label, "count": upTo.count, "lastAt": last.map { invClock(start, $0) } ?? NSNull(),
+                                "status": last == nil ? "off" : Double(atMin - last!) <= stale ? "live" : "stale"]
+        if let href { o["href"] = href }
+        if let note { o["note"] = note }
+        return o
+    }
+    let map = sc.map { "/app/?mode=akcja&sc=\($0)&actor=\(id)" }
+    let gpsM = fixes.filter { $0.1 == "gps" }.map(\.0), radioM = fixes.filter { $0.1 == "report" }.map(\.0)
+    let reportM = feed.filter { $0.kind == "report" || $0.kind == "fix" }.map { _ in liveMin } + radioM
+    var out: [[String: Any]] = []
+    if kind == "pies" {
+        out.append(mk("collar", "Obroża GPS psa", gpsM, map, nil))
+        out.append(mk("gps", "GPS przewodnika", [], nil, "osobny strumień telefonu przewodnika: brak w nagraniu"))
+    } else { out.append(mk("gps", "Pozycja GPS", gpsM, map, nil)) }
+    out.append(mk("reports", "Meldunki", reportM, "#log:report", nil))
+    out.append(mk("radio", "Radio / notatki głosowe (tekst)", radioM, "#log:radio", nil))
+    out.append(mk("clues", "Zgłoszone ślady", feed.filter { $0.kind == "clue" }.map { _ in liveMin }, "#log:clue", nil))
+    if kind == "dron" || kind == "smiglowiec" {
+        out.append(mk("video", "Wideo z kamery", [], nil, "podgląd niedostępny w demo"))
+        out.append(mk("thermal", "Kamera termowizyjna", [], nil, "podgląd niedostępny w demo"))
+    }
+    if telemetry {
+        var t = mk("telemetry", kind == "dron" ? "Telemetria (bateria)" : "Telemetria (paliwo)", working ? [atMin] : gpsM, "#telemetry", "szacunek z osi czasu, nie odczyt z urządzenia")
+        if !working && gpsM.isEmpty { t["status"] = "off" }
+        out.append(t)
+    }
+    return out
+}
+
+/// one unit's full state for GET /api/inventory (sc nil = its roster sc / first home with tracks)
+struct InvTeam: Sendable { var id = "", name = "", kind = "", sc: String?, home: [String] = [], segmentId: String?, status = "wolny" }
+func invTeams() async -> [InvTeam] {
+    let asg = await assignmentList()
+    var out = await roster.list().map { t -> InvTeam in
+        let seg = t.sc.flatMap { sc in asg.first { $0["resourceId"] as? String == t.id && ($0["scenario"] as? String == sc) }?["segmentId"] as? String }
+        return InvTeam(id: t.id, name: t.name, kind: t.kind, sc: t.sc, home: t.home, segmentId: seg, status: t.sc == nil ? "wolny" : seg == nil ? "w drodze" : "w akcji")
+    }
+    for (id, u) in invFileUnits() ?? [:] where !out.contains(where: { $0.id == id }) {
+        out.append(InvTeam(id: id, name: u["name"] as? String ?? id, kind: u["kind"] as? String ?? "", sc: nil, home: [], segmentId: nil))
+    }
+    return out
+}
+func invUnitSc(_ t: InvTeam, _ q: String?) -> String? {
+    if let q { return q }
+    if let s = t.sc { return s }
+    return t.home.first { FileManager.default.fileExists(atPath: scenariosDir.appendingPathComponent("tracks/\($0).json").path) } ?? t.home.first
+}
+func invUnitDoc(_ t: InvTeam, sc: String?, tl: (String, Int, [String: [[Double]]])?, atMin: Int?, liveMin: Int?, params: [String: Any], events: [InvEvent], file: [String: [String: Any]]?) async -> [String: Any] {
+    let fu = file?[t.id]
+    let kind = t.kind.isEmpty ? (fu?["kind"] as? String ?? "") : t.kind
+    let unit = fu ?? (file == nil ? invFallbackUnit(t.id, kind: kind) : [:])
+    var o: [String: Any] = ["id": t.id, "name": t.name, "kind": kind, "inventory": fu != nil || file == nil, "sc": t.sc ?? NSNull(),
+                            "segmentId": t.segmentId ?? NSNull(), "status": t.status, "home": t.home]
+    if file == nil { o["fallback"] = true }
+    for k in ["base", "model", "callsign", "crew", "dog", "spares", "maintenanceLog", "equipment", "dutyStart"] { o[k] = unit[k] ?? NSNull() }
+    let start = sc.map(invStart) ?? 0
+    let mine = events.filter { $0.unit == t.id && ($0.sc == nil || $0.sc == sc) }
+    let path = tl?.2[t.id]
+    let am = atMin ?? tl?.1 ?? liveMin ?? 0
+    var dem: DEM? = nil
+    if path != nil, let sc { dem = await invDEMs.get(sc) }
+    let (h, working) = invHealth(kind: kind, unit: unit, path: path, atMin: am, start: start, events: mine, dem: dem, params: params)
+    o["health"] = h
+    let w = invWarnings(kind: kind, h, params: params)
+    o["warnings"] = w
+    o["level"] = w.contains { $0["level"] as? String == "red" } ? "red" : w.isEmpty ? "ok" : "amber"
+    let fixes = sc != nil ? await invFixes(sc!, t.id, start: start) : []
+    o["feeds"] = invFeeds(id: t.id, kind: kind, sc: sc, atMin: am, liveMin: liveMin ?? am, start: start, fixes: fixes, feed: await invFeedEvents(t.id, sc: sc),
+                          telemetry: ["dron", "smiglowiec", "lodz"].contains(kind), working: working, params: params)
+    o["events"] = mine.reversed().prefix(10).map { e -> [String: Any] in jsonObject((try? JSONEncoder().encode(e)) ?? Data()) }
+    o["atSc"] = sc ?? NSNull()
+    return o
+}
+
+func invInventory(_ q: Req) async -> Data {
+    let qsc = scParam(q)
+    if let s = qsc, !scenarioNames().contains(s) { return jsonErr("400 Bad Request", "unknown sc") }
+    let params = invParams(), file = invFileUnits(), events = await invEvents.all()
+    let teams = await invTeams()
+    var tls: [String: (String, Int, [String: [[Double]]])?] = [:], lives: [String: Int?] = [:]
+    var units: [[String: Any]] = []
+    for t in teams {
+        let sc = invUnitSc(t, qsc)
+        // with ?sc=, a unit attached to another incident keeps static values
+        let onSc = qsc == nil || t.sc == qsc || (t.sc == nil && t.home.contains(qsc!))
+        var tl: (String, Int, [String: [[Double]]])? = nil, live: Int? = nil
+        if let sc, onSc {
+            if tls[sc] == nil { tls[sc] = .some(await invTimeline(sc, at: q.query["at"])) }
+            tl = tls[sc]!
+            if lives[sc] == nil { var lm = tl?.1; if lm == nil { lm = await invLiveMinute(sc) }; lives[sc] = .some(lm) }
+            live = lives[sc]!
+        }
+        let atMin = tl == nil ? sc.flatMap { invMin(invStart($0), q.query["at"]) } ?? live : nil
+        units.append(await invUnitDoc(t, sc: onSc ? sc : nil, tl: tl, atMin: atMin, liveMin: live, params: params, events: events, file: file))
+    }
+    let order = ["red": 0, "amber": 1, "ok": 2]
+    units.sort { (order[$0["level"] as? String ?? ""] ?? 3, $0["kind"] as? String ?? "", $0["id"] as? String ?? "") < (order[$1["level"] as? String ?? ""] ?? 3, $1["kind"] as? String ?? "", $1["id"] as? String ?? "") }
+    var o: [String: Any] = ["schema": "rescue-inventory-state/1", "sc": qsc ?? NSNull(), "fictional": true, "params": params, "units": units,
+                            "inventoryFile": file != nil,
+                            "note": "Dane sprzętu i załóg są fikcyjne. Zmęczenie, bateria i paliwo to szacunki z osi czasu (ślad szacowany), nie odczyty z urządzeń."]
+    if let s = qsc, let tl = tls[s] ?? nil { o["at"] = tl.0; o["minute"] = tl.1 }
+    else if let s = qsc, let m = invMin(invStart(s), q.query["at"]) ?? (lives[s] ?? nil) { o["at"] = invClock(invStart(s), m); o["minute"] = m }
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data("{}".utf8))
+}
+
+func invAddEvent(_ q: Req, _ id: String) async -> Data {
+    let o = jsonObject(q.body)
+    guard let t = await invTeams().first(where: { $0.id == id }) else { return jsonErr("400 Bad Request", "unknown unit") }
+    guard let type = o["type"] as? String, let label = invEventTypes[type] else { return jsonErr("400 Bad Request", "type: maintenance|battery_swap|refuel|rest|fault") }
+    let sc = scParam(q, o) ?? invUnitSc(t, nil)
+    var at = shortClean(o["at"], 12).flatMap { $0.range(of: #"^(\+\d )?\d{1,2}:\d{2}$"#, options: .regularExpression) != nil ? $0 : nil }
+    if at == nil, let sc, let m = await invLiveMinute(sc) { at = invClock(invStart(sc), m) }
+    if at == nil { let f = DateFormatter(); f.dateFormat = "HH:mm"; at = f.string(from: Date()) }
+    let note = shortClean(o["note"], 200), by = shortClean(o["by"], 40) ?? "operator"
+    let e = InvEvent(id: "inv-\(Int(Date().timeIntervalSince1970 * 1000))-\(Int.random(in: 100...999))", unit: id, type: type, note: note, at: at!, sc: sc, by: by,
+                     wall: ISO8601DateFormatter().string(from: Date()))
+    await invEvents.add(e)
+    var fe = LiveFeedEvent(kind: "inventory", by: by, title: "\(id): \(label)\(note.map { " - \($0)" } ?? "")")
+    fe.team = id; fe.type = type; fe.note = note; fe.sc = sc
+    _ = await liveFeed.add(fe)
+    return response("200 OK", json, Data(#"{"ok":true,"event":\#(jsonString(e))}"#.utf8))
+}
+
+func invActorFeeds(_ q: Req, _ id: String) async -> Data {
+    guard let t = await invTeams().first(where: { $0.id == id }) else { return jsonErr("404 Not Found", "unknown actor") }
+    let sc = invUnitSc(t, scParam(q))
+    var tl: (String, Int, [String: [[Double]]])? = nil, live: Int? = nil
+    if let sc { tl = await invTimeline(sc, at: q.query["at"]); live = await invLiveMinute(sc) }
+    let atMin = tl?.1 ?? sc.flatMap { invMin(invStart($0), q.query["at"]) } ?? live
+    let u = await invUnitDoc(t, sc: sc, tl: tl, atMin: atMin, liveMin: live, params: invParams(), events: await invEvents.all(), file: invFileUnits())
+    let o: [String: Any] = ["schema": "rescue-actor-feeds/1", "id": id, "sc": sc ?? NSNull(), "at": sc.flatMap { s in atMin.map { invClock(invStart(s), $0) } } ?? NSNull(),
+                            "feeds": u["feeds"] ?? [Any](), "level": u["level"] ?? "ok", "health": u["health"] ?? [:], "warnings": u["warnings"] ?? [Any]()]
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data("{}".utf8))
+}
+
+/// GET /api/actors/<id>/log (CONTRACT "Zasoby i dziennik" 1)
+func invActorLog(_ q: Req, _ id: String) async -> Data {
+    let teams = await invTeams()
+    let sc0 = scParam(q)
+    let t = teams.first { $0.id == id }
+    let trackActor = sc0.flatMap { invTrackActor($0, id) }
+    guard t != nil || trackActor != nil else { return jsonErr("404 Not Found", "unknown actor") }
+    let team = t ?? InvTeam(id: id, name: trackActor?["name"] as? String ?? id, kind: invKindNames[trackActor?["type"] as? String ?? ""] ?? trackActor?["kind"] as? String ?? "", sc: nil, home: sc0.map { [$0] } ?? [], segmentId: nil)
+    guard let sc = invUnitSc(team, sc0) else { return jsonErr("404 Not Found", "actor has no incident") }
+    let start = invStart(sc)
+    let liveMin = await invLiveMinute(sc) ?? 0
+    let upTo = invMin(start, q.query["at"]) ?? liveMin
+    var entries: [[String: Any]] = []
+    var ord = 0
+    func add(_ m: Int, _ type: String, _ title: String, src: String, _ extra: [String: Any] = [:]) {
+        guard m <= upTo else { return }
+        var e: [String: Any] = ["minute": m, "t": invClock(start, m), "type": type, "title": title, "src": src, "sc": sc, "_o": ord]
+        for (k, v) in extra { e[k] = v }
+        ord += 1
+        entries.append(e)
+    }
+    // tracks file legs: departures and searches (never truth)
+    let ta = invTrackActor(sc, id)
+    var lastSeg: String? = nil
+    for l in (ta?["legs"] as? [[String: Any]]) ?? [] {
+        guard let from = (l["from"] as? NSNumber)?.intValue, let to = (l["to"] as? NSNumber)?.intValue else { continue }
+        let seg = l["segmentId"] as? String, kind = l["kind"] as? String ?? ""
+        if (kind == "approach" || kind == "flight"), let seg, seg != lastSeg {
+            add(from, "dispatch", "\(kind == "flight" ? "Start do" : "Wyjście do") \(seg)", src: "tracks", ["segmentId": seg, "detail": "z nagrania śladów (zadanie zespołu)"])
+        }
+        if kind == "search", let seg {
+            let endM = min(to, upTo)
+            var detail = "przeszukanie \(invClock(start, from))-\(invClock(start, endM)) (\(max(0, endM - from)) min)"
+            if let fr = await timelineCache.frame(sc, live: true, features: nil, t: "\(endM)"),
+               let s = (jsonObject(fr)["segments"] as? [[String: Any]])?.first(where: { $0["id"] as? String == seg }), let c = (s["cumPod"] as? NSNumber)?.doubleValue {
+                detail += ", pokrycie \(seg) po przeszukaniu: \(Int((c * 100).rounded()))% (wszystkie zespoły)"
+            }
+            add(from, "search", "Przeszukanie \(seg)", src: "tracks", ["segmentId": seg, "detail": detail])
+        }
+        if let seg { lastSeg = seg }
+    }
+    // fixes: tracks file + live POST /api/fix
+    for f in await invFixes(sc, id, start: start) {
+        let rep = f.1 == "report"
+        add(f.0, "fix", rep ? "Pozycja z meldunku ±\(Int(f.2)) m" : f.1 == "est" ? "Pozycja szacowana ±\(Int(f.2)) m" : "Pozycja GPS ±\(Int(f.2)) m", src: f.6,
+            ["lat": f.3, "lon": f.4, "feed": team.kind == "pies" && !rep ? "collar" : rep ? "radio" : "gps", "detail": f.5 ?? NSNull()])
+    }
+    // scripted scenario events naming the actor
+    let scn = jsonObject((try? Data(contentsOf: scenariosDir.appendingPathComponent("\(sc).json"))) ?? Data())
+    let res = (scn["resources"] as? [[String: Any]]) ?? []
+    let kindWords: [String: [String]] = ["dron": ["dron"], "smiglowiec": ["śmigłowiec", "smiglowiec"], "pies": ["psem", "pies "], "lodz": ["łódź", "łodzi", "lodz"], "nurkowie": ["nurk"]]
+    let singleKind = res.filter { invKindNames[$0["type"] as? String ?? ""] == team.kind }.count == 1
+    let nameL = team.name.lowercased()
+    for ev in (scn["events"] as? [[String: Any]]) ?? [] {
+        let title = ev["title"] as? String ?? "", tl = title.lowercased()
+        guard let m = invMin(start, ev["at"] as? String), !(ev["epilogue"] as? Bool ?? false) else { continue }
+        let byName = tl.contains(nameL) || (singleKind && (kindWords[team.kind] ?? []).contains { tl.contains($0) })
+        if byName { add(m, "scripted", title, src: "scenario", ["detail": "zdarzenie scenariusza, przypisane po nazwie", "segmentId": (ev["segments"] as? [String])?.first ?? NSNull()]) }
+    }
+    // operator assignments
+    for a in await assignmentList() where a["resourceId"] as? String == id && (a["scenario"] == nil || a["scenario"] as? String == sc) {
+        let m = invMin(start, a["at"] as? String) ?? liveMin
+        add(m, "dispatch", "Przydział: \(a["segmentId"] as? String ?? "?")\((a["segmentName"] as? String).map { " (\($0))" } ?? "")", src: "assignment",
+            ["segmentId": a["segmentId"] ?? NSNull(), "detail": a["note"] ?? NSNull(), "wall": a["t"] ?? NSNull(), "by": a["by"] ?? "operator"])
+    }
+    // live feed
+    let feed = await invFeedEvents(id, sc: sc)
+    for e in feed where e.kind != "inventory" && e.kind != "scenario" && e.kind != "found" {
+        let type = e.kind == "dispatch" ? "dispatch" : e.kind == "clue" ? "clue" : e.kind == "fix" ? "fix" : "report"
+        var x: [String: Any] = ["seq": e.seq, "acked": e.acked ?? false, "wall": e.t, "by": e.by, "detail": e.note ?? NSNull(), "feed": (e.kind == "clue" ? "clues" : e.kind == "fix" ? "radio" : "reports") as Any]
+        if let s = e.segmentId { x["segmentId"] = s }
+        if let la = e.lat, let lo = e.lon { x["lat"] = la; x["lon"] = lo }
+        add(liveMin, type, e.title, src: "feed", x)
+    }
+    // stored field reports naming the actor (clues are in the feed already)
+    let feedNotes = Set(feed.compactMap(\.note))
+    for r in await store.reports(sc: nil) + (await store.reports(sc: sc)) where r.source != "live-clue" && !feedNotes.contains(r.text) {
+        let hit = r.hints.contains { h in
+            guard let rs = h.resource?.lowercased(), rs.count >= 4 else { return false }
+            return rs == id.lowercased() || rs == nameL || nameL.contains(rs)
+        }
+        if hit { add(invMin(start, r.at) ?? liveMin, "report", "Meldunek: \(r.text.prefix(80))", src: "report", ["detail": r.text, "wall": r.t, "feed": "reports"]) }
+    }
+    // inventory events
+    for e in await invEvents.all() where e.unit == id && (e.sc == nil || e.sc == sc) {
+        add(invMin(start, e.at) ?? liveMin, "inventory", "\(invEventTypes[e.type] ?? e.type)\(e.note.map { ": \($0)" } ?? "")", src: "inventory", ["wall": e.wall, "by": e.by, "eventType": e.type])
+    }
+    // status now
+    let stat = team.sc == nil && team.home.contains(sc) ? "w planie akcji (zespół ze scenariusza)" : team.status
+    add(min(liveMin, upTo), "status", "Status teraz: \(stat)\(team.segmentId.map { ", \($0)" } ?? "")\(team.sc.map { " (akcja \($0))" } ?? "")", src: "roster", ["segmentId": team.segmentId ?? NSNull()])
+    entries.sort { (($0["minute"] as? Int) ?? 0, ($0["_o"] as? Int) ?? 0) < (($1["minute"] as? Int) ?? 0, ($1["_o"] as? Int) ?? 0) }
+    if let since = invMin(start, q.query["since"]) { entries = entries.filter { ($0["minute"] as? Int ?? 0) >= since } }
+    if let ty = q.query["type"], !ty.isEmpty {
+        let want = Set(ty.split(separator: ",").map(String.init))
+        entries = entries.filter { want.contains($0["type"] as? String ?? "") || (want.contains("ack") && $0["acked"] as? Bool == true) || want.contains($0["feed"] as? String ?? "-") }
+    }
+    for i in entries.indices { entries[i]["_o"] = nil }
+    let counts = Dictionary(grouping: entries, by: { $0["type"] as? String ?? "" }).mapValues(\.count)
+    let o: [String: Any] = ["schema": "rescue-actor-log/1", "id": id, "name": team.name, "kind": team.kind, "sc": sc, "liveAt": invClock(start, liveMin),
+                            "at": invClock(start, upTo), "status": team.status, "entries": entries, "counts": counts,
+                            "note": "Zbudowane z istniejących danych: nagranie śladów (bez trasy prawdziwej), GPS na żywo, przydziały, kanał na żywo, meldunki, zdarzenia scenariusza, wpisy zasobów."]
+    return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: o, options: [.sortedKeys])) ?? Data("{}".utf8))
+}
+
+/// Routes of this block; nil = not an inventory request. POST /api/reset also clears the inventory events, then goes on.
+func inventoryRoute(_ q: Req) async -> Data? {
+    if q.method == "POST" && q.path == "/api/reset" { await invEvents.reset(); return nil }
+    if q.method == "GET" && q.path == "/api/inventory" { return await invInventory(q) }
+    let parts = q.path.split(separator: "/").map(String.init)   // ["api", "inventory", id, "event"] / ["api", "actors", id, "log"|"feeds"]
+    guard parts.count == 4, parts[0] == "api", validName(parts[2]) else { return nil }
+    if q.method == "POST" && parts[1] == "inventory" && parts[3] == "event" { return await invAddEvent(q, parts[2]) }
+    if q.method == "GET" && parts[1] == "actors" && parts[3] == "log" { return await invActorLog(q, parts[2]) }
+    if q.method == "GET" && parts[1] == "actors" && parts[3] == "feeds" { return await invActorFeeds(q, parts[2]) }
+    return nil
+}
+
 // MARK: routing
 
 struct Req { let method: String; let path: String; let query: [String: String]; let headers: [String: String]; let body: Data; let peer: String }
@@ -1435,6 +1974,7 @@ func handle(_ q: Req) async -> Data {
 
 func route(_ q: Req) async -> Data {
     if let d = await timelineRoute(q) { return d }   // MARK: timeline
+    if let d = await inventoryRoute(q) { return d }   // MARK: inventory
     switch (q.method, q.path) {
     case ("OPTIONS", _): return response("204 No Content", "text/plain", Data())
     case ("GET", "/"): return landing()
