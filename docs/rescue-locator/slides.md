@@ -1,6 +1,6 @@
 # Rescue Locator - slides (max 10)
 
-Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo, zawrat) and `rescue/validate/backtest.md` (4262ffe). **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** Every slide with a number carries the label "tymczasowe - do czasu testu na ślepo".
+Outline for the PDF deck. One idea per slide. Numbers: blind-test ablation `rescue/eval/ablation.json` (value), `rescue/README.md` (demo screen), `rescue/validate/backtest.md` (footnote only). **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** Every slide with a number carries the label "tymczasowe - do czasu testu na ślepo".
 
 1. **Title**
    - Rescue Locator - gdzie szukać najpierw (where to search first)
@@ -40,14 +40,19 @@ Outline for the PDF deck. One idea per slide. Numbers: `rescue/README.md` (demo,
    - All providers merge into one fused probability stream -> heatmap + ranked segments.
    - New source (AML, RECCO, live drone feed) = one new provider, core untouched.
 
-8. **Value number and how we validate it** (label: "tymczasowe - do czasu testu na ślepo")
-   - Hero: find spot **#1 after fusion vs #19 with Koester rings only**; area to sweep **0.11% vs 41%** (zawrat demo screen at 19:45, real OSM + DEM terrain).
-   - Slide line (PL): "Backtest: 9 fikcyjnych scenariuszy w 5 rejonach Polski - miejsce w top 3 w 8/9, średnio 2,2% obszaru zamiast 20%. Test na ślepo: 2/2 rundy znalezione w 3. fali, obie dzięki decyzji agenta-szukającego AI wbrew planerowi - w rundzie 2 sama mapa nie pomogła. Każdą lekcję wpisujemy do silnika (14 poprawek)."
-   - Backtest: find spot in the **top 3 in 8/9 scenarios**; on average **2.18% of the area vs 20.0%** with Koester rings (distance baseline for water cases). N = 9, real OSM + DEM terrain, 5 regions: Tatry, Bieszczady, Karkonosze, Śniardwy, Morzycko, Międzyzdroje.
-   - Footnote: fictional scenarios we wrote ourselves; drone POD 0.6 / 0.75 is an assumption and the worse result counts. Losses shown: Karkonosze misses the top 3 and needs more area than rings (2.86% vs 1.8%); kasprowy needs more area too (4.94% vs 4.2%). None of the scenarios ends on a GPS ping.
-   - Blind test so far: 2/2 found in wave 3, both from the AI searcher overriding the planner. Round 1: true cell in the top 4.1% of the area (naive 32.3%). Round 2: 37.4% vs 35.7% naive, the map alone did not help.
-   - Validation: blind "hide and seek" test. AI Marcina hides the person and commits to the spot with SHA-256; we search with the app only; the judge answers each patrol by its POD; the hash is opened at the end. Series of 3-5 rounds, failures shown too. Label stays "tymczasowe" until blind-03.
-   - Planner, said honestly: ETAs, safety gating, instant re-plan; 20% find chance in 1 h 46 min vs 2 h 00 min, not a big POS gain.
+8. **Does it help? Blind test, N = 2** (label: "tymczasowe - do czasu testu na ślepo")
+   - Slide line (PL): "Mapa prawdopodobieństwa działa na poziomie doświadczonego kierownika akcji - w rundzie 1 wyraźnie lepiej niż szukanie od punktu startu, w rundzie 2 nic nie pomogło. Planer zespołów jest najsłabszym elementem; obie odnalezienia przyszły z decyzji koordynatora wbrew planerowi. To narzędzie koordynacji i obrazu sytuacji, a mapa jest jednym z wejść. Kalibrację na setkach symulowanych przypadków (niezależny symulator) robimy teraz."
+   - Table, % of the area searched before reaching the hidden person (`rescue/eval/ablation.json`, 2cb6dd8):
+
+     | Runda | Mapa (silnik) | Heurystyka eksperta | Naiwnie od punktu startu |
+     |---|---|---|---|
+     | blind-01 | **2,1%** | 4,4% | 24,1% |
+     | blind-02 | 37,4% | 39,9% | **35,7%** |
+
+   - Planner alone (simulated, no overrides): round 1 found 180 min after the first patrol vs 35 min actual; round 2 not found in 6 h.
+   - Validation method: blind "hide and seek" test. AI Marcina hides the person and commits to the spot with SHA-256; we search with the app only; the referee answers each patrol from a sealed detection table; the hash is opened at the end. Series of 3-5 rounds, failures shown. Next: calibration on hundreds of cases from an independent simulator.
+   - Footnote only: authored backtest, 9 fictional scenarios in 5 regions, top 3 in 8/9, 2.18% vs 20.0% with Koester rings. We wrote them, so it is biased. Demo screen (zawrat) shows #1 vs #20, an illustration, not a value claim.
+   - Planner, said honestly: ETAs, safety gating, instant re-plan; its weak spot is re-tasking teams to segments already cleared.
 
 9. **Roadmap**
    - Blind test series (3-5 rounds), then a backtest on anonymised past GOPR/TOPR cases vs plain rings.

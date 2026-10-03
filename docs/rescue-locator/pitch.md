@@ -2,7 +2,16 @@
 
 Side project (Mateusz, SYZYGY Warsaw). Source material: [`research.md`](research.md). All demo data is mocked and fictitious. Numbers come from `rescue/README.md` (demo numbers), `rescue/validate/backtest.md` and the blind-test results in `rescue/blindtest/`. **Wszystkie liczby: tymczasowe - do czasu testu na ślepo.** They come from scenarios we wrote ourselves, so they only show the engine works as designed. The validation method is the blind test below.
 
-**Combined line for the pitch (coordinator decision, tymczasowe - do czasu blind-03):** Backtest: 9 fikcyjnych scenariuszy w 5 rejonach Polski - miejsce w top 3 w 8/9, średnio 2,2% obszaru zamiast 20%. Test na ślepo: 2/2 rundy znalezione w 3. fali, obie dzięki decyzji agenta-szukającego AI wbrew planerowi - w rundzie 2 sama mapa nie pomogła. Każdą lekcję wpisujemy do silnika (14 poprawek).
+**Headline for the pitch (coordinator decision, tymczasowe - do czasu blind-03):** Mapa prawdopodobieństwa działa na poziomie doświadczonego kierownika akcji - w rundzie 1 wyraźnie lepiej niż szukanie od punktu startu, w rundzie 2 nic nie pomogło. Planer zespołów jest najsłabszym elementem; obie odnalezienia przyszły z decyzji koordynatora wbrew planerowi. To narzędzie koordynacji i obrazu sytuacji, a mapa jest jednym z wejść. Kalibrację na setkach symulowanych przypadków (niezależny symulator) robimy teraz.
+
+Source: AI Marcina's ablation on the two blind rounds (`rescue/eval/ablation.json`, `rescue/eval/README.md`, 2cb6dd8). Metric: % of the area searched in rank order before reaching the hidden person. N = 2: say it out loud.
+
+| Round | Engine (map) | Expert heuristic | Naive from start point |
+|---|---|---|---|
+| blind-01 | **2.1%** (segment #2) | 4.4% (#4) | 24.1% (#6) |
+| blind-02 | 37.4% (#8) | 39.9% (#6) | **35.7%** (#10) |
+
+Planner alone, simulated with the referee's rules (no overrides): blind-01 finds her, but 180 min after the first patrol vs 35 min in the actual search; blind-02 does not find him in 6 h (it keeps re-tasking the drone to an already cleared segment).
 
 Blind test log and story for materials: [`blind-test/log.md`](blind-test/log.md), [`blind-test/story.md`](blind-test/story.md). Round 1 so far: blind-01: znaleziona w 3. fali (12 przydziałów). Zadecydował agent-szukający AI, który ręcznie zastosował zasadę Koestera IPP = ostatni pewny punkt (świadek 13:40), której zamrożony silnik jeszcze nie miał; planer sam wysłałby drona nad S3. Wniosek: poprawka #1 trafia do silnika i sprawdzamy ją w blind-02/03. Reveal 14:59 (ad2ced5): hash OK; at 19:00 the true cell was in the top 4.1% of the area (naive search from the hut: 32.3%), but the true segment was only #5/20 and the map peak 1.95 km away. Round 2 (Stanisław M., 79, dementia; reveal a0476e0, both hashes OK): found at 21:20 in D18 by patrol A, again from the AI searcher agent overriding the planner (dementia: walks straight until stuck). Engine alone at 17:45: true segment #8/20, 37.4% of the area to sweep vs 35.7% naive from the guesthouse, map peak ~1.0 km away: "Tym razem sama mapa nie pomogła" (referee). N = 2, not the pitch number on its own.
 
@@ -15,11 +24,11 @@ Scenario `rescue/scenarios/zawrat.json` (fictional), on real OSM + DEM terrain.
 - **Steps:**
   1. Open the incident: Tomasz W., 58, solo hiker, last seen 12:10 at the Pięć Stawów hut (IPP); wife reports at 17:40. Map shows Koester distance rings for "hiker, mountains" plus terrain (trails, streams, cliffs).
   2. Hints stream in on the timeline: wife's trip plan (Palenica - Pięć Stawów - Zawrat and back), car still at Palenica, 112 cell sector from 14:12 (~1.5 km), fog and nightfall. Each hint is a provider; the heatmap reshapes with every one, and toggling a hint off shows what it contributed.
-  3. Read the plan: top 3 segments hold **42% of the probability in 8% of the area**, and "Przydział zespołów" gives each team a segment, ETA and safety flags (ice on Zawrat = rope team only).
+  3. Read the plan: top 3 segments hold **46% of the probability in 7% of the area**, and "Przydział zespołów" gives each team a segment, ETA and safety flags (ice on Zawrat = rope team only).
   4. Searched segments come back empty (Roztoka, hut, blue trail, drone over the lakes at 19:35): probability drains into Żleb pod Zawratem (S7), now #1. Wind at 19:45 grounds the drone and clears the helicopter; the plan re-allocates and sends the TOPR helicopter into S7 (ETA 15 min). At 20:03 the helicopter's thermal camera finds him in S7: a Found event closes the case, the POA collapses on the find spot and the planner stops. The find comes from a search the planner sent. Optional epilogue: the 20:05 Ratunek ping lands inside S7 as well.
 - **Wow moment:** Step 4. Empty searches are evidence too: the map re-flows, S7 becomes #1, the planner sends the helicopter there and at 20:03 it reports "ZNALEZIONO". The Ratunek ping is not needed for the find.
-- **Value number (demo, tymczasowe - do czasu testu na ślepo):** the find spot is **#1 after fusion vs #19 with Koester rings only**; to reach it you sweep **0.11% of the area vs 41%** with rings only (demo screen at 19:45, `rescue/README.md`).
-- **Value number (backtest, all scenarios, tymczasowe - do czasu testu na ślepo):** find spot in the **top 3 segments in 8/9 scenarios**; on average **2.18% of the area to sweep vs 20.0%** with Koester rings (water cases: distance from the last known point, no ISRID tables). N = 9 fictional scenarios on real OSM + DEM terrain in 5 regions: Tatry (zawrat, kasprowy, morskie-oko, blind-01-replay), Bieszczady, Karkonosze, Śniardwy, Morzycko / Moryń, Międzyzdroje (Baltic). A scenario with two drone POD variants counts once, with the worse result. Source: `rescue/validate/backtest.md`. Honest losses: Karkonosze is the one miss of the top 3 (#5) and needs more area than rings (2.86% vs 1.8%); kasprowy also needs more area than rings (4.94% vs 4.2%) although it ranks higher (#2 vs #5); in morskie-oko rings alone already rank it #1.
+- **What the demo screen shows (zawrat, an authored scenario, not a value claim):** find spot #1 after fusion vs #20 with Koester rings only; 0.07% vs 34.3% of the area (`rescue/README.md`, step 19:45, current engine). At 18:30, with all clues and before any search report, it is only #5.
+- **Value (headline above):** blind-test ablation, N = 2. Footnote only: authored backtest, 9 fictional scenarios in 5 regions, top 3 in 8/9, 2.18% vs 20.0% of the area with Koester rings (`rescue/validate/backtest.md`). We wrote those scenarios ourselves, so it is biased and not a headline. Losses there: Karkonosze (#5, 2.86% vs 1.8%) and kasprowy (4.94% vs 4.2%).
 - **Validation method: blind "hide and seek" test (test na ślepo).** AI Marcina hides the fictional person and publishes only a SHA-256 commitment of the hiding spot before we start. We search with the app alone: we send patrols where the planner says, and the judge answers each patrol with what it would find given its POD (nothing, ŚLAD, ZNALEZIONO). After the search the commitment is opened, so nobody can move the spot after the fact. A series of 3-5 rounds, failures reported alongside successes. Until that series runs, every number on this page is provisional.
 - **Drone POD is an assumption:** 0.6 and 0.75 are illustrative, not a specific drone spec (`rescue/README.md`).
 
@@ -36,7 +45,7 @@ Fits the brief almost word for word ([`docs/tasks/defence.txt`](../tasks/defence
 
 | Criterion (weight) | Where the demo shows it | Say it out loud |
 |---|---|---|
-| Idea & Innovation (30%) | Step 4: empty searches and drone pass drain their segments, S7 becomes #1 (vs #19 on rings only), the helicopter the planner sent reports ZNALEZIONO in S7 at 20:03 | "Brak wyniku to też informacja" - negative evidence as a Bayes update, which CalTopo does not do automatically |
+| Idea & Innovation (30%) | Step 4: empty searches and drone pass drain their segments, S7 becomes #1 (vs #20 on rings only), the helicopter the planner sent reports ZNALEZIONO in S7 at 20:03 | "Brak wyniku to też informacja" - negative evidence as a Bayes update, which CalTopo does not do automatically |
 | Relation to Category (20%) | Steps 1-2: incomplete, stale, mixed hints in the first hour, few teams, fog and sunset | Use the brief's own words: incomplete information, limited resources, coordination during an emergency |
 | Practical Applicability / Usability (20%) | Step 3: plan with one segment, ETA and safety flag per team; field reports parsed offline in 1.3-1.7 s | Follows the existing GOPR/TOPR reflex-task workflow, no new process; works without internet |
 | Design (20%) | Whole demo: one screen, heatmap centre, hints left, plan right; toggling a hint shows its contribution | Keep the screen calm: one colour ramp, big % numbers, no settings |
@@ -52,11 +61,11 @@ AI disclosure (required by the open-task rules): name the AI tools used (Claude 
 >
 > Rescue Locator robi z tych okruchów jedną mapę prawdopodobieństwa. Zaczynamy od statystyk zachowań osób zaginionych Roberta Koestera i od prawdziwego terenu: szlaki, potoki, ściany. Każda wskazówka to osobny moduł. Dodajemy je i mapa przelicza się na żywo.
 >
-> Po prawej: trzy najlepsze sektory, 42 procent prawdopodobieństwa na 8 procentach obszaru. I przydział zespołów: kto, dokąd, za ile minut, a na oblodzone płyty tylko zespół z liną.
+> Po prawej: trzy najlepsze sektory, 46 procent prawdopodobieństwa na 7 procentach obszaru. I przydział zespołów: kto, dokąd, za ile minut, a na oblodzone płyty tylko zespół z liną.
 >
 > A teraz najważniejsze. Kolejne sektory wracają puste, dron nad stawami nic nie widzi. To też jest informacja. Prawdopodobieństwo spływa do Żlebu pod Zawratem. O 19:45 wiatr uziemia drona, plan sam się przelicza i wysyła śmigłowiec do żlebu. 20:03, kamera termowizyjna: znaleziony.
 >
-> W dziewięciu fikcyjnych scenariuszach z pięciu rejonów Polski miejsce odnalezienia było w pierwszej trójce w ośmiu: średnio 2 procent obszaru zamiast 20. Ale te scenariusze pisaliśmy sami. Dlatego sprawdzamy się na ślepo: ktoś inny chowa zaginionego i zapisuje miejsce jako skrót SHA-256, a my szukamy tylko aplikacją. Dwie rundy, dwa razy znaleziony, ale za każdym razem dlatego, że agent-szukający poszedł wbrew planerowi. W drugiej rundzie sama mapa nie pomogła. Każdą lekcję wpisujemy do silnika. Tylko legalne źródła, zero śledzenia, działa offline, a każdy nowy sygnał - AML, RECCO, dron - to po prostu kolejny moduł.
+> Sprawdziliśmy się na ślepo: ktoś inny chowa zaginionego i zapisuje miejsce jako skrót SHA-256, a my szukamy tylko aplikacją. Dwie rundy. W pierwszej mapa wskazała miejsce w dwóch procentach obszaru, wyraźnie lepiej niż szukanie od punktu startu. W drugiej nic nie pomogło. Mapa działa na poziomie doświadczonego kierownika akcji. Najsłabszy jest planer zespołów: oba odnalezienia przyszły z decyzji koordynatora wbrew planerowi. Dlatego to jest narzędzie koordynacji i obrazu sytuacji, a mapa jest jednym z wejść. Kalibrację na setkach symulowanych przypadków robimy teraz. Tylko legalne źródła, zero śledzenia, działa offline, a każdy nowy sygnał - AML, RECCO, dron - to po prostu kolejny moduł.
 >
 > Reagowanie kryzysowe wtedy, gdy informacji jest mało, a zespołów jeszcze mniej. Rescue Locator. Gdzie szukać najpierw.
 
@@ -74,8 +83,8 @@ AML is mandatory in the EU, but Poland is one of the last countries without it; 
 **Where do the behaviour statistics come from?**
 Koester's *Lost Person Behavior* and the ISRID database (tens of thousands of incidents). ISRID tables are copyrighted by dbS Productions, so the demo uses a few approximate, attributed quantiles or our own illustrative numbers. Production use would need a licence or cooperation with dbS / ISRID, ideally with Polish incident data contributed back.
 
-**How do you know it is better than circles?**
-Our backtest (`rescue/validate/backtest.md`) on 3 fictional scenarios: 9 fictional scenarios in 5 regions of Poland: the find spot is in the top 3 segments in 8/9, and you sweep on average 2.18% of the area vs 20.0% with Koester rings (distance baseline for water cases), all on real OSM + DEM terrain. Caveats to say out loud: the scenarios and find spots are ours, so this shows the fusion works as designed, not field accuracy; Karkonosze misses the top 3 and needs more area than rings (2.86% vs 1.8%), kasprowy needs more area too (4.94% vs 4.2%). That is why the blind test exists: 2/2 rounds found, both thanks to the AI searcher overriding the planner, and in round 2 the map alone did no better than naive search. Published evaluation (MapScore, Sava et al. 2015) shows terrain-aware models beat plain rings; the real test is a backtest on anonymised past GOPR/TOPR cases.
+**How do you know it helps?**
+Blind-test ablation (`rescue/eval/`), N = 2: engine 2.1% of the area vs expert heuristic 4.4% vs naive 24.1% in round 1; 37.4% vs 39.9% vs 35.7% in round 2, so in round 2 nothing beat naive search. Planner alone, simulated with the referee's rules (no overrides): blind-01 finds her, but 180 min after the first patrol vs 35 min in the actual search; blind-02 does not find him in 6 h (it keeps re-tasking the drone to an already cleared segment). The authored 9-scenario backtest (8/9 in top 3, 2.18% vs 20.0%) is a footnote only: we wrote those scenarios ourselves. Next: calibration on hundreds of cases from an independent simulator.
 
 **Your scenarios are your own, so of course it finds the spot?**
 Right, which is why every number is marked provisional. Our validation is a blind hide-and-seek test: AI Marcina hides the person and commits to the spot with a SHA-256 hash, we search using only the app, the judge answers each patrol according to its POD, and the hash is opened at the end. Series of 3-5 rounds, failures included.
@@ -84,7 +93,7 @@ Right, which is why every number is marked provisional. Our validation is a blin
 An assumption, not a spec. We ran both; the zawrat result (#1) holds for both.
 
 **Does the team planner find people faster?**
-Barely, in this scenario: 20% chance of find in 1 h 46 min vs 2 h 00 min with a naive plan, then roughly equal. Its value is ETAs, safety gating and instant re-planning when weather changes.
+No, and we say so. It is the weakest part. In the blind test, the planner alone (simulated, no overrides) found round 1 in 180 min vs 35 min actual, and did not find round 2 in 6 h because it kept re-tasking the drone to a cleared segment. Both finds came from the coordinator overriding it. In the zawrat scenario it reaches a 20% find chance in 1 h 46 min vs 2 h 00 min naive. Its value today is ETAs, safety gating and instant re-planning, with a human or AI coordinator deciding.
 
 **Does it need the internet?**
 No. Field reports are parsed by a local model (qwen3 4B in Ollama, 1.3-1.7 s per report), with keyword rules (~15 ms) as a fallback.
