@@ -53,14 +53,15 @@ window.rescueStore = store;   // debugging / tests
 const STATIC = {};
 STATIC["blind-01-replay"] = { name: "Test na ślepo: runda 1 (replay)", run: "../out/blind-01-replay.run.json" };
 async function detect() {
-  const a = await tryJSON("/api/scenarios");
-  const m = await tryJSON("/modules");
+  // the three probes at once (perf: they ran one after another, three round trips before the run could even start)
+  const blindP = (async () => { try { const r = await fetch(STATIC["blind-01-replay"].run, { cache: "no-cache" }); r.body && r.body.cancel(); return r.ok; } catch (e) { return false; } })();
+  const [a, m, blindOk] = await Promise.all([tryJSON("/api/scenarios"), tryJSON("/modules"), blindP]);
   store.hasApi = !!a; store.hasStudio = !!(m && m.modules); store.mods = m ? m.modules : [];
   let list = [];
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
   // blind test round 1 replay (the 3D view shows the hider's story and the true spot at the end); only when its run is there
-  try { const r = await fetch(STATIC["blind-01-replay"].run, { cache: "no-cache" }); if (r.ok) list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true }); r.body && r.body.cancel(); } catch (e) {}
+  if (blindOk) list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true });
   $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}" ${s.disabled ? "disabled" : ""}>${esc(s.name)}</option>`).join("");
   store.scenList = list;
 }
