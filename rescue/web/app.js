@@ -515,6 +515,7 @@
       map.on('mousemove', 'heat', (e) => { const f = e.features && e.features[0]; if (f) opt.onHover(f.properties.i, e.point); });
       map.on('mouseleave', 'heat', () => opt.onHover(null));
       map.on('click', 'heat', (e) => { const f = e.features && e.features[0]; if (f) opt.onCellClick(f.properties.i); });
+      map.on('click', (e) => opt.onMapClick && opt.onMapClick(e.lngLat, e.point));   // live mode: the shell's "+ Ślad" picks a point
       res();
     }));
     this.setBase = (b) => {
@@ -1265,6 +1266,7 @@
     $('#incident').textContent = `${R.incident} · ${R.date}`;
     const opt = {
       relief, baseStyle, tiles: CFG.tiles, onHover, onSegClick: selectSeg, onCellClick: (i) => selectSeg(M.segList[M.segOfIdx[i]].id),
+      onMapClick: (ll, pt) => toParent({ type: 'mapclick', lat: ll.lat, lon: ll.lng, x: pt.x, y: pt.y }),
       onSourceFail: (id) => {
         if ((id === 'topo' || id === 'osm') && S.base === id) { flashNote('Kafelki online niedostępne - pokazuję teren offline', true); setBase(S.bases.includes('relief') ? 'relief' : 'none'); }
         else if (baseStyle && baseStyle.sources && baseStyle.sources[id] && S.base === 'map') { flashNote('Podkład offline (basemap) nie wczytał się - pokazuję teren z DEM', true); setBase(S.bases.includes('relief') ? 'relief' : 'none'); }
