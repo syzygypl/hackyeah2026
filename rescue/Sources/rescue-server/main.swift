@@ -137,8 +137,12 @@ func runScenario(_ name: String, live: Bool) async -> Data? {
 /// Assessments are slow (local LLM 5-20 s): cache per (scenario, step, live file size).
 actor AssessCache {
     var c: [String: Data] = [:]
+    var inFlight: Set<String> = []
     func get(_ k: String) -> Data? { c[k] }
-    func put(_ k: String, _ v: Data) { c[k] = v; if c.count > 200 { c.removeAll() } }
+    func put(_ k: String, _ v: Data) { c[k] = v; inFlight.remove(k); if c.count > 200 { c.removeAll() } }
+    /// true if the caller should start the background computation for k
+    func claim(_ k: String) -> Bool { if inFlight.contains(k) || c[k] != nil { return false }; inFlight.insert(k); return true }
+    func release(_ k: String) { inFlight.remove(k) }
 }
 let assessCache = AssessCache()
 
@@ -274,7 +278,21 @@ func handle(_ q: Req) async -> Data {
             let key = "\(name)|\(q.query["step"] ?? "last")|\(liveSize)|\(llm)"
             if let c = await assessCache.get(key) { return response("200 OK", json, c) }
             guard let run = await runScenario(name, live: q.query["live"] != "0") else { return jsonErr("404 Not Found", "no scenario \(name)") }
-            let a = await Assessment.assess(run: run, step: q.query["step"].flatMap(Int.init), useLLM: llm)
+            let step = q.query["step"].flatMap(Int.init)
+            if llm && q.query["wait"] == "0" {
+                // non-blocking: rules now, the local model in the background; poll again for the LLM version
+                if await assessCache.claim(key) {
+                    Task.detached {
+                        let a = await Assessment.assess(run: run, step: step, useLLM: true)
+                        await assessCache.put(key, a)
+                    }
+                }
+                var r = (try? JSONSerialization.jsonObject(with: await Assessment.assess(run: run, step: step, useLLM: false))) as? [String: Any] ?? [:]
+                r["pending"] = true; r["retryAfterMs"] = 5000
+                r["note"] = "ocena z reguł; lokalny model liczy w tle - zapytaj ponownie"
+                return response("200 OK", json, (try? JSONSerialization.data(withJSONObject: r, options: [.sortedKeys])) ?? Data())
+            }
+            let a = await Assessment.assess(run: run, step: step, useLLM: llm)
             await assessCache.put(key, a)
             return response("200 OK", json, a)
         }

@@ -343,7 +343,8 @@ function renderAssessment(el, d) {
 if (location.protocol.startsWith('http')) fetch('/health').then(r=>r.json()).then(h=>{ if(h.server==='rescue-server'){
   document.getElementById('assessWrap').style.display='block';
   document.getElementById('assessBtn').onclick=async()=>{const el=document.getElementById('assess');el.style.display='block';el.textContent='lokalny model ocenia sytuację...';
-    try{const r=await fetch(`/api/assessment/${D.scenarioName}?step=${step}&live=0`);renderAssessment(el,await r.json());}catch(e){el.textContent='Ocena niedostępna: '+e;}};
+    const url=`/api/assessment/${D.scenarioName}?step=${step}&live=0&wait=0`;
+    try{for(let i=0;i<40;i++){const d=await (await fetch(url)).json();renderAssessment(el,d);if(!d.pending)break;await new Promise(r=>setTimeout(r,d.retryAfterMs||5000));}}catch(e){el.textContent='Ocena niedostępna: '+e;}};
 }}).catch(()=>{});
 render();
 </script>
