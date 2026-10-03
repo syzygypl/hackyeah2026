@@ -42,12 +42,14 @@
 </aside>
 
 <aside id="left" class="panel">
+  <section id="live" hidden></section>
   <h2>Sygnały źródłowe</h2>
   <ol id="signals"></ol>
   <p class="note">Każdy sygnał to wejście silnika (Swift, RescueKit). Kliknij, żeby zobaczyć go na mapie. „Wpływ” = segment, który zyskał najwięcej po dodaniu sygnału.</p>
 </aside>
 
 <aside id="right" class="panel">
+  <section id="value" hidden></section>
   <h2>Gdzie szukać najpierw</h2>
   <p id="rank-scope" class="scope">&nbsp;</p>
   <ol id="ranklist"></ol>
@@ -60,7 +62,7 @@
 <section id="feed" aria-live="polite"></section>
 
 <footer id="timeline" class="panel">
-  <button id="play" class="play" aria-label="Odtwórz / pauza"><span></span></button>
+  <button id="prev" class="btn sm" aria-label="Poprzedni krok">‹</button><button id="play" class="play" aria-label="Odtwórz / pauza"><span></span></button><button id="next" class="btn sm" aria-label="Następny krok">›</button><span id="stepno" class="stepno"></span>
   <div class="track">
     <div id="ticks" class="ticks"></div>
     <input id="slider" type="range" min="0" max="0" value="0" aria-label="Krok osi czasu">
@@ -72,6 +74,7 @@
 
 <div id="hud">
   <button id="btn-cine" class="btn red" title="Kino: automatyczny przelot przez całą akcję (Esc kończy)">Kino</button>
+  <button id="btn-diff" class="btn" title="Warstwa trudności terenu z silnika zamiast prawdopodobieństwa">Trudność</button>
   <button id="btn-trees" class="btn on" title="Lasy i kosodrzewina">Las</button>
   <button id="btn-top" class="btn" title="Przelot do najbardziej prawdopodobnego segmentu">Lider</button>
   <button id="btn-all" class="btn" title="Cały obszar">Cały obszar</button>

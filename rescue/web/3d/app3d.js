@@ -53,7 +53,22 @@ const sigOf = (e) => (/świadek/i.test(e.title || '') ? ['Ś', '#e76f51', 'Świa
 const TEAM_COL = { heli: '#1f4e79', ground: '#b8860b', dog: '#8d5524', drone: '#6c4ab6' };
 
 const $ = (id) => document.getElementById(id);
-const pct = (p) => (p >= 0.095 ? Math.round(p * 100) : (p * 100).toFixed(1)) + '%';
+const nf = (x, d) => Number(x).toLocaleString('pl-PL', { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = (p, d) => (d != null ? nf(p * 100, d) : p >= 0.095 ? nf(p * 100, 0) : nf(p * 100, 1)) + '%';
+const pp = (x) => (x >= 0 ? '+' : '-') + nf(Math.abs(x * 100), 1) + ' pp';
+const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')} min` : `${Math.round(m)} min`);
+const PRECIP = { none: 'bez opadu', rain: 'deszcz', snow: 'śnieg' };
+// same task hints as the 2D ranking (rescue/web/app.js taskFor)
+function taskFor(name) {
+  const n = name.toLowerCase();
+  if (n.includes('żleb') || n.includes('potok') || n.includes('roztok')) return 'Zespół + pies: zejście wzdłuż żlebu / cieku, sprawdzić progi';
+  if (n.includes('szlak') || n.includes('droga')) return 'Zespół szybki: przejście szlakiem, nawoływanie, światło';
+  if (n.includes('staw')) return 'Dron termowizyjny + obejście brzegu';
+  if (n.includes('grań') || n.includes('perć') || n.includes('wierch') || n.includes('przełęcz')) return 'Zespół wspinaczkowy / śmigłowiec: ściany pod granią';
+  if (n.includes('schronisko') || n.includes('hala') || n.includes('murowaniec')) return 'Sprawdzić schronisko, wypytać obsługę i turystów';
+  return 'Zespół: przeszukanie segmentu wzdłuż linii terenu';
+}
+const DIFF_COLORS = ['#e6dfc8', '#9cc47a', '#3f7a3a', '#b8a78a', '#8f80a6', '#4b3f4a', '#4a8fd1']; // same as 2D
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const getJSON = async (u, optional) => {
@@ -358,7 +373,7 @@ function compose() {
     g.globalAlpha = a; g.drawImage(cv, heatRect.x, heatRect.y, heatRect.w, heatRect.h);
     gg.globalAlpha = a; gg.drawImage(cv, heatRect.x, heatRect.y, heatRect.w, heatRect.h);
   };
-  draw(heatFrom, 1 - heatT); draw(heatTo, heatT);
+  if (SHOW_DIFF) draw(diffLayer(), 1); else { draw(heatFrom, 1 - heatT); draw(heatTo, heatT); }
   g.globalAlpha = 1; gg.globalAlpha = 1;
   // searched ground: cool grey wash with hatching, stronger for repeated searches
   for (const [id, n] of WASH) {
@@ -370,6 +385,17 @@ function compose() {
     g.restore();
   }
   compTex.needsUpdate = true; glowTex.needsUpdate = true;
+}
+let SHOW_DIFF = false, diffCanvas = null;
+function diffLayer() {
+  if (diffCanvas) return diffCanvas;
+  const small = document.createElement('canvas'); small.width = R.cols; small.height = R.rows;
+  const g = small.getContext('2d'), img = g.createImageData(R.cols, R.rows);
+  (R.difficulty || []).forEach((d, i) => { const c = new THREE.Color(DIFF_COLORS[d] || '#000'); img.data.set([c.r * 255, c.g * 255, c.b * 255, d >= 0 ? 165 : 0], i * 4); });
+  g.putImageData(img, 0, 0);
+  const out = document.createElement('canvas'); out.width = Math.round(heatRect.w); out.height = Math.round(heatRect.h);
+  const go = out.getContext('2d'); go.imageSmoothingEnabled = false; go.drawImage(small, 0, 0, out.width, out.height);
+  return (diffCanvas = out);
 }
 const showHeat = (cv, animate = true) => { heatFrom = animate ? heatTo : null; heatTo = cv; heatT = heatFrom ? 0 : 1; compose(); };
 
@@ -640,9 +666,16 @@ function renderUI(i, ranked, searched, prev) {
   const lead = ranked[0];
   let html = `Najbardziej prawdopodobne: <b>${esc(lead.name)}</b> <span class="pct">${pct(lead.poa)}</span>`;
   if (prev >= 0 && prev !== i) { const pl = rankedOf(R.steps[prev].segments)[0]; if (pl.id !== lead.id) html += `<br>Zmiana lidera (było: ${esc(pl.name)})`; }
-  if (foundStep >= 0 && i >= foundStep && R.value?.findSegName) {
-    const rank = rankedOf(R.steps[Math.max(0, foundStep - 1)].segments).findIndex((x) => x.id === R.value.findSeg) + 1;
-    html += `<br>Znaleziony w: <b>${esc(R.value.findSegName)}</b>${rank ? ` (#${rank} w rankingu tuż przed)` : ''}`;
+  const fSeg = R.value?.findSeg ?? R.value?.truthSeg;
+  if (foundStep >= 0 && i >= foundStep && fSeg) {
+    const rank = rankedOf(R.steps[Math.max(0, foundStep - 1)].segments).findIndex((x) => x.id === fSeg) + 1;
+    html += `<br>Znaleziony w: <b>${esc(R.value.findSegName || segs.get(fSeg)?.name || fSeg)}</b>${rank ? ` (#${rank} w rankingu tuż przed)` : ''}`;
+  }
+  // "Zmiana": the three biggest segment moves against the previous step, as in 2D
+  if (i > 0) {
+    const pm = new Map(R.steps[i - 1].segments.map((x) => [x.id, x.poa]));
+    const mv = s.segments.map((x) => ({ id: x.id, d: x.poa - (pm.get(x.id) || 0) })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 3).filter((x) => Math.abs(x.d) >= 0.001);
+    if (mv.length) html += `<div class="sc-effect">Zmiana: ${mv.map((x) => `<span class="${x.d >= 0 ? 'up' : 'down'}">${esc(x.id)} ${pp(x.d)}</span>`).join(' ')}</div>`;
   }
   if (REV && i >= (foundStep >= 0 ? foundStep : R.steps.length - 1)) html += `<br><br><b>Odsłonięcie (${esc(REV.round)}):</b> ${esc(REV.story || '')}${REV.state ? ` <i>(${esc(REV.state)})</i>` : ''}`;
   if (R.synthetic) html = `<span class="pct">Brak run.json z silnika</span>: mapa POA pojawi się, gdy plik trafi do repo.<br>` + html.replace(/^Najbardziej[^<]*<b>[^<]*<\/b> <span class="pct">[^<]*<\/span>/, '');
@@ -651,22 +684,21 @@ function renderUI(i, ranked, searched, prev) {
   if (w.visibilityM != null) chips.push([`widoczność ${w.visibilityM >= 1000 ? (w.visibilityM / 1000).toFixed(1) + ' km' : w.visibilityM + ' m'}`, w.visibilityM < 200 ? 'warn' : '']);
   if (w.windMs != null) chips.push([`wiatr ${w.windMs} m/s`, w.windMs >= 12 ? 'warn' : '']);
   if (w.tempC != null) chips.push([`${w.tempC > 0 ? '+' : ''}${w.tempC}°C`, '']);
-  if (w.precip && w.precip !== 'none') chips.push([{ rain: 'mżawka', snow: 'śnieg' }[w.precip] || w.precip, '']);
+  if (w.precip && w.precip !== 'none') chips.push([PRECIP[w.precip] || w.precip, '']);
   if (w.dark) chips.push(['ciemno', 'night']);
   if (w.ice) chips.push(['oblodzenie', 'warn']);
-  $('weather').innerHTML = chips.map(([t, c]) => `<span class="wchip ${c}">${esc(t)}</span>`).join('');
+  const sv = w.survival || {};
+  if (sv.level) chips.push([`hipotermia: ${sv.level}`, 'surv lv-' + String(sv.level).replace(/[^a-ząćęłńóśźż]/gi, ''), sv.text]);
+  $('weather').innerHTML = chips.map(([t, c, title]) => `<span class="wchip ${c}"${title ? ` title="${esc(title)}"` : ''}>${esc(t)}</span>`).join('');
   const n = s.hintsActive?.length || i + 1;
-  renderRanking(ranked, searched, foundStep >= 0 && i >= foundStep ? R.value?.findSeg : null, `Łącznie ${n} ${n === 1 ? 'sygnał' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'sygnały' : 'sygnałów'} do ${s.t}, nie tylko ostatni`);
-  const res = new Map((s.resources || []).map((r) => [r.id, r]));
-  $('teams').innerHTML = (s.assignments || []).length
-    ? s.assignments.map((a) => {
-      const t = res.get(a.resourceId)?.type || resources.get(a.resourceId)?.type, n = res.get(a.resourceId)?.name || resources.get(a.resourceId)?.name || a.resourceId;
-      return `<li><span class="dot" style="background:${TEAM_COL[t] || '#555'}"></span><span>${esc(n.split(' (')[0])} → ${esc(a.segmentName)}</span><span class="eta">${Math.round(a.etaMin)} min</span></li>`;
-    }).join('')
-    : '<li class="none">Brak przydziałów w tym kroku</li>';
+  renderRanking(ranked, searched, foundStep >= 0 && i >= foundStep ? (R.value?.findSeg ?? R.value?.truthSeg) : null, `Łącznie ${n} ${n === 1 ? 'sygnał' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'sygnały' : 'sygnałów'} do ${s.t}, nie tylko ostatni`);
+  renderPlan(s);
   $('slider').value = i;
+  $('stepno').innerHTML = `<b>${i + 1}</b>/${R.steps.length}`; $('prev').disabled = i === 0; $('next').disabled = i === R.steps.length - 1;
+  renderValue();
   document.querySelectorAll('.tick').forEach((t, k) => { t.classList.toggle('cur', k === i); t.classList.toggle('past', k < i); });
   renderProgress(i);
+  const l2 = document.querySelector('a.pill.link'); if (l2) l2.href = `../?sc=${encodeURIComponent(SC)}&step=${i}`;
 }
 function renderProgress(i) {
   const P = PROG, cur = P[i], W = 300, H = 74, maxMin = Math.max(1, P[P.length - 1].min);
@@ -685,13 +717,38 @@ function renderProgress(i) {
     </svg>
     <div class="pg-leg"><i style="background:#b8322a"></i>lider mapy <i style="background:#1f4e79"></i>szansa znalezienia (Σ POA×POD) <i style="background:#6b6f72"></i>przeszukany obszar</div>`;
 }
+function renderPlan(s) {
+  const res = new Map((s.resources || []).map((r) => [r.id, r]));
+  const items = (s.assignments || []).map((a) => {
+    const r = res.get(a.resourceId) || resources.get(a.resourceId) || { name: a.resourceId }, t = r.type || resources.get(a.resourceId)?.type;
+    return `<li data-seg="${esc(a.segmentId)}"><div class="as-h"><span class="dot" style="background:${TEAM_COL[t] || '#555'}"></span><span>${esc(String(r.name).split(' (')[0])} → <b>${esc(a.segmentId)}</b> ${esc(a.segmentName || '')}</span></div>
+      <div class="as-m">ETA <b>${fmtMin(a.etaMin)}</b> · szansa znalezienia <b>${pct(a.expectedFind, 1)}</b> · POD ${pct(a.pod)}</div>
+      ${a.reason ? `<div class="as-r">${esc(a.reason)}</div>` : ''}${(a.safety || []).map((x) => `<div class="as-safe">${esc(x)}</div>`).join('')}</li>`;
+  }).join('');
+  const down = (s.resources || []).filter((r) => r.available === false).map((r) => `<li class="down"><span>${esc(r.name)}</span> - ${esc(r.reason || 'niedostępny')}</li>`).join('');
+  $('teams').innerHTML = (items || '<li class="none">Brak dostępnych zespołów w tym kroku.</li>') + down;
+}
+function renderValue() {
+  const v = R.value, el = $('value'); if (!el) return;
+  if (!v || v.top3poa == null) { el.hidden = true; return; }
+  const at = R.steps[v.beforePing] || R.steps[R.steps.length - 1], seg = v.truthSeg ?? v.findSeg;
+  el.hidden = false;
+  el.innerHTML = `<h2>Wartość <span class="mode">silnik, ${esc(at.t)}</span></h2>
+    <div class="v-big">${pct(v.top3poa, 0)} <span>prawdopodobieństwa w <b>${pct(v.top3area, 0)}</b> obszaru (top 3)</span></div>
+    ${v.rankFused != null ? `<div class="v-row"><b class="ok">#${v.rankFused}</b> vs <b>#${v.rankRings}</b> <span>miejsce odnalezienia (${esc(seg)}): po fuzji vs same pierścienie Koestera</span></div>` : ''}
+    ${v.areaFused != null ? `<div class="v-row"><b class="ok">${pct(v.areaFused, 1)}</b> vs <b>${pct(v.areaRings, 1)}</b> <span>obszaru do przeszukania, zanim zespół trafi</span></div>` : ''}
+    ${v.pos2hPlanned != null && v.pos2hNaive != null ? `<div class="v-row"><b class="ok">${pct(v.pos2hPlanned, 0)}</b> vs <b>${pct(v.pos2hNaive, 0)}</b> <span>szansa znalezienia w 2 h: przydział silnika vs „największe POA najpierw”</span></div>` : ''}
+    <button class="btn sm" id="gobp">Pokaż krok ${esc(at.t)}</button>`;
+  $('gobp').onclick = () => { stopPlay(); setStep(v.beforePing); };
+}
 function renderRanking(ranked, searched, foundSeg, scope) {
   $('rank-scope').textContent = R.synthetic && G.phase === 'off' ? '\u00a0' : scope;
   if (R.synthetic && G.phase === 'off') { $('ranklist').innerHTML = '<li class="none" style="cursor:default;color:var(--mute);font-size:12.5px">Ranking pojawi się z plikiem run.json silnika.</li>'; return; }
   const mx = ranked[0].poa || 1;
   $('ranklist').innerHTML = ranked.slice(0, 8).map((sg) => {
     const cls = [searched.has(sg.id) ? 'searched' : '', sg.id === foundSeg ? 'found' : ''].join(' ');
-    return `<li class="${cls}" data-seg="${sg.id}"><div class="row"><span class="nm"><i>${sg.id}</i>${esc(sg.name)}</span><span class="pv">${pct(sg.poa)}</span></div><div class="bar"><i style="width:${(sg.poa / mx) * 100}%"></i></div><div class="act">Wyślij tu patrol</div></li>`;
+    const k = ranked.indexOf(sg), area = sg.areaPct ?? segs.get(sg.id)?.areaPct;
+    return `<li class="${cls}" data-seg="${sg.id}"><div class="row"><span class="nm"><i>${sg.id}</i>${esc(sg.name)}</span><span class="pv">${pct(sg.poa)}</span></div><div class="bar"><i style="width:${(sg.poa / mx) * 100}%"></i></div><div class="meta">${area != null ? `${nf(area, 1)}% obszaru` : ''}</div>${k < 3 && G.phase === 'off' ? `<div class="task">${esc(taskFor(sg.name))}</div>` : ''}<div class="act">Wyślij tu patrol</div></li>`;
   }).join('');
 }
 $('ranklist').addEventListener('click', (e) => {
@@ -717,6 +774,8 @@ function togglePlay() {
   playTimer = setInterval(() => { if (STEP >= R.steps.length - 1) return stopPlay(); setStep(STEP + 1); }, PLAY_MS);
 }
 $('play').addEventListener('click', togglePlay);
+$('prev').addEventListener('click', () => { stopPlay(); setStep(STEP - 1); });
+$('next').addEventListener('click', () => { stopPlay(); setStep(STEP + 1); });
 addEventListener('keydown', (e) => {
   if (e.target.closest('select,input') || G.phase !== 'off') return;
   if (e.key === 'ArrowRight') { stopPlay(); setStep(STEP + 1); }
@@ -761,6 +820,13 @@ $('btn-fog').addEventListener('click', () => { weatherOn = !weatherOn; $('btn-fo
 controls.addEventListener('start', () => { idleAt = Infinity; fly = null; if (CINE.on) cinema(false); });
 controls.addEventListener('end', () => { idleAt = performance.now(); });
 
+if (!(Array.isArray(R.difficulty) && R.difficulty.length === R.rows * R.cols)) $('btn-diff').hidden = true;
+$('btn-diff').addEventListener('click', () => {
+  SHOW_DIFF = !SHOW_DIFF; $('btn-diff').classList.toggle('on', SHOW_DIFF); compose();
+  document.querySelector('.legend').innerHTML = SHOW_DIFF
+    ? `<span>Trudność terenu (silnik)</span><div class="lg-diff">${(R.difficultyClasses || []).map((c) => `<span><i style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`
+    : '<span>Prawdopodobieństwo</span><i class="ramp"></i><span class="lo">niskie</span><span class="hi">wysokie</span>';
+});
 $('btn-trees').addEventListener('click', () => { forest.visible = !forest.visible; $('btn-trees').classList.toggle('on', forest.visible); });
 
 // ---------- cinematic mode: letterbox, subtitles, scripted shots through the timeline ----------
@@ -990,7 +1056,17 @@ async function pollLive() {
   }
   setTimeout(pollLive, 4000);
 }
+const liveList = [];
+function renderLive() {
+  const el = $('live'); if (!el) return;
+  el.hidden = !liveList.length;
+  el.innerHTML = `<h2>Meldunki z terenu <span class="mode">${liveList.length}</span></h2><ol>${liveList.slice().reverse().map((e) => {
+    const kinds = (e.hints || []).map((h) => (h.type === 'clue' ? 'ślad' : h.type === 'segmentSearched' ? 'przeszukany ' + (h.segmentId || '') : h.type)).join(', ');
+    return `<li><span class="t">${esc(e.at || '')}</span> ${esc(e.text)}<div class="meta">${esc(kinds || 'bez wskazówek')} · ${esc(e.parsedBy || '')}${e.latencyMs != null ? ` · ${e.latencyMs} ms` : ''} · <b>${R.steps.some((s) => s.label === e.text) ? 'w silniku' : 'czeka na przeliczenie'}</b></div></li>`;
+  }).join('')}</ol>`;
+}
 function toast(e) {
+  liveList.push(e); renderLive();
   const el = document.createElement('div'); el.className = 'toast';
   el.innerHTML = `<span class="t">${esc(e.at || '')} meldunek</span>${esc(e.text)}`;
   const feed = $('feed'); feed.prepend(el);
