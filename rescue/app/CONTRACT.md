@@ -45,6 +45,7 @@ Shared look: `rescue/app/tokens.css` (DECISION S1, `--rl-*` tokens, dark default
 | `{ source: "rescue2d", type: "ready", version }` | 2D loaded and listening. |
 | `{ source, type: "step", i, t }` | The **user** moved the view's timeline (not echoed for shell-sent steps). `t` = clock `HH:MM`. |
 | `{ source, type: "select", segmentId }` | The **user** clicked a segment (not echoed for shell-sent selects). |
+| `{ source: "rescue2d", type: "mapclick", lat, lon, x, y }` | Any user click on the 2D map (`x, y` = px inside the frame). The shell uses it only while "+ Ślad" (live mode) is armed. |
 | `{ source: "rescue3d", type: "evidence", id, on }` | The user toggled a signal in 3D (`"*"` = Przywróć). The shell mirrors it to its list and to the other views. |
 
 After `ready` the shell sends the current `step` and `select` (and `run` if it changed since the iframe URL was set).
@@ -205,3 +206,8 @@ Blind-test scenarios are never listed. Runs are cached per (sc, live version), s
 - First touch of an incident (a team moved to it or away from it): its own scenario-file teams that are still free (`sc: null`) are attached to it first, so its plan does not lose them.
 - Planner: an incident whose roster was never touched (no team attached to it or moved away from it) plans with its own scenario-file teams, exactly as today. Once touched, `GET /api/run/<sc>` plans only with the roster teams attached to `sc` (resource objects from the team's home file, `base`/`readyAt` kept).
 - In memory like the assignments: a server restart resets the roster to untouched.
+
+### Operator / rescuer UI (rescue/app)
+
+- Header: mode badge `LIVE` (TOPR red, pulsing dot; rescue-server answers `/api/live` for a rescue-server scenario) / `PLAN` (navy; Plan mode or Studio story) / `ODTWORZENIE` (neutral; static replay), next to the scenario title "<place> - <what>" (e.g. "Zawrat - zaginiony turysta"). Ratownik: same badge + title in a bar above the team picker.
+- Akcja, right panel "Na żywo": last 8 feed events (time, who, what), "+ Ślad" (arm, click the 2D map, pick type + note -> `POST /api/clue` with `sc`), "Wyślij zespół" (team + segment -> `/story/assign` with `scenario`). Polls `/api/live?sc=` every 3 s; on a new seq it refetches the run (2D/3D reload via `{type:"run", url}`) and the assignments, and toasts events from others.

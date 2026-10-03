@@ -13,6 +13,7 @@
 <div id="app">
 <header>
   <h1><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</h1>
+  <span id="liveHead" class="livehead"><span id="modeBadge" class="lbadge" role="status"></span><b id="scenTitle"></b></span>
   <label class="mute scenlbl"><span>Scenariusz</span> <select id="scen"></select></label>
   <span id="modes" class="views modes" role="tablist" aria-label="Tryb"></span>
   <span id="more" class="views more" role="tablist" aria-label="Więcej" style="display:none"></span>
@@ -44,6 +45,7 @@
 <section id="paneMon" class="full"><iframe id="frameMon" title="Monitoring"></iframe><div class="fullnote">Monitoring z <code>/metrics</code> serwera rescue-field (:8770).</div></section>
 <section id="paneVal" class="full scroll"><div id="validation-summary"></div><div id="val"></div></section>
 <section id="rescuer">
+  <div id="rLive" class="livehead rlive"><span id="rModeBadge" class="lbadge" role="status"></span><b id="rScenTitle"></b></div>
   <div class="rbar"><label>Zespół <select id="rTeam"></select></label><button id="rCenter" title="Pokaż moją pozycję">Moja pozycja</button><span id="rClock" class="mute"></span></div>
   <div id="rTask" class="rcard"></div>
   <div id="rSurv" class="rsurv"></div>
@@ -54,6 +56,9 @@
   <h2>Gdzie szukać najpierw</h2>
   <div class="hero"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
   <div id="segs"></div>
+  <div id="liveBox" class="livebox"><div class="row"><h2>Na żywo</h2><span style="flex:1"></span><button id="liveClue" title="Dodaj ślad: kliknij potem mapę">+ Ślad</button><button id="liveSend" title="Wyślij zespół do sektora">Wyślij zespół</button></div>
+    <div id="liveDispatch" class="row" hidden><select id="ldTeam" aria-label="Zespół"></select><select id="ldSeg" aria-label="Sektor"></select><button id="ldGo" class="primary">Wyślij</button></div>
+    <div id="liveFeed"></div></div>
   <div id="alerts"></div>
   <details id="moreInfo" class="moreinfo"><summary>Szczegóły: plan zespołów, postęp, ocena</summary>
   <h2>Plan zespołów</h2><div id="surv" class="help"></div><div id="teams"></div>

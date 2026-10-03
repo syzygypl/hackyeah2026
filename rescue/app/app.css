@@ -305,3 +305,21 @@ body.role-ratownik .rbar{padding:8px 12px;background:var(--rl-panel-solid);borde
 body.role-ratownik .rbar select{flex:1;min-height:44px;font-weight:600}
 body.role-ratownik #rClock{font-family:var(--rl-mono);font-weight:700;color:var(--rl-ink)}
 body.role-ratownik #frameRescuer{flex:1;min-height:0;border-radius:0}
+/* live mode: scenario title + mode badge (header, phone bar), live feed and ad-hoc actions in #right (CONTRACT.md "Live mode") */
+.livehead{display:flex;align-items:center;gap:10px;min-width:0}
+.livehead b{font-size:var(--rl-fs-xl);font-weight:700;color:var(--rl-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:34vw}
+.lbadge{display:inline-flex;align-items:center;gap:8px;flex:none;font:700 16px/1 var(--rl-font);letter-spacing:.1em;padding:7px 13px;border-radius:999px;background:var(--rl-accent);color:var(--rl-on-accent)}
+.lbadge.odtworzenie{background:var(--rl-panel-2);color:var(--rl-ink-2);box-shadow:inset 0 0 0 1px var(--rl-line-strong)}
+.lbadge.live{background:var(--rl-danger);color:var(--rl-on-danger)}
+.lbadge i{display:none}
+.lbadge.live i{display:block;width:10px;height:10px;border-radius:50%;background:var(--rl-on-danger);animation:rl-live 1.2s ease-in-out infinite}
+@keyframes rl-live{50%{opacity:.2;transform:scale(.65)}}
+.rlive{padding:8px 12px;background:var(--rl-panel-solid);border-bottom:1px solid var(--rl-line)}
+.rlive b{font-size:var(--rl-fs-l);max-width:none;flex:1}
+.livebox .row{display:flex;gap:6px;align-items:center}
+.livebox h2{margin:10px 0 6px}
+#liveDispatch{margin-bottom:6px}#liveDispatch select{min-width:0;flex:1}
+#liveClue.on{background:var(--rl-accent);color:var(--rl-on-accent);border-color:var(--rl-accent)}
+.lfi{font-size:var(--rl-fs-s);padding:5px 0;border-bottom:1px solid var(--rl-line)}
+.lft{font-family:var(--rl-mono);color:var(--rl-mute)}
+.livebox[hidden],.livebox [hidden]{display:none!important}

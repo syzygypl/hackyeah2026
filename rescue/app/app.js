@@ -717,6 +717,7 @@ function setMode(m, v) {
   if (m === "teren") showTeren();
   if (m === "monitoring") showMonitoring();
   if (m === "walidacja") showValidation();
+  renderLiveHead();
 }
 function setView(v) {
   const views = MODES[store.mode].views; if (views.length && !views.some(([k]) => k === v)) v = views[0][0];
@@ -763,6 +764,97 @@ async function pollFeed() {
   $("teamFeed").querySelectorAll("[data-add]").forEach((b) => b.onclick = () => { const e = ev[+b.dataset.add]; run(() => api("/story/event", { event: { provider: "FieldReport", text: e.text, at: e.at } }), "Meldunek dodany do historii"); });
   feedTimer = setTimeout(pollFeed, 8000);
 }
+// ---------- live mode (CONTRACT.md "Live mode"): poll GET /api/live?sc=, refetch the run when seq grows; LIVE badge + scenario
+// title in the header (and the phone bar), feed of the latest events, ad-hoc "+ Ślad" (click the map) and "Wyślij zespół" in Akcja
+const CLUE_TYPES = [["odziez", "Odzież"], ["slad", "Ślad"], ["swiadek", "Świadek"], ["telefon", "Sygnał telefonu"], ["znalezisko", "Znalezisko"]];
+const live = { seq: -1, ok: false, events: [], armed: false, sc: null };
+function scenTitle() {
+  const R = D(); if (!R) return "";
+  const inc = String(R.incident || "").replace(/\s*\(scenariusz[^)]*\)\s*$/i, ""), parts = inc.split(" - ");
+  const what = parts[0] ? parts[0][0].toLowerCase() + parts[0].slice(1) : "";
+  if (store.backend === "studio") return "Studio" + (what ? " - " + what : "");
+  const place = (STATIC[store.scenario] && STATIC[store.scenario].name.replace(/\s*\(.*\)$/, "").split(" - ")[0]) || (parts[1] || store.scenario || "");
+  return what ? `${place} - ${what}` : place;
+}
+function renderLiveHead() {
+  const mode = store.mode === "edycja" || store.backend === "studio" ? "PLAN" : store.backend === "api" && live.ok ? "LIVE" : "ODTWORZENIE";
+  const tip = { LIVE: "Akcja na żywo: zmiany z terenu i od operatora przeliczają mapę co kilka sekund", PLAN: "Plan / edycja historii - nie akcja na żywo", ODTWORZENIE: "Odtworzenie zapisanego scenariusza - bez połączenia na żywo" }[mode];
+  for (const [b, t] of [["modeBadge", "scenTitle"], ["rModeBadge", "rScenTitle"]]) {
+    const el = $(b); if (!el) continue;
+    el.className = "lbadge " + mode.toLowerCase(); el.innerHTML = `<i></i>${mode}`; el.title = tip;
+    $(t).textContent = scenTitle(); $(t).title = (D() && D().incident) || "";
+  }
+  if ($("liveBox")) $("liveBox").hidden = !(store.backend === "api" && live.ok) || store.mode === "edycja";
+}
+const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+function renderLiveFeed() {
+  const el = $("liveFeed"); if (!el) return;
+  const K = { clue: "ślad", dispatch: "przydział", report: "meldunek" };
+  el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi"><span class="lft">${esc(hhmm(e.t))}</span> <b>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}</div>`).join("")
+    || `<div class="help">Brak zdarzeń na żywo. Dodaj ślad albo wyślij zespół - mapa przeliczy się od razu.</div>`;
+}
+async function pollLive() {
+  clearTimeout(pollLive.h);
+  const sc = store.backend === "api" ? store.scenario : null;
+  if (store.hasApi && sc) {
+    if (sc !== live.sc) { live.sc = sc; live.seq = -1; live.events = []; }
+    try {
+      const d = await api(`/api/live?sc=${encodeURIComponent(sc)}&since=${Math.max(0, live.seq)}`);
+      if (sc === live.sc) {
+        const first = live.seq < 0, restarted = d.seq < live.seq;
+        if (restarted) live.events = [];
+        const have = new Set(live.events.map((e) => e.seq));
+        live.events = [...live.events, ...(d.events || []).filter((e) => !have.has(e.seq))].slice(-30);
+        const changed = !first && d.seq !== live.seq;
+        live.seq = d.seq; live.ok = true;
+        if (changed) await onLiveChange(restarted ? [] : d.events || []);
+      }
+    } catch (e) { live.ok = false; }
+  } else live.ok = false;
+  renderLiveHead(); renderLiveFeed();
+  pollLive.h = setTimeout(pollLive, 3000);
+}
+async function onLiveChange(evs) {
+  try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
+  if (store.backend === "api" && store.runUrl) { try { applyRun(await api(store.runUrl), {}, "run"); } catch (e) {} }
+  if (store.role === "ratownik") renderRescuer();
+  const other = evs.filter((e) => !(e.by === "operator" && store.role === "operator"));
+  if (other.length) toast("Na żywo: " + other.map((e) => (e.team ? e.team + ": " : "") + e.title).join("; "), 4000);
+}
+function liveForm(lat, lon, x, y) {
+  closePop(); live.armed = false; $("liveClue").classList.remove("on");
+  const el = document.createElement("form"); el.className = "pop"; el.style.position = "fixed";
+  el.style.left = Math.max(8, Math.min(innerWidth - 250, x + 14)) + "px"; el.style.top = Math.max(8, Math.min(innerHeight - 220, y - 20)) + "px";
+  el.innerHTML = `<h3>Dodaj ślad (na żywo)</h3><label>Rodzaj <select name="type">${CLUE_TYPES.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label>
+    <label>Opis <input name="note" maxlength="200" placeholder="np. czerwona czapka"></label><div class="help">${lat.toFixed(5)}, ${lon.toFixed(5)}</div>
+    <div class="row"><button type="button" class="cancel">Anuluj</button><button class="primary" type="submit">Dodaj</button></div>`;
+  document.body.appendChild(el); pop = { el };
+  el.querySelector(".cancel").onclick = closePop;
+  el.onkeydown = (e) => { if (e.key === "Escape") closePop(); };
+  el.onsubmit = async (e) => {
+    e.preventDefault();
+    const body = { type: el.elements.type.value, note: el.elements.note.value, lat: +lat.toFixed(5), lon: +lon.toFixed(5), by: store.role === "ratownik" ? "ratownik" : "operator", sc: store.scenario, id: "op-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7) };
+    if (store.role === "ratownik" && myTeam()) body.team = myTeam();
+    closePop();
+    try { await api("/api/clue", body); toast("Ślad dodany - przeliczam mapę"); pollLive(); } catch (err) { toast("Nie dodano śladu. " + plErr(err), 4000); }
+  };
+  setTimeout(() => el.elements.note.focus(), 0);
+}
+$("liveClue").onclick = () => { live.armed = !live.armed; $("liveClue").classList.toggle("on", live.armed); if (live.armed) toast("Kliknij mapę w miejscu śladu (Esc - anuluj)", 4000); };
+addEventListener("keydown", (e) => { if (e.key === "Escape" && live.armed) { live.armed = false; $("liveClue").classList.remove("on"); } });
+addEventListener("message", (e) => {   // 2D view: {source:"rescue2d", type:"mapclick", lat, lon, x, y} (user click on its map)
+  if (e.origin !== location.origin || e.source !== $("frame2d").contentWindow || !e.data || e.data.source !== "rescue2d" || e.data.type !== "mapclick" || !live.armed) return;
+  const r = $("frame2d").getBoundingClientRect(); liveForm(+e.data.lat, +e.data.lon, r.left + (+e.data.x || r.width / 2), r.top + (+e.data.y || r.height / 2));
+});
+map.on("click", (e) => { if (live.armed) { const r = $("map").getBoundingClientRect(); liveForm(e.lngLat.lat, e.lngLat.lng, r.left + e.point.x, r.top + e.point.y); } });
+$("liveSend").onclick = () => {
+  const box = $("liveDispatch"), S = curStep(); box.hidden = !box.hidden; if (box.hidden || !S) return;
+  $("ldTeam").innerHTML = (S.resources || []).map((r) => `<option value="${esc(r.id)}" ${r.available ? "" : "disabled"}>${esc(r.name.split(" (")[0])}</option>`).join("");
+  $("ldSeg").innerHTML = S.segments.map((s, k) => `<option value="${esc(s.id)}" ${s.id === store.selSeg ? "selected" : ""}>#${k + 1} ${esc(s.id)} ${esc(s.name)}</option>`).join("");
+};
+$("ldGo").onclick = async () => { const t = $("ldTeam").value, s = $("ldSeg").value; if (!t || !s) return; await assignTeam(t, s); $("liveDispatch").hidden = true; toast(`${t} → ${s}`); pollLive(); };
+subs.push((why) => { if (why === "load" || why === "mode" || why === "run" || why === "edit") renderLiveHead(); });
+
 // ---------- wiring
 subs.push((why) => {
   if (!store.run || !store.run.steps) return;
@@ -793,6 +885,7 @@ async function boot() {
     if (role === "ratownik" || role === "operator") setRole(role); else { store.role = "operator"; $("rolePick").hidden = false; }
     hint();
     pollAlerts();
+    pollLive();
   } catch (e) { console.error(e); toast("Nie mogę połączyć się z serwerem akcji. Uruchom „swift run rescue-server” i otwórz http://127.0.0.1:8780/app/", 10000); }
 }
 boot();
