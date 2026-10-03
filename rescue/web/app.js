@@ -976,7 +976,8 @@
   }
   function applyParentMessage(m) {
     try {
-      if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
+      if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
+      else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
       else if (m.type === 'run' && typeof m.url === 'string') reloadWith({ run: m.url }, ['runInline', 'sc', 'step']);
       else if (m.type === 'run' && m.run && typeof m.run === 'object' && typeof m.run.url === 'string' && !m.run.schema) reloadWith({ run: m.run.url }, ['runInline', 'sc', 'step']);
@@ -989,6 +990,18 @@
     } catch (err) { warn('embed message ignored: ' + err.message); }
   }
   window.addEventListener('message', onParentMessage);
+  // insets (plumbing): in /app the shell's floating panels cover the frame's edges (?insets=T,R,B,L px, then {type:'insets'});
+  // MapLibre pads its camera so the scenario sits in the free area, and the overlays read --inset-* (style.css)
+  let INSETS = (Q.get('insets') || '').split(',').map(Number);
+  if (INSETS.length !== 4 || INSETS.some((v) => !isFinite(v))) INSETS = [0, 0, 0, 0];
+  function applyInsets() {
+    const [T, Rr, Bm, L] = INSETS, st = document.documentElement.style;
+    [['t', T], ['r', Rr], ['b', Bm], ['l', L]].forEach(([k, v]) => st.setProperty('--inset-' + k, v + 'px'));
+    const map = S.view && S.view.map; if (!map || !S.M) return;
+    const { west, south, east, north } = S.M.bbox;
+    map.setPadding({ top: T, right: Rr, bottom: Bm, left: L });
+    map.fitBounds([[west, south], [east, north]], { padding: 24, duration: 0 });
+  }
   function onHover(i, pt) {
     const tip = $('#tip');
     if (i == null || !S.lastP) { tip.hidden = true; return; }
@@ -1263,6 +1276,7 @@
     }
     if (!useML) flashNote(CFG.renderer === 'canvas' ? 'Widok zastępczy (Canvas), wymuszony parametrem' : window.__mlFailed || !window.maplibregl ? 'MapLibre niedostępny - widok zastępczy (Canvas)' : 'Brak WebGL - widok zastępczy (Canvas)', true);
     await S.view.ready;
+    applyInsets();
     S.view.setBaseFC(baseFeatures(M));
     setBase(S.base);
     $('#diffwrap').hidden = !(Array.isArray(R.difficulty) && R.difficulty.length === M.N);

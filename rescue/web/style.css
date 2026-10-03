@@ -293,3 +293,9 @@ body.embed-scene #legend { top: 10px; bottom: auto; }
 .modelink:hover { background: var(--accent); color: #062126; }
 /* version stamp (web/version.js) sits in the bottom-right corner: keep the timeline labels clear of it */
 body.has-version #timeline { padding-bottom: 14px; }
+
+/* insets (plumbing): inside /app the shell's floating panels cover the frame edges; overlays keep clear (--inset-* set by app.js) */
+body.embed-scene #mapctl { top: calc(var(--inset-t, 0px) + 10px); right: calc(var(--inset-r, 0px) + 10px); }
+body.embed-scene #legend { top: calc(var(--inset-t, 0px) + 10px); left: calc(var(--inset-l, 0px) + 10px); }
+body.embed-scene .maplibregl-ctrl-bottom-right { right: var(--inset-r, 0px); bottom: var(--inset-b, 0px); }
+body.embed-scene .maplibregl-ctrl-bottom-left { left: var(--inset-l, 0px); bottom: var(--inset-b, 0px); }
