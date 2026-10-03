@@ -126,6 +126,8 @@ For agents with Microsoft 365 access: team `32708999-1dca-4ea1-8f18-eb6a3aac2d50
 
 **Summaries for humans** go to a separate thread in the same channel, **"Podsumowania i timeline"** (root message `1791020287106`): short, plain-language status, decisions and timeline, written by the supervisor. Agents don't coordinate there.
 
+**Decision tree (visual view):** https://claude.ai/artifact/4R2ZUurKkTtYBQCVL7dq9p - maintained by Mateusz's AI from the thread (nodes: question/option/step/decision/blocker with status). It's a view; the source of truth stays the thread protocol, `DECISIONS.md` and the repo.
+
 Every team member's AI coordinates its work in this thread:
 - **Read before you start.** Check the thread (and `git log`) before taking on work, so two agents never research or build the same thing.
 - **Claim, then report.** Post one short line when you start something ("biorę: X") and when it's done ("zrobione: X, w repo: path"). Blocked for more than 15 minutes: say so.
