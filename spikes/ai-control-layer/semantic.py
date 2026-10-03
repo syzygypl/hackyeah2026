@@ -128,7 +128,8 @@ class SemanticGuard:
         self.heuristic = HeuristicClassifier()
         self.installed, self._checked_at, self._url = {}, 0, None
         self.cache = {}
-        self.warm, self.cooldown, self._warming = set(), {}, set()  # models loaded once; circuit breaker: model -> retry-after timestamp
+        self.warm, self.cooldown, self._warming = set(), {}, set()
+        self._ps_checked_at = 0  # models loaded once; circuit breaker: model -> retry-after timestamp
         self.stats = {"model_calls": 0, "cache_hits": 0, "errors": 0, "last_backend": None, "last_error": None}
 
     # -- model inventory (name -> digest), refreshed every 30 s
@@ -140,6 +141,20 @@ class SemanticGuard:
                     self.installed = {m["name"]: m.get("digest", "") for m in json.load(r).get("models", [])}
             except Exception:
                 self.installed = {}
+        if time.time() - self._ps_checked_at > 10:  # F5: the warm set must follow what Ollama actually has loaded
+            self._ps_checked_at = time.time()
+            try:
+                with urllib.request.urlopen(url.rstrip("/") + "/api/ps", timeout=0.5) as r:
+                    loaded = {m["name"] for m in json.load(r).get("models", [])}
+                for m in list(self.warm):
+                    if m not in loaded and m + ":latest" not in loaded:
+                        self.warm.discard(m)
+            except Exception:
+                pass
+
+    def _mark_cold(self, cfg, model):
+        self.warm.discard(model)
+        self._warm_async(cfg, model)
 
     def _candidates(self, stage, cfg, allowed, flags):
         """Models for this tier in fallback order that are installed, allowlisted, digest-pinned OK, not in cooldown."""
@@ -241,6 +256,7 @@ class SemanticGuard:
                                     category_names=[LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]))
             except Exception as e:
                 self.cooldown[model] = time.time() + cfg.get("cooldown_s", 15)
+                self._mark_cold(cfg, model)  # F5: a timeout usually means evicted/cold -> re-warm in the background
                 errors.append(f"{model} {type(e).__name__}: {str(e)[:60]}")
                 res["flags"].append(f"failed:{model}")
                 continue
@@ -296,6 +312,8 @@ class SemanticGuard:
             return
         model, digest = cands[0]
         v["digest"] = digest[:12]
+        if model not in self.warm:
+            self._warm_async(cfg, model)
         fmt = model_format(model)
         blocked = set(cfg.get("blocked_categories", LLAMA_GUARD_CATEGORIES))
         t = time.perf_counter_ns()
@@ -317,6 +335,7 @@ class SemanticGuard:
             self.warm.add(model)
         except Exception as e:  # timed out / errored guard: does not vote
             self.cooldown[model] = time.time() + cfg.get("cooldown_s", 15)
+            self._mark_cold(cfg, model)
             v["vote"], v["error"] = "unknown", f"{type(e).__name__}: {str(e)[:60]}"
         v["latency_ms"] = round((time.perf_counter_ns() - t) / 1e6, 1)
         out[i] = v

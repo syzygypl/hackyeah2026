@@ -569,6 +569,7 @@ class FakeOllama:
     def __init__(self, models, reply="safe", delay=0.0):
         outer = self
         self.models, self.reply, self.delay, self.requests = models, reply, delay, []
+        self.loaded = None  # /api/ps: None = everything loaded
 
         class H(BaseHTTPRequestHandler):
             def _json(self, obj):
@@ -580,7 +581,8 @@ class FakeOllama:
                 self.wfile.write(data)
 
             def do_GET(self):
-                self._json({"models": [{"name": n, "digest": d} for n, d in outer.models.items()]})
+                names = outer.loaded if (self.path.endswith("/api/ps") and outer.loaded is not None) else list(outer.models)
+                self._json({"models": [{"name": n, "digest": outer.models.get(n, "")} for n in names]})
 
             def do_POST(self):
                 req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
@@ -709,6 +711,40 @@ class OutputJudgeFailure(unittest.TestCase):
         self.assertLessEqual(len(g), 2100)
         self.assertTrue(g.endswith(tail))
         self.assertIn("middle omitted", g)
+
+
+class WarmSet(unittest.TestCase):
+    """F5: the warm set shrinks on eviction (/api/ps) and on timeouts, and cold models are re-warmed in the background."""
+
+    def tearDown(self):
+        self.fake.stop()
+
+    def _warmups(self):
+        return [q for q in self.fake.requests if q["messages"][-1]["content"] == "warm-up"]
+
+    def test_eviction_seen_in_api_ps_drops_model_and_rewarms(self):
+        self.fake = FakeOllama({LLAMA: "l"}, reply="safe")
+        layer, s, _ = fresh(edit=semantic_env(self.fake.url, warmup_timeout_ms=2000))
+        layer.check_prompt(s, "first")
+        time.sleep(0.2)
+        self.assertIn(LLAMA, layer.semantic.warm)
+        self.fake.loaded = []  # Ollama evicted it
+        layer.semantic._ps_checked_at = 0
+        n = len(self._warmups())
+        layer.check_prompt(s, "second")
+        time.sleep(0.3)
+        self.assertGreater(len(self._warmups()), n)  # re-warm fired
+
+    def test_timeout_marks_cold_and_rewarms(self):
+        self.fake = FakeOllama({LLAMA: "l"}, reply="safe")
+        layer, s, _ = fresh(edit=semantic_env(self.fake.url, warmup_timeout_ms=2000, prefilter={"timeout_ms": 150}))
+        layer.check_prompt(s, "warm it")
+        time.sleep(0.2)
+        self.assertIn(LLAMA, layer.semantic.warm)
+        self.fake.delay = 0.5
+        layer.check_prompt(s, "this one times out")
+        self.assertNotIn(LLAMA, layer.semantic.warm)
+        self.assertIn(LLAMA, layer.semantic._warming)  # background re-warm in flight
 
 
 class SemanticCache(unittest.TestCase):
@@ -1234,7 +1270,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization", "InjectionNotHiddenByPii": "injection not hidden behind PII",
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "Performance": "performance"}
 
 
