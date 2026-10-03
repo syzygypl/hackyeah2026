@@ -13,11 +13,11 @@ python3 compare.py out/ref-run.json
 python3 -m unittest -v test_poa    # core math: normalisation, Koopman update, ring quantiles, geometry, regression
 ```
 
-`rescue/out/run.json` was regenerated with `swift run rescue-demo --fast`: same `value` block as the committed file.
+Both engines read `scenarios/zawrat-terrain.json` (real OSM + DEM, commit d0544b1) when it exists. The numbers below are given for **both** terrains: the real one is what main runs now, and the hand-drawn one is what the README pitch numbers came from.
 
 ## Result 1: the Swift engine is implemented correctly
 
-With the same parameter values, the independent engine reproduces Swift at **every step**:
+With the same parameter values, the independent engine reproduces Swift at **every step**, on both terrains. The table below is the hand-drawn terrain; the real terrain gives the same picture (identical top 3 at all steps, L1 <= 0.0015, all 8 value numbers equal):
 
 | | |
 |---|---|
@@ -29,6 +29,19 @@ With the same parameter values, the independent engine reproduces Swift at **eve
 | Pitch numbers | all 8 equal: top3poa 0.464, top3area 0.0617, rankFused 1, rankRings 19, areaFused 0.0017, areaRings 0.364, truthSeg S7, beforePing 10 |
 
 Hint ordering, the Koopman update (POA x (1-POD), renormalised), segment aggregation, rings-only baseline and area-to-find are all consistent. **No bug found in the Swift engine.**
+
+## Result 0: on the real terrain the find spot is #2, not #1 (Swift's own output)
+
+With `zawrat-terrain.json` present (current main), `swift run rescue-demo` itself reports, at 19:35 before the ping:
+
+| Number | Hand-drawn terrain (README pitch) | Real OSM + DEM terrain (main now) |
+|---|---|---|
+| Top-3 POA / area | 46% in 6% | 49% in 6% |
+| S7 (find spot) rank fused | **1** (S7 16.6%, S5 15.0%) | **2** (S4 Wielki Staw 21.7%, S7 18.8%) |
+| Area swept before the find spot, fused vs rings only | 0.17% vs 36.4% | **0.03% vs 36.4%** |
+| S7 rank, rings only | 19 | 19 |
+
+**The README / deck line "find spot is segment #1 after fusion" no longer holds on main.** Either re-place the fictional find spot or the scenario events for the real terrain (the README already warns about this), or pitch "top 2" plus the area-to-sweep number. The area-to-sweep number got even stronger.
 
 ## Result 2: which pitch numbers depend on modelling choices
 
@@ -52,7 +65,13 @@ At 19:35, just before the Ratunek ping:
 | Same, rings only | 36.4% | 37.7% |
 | S7 rank, rings only | 19 | 19 |
 
-One-at-a-time sensitivity (Swift parameters plus one research choice):
+Real terrain, at 19:35:
+- Swift: S4 21.7%, S7 18.8%, S7 #2, area 0.03%.
+- Research parameters: S4 20.2%, S7 18.5%, S7 #2, top-3 54% in 8.1%, area 0.36%.
+- Only the linear ring interpolation makes S7 #1 there (S7 18.0% vs S4 17.6%).
+- The cell-fix model gives S4 24.5%; the terrain, route and point models leave the ranking unchanged.
+
+One-at-a-time sensitivity on the hand-drawn terrain (Swift parameters plus one research choice):
 - Only the **ring interpolation** flips S7 from #1 to #2. A linear CDF in distance gives density ~1/d, a spike at the IPP: the density ratio at 100 m vs 2 km is 34.6, against 6.4 for Swift's area-uniform bands. The IPP is the hut, inside S3, so S3 wins.
 - The terrain model raises top-3 to 50%, the cell-fix model raises area-to-find to 0.28%, and the point model changes nothing before the ping.
 - S7 stays #1 under every choice except the ring interpolation.
@@ -65,12 +84,15 @@ One-at-a-time sensitivity (Swift parameters plus one research choice):
    - Ranking segments by total POA under a radially symmetric ring model penalises small segments, and S7 is the smallest (1.5% of the area).
    - Ranked by POA density (probability per area), S7 is **#9** under rings, not #19.
    - The fair, robust number is the cell-level **area to sweep: 0.17% fused vs 36.4% rings**. It holds under both parameter sets (0.19% vs 37.7%). Suggest leading with it.
-2. **"S7 is #1 before the ping" is fragile.** The margin is 1.6 points (16.6% vs 15.0%), and a defensible alternative ring interpolation makes S7 #2 behind the IPP segment. Say "top 2" or show the margin.
-3. **"Top 3 hold 46% in 6% of the area"** is robust in direction: 46-53% of POA in 6-8% of the area across the models.
+2. **"S7 is #1 before the ping" is fragile, and false on the real terrain.**
+   - Hand-drawn terrain: the margin is 1.6 points, and the alternative ring model makes it #2.
+   - Real terrain: it is #2 in Swift itself (S4 Wielki Staw first), and #1 only under the alternative ring model.
+   - Say "top 2", or re-place the scenario events for the real terrain.
+3. **"Top 3 hold 46% in 6% of the area"** is robust in direction: 46-54% of POA in 6-8% of the area across models and both terrains.
 4. **Cosmetic:** the Swift ring tail beyond the 95% quantile uses `0.05 / (pi * 3 * q95^2)`, a disc rather than an annulus. That is irrelevant here, since 11.5 km lies outside the 6 x 6 km box.
 
 ## Files
 
-- `poa.py` - engine (`--params swift|research`), writes `out/ref-run*.json` in the `rescue-run/1` shape, plus `ringsOnlySegments`
+- `poa.py` - engine (`--params swift|research`), writes `out/ref-run*.json` in the `rescue-run/1` shape, plus `ringsOnlySegments`. The committed `out/ref-run.json` is research parameters on the real terrain.
 - `compare.py` - per-step comparison with `rescue/out/run.json`
 - `test_poa.py` - 14 tests (normalisation, Koopman closed form and composition, ring CDF at quantiles and density integral, geometry, contract grid, pitch-number regression)
