@@ -115,6 +115,7 @@ function previewEvent(k) {   // k = 1-based step (feed item) of the dock documen
   document.querySelectorAll("#pFeed li.cur").forEach((x) => x.classList.remove("cur"));
   const li = st && document.querySelector(`#pFeed li[data-seq="${st.seq}"]`); if (li) li.classList.add("cur");
   if (st && st.segmentId) post({ type: "select", segmentId: st.segmentId });
+  if (st && st.segmentId) post({ type: "focusArea", segIds: [st.segmentId], kind: st.kind });   // zoom + flash (2D builds the box)
 }
 $("tl").addEventListener("pointermove", (e) => { if (G.dock) { clearTimeout(dockTip.h); dockTip(dockIndexAt(e.clientX)); } });
 $("tl").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") dockTip(0); });
