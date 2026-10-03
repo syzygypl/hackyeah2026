@@ -5910,7 +5910,7 @@
  ],
  "lakes": [
   {
-   "name": "staw bez nazwy",
+   "name": "jezioro bez nazwy",
    "center": [
     49.143656,
     22.534063
@@ -5931,13 +5931,6 @@
    "at": [
     49.17435,
     22.49014
-   ]
-  },
-  {
-   "name": "schron",
-   "at": [
-    49.1431,
-    22.48902
    ]
   },
   {
@@ -9561,6 +9554,37 @@
   "rows": 60,
   "cols": 60,
   "cellM": 100,
-  "stat": "mean slope of the 30 m DEM pixels in the cell, degrees"
- }
+  "stat": "mean slope of the 30 m DEM pixels in the cell, degrees (0 over water)"
+ },
+ "lakePolygons": [
+  {
+   "name": "jezioro bez nazwy",
+   "kind": "lake",
+   "outer": [
+    [
+     [
+      49.14362,
+      22.53468
+     ],
+     [
+      49.14346,
+      22.53477
+     ],
+     [
+      49.14364,
+      22.53344
+     ],
+     [
+      49.14383,
+      22.53362
+     ],
+     [
+      49.14362,
+      22.53468
+     ]
+    ]
+   ],
+   "inner": []
+  }
+ ]
 }

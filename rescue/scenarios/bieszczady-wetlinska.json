@@ -870,10 +870,10 @@
       "title": "CPR Rzeszów: ostatnie logowanie telefonu o 14:58, BTS Wetlina",
       "detail": "Sektor anteny skierowany na wschód doliną Wetlinki, promień błędu ok. 2 km. Ostatni kontakt sieci przed rozładowaniem.",
       "point": [
-        49.148,
-        22.515
+        49.15,
+        22.518
       ],
-      "radiusM": 2000
+      "radiusM": 1800
     },
     {
       "provider": "Weather",
