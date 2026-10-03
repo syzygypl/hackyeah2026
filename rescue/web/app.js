@@ -1415,7 +1415,9 @@
       if (!R) return fatal('brak run.json przekazanego przez aplikację nadrzędną (sessionStorage)');
       CFG.run = 'inline';
     } else {
-      try { R = await fetchJSON(CFG.run); } catch (e) { return fatal(`${CFG.run}: ${e.message}`); }
+      // runInline: the /app shell already fetched this run (app.js api()) - at boot parse its copy instead of a second GET (polls still GET)
+      const inl = (() => { try { const c = window.parent !== window && window.parent.__rescueRunText; return c && c.url === new URL(CFG.run, location.href).href ? c.text : null; } catch (e) { return null; } })();
+      try { R = inl ? JSON.parse(inl) : await fetchJSON(CFG.run); } catch (e) { return fatal(`${CFG.run}: ${e.message}`); }
     }
     const errs = checkRun(R);
     if (errs.length) return fatal('run.json nie spełnia kontraktu rescue-run/1: ' + errs.join('; '));

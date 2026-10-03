@@ -24,7 +24,10 @@ async function api(path, body) {
   if (r.status === 404) throw new Error("Nie znaleziono danych na serwerze.");
   if (r.status >= 500) throw new Error("Serwer zgłosił błąd - spróbuj ponownie za chwilę.");
   if (!r.ok) throw new Error("Serwer odrzucił żądanie (" + r.status + ").");
-  return r.json();
+  if (body !== undefined || !/^\/api\/run\//.test(path) || /[?&]t=/.test(path)) return r.json(); // per-minute frames (&t=) are not the run
+  // runInline: the last GET of a run stays here as text; the 2D / 3D frames (same origin) parse it instead of a second GET of the same URL
+  const text = await r.text(); window.__rescueRunText = { url: new URL(path, location.href).href, text };
+  return JSON.parse(text);
 }
 const tryJSON = async (path) => { try { return await api(path); } catch (e) { return null; } };
 // friendly Polish text for any error (network errors from fetch come as TypeError "Failed to fetch")
