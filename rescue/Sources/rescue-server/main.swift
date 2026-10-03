@@ -46,6 +46,7 @@ let types = ["html": "text/html; charset=utf-8", "js": "text/javascript", "mjs":
 func staticFile(_ rawPath: String) -> Data? {
     let p = rawPath.removingPercentEncoding ?? rawPath
     if let e = EvalFiles.file(p) { return response("200 OK", e.1, e.0) }   // rescue/eval/ for the app's Walidacja mode
+    if p == "/version.json", let d = FileManager.default.contents(atPath: pkgDir.appendingPathComponent("version.json").path) { return response("200 OK", "application/json", d) }   // web/version.js stamp (tools/version-json.sh)
     let jsonOnly = p.hasPrefix("/scenarios/") || p.hasPrefix("/tools/terrain/data/")
     guard p.hasPrefix("/out/") || p.hasPrefix("/web/") || p.hasPrefix("/app/") || p == "/web" || p == "/app" || jsonOnly, !p.contains(".."),
           !(jsonOnly && (!p.hasSuffix(".json") || p.lowercased().contains("blind"))) else { return nil }
