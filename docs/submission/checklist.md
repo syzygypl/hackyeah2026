@@ -24,7 +24,7 @@ Chosen task: TBD | Language of the submission: TBD (see table below)
 
 | Task | Submission | Live pitch | Extra |
 |---|---|---|---|
-| AI Control Layer (Goldman Sachs) | EN or PL | EN or PL | Self-testing suite is 20% of the score: show it in deck + video |
+| AI Control Layer (Goldman Sachs) | EN or PL (we use EN) | EN or PL (we use EN) | Brief weights: guardrails 30, architecture/perf 20, reporting 20, self-tests 15, implementability 15. Architecture diagram required (`docs/architecture/README.md`) |
 | HubMI.pl | **PL** (HackTribe says PL or EN, rules say PL: use PL) | **PL** | MP4 required. WCAG 2.1 AA = 20%. Winning transfers copyright to PROIDEA |
 | Cracow without barriers | **PL** | PL | MP4 required. Winning transfers copyright + GitLab repo handover within 7 days |
 | Huawei | **EN** | EN | AI tools + third-party disclosure |

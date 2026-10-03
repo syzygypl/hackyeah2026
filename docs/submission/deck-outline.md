@@ -23,15 +23,40 @@ Rule: if a slide has no screenshot or number, question whether it's needed.
 
 Fill the "What we show" column once the task is chosen; that column is also the checklist for the demo.
 
-### AI Control Layer (Goldman Sachs) - EN or PL
+### AI Control Layer (Goldman Sachs) - EN (GS judges)
+
+Weights from the official brief (`docs/tasks/ai-control-layer.txt` section 8). They replace the older rules-PDF weights, which had tests at 20% and implementability at 10%.
 
 | Criterion | Weight | Slides | What we show |
 |---|---|---|---|
-| Robustness of the solution and quality of guardrails | 30% | 4, 5, 6 | `[guardrails list, attack blocked live]` |
-| Architecture and performance efficiency | 20% | 6, 7 | `[diagram, latency/overhead per call]` |
-| Security reporting | 20% | 5, 7 | `[report/dashboard screenshot]` |
-| Completeness of the self-testing suite | 20% | 7, 8 | `[N attack tests, pass rate, how to run]` |
-| Practical implementability and scalability | 10% | 9 | `[how a company plugs it in, deployment]` |
+| Robustness of the solution and quality of guardrails | 30% | 4, 5, 6 | 95,000 EUR hijack denied. The "INV-2041 part 2" payment passes every rule and only the judge catches it. Hybrid: deterministic checks + 3 local guard models |
+| Architecture and performance efficiency | 20% | 6, 7 | Pipeline diagram (`docs/architecture/README.md`). Deterministic p50 58 us, prefilter 0.2 s, judge 1.4 s only on high-risk calls |
+| Security reporting | 20% | 5, 8 | Live dashboard, hash-chained audit, `/report` for management + security team |
+| Completeness of the self-testing suite | 15% | 8 | 67 unit tests / 120 cases, green in about 10 s; weakening the policy fails tests on purpose |
+| Practical implementability and scalability | 15% | 6, 9 | 3-command deploy, stdlib only, 1 client file + 2 calls, hot-reload policy, scaling path |
+
+#### Slide plan with real evidence
+
+Product name **Airlock** is a placeholder from `docs/brand/brand.md`, *name TBD by humans*. Numbers come from main as of `f3186a9`. Recount tests and rerun the demo right before export, because these numbers move. Voice and fact rules: `docs/brand/brand.md` sections 3 and 5.
+
+| # | Slide | Content | Evidence / source |
+|---|---|---|---|
+| 1 | Title | "Airlock (name TBD) - an AI control layer that runs on your machine." Team, task: AI Control Layer (Goldman Sachs) | - |
+| 2 | Problem | One poisoned invoice turns a helpful treasury agent into an insider: hidden `<system>` text orders a 95,000 EUR wire and a customer-list email | `mock_tools.py` INVOICE |
+| 3 | User | Platform / security team at a bank that lets agents touch payments, email, SQL. Needs control without slowing developers down | brief section 1 |
+| 4 | Solution | One gateway between every agent and every tool: check, execute, check the output. Deterministic first (microseconds), local guard models second. Nothing leaves the machine | `spikes/ai-control-layer` |
+| 5 | Live demo | (a) Real agent, qwen3:4b, reads the invoice: output marked UNTRUSTED, session tainted, legit 4,200 EUR held for a human. (b) Scripted hijack on the same gateway: 95k denied, exfil email denied, card numbers redacted. (c) Live `policy.json` edit, PII block to redact, no restart. Dashboard on screen throughout | `acl-agent --scenario injection`, `demo.py`, `acl-dashboard` |
+| 6 | How it works | Pipeline diagram + fail-closed / fail-open table. 16 attack signatures over decoded layers. 3 local guard models, digest-pinned: qwen3guard 0.6b, granite3.3-guardian 8b, llama-guard3 1b | `docs/architecture/README.md` |
+| 7 | The one more thing | "INV-2041 part 2": approved vendor, 9,000 EUR, under the four-eyes limit. Every rule says yes. Granite judges the call against the task, flags it, and a human rejects it | `sample-security-report.md` event 3 |
+| 8 | Proof | Hero numbers: **58 us** deterministic p50; **67 unit tests / 120 cases** green; **29/29** decisions in a verified hash chain; 18 of 29 blocked in the demo run; judge flagged 5/5 attacks with 0 false positives (n=10, not a rate) | `test_attacks.py`, sample report, spike README |
+| 9 | Deploy + roadmap | 3 commands, Python stdlib, no pip install. Integration: `acl_client.py`, 2 calls. Real today vs planned: approval queue, shared audit store, MCP / Ollama-compatible proxy, per-user authz, model server pool | architecture sections 3-4 |
+| 10 | Team + ask | Members, repo link, demo link. Tagline placeholder: "Your agents act. Airlock decides." | `docs/brand/brand.md` |
+
+**Honest limits, said out loud** (slide 5 or 9, and in Q&A):
+- The real qwen3:4b agent did not fall for the injection (3/3 runs). The 95k hijack scene is the scripted agent against the real gateway.
+- Approval is simulated (`approved_by` on the request).
+- Tools are mocks inside the gateway.
+- Measured on one MacBook. This is a hackathon prototype, not production-hardened.
 
 ### HubMI.pl (Województwo Małopolskie) - PL only
 
