@@ -162,6 +162,8 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 #mapwrap { grid-area: map; position: relative; min-height: 0; background: #1f2a24; }
 #map { position: absolute; inset: 0; }
 .floating { position: absolute; z-index: 5; background: color-mix(in srgb, var(--bg) 90%, transparent); border: 1px solid var(--line); border-radius: var(--radius); backdrop-filter: blur(3px); }
+/* until the map is built the floating panels (legend, map controls) are empty white boxes: keep them hidden while loading */
+body[data-state="loading"] .floating { visibility: hidden; }
 #stepcard { top: 10px; left: 10px; max-width: min(420px, calc(100% - 200px)); padding: 8px 11px; }
 .sc-head { display: flex; gap: 8px; align-items: center; color: var(--ink-2); font-size: 13px; }
 .sc-title { font-size: 16px; font-weight: 700; margin-top: 2px; line-height: 1.25; }
