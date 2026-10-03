@@ -54,8 +54,27 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
 | SegmentSearched | `SegmentSearchedProvider.swift` | team searched segment, nothing found, POD |
 | DronePassEmpty | `DronePassEmptyProvider.swift` | thermal drone pass, nothing found, POD |
 | RatunekPing | `RatunekPingProvider.swift` | GPS point fix with accuracy radius, arrives late |
+| WaterDrift | `WaterDriftProvider.swift` | person / boat in water: plume downwind of the LKP from leeway (person ~1.5%, kayak 2.5%, dinghy 3%, boat 4% of wind) + current; what the plume pushes ashore is beached on the first shore cell. A later drift event replaces the earlier one (the subject moves). Water cells from the terrain `waterMask`. Illustrative numbers, USCG leeway tables cited in the file |
 | TerrainDifficulty | `TerrainDifficultyProvider.swift` | classes trail / meadow / kosodrzewina / scree / slab / cliff / water from OSM cliffs/scree/scrub if present, else DEM `slopeDeg` (>45 cliff, >35 slab, >28 scree), else ridge distance. Victim layer: cliffs unlikely, gullies below steep ground likely. Searcher side: speed and POD per class |
 | WeatherConditions | `WeatherConditionsProvider.swift` | scripted visibility, wind, precipitation, temperature, darkness, ice. No POA effect; drives POD multipliers, resource gates and the hypothermia clock |
+
+## Scenarios outside the Tatras
+
+Five more fictional cases on real OSM + Copernicus DEM terrain (`<name>-terrain.json` from `tools/terrain/osm_terrain.py`), each with a find spot for the backtest and a find reported by a team (no GPS ping). Numbers: `validate/backtest.md`.
+
+| Scenario | Case | Teams | Fused vs rings (rank, area to sweep) |
+|---|---|---|---|
+| `bieszczady-wetlinska` | mushroom picker (ISRID gatherer) lost in beech forest above Przełęcz Wyżna, found by a GOPR dog in the Kostywski ravine | GOPR Bieszczady patrols, dog, drone, police helicopter | #2 vs #15, 1.4% vs 33.6% |
+| `karkonosze-sniezka` | hiker in a whiteout below Śnieżka, lost the Śląska Droga, found at the bottom of Kocioł Łomniczki; phone roamed on a Czech BTS (bbox includes the Czech side) | GOPR Karkonosze patrols, avalanche dog, drone, LPR helicopter | #5 vs #8, 2.9% vs 1.8% (rings win: the find is 0.7 km from the IPP, the evidence pointed along the planned route) |
+| `sniardwy` | white squall, Omega capsized; boat found empty in the reeds, sailor in the water between LKP and boat | WOPR / PSP boats, police shore patrol, drone, PSP divers, LPR helicopter | #1 vs #3, 3.5% vs 31.8% |
+| `morzycko` | kayaker on Jezioro Morzycko (Moryń) after a storm, kayak and then the man found in the NE shore reeds | OSP / WOPR boats, police + OSP shore patrol with thermal camera, drone, divers | #1 vs #7, 0.9% vs 5.0% |
+| `miedzyzdroje` | swimmer taken by a rip current, carried NE by the longshore current, found by a WOPR jet ski | WOPR jet ski and boat, SAR boat, beach patrol, drone, Navy SAR helicopter | #3 vs #10, 1.6% vs 17.2% |
+
+- Water: resource types `boat` (straight-line travel ~25 km/h, sweeps water only) and `diver` (slow, small area, no night dives), illustrative numbers in `SearchPlanner.swift`. In water cases the "rings" baseline is plain distance from the LKP (ISRID has no tables for a person in water), so fused vs rings measures what wind and current add.
+- WaterDrift event fields: `point` (LKP), `radiusM`, `windMs`, `windFromDeg`, `currentMs`, `currentToDeg`, `object` (person / kayak / dinghy / boat), `leewayPct`, `driftHours` (default: event time - `subject.lastContact`).
+- Terrain: Overpass was unreachable from the hackathon network, so the OSM caches (`tools/terrain/data/<name>-overpass.json`) were built from the OSM API 0.6 `/map` call (same tags, Overpass-shaped JSON) and then run through `osm_terrain.py` unchanged. A rerun with `--refresh` where Overpass works gives the same features.
+- Offline basemap (`web/basemap/`) covers the Tatras only; the new areas fall back to the DEM relief / plain background. To add them (AI Michała): `python3 rescue/web/basemap/extract_pmtiles.py --scenario rescue/scenarios/<name>.json --out rescue/web/basemap/<name>.pmtiles`.
+- Run: `cd rescue && swift run rescue-demo --fast scenarios/<name>.json` -> `out/<name>.html` + `out/<name>.run.json`.
 
 ## What's mocked
 
@@ -105,7 +124,7 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
       "weather": { "visibilityM": 1500, "windMs": 14, "tempC": -1, "precip": "none|rain|snow",
                    "dark": true, "ice": true, "note": "string",
                    "survival": { "hoursOut": 5.5, "level": "niski|podwyższony|wysoki|krytyczny", "text": "string" } },
-      "resources": [ { "id": "drone", "name": "string", "type": "ground|dog|drone|heli",
+      "resources": [ { "id": "drone", "name": "string", "type": "ground|dog|drone|heli|boat|diver",
                        "available": false, "reason": "uziemiony: wiatr 14 m/s > 12 m/s" } ],
       "assignments": [                  // greedy plan for this step, best expected find rate first
         { "resourceId": "heli", "segmentId": "S7", "segmentName": "string",
@@ -154,7 +173,7 @@ If present next to the scenario, it replaces `terrain` from the scenario. Same s
 
 `zawrat.json` positions (IPP, trip route along the real green/black/blue trails, cell fix, find spot, segment seeds) are placed on the real OSM geometry from `zawrat-terrain.json`.
 
-Scenario `resources` (optional): `[{ "id", "name", "type": "ground|dog|drone|heli", "base": [lat, lon], "readyAt": "HH:mm" }]`. `WeatherConditions` events use optional fields `visibilityM, windMs, tempC, precip, dark, ice` (each event overrides only what it sets). `subject.lastContact` ("HH:mm") starts the hypothermia clock.
+Scenario `resources` (optional): `[{ "id", "name", "type": "ground|dog|drone|heli|boat|diver", "base": [lat, lon], "readyAt": "HH:mm" }]`. `WeatherConditions` events use optional fields `visibilityM, windMs, tempC, precip, dark, ice` (each event overrides only what it sets). `subject.lastContact` ("HH:mm") starts the hypothermia clock.
 
 ## Validation
 
