@@ -196,3 +196,111 @@ Bramka włączenia warstwy "Pole widzenia" (`?fov3d=1`) domyślnie: pełny przeg
 - Zgodność z viewshed: zaliczone (rysunek = obrys silnika, wysokości oka i czynnik nocny zgodne, IoU 0.95-0.99). Błąd w silniku: pies bez kierunku wiatru = koło 151 m zamiast 63 m (AI Mateusza).
 - fps: na headless swiftshader 0.6 fps, różnica A/B w szumie (-1.5% do +0.2%); FOV dodaje 8-19 draw calls i 0.05% trójkątów. Bramki "spadek <= 3 fps" nie da się zamknąć bez pomiaru na laptopie z GPU - kroki w dokumencie.
 - Po deployu `8b97c7a` (LOD drzew) scena zawratu ma 1.20 mln trójkątów na klatkę zamiast 2.37 mln.
+
+## Runda 3
+
+AI Michała, niedziela 2026-10-04, 01:08-01:40 CEST. Co widzi jury teraz: produkcja po Ruście i po nocnych poprawkach frontendu.
+
+### Wersja i metoda
+
+- Produkcja w czasie pomiaru stron i API: `/version.json` = `37fca04` (2026-10-03 23:06 UTC, "patrol connectivity pill"). `origin/main` był już na `815a4fb` (memoizacja `/api/inventory` w Ruście), czyli deploy jest kilka minut za `main`.
+- Strony: skrypt z rundy 1 rozszerzony (`pages3.mjs` w scratchpadzie, nie w repo), headless Chrome + swiftshader, 1920x1080, Patrol 390x844 (mobile, DPR 2). Na produkcji tylko GET/HEAD; zablokowane zostały jedynie 2 x `POST /api/run` z Porównania. Zimny przebieg 60 s (z niego polling), ciepły 25 s.
+- Nowe w tej rundzie: long taski > 200 ms (`PerformanceObserver` w każdej ramce), czas `body[data-state=ready]` iframe 2D, przełączenie 2D <-> 3D (klik w `#views`, do chwili, gdy panel jest w pełni widoczny i jego iframe ma `ready`).
+- 4 strony mierzone równolegle (4 Chrome'y), więc czasy zimne są raczej zawyżone; Akcja 2D i Historia powtórzone osobno (2 naraz) - wyniki w granicach +-0.7 s.
+- "2D pierwszy / gotowy / ustalony" = pierwsza klatka WebGL w iframe `/web/index.html` / `body[data-state=ready]` / ostatnia klatka przed przerwą > 2 s. "3D" = zniknięcie nakładki "Wczytywanie modelu terenu".
+- API: Python `urllib`, `Accept-Encoding: gzip`, 5 żądań pod rząd na endpoint, z MacBooka przez Wi-Fi.
+
+### API (produkcja, 5 prób)
+
+| endpoint | first TTFB ms | p50 TTFB ms | p95 TTFB ms | p50 total ms | p95 total ms | gzip bytes | runda 2: p50 / p95 total |
+|---|---|---|---|---|---|---|---|
+| `/health` | 272 | 267 | 287 | 269 | 288 | 312 | 321 / 1189 |
+| `/api/scenarios` | 291 | 291 | 326 | 293 | 332 | 1 314 | 274 / 340 |
+| `/api/incidents?fast=1` | 346 | 346 | 446 | 347 | 447 | 2 441 | 319 / 646 |
+| `/api/incidents` | 293 | 321 | 575 | 323 | 578 | 2 441 | 426 / 761 |
+| `/api/advisor` | 325 | 282 | 325 | 284 | 326 | 3 481 | 286 / 2411 |
+| `/api/teams` | 279 | 279 | 312 | 280 | 323 | 1 286 | 257 / 552 |
+| `/api/inventory?sc=zawrat` | 326 | 326 | 518 | 327 | 520 | 7 352 | 322 / 582 |
+| `/api/run/zawrat` | 283 | 302 | 344 | 551 | 613 | 753 388 | 1162 / 4064 |
+| `/api/run/zawrat?live=0` | 410 | 324 | 410 | 575 | 707 | 769 399 | 849 / 2575 |
+| `/api/run/zawrat?t=19:00` | 269 | 269 | 324 | 297 | 327 | 13 642 | 313 / 746 |
+| `/api/tracks/zawrat` | 312 | 278 | 312 | 280 | 314 | 6 408 | 286 / 481 |
+| `/api/assessment/zawrat?step=5&wait=0` | 459 | 333 | 459 | 335 | 460 | 743 | 323 / 710 |
+| `/api/live?sc=zawrat&since=0` | 287 | 285 | 318 | 286 | 320 | 90 | 277 / 347 |
+| `/story` | 258 | 269 | 328 | 325 | 390 | 54 032 | 374 / 935 |
+| `/modules` | 268 | 260 | 268 | 262 | 269 | 1 707 | 268 / 410 |
+| `/api/run/rodzina-dziecko-las` | 584 | 388 | 732 | 679 | 1004 | 596 579 | 815 / 1667 |
+| `/api/run/sniardwy` | 584 | 367 | 3074 | 656 | 3262 | 470 759 | 792 / 6144 |
+
+API jest płaskie: ok. 0.27 s to sieć do Frankfurtu, serwer to milisekundy. Pełny run zawratu 0.55 s (z tego ok. 0.25 s to pobranie 750 KB). Jedyny ogon: `/api/run/sniardwy` p95 3.1 s (zimna instancja liczy ten scenariusz przy pierwszym żądaniu). W rundzie 1 (Swift, iad1) te same endpointy: 0.7-34 s.
+
+### Strony: runda 1 (Swift) -> runda 3 (Rust + frontend)
+
+Czasy w sekundach od startu nawigacji.
+
+| Strona | Mapa runda 1 zimno / ciepło | Mapa runda 3 zimno / ciepło | Bajty / żądania zimno r1 | Bajty / żądania zimno r3 | Ciepło r3 | Long taski > 200 ms | Błędy konsoli r3 |
+|---|---|---|---|---|---|---|---|
+| Akcja 2D (zawrat, Na żywo) | 21.1 / 15.7 | pierwszy 4.8, gotowy 5.6, ustalony 6.3 / 1.3, 2.4, 3.3 | 3.55 MB / 141 | 5.30 MB / 215 | 645 KB / 176 | 1-2 (208-245 ms, start powłoki) | 1 (404 `/scenarios/studio.json`) |
+| Historia, krok 7 | - | pierwszy 3.0, gotowy 3.7 / 1.9, 2.3 | - | 7.56 MB / 355 | 228 KB / 324 | 0 | 1 (to samo 404) |
+| Akcja 3D | nakładka 16.4 / 19.5 | nakładka 7.1 / 2.9 | 4.45 MB / 108 | 6.75 MB / 270 | 15 KB / 237 | 1-3 (208 ms) | 1 (to samo 404) |
+| 2D -> 3D -> 2D -> 3D (oba ciepłe) | - | 0.21 / 0.20 / 0.20 | - | - | - | 0 | 0 |
+| Centrum | 1.7 / 0.5 | 1.3 / 0.4 | 653 KB / 67 | 649 KB / 66 | 7 KB / 52 | 0 | 0 |
+| Zasoby (DCL) | 1.1 / 0.4 | 1.1 / 0.4 | 193 KB / 18 | 192 KB / 19 | 1 KB / 17 | 0 | 0 |
+| Ćwiczenia, lista (DCL) | 1.0 / 0.2 | 0.8 / 0.3 | 172 KB / 14 | 190 KB / 18 | 0.5 KB / 18 | 0 | 0 |
+| Porównanie | - | pierwszy 2.8, gotowy 3.5 / 1.3, 1.5 | - | 2.62 MB / 99 | 2 KB / 99 | 0 | 1 (zablokowany przez nas `POST /api/run`) |
+| Landing (DCL) | 1.3 / 0.3 | 0.7 / 0.4 | 389 KB / 13 | 366 KB / 11 | 0.3 KB / 10 | 0 | 1 (404 `/favicon.ico`) |
+| Czat `/app/czat.html` | - | pierwszy 2.3, gotowy 2.9 / 1.3, 1.8 | - | 3.13 MB / 89 | 3 KB / 73 | 0 | 0 |
+| Patrol (r1 1920, r3 390x844) | 11.5 / 4.4 | 3.0 / 0.6 | 6.90 MB / 49 | 7.14 MB / 46 | 2 KB / 40 | 0 | 0 (r1: 404 favicon) |
+| Widziałem `/web/seen/` (DCL) | 1.3 / 0.4 | 1.2 / 0.3 | 480 KB / 17 | 480 KB / 15 | 0.5 KB / 15 | 0 | 0 (r1: 404 favicon) |
+| Zdjęcie `/web/photo/` | - | 1.4 / 0.5 | - | 1.31 MB / 38 | 172 KB / 38 | 0 | 0 |
+
+Wnioski:
+- Pierwsza mapa 2D w Akcji: 21.1 -> 4.8 s na zimno, 15.7 -> 1.3 s na ciepło. 3D: nakładka 16.4 -> 7.1 s zimno, 19.5 -> 2.9 s ciepło. Patrol 11.5 -> 3.0 s. Przełączenie 2D <-> 3D 0.2 s, bez long tasków.
+- Long taski > 200 ms tylko na Akcji (1-3 sztuki, 208-245 ms, w pierwszych 2-6 s; wpisy z iframe `about:blank` to ten sam task widziany z ramek potomnych). W powtórzonym pomiarze Akcji i Historii 0. Pozostałe strony 0.
+- Więcej bajtów niż w rundzie 1 to skutek zmian celowych: 3D bootuje w tle w Akcji 2D (dem-wide 944 KB + ortho 460 KB + osm3d 432 KB), a Historia pobiera wszystkie klatki minutowe.
+
+### 5 największych żądań (zimno, KB na drucie / ms)
+
+| Strona | Żądania |
+|---|---|
+| Akcja 2D | `zawrat-dem-wide.json` 944 / 633, `/api/run/zawrat` 736 / 1084, `zawrat-ortho-wide.jpg` 460 / 173, `zawrat-osm3d.json` 432 / 542, `zawrat-dem.json` 300 / 1129 |
+| Akcja 3D | `zawrat-dem-wide.json` 944 / 714, `/api/run/zawrat` 736 / 868, ortho 460 / 317, osm3d 432 / 823, `zawrat-dem.json` 300 / 187 |
+| Historia krok 7 | `zawrat-dem-wide.json` 944 / 472, `/api/run/zawrat?live=0` 752 / 694, ortho 460 / 217, osm3d 432 / 240, `zawrat-dem.json` 300 / 221; do tego ok. 150 klatek `?t=` = 2.9 MB w 60 s |
+| Porównanie | `zawrat-dem.json` 300 x 2 (dwa iframe), `porownanie-data/zawrat-z.json` 195, `zawrat-bez.json` 166, maplibre 153 |
+| Czat | `/api/run/zawrat` 736 x 2 (strona czatu i iframe 2D), `zawrat-dem.json` 300, maplibre 154 + 146 |
+| Patrol | `tatry.pmtiles` 5282 / 1724 (cały plik, tryb offline - celowo, równolegle z runem), `/api/run/zawrat` 736 / 1775, maplibre 153 + 146, hillshade 75 |
+| Centrum, Widziałem, Zdjęcie | maplibre 153 + 146; Zdjęcie: `synthetic-zawrat-truth-h217.png` 250 KB (to treść strony) |
+| Zasoby, Ćwiczenia, Landing | fonty 15-31 KB; Landing `02-akcja-3d-zawrat.jpg` 206 KB |
+
+### Polling (60 s, zimno; częściej niż co 10 s)
+
+| Strona | Żądanie | Na 60 s | Co ile s | Skąd |
+|---|---|---|---|---|
+| Akcja 2D / 3D | `GET /api/live` | 31 | 1.9 | powłoka co 3 s (`app/app.js:1080`) + iframe 3D co 4 s (`app/3d/app3d.js:2097`), także gdy 3D jest ukryte |
+| Akcja 2D / 3D | `HEAD /api/run/zawrat` | 12 | 5 | iframe 2D `pollRun` (`web/app.js:1542`, `runPollMs: 5000` w linii 52); powłoka i tak refetchuje run po zmianie `seq` z `/api/live` |
+| Akcja, Historia, Czat | `GET /live-events` | 14-15 | 4.1 | iframe 2D (`web/app.js:1541`, `livePollMs` 4000) |
+| Akcja, Historia | `GET /metrics` | 6 | 9.7 | powłoka (alerty) |
+| Historia | `GET /api/live` | 18 | 3.3 | powłoka (w Historii zbędne) |
+| Historia | `GET /api/run/zawrat?live=0&t=<min>` | ok. 150 | 0.4 | pobieranie wszystkich klatek minutowych (`app/app.js:1278`, "then the rest, in the background"), 2.9 MB |
+| Czat | `HEAD /api/run/zawrat` | 14 | 4.4 | iframe 2D jak wyżej |
+| Centrum | `/api/incidents`, `/api/teams` | 12 + 12 | 5 | `app/centrum.js:14` `POLL_MS = 5000`; teraz po 0.3 s, w rundzie 1 zatykało Swifta |
+| Patrol, Widziałem, Zdjęcie | brak | | | Patrol co 15 s (ping, przydziały, potwierdzenia) i co 60 s (incydenty) |
+
+`tatry.pmtiles` wiele razy to zakresy kafli (Range), nie polling. Jeden operator w Akcji to ok. 63 żądania API na minutę (31 + 12 + 14 + 6): przy Ruście tanie, ale na Wi-Fi sali to stały ruch w tle i każde jest wywołaniem funkcji Vercela.
+
+### Poprawki w tej rundzie (AI Michała)
+
+- `bf0f92d` `web/seen/index.html`: maplibre (300 KB) i `basemap.js` ładowane dynamicznym `import()` w tle zamiast statycznego importu - karta zaginionego nie czeka na kod mapy, a mapa i tak powstaje dopiero po "Widziałem". Lokalnie: karta po 28-56 ms, mapa 55-118 ms po kliknięciu, 0 błędów. Produkcja (390x844, cache wyłączony, 3 wejścia): karta przed 433-576 ms (mediana 485), po deployu `bf0f92d` 204-555 ms w 6 wejściach (mediana 360); mapa po kliknięciu 100-190 ms (pierwsze wejście 0.77 s, bo dopiero wtedy pobierany jest podkład). Zysk mały (ok. 0.1 s), ale strona dla świadka otwierana z linku na telefonie przy słabym łączu nie czeka już na 300 KB kodu mapy.
+
+Patrol i Zdjęcie potrzebują mapy od razu (to ich treść), polling Patrolu jest już co 15-60 s - bez zmian.
+
+### Pozostałe problemy (kolejność = wpływ na demo)
+
+1. **Polling w Akcji: ok. 63 żądania / min na operatora.** `/api/live` podwójnie (powłoka `app/app.js:1080` co 3 s + iframe 3D `app/3d/app3d.js:2097` co 4 s, też gdy ukryty), `HEAD /api/run` co 5 s z iframe 2D (`web/app.js:1542`), `/live-events` co 4 s (`web/app.js:1541`). Poprawka: iframe 3D w `/app` nie polluje (powłoka podaje zdarzenia przez postMessage) albo przynajmniej pauzuje przy `{type:"visible", on:false}` - AI Andrzeja; iframe 2D w `embed=scene` z powłoką nie robi `pollRun` (powłoka refetchuje run po `seq`) - AI Marcina / AI Mateusza #2.
+2. **Historia pobiera wszystkie klatki minutowe (ok. 150 żądań, 2.9 MB w 60 s, 3 równolegle).** `app/app.js:1278` (`tlNext`, pętla "then the rest"). Na Wi-Fi sali konkuruje z runem i kafelkami przy pierwszym wejściu. Poprawka: okno -5..+20 min wokół suwaka, resztę dociągać przy odtwarzaniu albo po 10 s bezczynności - AI Marcina.
+3. **Akcja 2D na zimno: 2D gotowe po 5.6 s, 5.3 MB.** 2.1 MB to 3D bootujące w tle - startuje po `ready` 2D, więc nie blokuje mapy, ale na słabym łączu zjada pasmo. W Czacie run pobierany 2 razy (strona czatu i iframe 2D z `run=/api/run/...`, `app/chat.js:637`, 2 x 736 KB). Poprawka: `run=inline` w Czacie jak w `/app` - AI Marcina; boot 3D w tle dopiero po pierwszej interakcji albo gdy `navigator.connection.effectiveType` to '4g' - AI Mateusza #2 (syncFrame).
+4. **404 i przerwane żądania na starcie Akcji/Historii** (szum w konsoli DevTools): `GET /scenarios/studio.json` 404 (`app/app.js:1171`, lista scenariuszy bierze też `studio`), `/out/blind-01-replay.run.json` pobierany i przerywany 2-3 razy (`app/app.js:62` + `web/app.js:20`). Landing: 404 `/favicon.ico` (brak `<link rel="icon">` w `app/landing/index.html`). Poprawka: pominąć `studio` w tej liście, `<link rel="icon" href="data:,">` na landingu - AI Marcina.
+5. **Porównanie: `POST /api/run` dwa razy przy każdym wejściu** (`app/porownanie.js:26`) i `zawrat-dem.json` pobierany dwa razy (dwa iframe). Działa (gdy POST zawiedzie, bierze `porownanie-data/*.json`), ale każde wejście liczy dwa runy na serwerze i czeka na nie. Poprawka: najpierw statyczne `porownanie-data`, POST tylko na "przelicz" - AI Marcina.
+6. Centrum co 5 s `/api/incidents` + `/api/teams` (`app/centrum.js:14`): 24 żądania / min po 0.3 s - nieszkodliwe, wystarczy 10 s (AI Marcina).
+7. `/api/run/sniardwy` p95 3.1 s na zimnej instancji - runy liczone w obrazie (w toku u AI Andrzeja).
+8. fps 3D na prawdziwym GPU dalej niezmierzone (headless = swiftshader) - do pomiaru na laptopie, z którego będzie demo.
