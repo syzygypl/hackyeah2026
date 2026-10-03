@@ -20,4 +20,4 @@
 - run_json_object(..) -> Map; weather_json / resource_json / assignment_json -> Map; r4g public.
 - KOESTER_CATEGORIES (BTreeMap), all_module_schemas(), field_report_schema(), StudioModule::schema(), ModuleField::f/d/new.
 - Server note: Swift's server timeline cache builds its grid WITHOUT clue weights (unlike StoryPipeline.run) - mirror it.
-- Known non-byte-identical by Swift's own nondeterminism: steps[].assignments[].reason terrain-class tie (miedzyzdroje, morzycko, rodzina-dziecko-las, tragedia-w-moryniu) and modules.json key order.
+- Known non-byte-identical by Swift's own nondeterminism: steps[].assignments[].reason terrain-class tie (miedzyzdroje, morzycko, rodzina-dziecko-las, tragedia-w-moryniu). GET /modules: Swift writes it unsorted in per-dictionary hash order; StoryPipeline::modules_data replays the order the Swift server served (golden/modules.json).

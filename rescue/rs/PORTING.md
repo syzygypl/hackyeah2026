@@ -58,7 +58,7 @@ response bodies. Integers stay integers. `rescue/rs/parity.py` compares with tol
 
 - Edition 2021, crate name `rescue`, deps in Cargo.toml (serde, serde_json, tokio, axum 0.8, tower-http, reqwest+rustls,
   parking_lot, once_cell, regex, chrono, rand, sha2, hex, rayon). Ask the coordinator before adding a dependency.
-- `#![allow(dead_code, unused_imports, ...)]` is set in lib.rs; do not fight warnings.
+- lib.rs keeps `kit`, `studio` and the `server` submodules private (only `server::main` is public), so code the server never reaches warns as dead; keep the build at zero warnings.
 - Do NOT run `git add` / `git commit` / `git push` / `git stash`: several agents share this worktree; the coordinator commits.
 - Do NOT edit files outside your assignment (other agents are writing them right now). If you need a type or function from
   someone else's file, use it by the naming rules above as if it exists; if you must have a placeholder to type-check your
