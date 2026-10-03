@@ -25,6 +25,8 @@ The shell sends `{type:'time', minute, t}`; one-minute advances blend for 0.5 s,
 
 Click a unit marker or its label (also Enter / Space on a focused label) to highlight that unit's track and send `{source:'rescue3d', type:'actor', id}` for the shell's log panel. Parent selection with `{type:'actor',id}` highlights it without echoing. The view does not calculate equipment health or invent log entries.
 
+Labels show short unit names; the tooltip gives the source and accuracy. Overlapping unit labels are hidden, prioritising the selected unit. Dragging from a label rotates the scene. A second click or Esc clears selection (`id:null`) and restores other tracks; the highlighted route uses the theme's danger colour with a pale border.
+
 Local verification on Zawrat with the real Swift engine: no actors or coverage before the first fix, 5 actors at minute 100, fractional movement 100 -> 101, FPP disables orbit and Esc restores it; scenarios without timeline still load. Syntax and temporal boundary checks also pass.
 
 ## Blind test (button "Test na ślepo")

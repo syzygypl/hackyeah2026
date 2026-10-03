@@ -291,7 +291,7 @@ host.appendChild(labels.domElement);
 const ATMO = installHeightFog(); // fx3d: aerial perspective, valley fog, alpenglow, before any material compiles
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.01, 400);
-const controls = new OrbitControls(camera, renderer.domElement);
+const controls = new OrbitControls(camera, host); // label drags bubble to the same scene controls
 controls.enableDamping = true; controls.dampingFactor = 0.08;
 controls.maxPolarAngle = Math.PI * 0.46; controls.minDistance = 0.5; controls.maxDistance = 30;
 controls.autoRotateSpeed = 0.3;
@@ -1696,8 +1696,8 @@ const pick = (e) => { mouse.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / 
 const cv = renderer.domElement;
 cv.addEventListener('pointermove', (e) => { lastEv = e; if (!hoverPending) { hoverPending = true; requestAnimationFrame(hover); } });
 cv.addEventListener('pointerleave', () => { $('tip').hidden = true; });
-cv.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
-cv.addEventListener('pointerup', (e) => {
+host.addEventListener('pointerdown', (e) => { downAt = e.target.closest('[data-actor-id]') ? null : [e.clientX, e.clientY]; });
+host.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
   const h = pick(e);
   if (G.phase === 'off' && TL3D?.pickActor(ray, h ? ray.ray.origin.distanceTo(h.point) : Infinity)) return;
@@ -1707,7 +1707,7 @@ cv.addEventListener('pointerup', (e) => {
   if (G.phase === 'off') selectSeg(R.segOf[k], { fly: false });
   else if (G.phase === 'search') sendPatrol(R.segOf[k]); // the patrol goes to the clicked segment
 });
-cv.addEventListener('dblclick', (e) => { const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
+host.addEventListener('dblclick', (e) => { if (e.target.closest('[data-actor-id]')) return; const h = pick(e); if (h && G.phase !== 'hide') flyTo(h.point, 2); });
 TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, line: makeLine, drape: drapeRuns,
   dispose: disposeGroup, label, esc, nf, wake,
   onFrame: (f, minute) => {
@@ -1930,7 +1930,7 @@ addEventListener('message', (e) => {
     if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
     else if (m.type === 'time' && Number.isFinite(m.minute)) TL3D?.setTime(m.minute, m.t, true, m.frame);
     else if (m.type === 'fpp') { if (m.on === false) TL3D?.stopFpp(); else TL3D?.startFpp(m.actorId); }
-    else if (m.type === 'actor' && typeof m.id === 'string') TL3D?.selectActor(m.id, false);
+    else if (m.type === 'actor' && (m.id === null || typeof m.id === 'string')) TL3D?.selectActor(m.id, false);
     else if (m.type === 'highlight' && typeof m.actor === 'string') TL3D?.selectActor(m.actor, false);
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
     else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
@@ -2038,7 +2038,7 @@ function frame() {
   renderer.render(scene, camera);
   if (GPU_SYNC) renderer.getContext().finish(); // ?gpu=1: stats count the GPU time in "render" (diagnostic only)
   const c1 = performance.now();
-  if (moved || timelineMoving || labelsDirty || now - lastLabels > 1000) { labels.render(scene, camera); labelsDirty = false; lastLabels = now; nL++; }
+  if (moved || timelineMoving || labelsDirty || now - lastLabels > 1000) { labels.render(scene, camera); TL3D?.layoutLabels(); labelsDirty = false; lastLabels = now; nL++; }
   if (statsEl) {
     const c2 = performance.now();
     statN++; statT += interval; cpuR += c1 - c0; cpuL += c2 - c1; cpuF += c0 - now; statCalls = renderer.info.render.calls; statTris = renderer.info.render.triangles;

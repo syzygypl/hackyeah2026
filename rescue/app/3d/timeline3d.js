@@ -20,6 +20,9 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
   const timeline = run.timeline;
   if (!timeline?.actors?.length) return null;
   const colors = { pieszy: '#b8860b', pies: '#8d5524', dron: '#6c4ab6', smiglowiec: '#1f4e79', lodz: '#168aad', osoba: '#cf473f' };
+  const token = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  const danger = () => token('--rl-danger', '#b8322a');
+  let labelDown = null;
   const group = new THREE.Group(), trail = new THREE.Group(), area = new THREE.Group();
   scene.add(group, trail, area);
   const actors = timeline.actors.map((a) => {
@@ -30,7 +33,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
     tag.element.dataset.actorId = a.id; tag.element.tabIndex = 0; tag.element.setAttribute('role', 'button');
     tag.element.title = 'Pokaż ślad i dziennik jednostki';
     tag.element.style.pointerEvents = 'auto'; tag.element.style.cursor = 'pointer';
-    tag.element.onclick = (e) => { e.stopPropagation(); selectActor(a.id); };
+    tag.element.onpointerdown = (e) => { labelDown = { id: a.id, x: e.clientX, y: e.clientY }; };
     tag.element.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectActor(a.id); } };
     g.add(dot, tag); group.add(g);
     return { ...a, g, tag, dot, color: colors[a.kind] || '#555' };
@@ -57,13 +60,20 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
   }
   button.onclick = () => { if (fpp) stopFpp(); else startFpp(select.value); };
   select.onchange = () => { if (fpp) { if (!startFpp(select.value)) stopFpp(); } };
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') stopFpp(); });
+  addEventListener('keydown', (e) => { if (e.key === 'Escape') { stopFpp(); selectActor(null); } });
+  addEventListener('pointerup', (e) => {
+    const d = labelDown; labelDown = null;
+    if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 5) selectActor(d.id);
+  });
+  addEventListener('pointercancel', () => { labelDown = null; });
   function selectActor(id, notify = true) {
-    const actor = actors.find((a) => a.id === id); if (!actor) return false;
-    selected = id; select.value = id;
+    if (notify && id === selected) id = null;
+    if (id != null && !actors.some((a) => a.id === id)) return false;
+    selected = id; if (id != null) select.value = id;
     for (const a of actors) {
       a.tag.element.setAttribute('aria-pressed', String(a.id === id));
-      a.tag.element.style.outline = a.id === id ? '2px solid #cf473f' : '';
+      a.tag.element.style.outline = a.id === id ? `2px solid ${danger()}` : '';
+      a.dot.material.color.set(a.id === id ? danger() : a.color); a.dot.scale.setScalar(a.id === id ? 1.5 : 1);
     }
     if (target != null) trails(target);
     if (notify) onActor?.(id); wake(); return true;
@@ -88,9 +98,13 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
   function trails(minute) {
     dispose(trail);
     for (const a of actors) {
-      const color = selected === a.id ? '#cf473f' : a.color, opacity = selected && selected !== a.id ? 0.25 : 0.9;
+      const color = selected === a.id ? danger() : a.color, opacity = selected && selected !== a.id ? 0.25 : 0.9;
       const path = a.path || []; let pts = [], dashed = null;
-      const flush = () => { if (pts.length > 1) trail.add(line(pts, { color, width: selected === a.id ? 4 : 2, opacity, dashed, dash: 0.025, gap: 0.02 })); };
+      const flush = () => {
+        if (pts.length < 2) return;
+        if (selected === a.id) trail.add(line(pts, { color: token('--rl-panel-solid', '#faf8f3'), width: 8, opacity: 0.95, dashed, dash: 0.025, gap: 0.02 }));
+        trail.add(line(pts, { color, width: selected === a.id ? 4 : 2, opacity, dashed, dash: 0.025, gap: 0.02 }));
+      };
       for (let i = 1; i < path.length && path[i - 1][2] < minute; i++) {
         const p = path[i - 1], q = path[i], end = q[2] <= minute ? { lat: q[0], lon: q[1] } : sampleAt(path, minute);
         // A GPS trace connects two GPS fixes; everything based on an estimate remains dashed.
@@ -136,8 +150,10 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
       if (!p) continue;
       const lift = a.kind === 'dron' || a.kind === 'smiglowiec' ? (a.fov?.eyeM || 80) / 1000 : 0.023;
       a.g.position.copy(v3(p.lat, p.lon, lift));
-      const text = `${esc(a.name || a.id)} · ${p.est ? 'szacunek' : 'GPS'} · dokładność ±${nf(p.accM, 0)} m`;
+      const short = (a.name || a.id).split(' (')[0].replace(/^Patrol /, '').replace('Zespół z psem', 'Pies').replace('Dron termowizyjny', 'Dron').replace('Śmigłowiec ', '');
+      const text = esc(short);
       if (a.tag.element.innerHTML !== text) a.tag.element.innerHTML = text;
+      a.tag.element.title = `${a.name || a.id} · ${p.est ? 'szacunek' : 'GPS'} · dokładność ±${nf(p.accM, 0)} m · pokaż ślad i dziennik`;
       if (fpp === a.id) {
         const next = sampleAt(a.path, Math.min(shown + 0.5, a.path.at(-1)[2]));
         const eye = v3(p.lat, p.lon, (a.fov?.eyeM || 1.7) / 1000);
@@ -151,6 +167,23 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
     return moving || !!fpp;
   }
   function setVisible(on) { visible = on; group.visible = trail.visible = area.visible = on; panel.hidden = !on; if (!on) stopFpp(); }
-  return { setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
+  function layoutLabels() {
+    const placed = [];
+    const order = [...actors].sort((a, b) => Number(b.id === selected) - Number(a.id === selected));
+    for (const a of order) {
+      const el = a.tag.element;
+      const p = a.tag.getWorldPosition(new THREE.Vector3()).project(camera);
+      const x = (p.x + 1) * innerWidth / 2, y = (1 - p.y) * innerHeight / 2;
+      const w = el.offsetWidth, h = el.offsetHeight;
+      const r = { l: x - w / 2 - 3, r: x + w / 2 + 3, t: y - h / 2 - 3, b: y + h / 2 + 3 };
+      const hide = !visible || document.body.classList.contains('cinema') || !a.g.visible || !a.tag.visible || p.z > 1 || p.z < -1 ||
+        placed.some((b) => r.l < b.r && r.r > b.l && r.t < b.b && r.b > b.t);
+      el.style.visibility = hide ? 'hidden' : 'visible';
+      el.style.pointerEvents = hide ? 'none' : 'auto';
+      if (a.id === selected) el.style.zIndex = '10000';
+      if (!hide) placed.push(r);
+    }
+  }
+  return { setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
     get following() { return fpp; }, get actorCount() { return actors.filter((a) => a.g.visible).length; } };
 }
