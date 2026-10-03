@@ -105,6 +105,48 @@ export function installHeightFog() {
 #endif`;
 }
 
+// ---------- shared water shading (lakes and sea) ----------
+// waves: three directions, wavenumbers scaled by uWaveK (1 = Tatra lakes, < 1 = longer swell), height grows with wind
+const WAVE_GLSL = `
+    float fxWaveAmp() { return (0.0012 + uWind * 0.02) / sqrt(uWaveK); }
+    // height and its x/z slope, world units (km)
+    vec3 fxWave(vec2 p, float t, float a) {
+      vec3 r = vec3(0.0);
+      vec2 D[3]; D[0] = vec2(0.8, 0.6); D[1] = vec2(-0.42, 0.91); D[2] = vec2(0.96, -0.28);
+      float K[3]; K[0] = 48.0; K[1] = 74.0; K[2] = 118.0;
+      float W[3]; W[0] = 1.15; W[1] = 1.7; W[2] = 2.4;
+      float A[3]; A[0] = 1.0; A[1] = 0.55; A[2] = 0.3;
+      // slow noise groups the waves into sets, so the three trains never show as a regular grid
+      a *= 0.35 + 1.1 * fxNoise(p * 9.0 * uWaveK + vec2(t * 0.03, -t * 0.02));
+      for (int i = 0; i < 3; i++) {
+        float k = K[i] * uWaveK, ph = k * dot(D[i], p) + W[i] * sqrt(uWaveK) * t + fxNoise(p * 20.0 * uWaveK) * 2.5 * float(i), ai = a * A[i];
+        r.x += ai * sin(ph); r.yz += ai * k * cos(ph) * D[i];
+      }
+      return r;
+    }`;
+// expects waveEdge (0 calm .. 1 full waves), waterDeep (0 shallow .. 1 deep), waterShore (foam band) and wv = fxWave(...)
+const WATER_COLOR = `{
+      vec3 deep = vec3(0.01, 0.07, 0.12), shallow = vec3(0.06, 0.32, 0.34);
+      diffuseColor.rgb = mix(shallow, deep, waterDeep);
+      float near = 1.0 - smoothstep(1.5, 6.0, length(fxWorld - cameraPosition)); // crest foam only where it reads as foam
+      float streak = smoothstep(0.62, 0.9, fxNoise(fxWorld.xz * vec2(900.0, 300.0) + uTime * 1.5) * fxNoise(fxWorld.xz * 140.0 - uTime * 0.4) * 1.6);
+      float crest = smoothstep(0.7, 1.0, wv.x / fxWaveAmp()) * streak * smoothstep(0.03, 0.09, uWind) * near;
+      float shore = waterShore * (0.35 + 0.65 * fxNoise(fxWorld.xz * 380.0 - uTime * 0.8));
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 0.95), clamp(shore * 0.8 + crest * 0.55, 0.0, 1.0));
+    }`;
+const WATER_NORMAL = `
+    vec3 waterN;
+    { vec2 p = fxWorld.xz * 260.0; float t = uTime, a = (0.25 + uWind * 6.0) * 0.07;
+      vec2 q = p + vec2(sin(p.y * 0.37 + t * 0.4), cos(p.x * 0.41 - t * 0.3)) * 2.2; // domain-warped ripples: no regular grid
+      vec2 rip = vec2(sin(q.x + t * 1.3) * 0.5 + sin((q.x * 0.6 + q.y) * 1.3 - t * 1.1) * 0.35, sin(q.y * 0.9 + t * 0.9) * 0.5 + sin((q.x - q.y * 0.7) * 1.1 + t * 1.6) * 0.3) * a;
+      waterN = normalize(vec3(-wv.y + rip.x, 1.0, -wv.z + rip.y));
+      normal = normalize((viewMatrix * vec4(waterN, 0.0)).xyz); }`;
+const WATER_GLITTER = `
+    { vec3 V = normalize(cameraPosition - fxWorld), Rf = reflect(-V, waterN);
+      float sd = max(dot(Rf, normalize(uSunDir)), 0.0);
+      float tw = step(0.8, fxHash(floor(fxWorld.xz * 1400.0) + floor(uTime * 7.0)));
+      totalEmissiveRadiance += vec3(1.0, 0.88, 0.7) * (pow(sd, 1200.0) * 1.6 + pow(sd, 90.0) * 0.12 + pow(sd, 400.0) * tw * 1.4) * uDay * waveEdge; }`;
+
 // ---------- effects ----------
 // U: shared uniforms owned by the page (time, wind, heat textures...), so one value drives every material using it
 export const FX = {
@@ -212,58 +254,50 @@ export const FX = {
       bakedSun *= 1.0 - uCloud * 0.6 * smoothstep(0.5 - uCloud * 0.2, 0.72 - uCloud * 0.15, n);
     }` } }),
 
-  // lakes: three directional waves displace the surface in the vertex shader; the pixel shader takes the normal from
+  // lakes (Tatra cut): circles on a unit polar grid scaled (r, 1, r), so length(position.xz) is 0 at the centre and 1 at
+  // the shore. Three directional waves displace the surface in the vertex shader; the pixel shader takes the normal from
   // the same function (exact at every pixel) plus fine wind ripples, tints deep water dark and the shallow rim
-  // turquoise, puts foam on the shore and on crests, and sparkles where the sun reflects. Mesh: unit polar grid
-  // scaled (r, 1, r), so length(position.xz) is 0 at the centre and 1 at the shore.
-  lakeWaves: (U) => ({ name: 'waves', uniforms: { uTime: U.uTime, uWind: U.uWind, uSunDir: U.uSunDir, uDay: U.uDay },
-    glsl: `
-    varying float vRim;
-    float fxWaveAmp() { return 0.0016 + uWind * 0.03; }
-    // height and its x/z slope, world units (km)
-    vec3 fxWave(vec2 p, float t, float a) {
-      vec3 r = vec3(0.0);
-      vec2 D[3]; D[0] = vec2(0.8, 0.6); D[1] = vec2(-0.42, 0.91); D[2] = vec2(0.96, -0.28);
-      float K[3]; K[0] = 48.0; K[1] = 74.0; K[2] = 118.0;
-      float W[3]; W[0] = 1.15; W[1] = 1.7; W[2] = 2.4;
-      float A[3]; A[0] = 1.0; A[1] = 0.55; A[2] = 0.3;
-      for (int i = 0; i < 3; i++) {
-        float ph = K[i] * dot(D[i], p) + W[i] * t, ai = a * A[i];
-        r.x += ai * sin(ph); r.yz += ai * K[i] * cos(ph) * D[i];
-      }
-      return r;
-    }`,
+  // turquoise, puts foam on the shore and on crests, and sparkles where the sun reflects.
+  lakeWaves: (U) => ({ name: 'waves', uniforms: { uTime: U.uTime, uWind: U.uWind, uSunDir: U.uSunDir, uDay: U.uDay, uWaveK: { value: 1 } },
+    glsl: `varying float vRim;\n${WAVE_GLSL}`,
     hooks: {
       vertex: `
     {
       vRim = length(position.xz);
       vec3 wp = (modelMatrix * vec4(transformed, 1.0)).xyz;
-      transformed.y += fxWave(wp.xz, uTime, fxWaveAmp()).x * (1.0 - smoothstep(0.8, 1.0, vRim));
+      float e = 1.0 - smoothstep(0.8, 1.0, vRim); // lifted by the trough depth so the ground under the disc never shows
+      transformed.y += (fxWave(wp.xz, uTime, fxWaveAmp()).x + fxWaveAmp() * 2.7) * e;
     }`,
       color: `
-    float waveEdge = 1.0 - smoothstep(0.8, 1.0, vRim);
+    float waveEdge = 1.0 - smoothstep(0.8, 1.0, vRim), waterDeep = 1.0 - smoothstep(0.72, 1.0, vRim), waterShore = smoothstep(0.93, 0.99, vRim);
     vec3 wv = fxWave(fxWorld.xz, uTime, fxWaveAmp()) * waveEdge;
+    ${WATER_COLOR}`,
+      normal: WATER_NORMAL,
+      emissive: WATER_GLITTER,
+    } }),
+
+  // sea and lakes outside the Tatras: the terrain mesh itself, lifted a little, with every pixel outside the water mask
+  // discarded (mask: 1 = water, blurred so its 0.5..0.9 band is the shore). Longer swell than on the small Tatra lakes,
+  // so the terrain mesh (30-60 m between vertices) can carry the waves; calm at the shore. rect = (west x, south z, w, h).
+  seaWaves: (U, mask, rect) => ({ name: 'sea', uniforms: { uTime: U.uTime, uWind: U.uWind, uSunDir: U.uSunDir, uDay: U.uDay, uWaveK: { value: 0.27 },
+    uWaterMask: { value: mask }, uWaterRect: { value: rect } },
+    glsl: `${WAVE_GLSL}
+    float fxWaterAt(vec2 xz) { return texture2D(uWaterMask, vec2((xz.x - uWaterRect.x) / uWaterRect.z, (uWaterRect.y - xz.y) / uWaterRect.w)).r; }`,
+    hooks: {
+      vertex: `
     {
-      vec3 deep = vec3(0.01, 0.07, 0.12), shallow = vec3(0.06, 0.32, 0.34);
-      diffuseColor.rgb = mix(deep, shallow, smoothstep(0.72, 1.0, vRim));
-      float near = 1.0 - smoothstep(1.5, 6.0, length(fxWorld - cameraPosition)); // foam detail only where it reads as foam
-      float streak = smoothstep(0.62, 0.9, fxNoise(fxWorld.xz * vec2(900.0, 300.0) + uTime * 1.5) * fxNoise(fxWorld.xz * 140.0 - uTime * 0.4) * 1.6);
-      float crest = smoothstep(0.7, 1.0, wv.x / fxWaveAmp()) * streak * smoothstep(0.03, 0.09, uWind) * near;
-      float shore = smoothstep(0.93, 0.99, vRim) * (0.35 + 0.65 * fxNoise(fxWorld.xz * 380.0 - uTime * 0.8));
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.94, 0.95), clamp(shore * 0.8 + crest * 0.55, 0.0, 1.0));
+      vec3 wp = (modelMatrix * vec4(transformed, 1.0)).xyz;
+      float e = smoothstep(0.5, 0.9, fxWaterAt(wp.xz)); // the ground under the sea is flat: lift by the deepest trough so it never shows
+      transformed.y += (fxWave(wp.xz, uTime, fxWaveAmp()).x + fxWaveAmp() * 2.7) * e;
     }`,
-      normal: `
-    vec3 waterN;
-    { vec2 p = fxWorld.xz * 260.0; float t = uTime, a = (0.25 + uWind * 6.0) * 0.07;
-      vec2 q = p + vec2(sin(p.y * 0.37 + t * 0.4), cos(p.x * 0.41 - t * 0.3)) * 2.2; // domain-warped ripples: no regular grid
-      vec2 rip = vec2(sin(q.x + t * 1.3) * 0.5 + sin((q.x * 0.6 + q.y) * 1.3 - t * 1.1) * 0.35, sin(q.y * 0.9 + t * 0.9) * 0.5 + sin((q.x - q.y * 0.7) * 1.1 + t * 1.6) * 0.3) * a;
-      waterN = normalize(vec3(-wv.y + rip.x, 1.0, -wv.z + rip.y));
-      normal = normalize((viewMatrix * vec4(waterN, 0.0)).xyz); }`,
-      emissive: `
-    { vec3 V = normalize(cameraPosition - fxWorld), Rf = reflect(-V, waterN);
-      float sd = max(dot(Rf, normalize(uSunDir)), 0.0);
-      float tw = step(0.8, fxHash(floor(fxWorld.xz * 1400.0) + floor(uTime * 7.0)));
-      totalEmissiveRadiance += vec3(1.0, 0.88, 0.7) * (pow(sd, 1200.0) * 1.6 + pow(sd, 90.0) * 0.12 + pow(sd, 400.0) * tw * 1.4) * uDay * waveEdge; }`,
+      color: `
+    float waterM = fxWaterAt(fxWorld.xz);
+    if (waterM < 0.5) discard;
+    float waveEdge = smoothstep(0.5, 0.9, waterM), waterDeep = smoothstep(0.6, 1.0, waterM), waterShore = 1.0 - smoothstep(0.5, 0.68, waterM);
+    vec3 wv = fxWave(fxWorld.xz, uTime, fxWaveAmp()) * waveEdge;
+    ${WATER_COLOR}`,
+      normal: WATER_NORMAL,
+      emissive: WATER_GLITTER,
     } }),
 
   // rain / snow: GPU particles in a box around the orbit target (uCenter, size uBox), falling and drifting with the

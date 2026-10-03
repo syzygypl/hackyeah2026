@@ -433,6 +433,24 @@ applyFx(terrainMat, [FX.terrainDetail(), FX.poaHeat(heatU), FX.bakedSun(heatU), 
 const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
+// sea and lakes outside the Tatras as a real water surface (fx3d.seaWaves): the terrain mesh itself, lifted 3 m, shows
+// only where isWater says water, so the coast and lake shapes match the 2D map; the mask is blurred so its edge is a
+// smooth shore line (the scenario waterMask is a coarse grid) and the 0.5..0.9 band carries the surf
+let seaMesh = null;
+if (WM || LOW) {
+  const C = 512, Rw = Math.max(2, Math.round((C * HKM) / WKM)), m = new Float32Array(C * Rw); let n = 0;
+  for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { if (isWater(latN - ((r + 0.5) / Rw) * (latN - latS), lonW + ((c + 0.5) / C) * (lonE - lonW))) { m[r * C + c] = 1; n++; } }
+  if (n > 20) {
+    const cellPx = WM ? Math.max((C / WM.cols) * ((WM.b.east - WM.b.west) / (lonE - lonW)), 1) : 2, rad = Math.max(2, Math.round(cellPx * 0.6));
+    const blur = (src, dx, dy) => { const out = new Float32Array(src.length); for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { let a = 0, k = 0; for (let t = -rad; t <= rad; t++) { const rr = r + t * dy, cc = c + t * dx; if (rr >= 0 && rr < Rw && cc >= 0 && cc < C) { a += src[rr * C + cc]; k++; } } out[r * C + c] = a / k; } return out; };
+    const mb = blur(blur(m, 1, 0), 0, 1), data = new Uint8Array(C * Rw * 4);
+    for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { const o = ((Rw - 1 - r) * C + c) * 4; data[o] = data[o + 1] = data[o + 2] = mb[r * C + c] * 255; data[o + 3] = 255; } // row 0 = south
+    const tex = new THREE.DataTexture(data, C, Rw, THREE.RGBAFormat); tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+    const seaMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
+    applyFx(seaMat, [FX.seaWaves(heatU, tex, new THREE.Vector4(-WKM / 2, HKM / 2, WKM, HKM))]);
+    seaMesh = new THREE.Mesh(terrainGeo, seaMat); seaMesh.position.y = 0.003; seaMesh.receiveShadow = true; seaMesh.renderOrder = 1; scene.add(seaMesh);
+  }
+}
 {
   const S = Math.max(WKM, HKM) * 0.75, cam = sun.shadow.camera;
   cam.left = -S; cam.right = S; cam.top = S; cam.bottom = -S; cam.near = 0.1; cam.far = 80; cam.updateProjectionMatrix();
@@ -632,7 +650,7 @@ for (const s of TER?.streams || []) {
 const waterMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
 applyFx(waterMat, [FX.lakeWaves(heatU)]); // fx3d: waves, foam, depth tint, sun glitter
 const lakeGeo = new THREE.RingGeometry(0.0001, 1, 96, 24).rotateX(-Math.PI / 2);
-for (const l of TER?.lakes || []) {
+for (const l of seaMesh ? [] : TER?.lakes || []) { // regions: lakes come with the sea surface above
   const m = new THREE.Mesh(lakeGeo, waterMat), r = l.radiusM / 1000;
   m.scale.set(r, 1, r); m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
 }
