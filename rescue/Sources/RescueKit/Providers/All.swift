@@ -15,5 +15,6 @@ public func allProviders(_ s: Scenario) -> [any HintProvider] {
         ClueProvider(s),
         RatunekPingProvider(s),
         FoundProvider(s),
+        WaterDriftProvider(s),
     ]
 }

@@ -21,6 +21,13 @@ public enum SearchPlanner {
                          speedMult: [1, 1, 1, 1, 1, 1, 1], pod: [0.75, 0.75, 0.35, 0.45, 0.6, 0.55, 0.3]),
         "heli": Profile(travelKmh: 180, sweepKmh: 60, widthM: 250, setupMin: 12, air: true,
                         speedMult: [1, 1, 1, 1, 1, 1, 1], pod: [0.6, 0.6, 0.25, 0.35, 0.45, 0.4, 0.2]),
+        // Water (illustrative): WOPR/MOPR/PSP rescue boat ~25 km/h transit, ~8 km/h search pattern, ~100 m track
+        // spacing for a head in the water; straight-line travel (air: true = no trails). On land it can only scan the
+        // shoreline from the water (low speed/POD). Diver: brought by boat, slow underwater sweep of a small area.
+        "boat": Profile(travelKmh: 25, sweepKmh: 8, widthM: 100, setupMin: 5, air: true,
+                        speedMult: [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 1], pod: [0.15, 0.15, 0.05, 0.1, 0.1, 0.1, 0.7]),
+        "diver": Profile(travelKmh: 15, sweepKmh: 0.6, widthM: 15, setupMin: 15, air: true,
+                         speedMult: [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 1], pod: [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.6]),
     ]
 
     public struct ResourceStatus: Sendable {
@@ -62,6 +69,8 @@ public enum SearchPlanner {
         case "dog": if c.dark { m *= 0.95 }; if wet { m *= 0.75 }; if windy { m *= 0.8 }
         case "drone": if fog { m *= 0.6 }; if c.dark { m *= 1.1 }; if wet { m *= 0.6 }
         case "heli": if c.dark { m *= 0.7 }; if c.visibilityM < 1000 { m *= 0.7 }
+        case "boat": if c.dark { m *= 0.6 }; if fog { m *= 0.6 }; if wet { m *= 0.85 }; if c.windMs > 10 { m *= 0.7 }  // waves hide a head
+        case "diver": if c.dark { m *= 0.8 }
         default: break
         }
         return m
@@ -78,6 +87,11 @@ public enum SearchPlanner {
             if c.visibilityM < 500 { return (false, "nie leci: mgła, widzialność \(Int(c.visibilityM)) m < 500 m") }
             if c.dark && c.visibilityM < 1000 { return (false, "nie leci: noc i widzialność < 1000 m (lot z NVG wymaga lepszej)") }
             if c.windMs > 18 { return (false, "nie leci: wiatr \(Int(c.windMs)) m/s > 18 m/s") }
+        case "boat":
+            if c.windMs > 20 { return (false, "nie wypływa: wiatr \(Int(c.windMs)) m/s > 20 m/s") }
+        case "diver":
+            if c.windMs > 12 { return (false, "nurkowie czekają: wiatr \(Int(c.windMs)) m/s, fala") }
+            if c.dark { return (false, "nurkowie: nie schodzą w nocy (próg ilustracyjny)") }
         default: break
         }
         return (true, r.type == "heli" && c.dark ? "dostępny (lot nocny z NVG)" : "dostępny")

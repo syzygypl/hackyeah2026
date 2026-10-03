@@ -38,6 +38,8 @@ public struct LocationHint: Sendable {
         case difficulty
         /// Weather conditions for the SEARCH (POD, resource gates, survival clock). No spatial effect on POA.
         case conditions(Conditions)
+        /// A layer the provider computed itself (rows*cols, row 0 = north), e.g. a water drift plume.
+        case layer(kind: String, factor: [Double])
     }
 
     public struct Conditions: Sendable, Codable {
@@ -83,6 +85,7 @@ public struct LocationHint: Sendable {
         case .weather: "weather"
         case .difficulty: "difficulty"
         case .conditions: "conditions"
+        case let .layer(k, _): k
         }
     }
 }

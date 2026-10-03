@@ -49,7 +49,7 @@ public final class ProbabilityGrid {
         dStream = c.map { p in streams.map { Geo.toLine(p, $0) }.min() ?? .infinity }
         dRidge = c.map { p in ridges.map { Geo.toLine(p, $0) }.min() ?? .infinity }
         dHut = c.map { p in huts.map { Geo.meters(p, $0) }.min() ?? .infinity }
-        inLake = c.map { p in t.lakes.contains { Geo.meters(p, Coord($0.center)) < $0.radiusM } }
+        inLake = WaterMask.water(t, c) ?? c.map { p in t.lakes.contains { Geo.meters(p, Coord($0.center)) < $0.radiusM } }
         // Difficulty: slope from terrain file if present, else proxy from distance to ridge (hardcoded terrain).
         // Priority: OSM feature types (cliff/arete, scree, scrub) > optional DEM slope > ridge-distance proxy.
         func near(_ lines: [Scenario.Named]?, _ m: Double) -> [Bool] {
@@ -186,6 +186,8 @@ public final class ProbabilityGrid {
             }
         case .conditions:
             return [Double](repeating: 1, count: n)
+        case let .layer(_, f):
+            return f.count == n ? f : [Double](repeating: 1, count: n)
         }
     }
 

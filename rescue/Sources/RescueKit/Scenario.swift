@@ -46,6 +46,9 @@ public struct Scenario: Codable, Sendable {
         public var scree: [Named]? = nil
         /// Optional OSM natural=scrub (kosodrzewina) areas (ring points).
         public var dwarfPine: [Named]? = nil
+        /// Optional water per cell (rows*cols 0/1, row 0 = north), from tools/terrain/osm_terrain.py: lakes/rivers
+        /// polygons minus islands, plus sea (coastline side / missing DEM sea tiles). Replaces the lake circles.
+        public var waterMask: [Int]? = nil
     }
     public struct Resource: Codable, Sendable {
         public let id: String
@@ -88,6 +91,13 @@ public struct Scenario: Codable, Sendable {
         public var found: Bool?
         /// Optional epilogue event (e.g. a late Ratunek ping): skipped unless --epilogue / showEpilogue.
         public var epilogue: Bool?
+        // WaterDrift fields (see Providers/WaterDriftProvider.swift)
+        public var windFromDeg: Double?   // direction the wind blows FROM, degrees (meteorological)
+        public var currentMs: Double?     // surface current speed, m/s
+        public var currentToDeg: Double?  // direction the current flows TO, degrees
+        public var object: String?        // person | kayak | dinghy | boat (leeway class)
+        public var leewayPct: Double?     // override: downwind leeway as % of wind speed
+        public var driftHours: Double?    // drift time; default = event time - subject.lastContact
     }
 
     public let incident: String
