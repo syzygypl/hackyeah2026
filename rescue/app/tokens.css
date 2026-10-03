@@ -18,7 +18,7 @@
   --rl-line:rgba(35,39,42,.12);
   --rl-line-strong:rgba(35,39,42,.22);
   /* text */
-  --rl-ink:#23272a;--rl-ink-2:#4a5054;--rl-mute:#6b6f72;
+  --rl-ink:#23272a;--rl-ink-2:#4a5054;--rl-mute:#5d6165;   /* mute: 5.1:1 on --rl-bg, 4.8:1 on #e6e2d8 (AA); was #6b6f72 = 4.15:1 */
   /* roles */
   --rl-danger:#b8322a;--rl-on-danger:#ffffff;   /* TOPR red: rank 1, primary action, alarm, ZNALEZIONO */
   --rl-accent:#1f4e79;--rl-on-accent:#ffffff;   /* navy: selection, links, pressed toggles */
