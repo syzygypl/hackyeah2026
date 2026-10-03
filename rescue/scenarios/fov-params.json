@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "doc": "docs/rescue-locator/pole-widzenia.md",
+  "about": "Field of view / detection parameters per unit type for timeline mode. sweepWidthM = effective sweep width W (Koopman): per searcher / per sensor, daytime, unresponsive subject, rested crew. Coverage of a 100 m cell: C = W * trackLengthInCell / cellArea; POD = 1 - exp(-C). Values are conservative; every value marked est is an estimate (no direct published number). Not TOPR/GOPR/WOPR operating rules.",
+  "terrainClassMap": {
+    "trail": "open",
+    "meadow": "meadow",
+    "dwarfPine": "dwarfPine",
+    "scree": "scree",
+    "slab": "slab",
+    "cliff": "cliff",
+    "water": "water",
+    "forestOverlay": "forest (ProbabilityGrid.forest[cell] == true replaces the class value for land classes, except water)"
+  },
+  "pod": {
+    "formula": "POD = 1 - exp(-C), C = sum over minutes of W_eff * trackM / cellAreaM2",
+    "combine": "cumulative POD over units and minutes: 1 - exp(-sum C) (equivalent to 1 - prod(1 - POD_i))",
+    "cap": 0.95
+  },
+  "units": {
+    "ground": {
+      "detectionRangeM": 50,
+      "sweepWidthM": { "open": 80, "meadow": 60, "forest": 35, "dwarfPine": 15, "scree": 40, "slab": 50, "cliff": 25, "water": 30 },
+      "nightFactor": 0.34,
+      "nightFactorWeakLight": 0.17,
+      "responsiveAuditorySweepWidthM": 300,
+      "unresponsiveFactor": 1.0,
+      "needsLineOfSight": true,
+      "observerHeightM": 1.7,
+      "maxRangeM": 200,
+      "forestLosAttenuationPer100m": 0.1,
+      "notes": "Per searcher. A line of n searchers = n tracks. Day ESW for a medium-visibility adult in temperate forest 64 m, night 22 m (Cf 0.34), weak lights <200 lux another x0.5. Published range 17 m (dense forest, low-vis adult) to 142 m (open winter hardwood, high-vis adult). Forest chosen below 64 m because Polish mountain forest is leaf-on spruce with understorey. dwarfPine, scree, slab, cliff, water are est. A responsive subject (answers calls / whistle) adds an auditory W of about 300 m (NZ mountain experiment 306-460 m); the visual table assumes unresponsive.",
+      "sources": ["koester-night", "koester-amdr", "koester-2004", "nz-auditory"]
+    },
+    "dog": {
+      "detectionRangeM": 100,
+      "sweepWidthM": { "open": 95, "meadow": 95, "forest": 80, "dwarfPine": 70, "scree": 70, "slab": 60, "cliff": 40, "water": 20 },
+      "nightFactor": 1.0,
+      "middayCalmFactor": 0.5,
+      "needsLineOfSight": false,
+      "observerHeightM": 0.5,
+      "maxRangeM": 250,
+      "windCone": {
+        "direction": "cone opens UPWIND from the dog (the dog smells sources upwind of it; the scent plume itself drifts downwind from the subject)",
+        "halfAngleDeg": 25,
+        "rangeM": [
+          { "windMsMin": 0, "windMsMax": 1, "rangeM": 40, "halfAngleDeg": 180, "note": "calm: no direction, small circle; convection lifts scent at midday" },
+          { "windMsMin": 1, "windMsMax": 2, "rangeM": 80, "halfAngleDeg": 35 },
+          { "windMsMin": 2, "windMsMax": 5, "rangeM": 150, "halfAngleDeg": 25, "note": "best band, 2.2-4.5 m/s in literature" },
+          { "windMsMin": 5, "windMsMax": 9, "rangeM": 120, "halfAngleDeg": 20 },
+          { "windMsMin": 9, "windMsMax": 99, "rangeM": 70, "halfAngleDeg": 15, "note": "strong wind dilutes and shears the plume" }
+        ],
+        "mountainThermals": "day (sun on slope): air flows upslope, cone points downslope/below the dog is less useful, search along ridges and downhill; evening/night: katabatic downslope flow, work up gullies from below"
+      },
+      "notes": "Air-scent dog team, area search. Mean ESW of 4 teams 95 m (95% CI 44-145 m). Handbook: dog POD 5-95% at 100 m spacing depending on weather; night and morning/evening better than calm sunny midday (convection). Greatbatch 2015 found no correlation of wind/temperature with effectiveness, so wind cone values are est. Trailing dogs follow a track (width ~10-30 m around the track) and are not modeled as area cover. Water: dog only on shore / from boat, est. Terrain values below 95 m are est.",
+      "sources": ["chiacchia-dogs", "sarbc-dog-handbook", "greatbatch-dogs"]
+    },
+    "drone": {
+      "detectionRangeM": 120,
+      "altitudeAglM": 80,
+      "sensor": { "name": "thermal 640x512, 12 um, 9.1 mm (DJI M30T class)", "hfovDeg": 49, "vfovDeg": 40, "ifovMrad": 1.35, "gsdCmAt80m": 11, "footprintAt80m": { "widthM": 74, "heightM": 59 }, "minPixelsOnTarget": 4 },
+      "sweepWidthM": { "open": 60, "meadow": 55, "forest": 12, "dwarfPine": 25, "scree": 35, "slab": 40, "cliff": 30, "water": 45 },
+      "nightFactor": 1.1,
+      "dayRockFactor": 0.8,
+      "windLimitMs": 12,
+      "needsLineOfSight": true,
+      "observerHeightM": 80,
+      "maxRangeM": 250,
+      "forestThermalPassThrough": 0.2,
+      "notes": "Nadir thermal camera at 80 m AGL. Footprint = 2 * AGL * tan(HFOV/2). W chosen at about 0.8 of footprint width in the open (operator watches live video; misses are common), lower in clutter. Max AGL where a 0.5 m body is 1.5 px (Johnson detection) is about 250 m, but a human watching video needs 4+ px, so 80-100 m AGL. Single thermal frames under dense canopy rarely show a person (Bimber AOS: practical only with multi-view integration), so forest W is est at 0.2 of open. Sun-warmed scree/slab in daytime x0.8 (already in the engine). Night better thermal contrast x1.1. Engine currently uses widthM 120: about 2x this value.",
+      "sources": ["dji-m30t", "johnson-dri", "bimber-aos", "uscg-addendum"]
+    },
+    "heli": {
+      "detectionRangeM": 300,
+      "altitudeAglM": 150,
+      "sweepWidthM": { "open": 300, "meadow": 250, "forest": 30, "dwarfPine": 75, "scree": 150, "slab": 150, "cliff": 100, "water": 185 },
+      "nightFactor": 0.5,
+      "nightFactorNvgOnly": 0.1,
+      "pfdFactorWater": 4,
+      "needsLineOfSight": true,
+      "observerHeightM": 150,
+      "maxRangeM": 1000,
+      "forestThermalPassThrough": 0.15,
+      "notes": "Visual search from helicopter at 300-500 ft. Water: USCG/IAMSAR person in water 0.1 NM (185 m) for 300-500 ft, all visibilities; x4 with lifejacket (PFD) up to 500 ft. Land: no open-access table found; open 300 m is est, scaled by IAMSAR terrain/vegetation factors (0.5 for 15-60% vegetation or hilly, 0.3 for 60-85% or mountainous, 0.1 above 85%). Night: NVG unilluminated PIW without PFD 0.01 NM vs 0.1 NM by day (x0.1); with FLIR turret est x0.5. Engine gates: no flight under 500 m visibility, wind > 18 m/s.",
+      "sources": ["uscg-addendum", "sulaiman-heli", "iamsar-ch5"]
+    },
+    "boat": {
+      "detectionRangeM": 200,
+      "sweepWidthM": { "open": 20, "meadow": 20, "forest": 10, "dwarfPine": 10, "scree": 20, "slab": 20, "cliff": 20, "water": 300 },
+      "nightFactor": 0.3,
+      "nightFactorNoSearchlight": 0.1,
+      "pfdFactorWater": 2,
+      "waveFactor": [
+        { "windMsMax": 7.7, "factor": 1.0, "note": "wind 0-15 kt or seas 0-3 ft" },
+        { "windMsMax": 12.9, "factor": 0.5, "note": "wind 15-25 kt or seas 3-5 ft" },
+        { "windMsMax": 99, "factor": 0.25, "note": "wind > 25 kt or seas > 5 ft" }
+      ],
+      "needsLineOfSight": true,
+      "observerHeightM": 2.0,
+      "maxRangeM": 600,
+      "notes": "Small boat SRU, person in water: USCG table 0.2 NM (370 m) at 1-3 NM visibility, 0.3 NM (555 m) at 5+ NM. Chosen 300 m: lake chop, untrained crew, head-only target. Land classes: shoreline scan from the water only, est. Night: unlit PIW nearly impossible to see without light; searchlight est 0.3. PFD factor 2 is est (USCG x4 is for aircraft).",
+      "sources": ["uscg-addendum"]
+    },
+    "diver": {
+      "detectionRangeM": 2,
+      "sweepWidthM": { "open": 0, "meadow": 0, "forest": 0, "dwarfPine": 0, "scree": 0, "slab": 0, "cliff": 0, "water": 3 },
+      "underwaterVisibilityM": { "turbid": 0.5, "typicalLowlandLake": 2, "clearLake": 5, "veryClear": 10 },
+      "sweepWidthFromVisibility": "W = min(2 * visibilityM, 6); zero visibility: tactile search W 1.5 m (arm reach on a jackstay line)",
+      "nightFactor": 1.0,
+      "needsLineOfSight": true,
+      "observerHeightM": 0,
+      "maxRangeM": 10,
+      "notes": "Underwater visibility in Polish lakes: Secchi depth below 1 m turbid, 2-4 m good, record 10-12 m (Powidzkie, Hancza). Horizontal visibility taken ~ Secchi depth (est). Underwater light is artificial anyway, so nightFactor 1 for detection; the engine gates divers at night for safety. Engine widthM 15 is about 5x too wide.",
+      "sources": ["secchi-pl"]
+    }
+  },
+  "lineOfSight": {
+    "dem": "Ray from observer (ground elevation + observerHeightM) to target cell centre + 0.3 m (lying person); blocked if any DEM sample in between is above the ray. Sample every 25 m. Cells beyond maxRangeM are not covered.",
+    "forest": "Visual: each 100 m of forest along the ray multiplies visibility by forestLosAttenuationPer100m (ground 0.1). Aerial thermal: target cell in forest multiplies W by forestThermalPassThrough (no attenuation along the ray, looking down).",
+    "dog": "No LOS. Ridges still block scent: if the DEM ray from the dog to the cell crosses a ridge more than 20 m above both ends, set coverage to 0 (est)."
+  },
+  "sources": {
+    "koester-night": { "title": "Koester et al., Land SAR POD: new sweep width values, correction factors (day 64 m / night 22 m, Cf 0.34)", "url": "https://journalofsar.com/wp-content/uploads/2020/04/v4-7-Koester-POD-Syrotuck.pdf.pdf" },
+    "koester-amdr": { "title": "Koester et al. 2014, Use of visual range of detection to estimate ESW (W ~ 1.645 x AMDR)", "url": "https://doi.org/10.1016/j.wem.2013.09.016" },
+    "koester-2004": { "title": "Koester et al. 2004, Sweep Width Estimation for Ground SAR (USCG report)", "url": "https://www.dco.uscg.mil/Portals/9/CG-5R/nsarc/DetExpReport_2004_final_s.pdf" },
+    "nz-auditory": { "title": "Auditory and light based two-way ESW, NZ mountainous terrain (306-460 m)", "url": "https://journalofsar.com/auditory-and-light-based-two-way-effective-sweep-width-for-responsive-search-subjects-in-new-zealand-mountainous-terrain/" },
+    "chiacchia-dogs": { "title": "Chiacchia, Houlahan, Hostetter 2015, Deriving ESW for air-scent dog teams (95 m, CI 44-145)", "url": "https://doi.org/10.1016/j.wem.2014.10.004" },
+    "sarbc-dog-handbook": { "title": "Search Dog Handbook, Facts and Figures for the Search Manager (SARBC)", "url": "https://www.sarbc.org/sarbc/pdfs/sardog.pdf" },
+    "greatbatch-dogs": { "title": "Greatbatch et al. 2015, Quantifying search dog effectiveness", "url": "https://pubmed.ncbi.nlm.nih.gov/25998861/" },
+    "uscg-addendum": { "title": "USCG Addendum to the National SAR Supplement (COMDTINST M16130.2F), Appendix H tables H-10, H-15, H-19, H-32", "url": "https://rdept.cgaux.org/documents/ManualsTemp/USCG_SAR_Addendum.pdf" },
+    "iamsar-ch5": { "title": "IAMSAR Manual Vol. II ch. 5 (2019) extract; terrain/vegetation correction table N-10", "url": "https://cranston.independent-inquiry.uk/wp-content/uploads/cranston-evidence/INQ010511_Extract_from_IAMSAR__International_Aeronautical_and_Maritime_Search_and_Rescue__Manual__Chapter_5_of_Volume_II__2019_Edition.pdf" },
+    "sulaiman-heli": { "title": "Sulaiman & Pierce 2023, Modelling maritime SAR ESW for helicopters (IAMSAR N-5 comparison)", "url": "https://arxiv.org/abs/2304.00983" },
+    "dji-m30t": { "title": "DJI Matrice 30T thermal camera: 640x512, 12 um, 9.1 mm, DFOV 61 deg", "url": "https://enterprise-insights.dji.com/matrice-30-series-us-mobile" },
+    "johnson-dri": { "title": "Thermal camera person detection range (Johnson criteria, DRI)", "url": "https://uavthermal.com/blog/thermal-camera-person-detection-range/" },
+    "bimber-aos": { "title": "Schedl, Kurmi, Bimber 2020, Search and rescue with airborne optical sectioning", "url": "https://www.nature.com/articles/s42256-020-00261-3" },
+    "secchi-pl": { "title": "Secchi depth in Polish lakes (Hancza up to 12 m; classes <1 / 1-2 / 2-4 / >4 m)", "url": "https://pl.wikipedia.org/wiki/Ha%C5%84cza_(jezioro)" }
+  }
+}
