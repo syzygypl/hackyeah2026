@@ -107,7 +107,7 @@
   </section>
   <textarea id="free" rows="2" placeholder="własnymi słowami, np. przeszukaliśmy żleb do progu, nic, widoczność 20 m" style="margin-top:10px"></textarea>
   <div class="row"><button type="button" class="b-send" id="sendFree">Wyślij meldunek</button></div>
-  <p class="muted" style="margin:8px 0 12px">Meldunek czyta lokalny model na laptopie kierownika akcji (bez internetu). Bez zasięgu czeka w kolejce na telefonie.</p>
+  <p class="muted" style="margin:8px 0 12px">Meldunek czyta model AI na serwerze akcji (bez modelu: reguły). Bez zasięgu czeka w kolejce na telefonie.</p>
   <h2>Wysłane</h2><div class="log" id="log"></div>
   <div class="row"><button value="close" class="b-ghost">Zamknij</button></div>
 </form></dialog>
@@ -121,7 +121,7 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const qs = new URLSearchParams(location.search);
-  const API = qs.get("api") || "http://127.0.0.1:8770";       // rescue-field serve (laptop kierownika akcji)
+  const API = qs.get("api") || (location.protocol.startsWith("http") ? location.origin : "http://127.0.0.1:8780");   // the rescue-server that serves this page
   const RUN = qs.get("run") || "../../out/run.json";
   const EMBED = qs.get("embed") === "1";
   if (EMBED) document.body.classList.add("embed");
@@ -145,8 +145,8 @@
   const pinRaw = () => { try { return String(localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch { return ""; } };
   const pinH = () => pinRaw() ? { "X-Rescue-Pin": pinRaw() } : {};
   let rr = await fetch(RUN, { headers: pinH() }).catch(() => null);
-  if (rr && (rr.status === 401 || rr.status === 403) && !EMBED) { const p = prompt("Podaj PIN akcji:"); if (p) { store.set("rescue-pin", p.trim()); rr = await fetch(RUN, { headers: pinH() }).catch(() => null); } }
-  if (!rr || !rr.ok) { document.body.innerHTML = `<p>${rr && (rr.status === 401 || rr.status === 403) ? "Podaj PIN akcji (zapytaj kierownika akcji) i odśwież stronę." : "Brak danych akcji - sprawdź połączenie i odśwież."}</p>`; await new Promise(() => {}); }
+  if (rr && (rr.status === 401 || rr.status === 403) && !EMBED) { const p = prompt("Podaj klucz akcji:"); if (p) { store.set("rescue-pin", p.trim()); rr = await fetch(RUN, { headers: pinH() }).catch(() => null); } }
+  if (!rr || !rr.ok) { document.body.innerHTML = `<p>${rr && (rr.status === 401 || rr.status === 403) ? "Podaj klucz akcji (zapytaj kierownika akcji) i odśwież stronę." : "Brak danych akcji - sprawdź połączenie i odśwież."}</p>`; await new Promise(() => {}); }
   run = await rr.json();
   step = [...run.steps].reverse().find(s => (s.assignments || []).length) || run.steps[run.steps.length - 1];   // last step that still has a plan (the final one may be "akcja zamknięta")
   const teams = (step.resources || []).filter(r => r.type !== "drone");
@@ -270,7 +270,7 @@
   function toast(msg) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = "none", 3500); }
 
   // Monitoring contract (rescue/README.md "X-Rescue-Client"): random client id kept on the phone, team, source.
-  // On the team hotspot (LAN) rescue-field also needs the PIN; asked once, kept on this phone.
+  // Writes need the action key (from the join link / QR, or asked once); kept on this phone.
   let clientId = store.get("rescue-client-id", null);
   if (!clientId) { clientId = "patrol-" + Math.random().toString(36).slice(2, 10); store.set("rescue-client-id", clientId); }
   const headers = () => {
@@ -282,7 +282,7 @@
   async function post(text, at, retried, id) {
     const r = await fetch(API + "/report", { method: "POST", headers: headers(), body: JSON.stringify({ text, at, id: id && clientId + "-" + id }), signal: AbortSignal.timeout(20000) });   // id: server drops a resend of a report that timed out but arrived
     if ((r.status === 401 || r.status === 403) && !retried) {
-      const pin = prompt("PIN akcji (od kierownika akcji):");
+      const pin = prompt("Klucz akcji (od kierownika akcji):");
       if (pin) { store.set("rescue-pin", pin.trim()); return post(text, at, true, id); }
     }
     if (!r.ok) throw new Error("HTTP " + r.status);

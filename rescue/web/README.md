@@ -42,7 +42,7 @@ When `rescue-field` runs on the LAN (`serve --host 0.0.0.0 --pin NNNN`), its end
 | `terrain` | `<scenario>-terrain.json` | trails, streams, lakes, huts, steep ground, `slopeDeg` |
 | `dem` | `../tools/terrain/data/zawrat-dem.json` | Copernicus DEM crop for the offline relief (hillshade + elevation tint) |
 | `live` | `../out/live-events.json` | field reports, polled every 4 s (`livePollMs`) |
-| `field` | `http://127.0.0.1:8770` | local `rescue-field serve` for the "Wyślij meldunek" box |
+| `field` | this page's origin (`http://127.0.0.1:8780` from a file) | rescue-server for the "Wyślij meldunek" box |
 | `basemap` | `basemap/` | offline basemap folder; `none` = skip |
 | `flavor` | `light` | basemap flavour passed to `offlineStyle()` (`light`, `white`, `grayscale`) |
 | `base` | first available | start background: `map`, `relief`, `topo`, `osm`, `none` |

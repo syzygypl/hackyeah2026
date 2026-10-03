@@ -9,13 +9,13 @@
   const Q = new URLSearchParams(location.search);
   // ?pin= is NOT supported (it would land in browser history): PIN is typed into the page, kept in localStorage.
   if (Q.has('pin')) { Q.delete('pin'); try { history.replaceState(null, '', location.pathname + (Q.toString() ? '?' + Q : '') + location.hash); } catch (e) { /* ignore */ } }
-  // Scenarios the screen can switch between (header). run.json files are produced by
-  // `cd rescue && swift run rescue-demo --fast scenarios/<name>.json`; missing ones are greyed out.
+  // Scenarios the screen can switch between (header). Runs come live from rescue-server (/api/run/<id>); the blind-test
+  // replays are the committed out/*.run.json files.
   // The offline basemap (basemap/) only covers the Zawrat bbox; other scenarios use the DEM relief.
   const SCENARIOS = [
-    { id: 'zawrat', label: 'Zawrat', run: '../out/run.json', scenario: '../scenarios/zawrat.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
-    { id: 'morskie-oko', label: 'Morskie Oko', run: '../out/morskie-oko.run.json', scenario: '../scenarios/morskie-oko.json', dem: '../tools/terrain/data/morskie-oko-dem.json', basemap: false },
-    { id: 'kasprowy', label: 'Kasprowy', run: '../out/kasprowy.run.json', scenario: '../scenarios/kasprowy.json', dem: '../tools/terrain/data/kasprowy-dem.json', basemap: false },
+    { id: 'zawrat', label: 'Zawrat', run: '/api/run/zawrat', scenario: '../scenarios/zawrat.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
+    { id: 'morskie-oko', label: 'Morskie Oko', run: '/api/run/morskie-oko', scenario: '../scenarios/morskie-oko.json', dem: '../tools/terrain/data/morskie-oko-dem.json', basemap: false },
+    { id: 'kasprowy', label: 'Kasprowy', run: '/api/run/kasprowy', scenario: '../scenarios/kasprowy.json', dem: '../tools/terrain/data/kasprowy-dem.json', basemap: false },
     // blind tests replayed with the hidden answer revealed (same bbox as Zawrat for blind-01; blind-02 is Zakopane)
     { id: 'blind-01-replay', label: 'Test na ślepo 1 (powtórka)', run: '../out/blind-01-replay.run.json', scenario: '../scenarios/blind-01-replay.json', dem: '../tools/terrain/data/zawrat-dem.json', basemap: true },
     { id: 'blind-02-replay', label: 'Test na ślepo 2 (powtórka)', run: '../out/blind-02-replay.run.json', scenario: '../scenarios/blind-02-replay.json', dem: '../tools/terrain/data/blind-02-dem.json', basemap: false },
@@ -23,7 +23,7 @@
     ...[['bieszczady-wetlinska', 'Bieszczady - Połonina Wetlińska', 'bieszczady.pmtiles'], ['karkonosze-sniezka', 'Karkonosze - Śnieżka', 'karkonosze.pmtiles'],
       ['sniardwy', 'Śniardwy (woda)', 'sniardwy.pmtiles'], ['morzycko', 'Morzycko (woda)', 'moryn.pmtiles'], ['miedzyzdroje', 'Międzyzdroje (Bałtyk)', 'miedzyzdroje.pmtiles'],
       ['krakow-nowa-huta', 'Kraków - Nowa Huta (miasto)', 'krakow.pmtiles']]
-      .map(([id, label, f]) => ({ id, label, run: `../out/${id}.run.json`, scenario: `../scenarios/${id}.json`, dem: `../tools/terrain/data/${id}-dem.json`, basemap: true, basemapFile: f })),
+      .map(([id, label, f]) => ({ id, label, run: `/api/run/${id}`, scenario: `../scenarios/${id}.json`, dem: `../tools/terrain/data/${id}-dem.json`, basemap: true, basemapFile: f })),
   ];
   const SC = SCENARIOS.find((x) => x.id === Q.get('sc')) || SCENARIOS[0];
   const CUSTOM_RUN = Q.has('run') || Q.has('runInline'); // ?run= (or a parent-supplied run) wins over the switcher
@@ -38,8 +38,8 @@
     scenario: Q.get('scenario') || SC.scenario,
     terrain: Q.get('terrain') || '',
     dem: Q.get('dem') || SC.dem,
-    live: Q.get('live') || '../out/live-events.json',
-    field: Q.get('field') || 'http://127.0.0.1:8770',
+    live: Q.get('live') || '/live-events',   // rescue-server field reports
+    field: Q.get('field') || (location.protocol.startsWith('http') ? location.origin : 'http://127.0.0.1:8780'),   // rescue-server that serves this page
     basemap: Q.get('basemap') || (SC.basemap || CUSTOM_RUN ? 'basemap/' : 'none'), // folder with basemap.js or style.json; "none" = skip
     flavor: Q.get('flavor') || 'paper',
     tiles: Q.get('tiles') === 'online',
@@ -51,7 +51,7 @@
   };
 
   /* ---------- field server PIN (same behaviour as rescue/out/field.html) ---------- */
-  // Needed only when rescue-field listens on the LAN (serve --host 0.0.0.0 --pin NNNN); loopback needs none.
+  // Action key for writes (rescue-server on Vercel or --host on a LAN); loopback needs none. Set by the app's join link (?key=).
   const FIELD = (() => { try { return new URL(CFG.field, location.href); } catch (e) { return null; } })();
   const FIELD_LOOPBACK = !FIELD || ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(FIELD.hostname);
   let PIN = '';
@@ -761,9 +761,9 @@
       <details class="ff"><summary>Nowy meldunek z terenu</summary><form id="fieldform" class="fieldform" autocomplete="off">
         <textarea id="fieldtext" rows="2" placeholder="Meldunek, np. Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"></textarea>
         <div class="ff-row"><input id="fieldat" placeholder="hh:mm" size="5" maxlength="5" title="Opcjonalnie: czas scenariusza"><button class="primary sm" type="submit">Wyślij meldunek</button></div>
-        <label class="ff-pin" id="pinbox" hidden>PIN serwera <input id="pin" inputmode="numeric" autocomplete="off" size="8" title="PIN z terminala rescue-field (tryb LAN). Zapamiętany w tej przeglądarce, nie trafia do adresu."></label>
+        <label class="ff-pin" id="pinbox" hidden>Klucz akcji <input id="pin" inputmode="numeric" autocomplete="off" size="8" title="Klucz akcji (z linku Udostępnij). Zapamiętany w tej przeglądarce, nie trafia do adresu."></label>
         <div class="ff-msg" id="fieldmsg"></div>
-        <div class="live-note">Idzie do lokalnego <code>rescue-field</code> (${esc(CFG.field.replace(/^https?:\/\//, ''))}, offline). Na mapie jako znaczniki; do POA wlicza je silnik przy kolejnym przebiegu.</div>
+        <div class="live-note">Idzie do serwera akcji (${esc(CFG.field.replace(/^https?:\/\//, ''))}). Na mapie jako znaczniki; do POA wlicza je silnik przy kolejnym przebiegu.</div>
       </form></details></section>`;
     if (!FIELD_LOOPBACK) {
       $('#pinbox').hidden = false;
@@ -779,14 +779,14 @@
         const body = at ? { text, at } : { text };
         const url = CFG.field.replace(/\/$/, '') + '/report';
         const r = await fetch(url, { method: 'POST', headers: pinHeaders(url, { 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
-        if (r.status === 401) { msg.textContent = PIN ? 'Zły PIN - wpisz PIN wyświetlony w terminalu rescue-field.' : 'Serwer wymaga PIN-u (tryb LAN): wpisz PIN wyświetlony w terminalu rescue-field.'; return; }
+        if (r.status === 401) { msg.textContent = PIN ? 'Zły klucz akcji - poproś kierownika akcji o link „Udostępnij”.' : 'Wysłanie wymaga klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz.'; return; }
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const ev = await r.json().catch(() => null);
         msg.textContent = ev && ev.parsedBy ? `Przyjęty (${ev.parsedBy}${ev.latencyMs != null ? ', ' + ev.latencyMs + ' ms' : ''}).` : 'Przyjęty.';
         $('#fieldtext').value = '';
         pollLive(false);
       } catch (err) {
-        msg.textContent = `Serwer rescue-field nie odpowiada (${err.message}). Uruchom: cd rescue && swift run rescue-field serve`;
+        msg.textContent = `Serwer akcji nie odpowiada (${err.message}). Sprawdź sieć i spróbuj ponownie.`;
       }
     });
   }
@@ -1108,7 +1108,7 @@
     try {
       const r = await fetch(CFG.live, { cache: 'no-store', headers: pinHeaders(CFG.live) });
       const now = new Date().toTimeString().slice(0, 8);
-      if (r.status === 401) { S.liveStatus = 'Serwer meldunków wymaga PIN-u: wpisz PIN wyświetlony w terminalu rescue-field (pole PIN niżej).'; }
+      if (r.status === 401) { S.liveStatus = 'Meldunki wymagają klucza akcji: wpisz klucz w polu niżej albo otwórz link „Udostępnij”.'; }
       else if (!r.ok) { S.liveStatus = `Brak pliku ${CFG.live.split('/').pop()} - czekam (${now})`; }
       else {
         const items = normLive(await r.json());

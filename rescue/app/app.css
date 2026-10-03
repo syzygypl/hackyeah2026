@@ -359,3 +359,16 @@ body.role-ratownik #newActionBtn{display:none}
   #scen{max-width:150px}
   header .livehead b{max-width:18vw}
 }
+
+/* Udostępnij: join links + QR */
+#shareBtn{min-height:40px;border-radius:20px;padding:0 16px;white-space:nowrap}
+body.role-ratownik #shareBtn{display:none}
+#shareDlg{border:0;border-radius:20px;background:var(--rl-panel-solid);color:var(--rl-ink);box-shadow:var(--rl-shadow);width:min(620px,94vw);padding:18px 20px}
+#shareDlg::backdrop{background:color-mix(in srgb,var(--rl-ink) 55%,transparent)}
+#shareDlg h2{margin:0 0 10px;font-size:var(--rl-fs-xl)}
+#shareDlg .shr{display:flex;gap:14px;align-items:center;padding:10px 0;border-top:1px solid var(--rl-line)}
+#shareDlg .shq{flex:0 0 120px;width:120px;height:120px;background:#fff;border-radius:8px;padding:4px;box-sizing:border-box}
+#shareDlg .shq svg{width:100%;height:100%;display:block}
+#shareDlg input{width:100%;box-sizing:border-box;margin:6px 0;padding:6px 8px;border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius);background:var(--rl-card);color:var(--rl-ink);font:inherit;font-size:var(--rl-fs-s)}
+#shareDlg .shfoot{display:flex;gap:8px;margin-top:12px}
+@media (max-width:520px){#shareDlg .shr{flex-direction:column;align-items:stretch}#shareDlg .shq{margin:0 auto}}

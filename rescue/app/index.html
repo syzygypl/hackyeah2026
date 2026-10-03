@@ -21,14 +21,20 @@
   <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button></span>
   <span style="flex:1"></span>
   <span class="edit-only edit-mode"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
-  <label id="pinbox" style="display:none">PIN <input id="pin" size="7" inputmode="numeric" autocomplete="off"></label>
+  <label id="pinbox" style="display:none" title="Klucz akcji: pozwala zmieniać akcję (meldunki, przydziały, Studio). Bez klucza tylko podgląd.">Klucz <input id="pin" size="8" autocomplete="off"></label>
   <span id="status" class="mute"></span>
   <button id="newActionBtn" title="Nowa akcja poszukiwawcza: kto, gdzie, kiedy">+ Nowa akcja</button>
   <a id="centrumLink" href="centrum.html" title="Wszystkie akcje i zespoły na jednej mapie">Centrum - wszystkie akcje</a>
+  <button id="shareBtn" title="Linki i kody QR do tej akcji: telefon ratownika, drugi komputer, podgląd dla jury">Udostępnij</button>
   <button id="roleBtn" title="Zmień rolę (ratownik / operator)">Rola</button>
   <span id="firstRun" class="note" role="status" hidden><span id="firstRunText"></span> <button id="firstRunOk">OK, rozumiem</button></span>
 </header>
 <span id="views" class="views" role="tablist" aria-label="Widok"></span>
+<dialog id="shareDlg" aria-label="Udostępnij akcję"><form method="dialog">
+  <h2>Udostępnij akcję</h2>
+  <div id="shareBody"></div>
+  <div class="shfoot"><button type="button" id="shareReset" title="Czyści meldunki, ślady, feed, przydziały i historię Studio na serwerze">Wyczyść akcję</button><span style="flex:1"></span><button value="close">Zamknij</button></div>
+</form></dialog>
 <dialog id="newAction" aria-label="Nowa akcja poszukiwawcza"><form method="dialog" id="naForm">
   <h2>Nowa akcja poszukiwawcza</h2>
   <label>Kto zaginął</label>
@@ -63,8 +69,8 @@
   <div id="pane2d"><iframe id="frame2d" title="Analiza 2D" loading="lazy"></iframe><div id="note2d" class="note3d"></div></div>
   <div id="pane3d"><iframe id="frame3d" title="Widok 3D" loading="lazy"></iframe><div id="note3d" class="note3d"></div></div>
 </main>
-<section id="paneTeren" class="full"><div id="teamFeed" class="scroll" style="display:none"></div><iframe id="frameTeren" title="Teren"></iframe><div class="fullnote">Strony terenowe działają na serwerze rescue-field (:8770): <code>swift run rescue-field serve 8770</code>.</div></section>
-<section id="paneMon" class="full"><iframe id="frameMon" title="Monitoring"></iframe><div class="fullnote">Monitoring z <code>/metrics</code> serwera rescue-field (:8770).</div></section>
+<section id="paneTeren" class="full"><div id="teamFeed" class="scroll" style="display:none"></div><iframe id="frameTeren" title="Teren"></iframe><div class="fullnote">Telefon patrolu i meldunki idą do tego samego serwera akcji. Telefon dołącza przez „Udostępnij” (kod QR).</div></section>
+<section id="paneMon" class="full"><iframe id="frameMon" title="Monitoring"></iframe><div class="fullnote">Monitoring z <code>/metrics</code> serwera akcji (na Vercelu liczniki jednej instancji).</div></section>
 <section id="paneVal" class="full scroll"><div id="validation-summary"></div><div id="val"></div></section>
 <section id="rescuer">
   <div id="rLive" class="livehead rlive"><span id="rModeBadge" class="lbadge" role="status"></span><b id="rScenTitle"></b></div>
@@ -98,6 +104,7 @@
 <div id="rolePick" hidden><div class="rolebox"><h2 style="font-size:16px;text-transform:none;letter-spacing:0;color:var(--ink)">Kim jesteś w tej akcji?</h2>
   <button data-role="ratownik"><b>Ratownik w terenie</b><span>Telefon: moje zadanie, mapa, meldunki</span></button>
   <button data-role="operator"><b>Operator / kierownik akcji</b><span>Mapa, 3D, plan zespołów, edycja, monitoring</span></button></div></div>
+<script src="vendor/qrcode.min.js"></script>
 <script type="module" src="app.js"></script>
 <script src="../web/version.js" defer></script>
 </body>

@@ -62,8 +62,8 @@ const EXAMPLES = [
   "Śmigłowiec nie poleci, wiatr na grani 20 m/s, mgła",
   "Dron: przelot nad Zmarzłym Stawem, brak śladów termicznych, bateria rozładowana, wracamy",
 ];
-// Same origin when served by `swift run rescue-field serve`; localhost:8770 when opened as a file.
-const API = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8770";
+// Same origin when served by rescue-server (Vercel or `swift run rescue-server`); localhost:8780 when opened as a file.
+const API = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8780";
 const SEG = {S1:"Dolina Roztoki (dolna)",S2:"Siklawa / Roztoka górna",S3:"Schronisko i Przedni Staw",S4:"Wielki Staw",S5:"Czarny i Zadni Staw",S6:"Szlak niebieski pod Zawratem",S7:"Żleb pod Zawratem",S8:"Zawrat - Świnica, grań",S9:"Zmarzły Staw / Kozia Dolinka",S10:"Kozi Wierch - Orla Perć",S11:"Granaty / Buczynowa Dolinka",S12:"Szpiglasowa Przełęcz",S13:"Morskie Oko",S14:"Droga do Morskiego Oka",S15:"Hala Gąsienicowa / Murowaniec",S16:"Wołoszyn",S17:"Czarny Staw Gąsienicowy",S18:"Dolina za Mnichem",S19:"Las nad Wodogrzmotami"};
 const $ = id => document.getElementById(id);
 // PIN: needed only when the page talks to the server over the LAN (rescue-field serve --host ... --pin)

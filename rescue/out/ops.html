@@ -62,8 +62,8 @@
   <div class="meta" id="foot"></div>
 </main>
 <script>
-// Same origin when served by rescue-field (GET /ops.html); 127.0.0.1:8770 when opened as a file.
-const API = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8770";
+// Same origin when served by rescue-server (GET /ops.html); 127.0.0.1:8780 when opened as a file.
+const API = location.protocol.startsWith("http") ? "" : "http://127.0.0.1:8780";
 const $ = id => document.getElementById(id);
 const LOOPBACK = !location.protocol.startsWith("http") || ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
 let PIN = ""; try { PIN = localStorage.getItem("rescue-pin") || ""; } catch (e) {}

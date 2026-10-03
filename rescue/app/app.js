@@ -11,12 +11,14 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (p) => Math.round((p || 0) * 100) + "%";
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
+// action key (write access): arrives once in the join link / QR (?key=), is kept on this device and removed from the address bar
+{ const k = new URLSearchParams(location.search).get("key"); if (k) { try { localStorage.setItem("rescue-pin", k.trim()); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("key"); history.replaceState(null, "", u); } }
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}   // raw like field/ops/2D; web/patrol writes it JSON-quoted
 if (!LOOPBACK) { $("pinbox").style.display = ""; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} boot(); }; }
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
   const r = await fetch(path, body === undefined ? { headers: h, cache: "no-store" } : { method: "POST", headers: h, body: JSON.stringify(body) });
-  if (r.status === 401) throw new Error("Podaj PIN akcji (widoczny na laptopie kierownika akcji).");
+  if (r.status === 401) throw new Error("Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz.");
   if (r.status === 404) throw new Error("Nie znaleziono danych na serwerze.");
   if (r.status >= 500) throw new Error("Serwer zgłosił błąd - spróbuj ponownie za chwilę.");
   if (!r.ok) throw new Error("Serwer odrzucił żądanie (" + r.status + ").");
@@ -42,23 +44,16 @@ const curStep = () => (store.run && store.run.steps ? store.run.steps[store.step
 window.rescueStore = store;   // debugging / tests
 
 // ---------- backends
-const STATIC = Object.fromEntries([["zawrat", "Zawrat (Tatry)"], ["morskie-oko", "Morskie Oko"], ["kasprowy", "Kasprowy"], ["bieszczady-wetlinska", "Bieszczady - Połonina Wetlińska"],
-  ["karkonosze-sniezka", "Karkonosze - Śnieżka"], ["sniardwy", "Śniardwy"], ["morzycko", "Morzycko"], ["miedzyzdroje", "Międzyzdroje (Bałtyk)"]]
-  .map(([id, name]) => [id, { name, run: id === "zawrat" ? "../out/run.json" : `../out/${id}.run.json` }]));
+// scenarios come from rescue-server (/api/scenarios, runs computed live); only the blind-test replay is a committed file
+const STATIC = {};
 STATIC["blind-01-replay"] = { name: "Test na ślepo: runda 1 (replay)", run: "../out/blind-01-replay.run.json" };
 async function detect() {
   const a = await tryJSON("/api/scenarios");
   const m = await tryJSON("/modules");
   store.hasApi = !!a; store.hasStudio = !!(m && m.modules); store.mods = m ? m.modules : [];
   let list = [];
-  // rescue-server (one port) also answers /report, /live-events, /field.html, /ops.html; otherwise rescue-field on :8770
-  FIELD = store.hasApi ? "" : `${location.protocol}//${location.hostname}:8770`;
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
-  if (!a) await Promise.all(Object.entries(STATIC).filter(([id]) => !/blind/.test(id)).map(async ([id, s]) => {
-    let ok = false; try { const r = await fetch(s.run, { cache: "no-store" }); ok = r.ok; r.body && r.body.cancel(); } catch (e) {}   // GET: the Studio server has no HEAD
-    list.push({ id, name: s.name + (ok ? "" : " (brak run.json)"), static: true, disabled: !ok });
-  }));
   // blind test round 1 replay (the 3D view shows the hider's story and the true spot at the end); only when its run is there
   try { const r = await fetch(STATIC["blind-01-replay"].run, { cache: "no-store" }); if (r.ok) list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true }); r.body && r.body.cancel(); } catch (e) {}
   $("scen").innerHTML = list.map((s) => `<option value="${esc(s.id)}" ${s.disabled ? "disabled" : ""}>${esc(s.name)}</option>`).join("");
@@ -281,23 +276,23 @@ $("segs").onclick = (e) => { const b = e.target.closest("[data-seg]"); if (b) { 
 $("teams").onclick = (e) => { const b = e.target.closest(".seglink"); if (b) { selectSeg(b.dataset.seg, "panel"); flyToSeg(b.dataset.seg); } };
 function flyToSeg(id) { const s = curStep()?.segments.find((x) => x.id === id); if (!s || !s.polygon || !s.polygon.length || store.mode !== "edycja") return; let w = 180, e = -180, so = 90, n = -90; for (const [x, y] of s.polygon) { w = Math.min(w, x); e = Math.max(e, x); so = Math.min(so, y); n = Math.max(n, y); } map.fitBounds([[w, so], [e, n]], { padding: 120, maxZoom: 15, duration: 500 }); }
 
-// ---------- alerts (from /metrics of this server and of rescue-field on :8770)
+// ---------- alerts (from /metrics of this server)
 let alertBase = null;
 function prom(txt) { const out = []; for (const l of (txt || "").split("\n")) { if (!l || l[0] === "#") continue; const m = /^(\w+)(\{([^}]*)\})?\s+(\S+)/.exec(l); if (!m) continue; const lab = {}; (m[3] || "").replace(/(\w+)="([^"]*)"/g, (_, k, v) => lab[k] = v); out.push({ n: m[1], lab, v: +m[4] }); } return out; }
 async function pollAlerts() {
   const get = async (u) => { try { const r = await fetch(u, { cache: "no-store" }); return r.ok ? await r.text() : null; } catch (e) { return null; } };
-  const own = await get("/metrics"), field = await get(`${location.protocol}//${location.hostname}:8770/metrics`);
+  const own = await get("/metrics");
   const A = [];
-  const M = [...prom(own), ...prom(field)];
+  const M = prom(own);
   const now = M.find((m) => m.n === "rescue_server_time_seconds")?.v || Date.now() / 1000, thr = M.find((m) => m.n === "rescue_silent_threshold_seconds")?.v || 600;
   const last = {}; M.filter((m) => m.n === "rescue_client_last_report_timestamp_seconds").forEach((m) => { const k = m.lab.team || m.lab.client_id; last[k] = Math.max(last[k] || 0, m.v); });
   for (const [team, t] of Object.entries(last)) { const age = now - t; if (age > thr && age < 7200) A.push(["bad", `CISZA: ${team} - brak meldunku od ${Math.round(age / 60)} min`]); }
   const rej = {}; M.filter((m) => m.n === "rescue_reports_rejected_total").forEach((m) => rej[m.lab.reason] = (rej[m.lab.reason] || 0) + m.v);
   if (!alertBase) alertBase = { ...rej };
-  for (const [k, v] of Object.entries(rej)) { const d = v - (alertBase[k] || 0); if (d > 0) A.push([d > 5 ? "bad" : "", `${k === "pin" ? "Próby ze złym PIN-em" : "Odrzucone żądania (" + k + ")"}: ${d} od otwarcia strony`]); }
+  for (const [k, v] of Object.entries(rej)) { const d = v - (alertBase[k] || 0); if (d > 0) A.push([d > 5 ? "bad" : "", `${k === "pin" ? "Próby zmian bez klucza akcji" : "Odrzucone żądania (" + k + ")"}: ${d} od otwarcia strony`]); }
   if (M.some((m) => m.n === "rescue_llm_up" && m.v === 0)) A.push(["", "Model AI jest wyłączony - meldunki są odczytywane regułami"]);
   const S = curStep(); (S?.assignments || []).forEach((a) => (a.safety || []).forEach((f) => A.push(["", `${a.resourceId}: ${f}`])));
-  if (field === null) A.push(["ok", "Brak połączenia z serwerem meldunków - nie widać zespołów w terenie"]);
+  if (own === null) A.push(["ok", "Brak połączenia z serwerem akcji - nie widać zespołów w terenie"]);
   $("alerts").innerHTML = (A.length ? A : [["ok", "Wszystko w porządku - brak alertów"]]).map(([c, t]) => `<div class="alert ${c}">${esc(t)}</div>`).join("");
 }
 setInterval(pollAlerts, 10000);
@@ -743,8 +738,8 @@ function setView(v) {
   sync3d("view");
   hint();
 }
-// field server (rescue-field, :8770) pages are served by that server, so they talk to their own API
-let FIELD = `${location.protocol}//${location.hostname}:8770`;   // set in detect()
+// field report pages (out/field.html, out/ops.html) and the patrol view talk to this same server
+const FIELD = "";
 function setFrame(id, url) { const f = $(id); if (f.dataset.src !== url) { f.dataset.src = url; f.src = url; } }
 function showTeren() {
   $("frameTeren").style.display = store.view === "przeglad" ? "none" : ""; $("teamFeed").style.display = store.view === "przeglad" ? "" : "none";
@@ -900,7 +895,7 @@ async function boot() {
     hint();
     pollAlerts();
     pollLive();
-  } catch (e) { console.error(e); toast("Nie mogę połączyć się z serwerem akcji. Uruchom „swift run rescue-server” i otwórz http://127.0.0.1:8780/app/", 10000); }
+  } catch (e) { console.error(e); toast("Nie mogę połączyć się z serwerem akcji - sprawdź sieć i odśwież stronę.", 10000); }
 }
 boot();
 
@@ -943,4 +938,34 @@ boot();
     setMode("edycja");
     $("naWho").value = ""; $("naLatLon").value = "";
   });
+}
+
+// ---------- "Udostępnij" (operator): join links + QR for this action. The key travels only in the link (?key=), the phone
+// keeps it and drops it from the address bar. Without a key on this device the links are view-only.
+{
+  const qrSVG = (text) => { try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ""; } };
+  const link = (role, withKey) => {
+    const u = new URL("/app/", location.origin);
+    if (role) u.searchParams.set("role", role);
+    const sc = $("scen").value; if (sc && sc !== "studio") u.searchParams.set("sc", sc);
+    if (withKey && PIN) u.searchParams.set("key", PIN);
+    return u.toString();
+  };
+  const row = (title, sub, url) => `<div class="shr"><div class="shq">${qrSVG(url)}</div><div><b>${esc(title)}</b><div class="help">${esc(sub)}</div>
+    <input readonly value="${esc(url)}" onfocus="this.select()"><button data-copy="${esc(url)}">Kopiuj link</button></div></div>`;
+  $("shareBtn").onclick = () => {
+    $("shareBody").innerHTML = (PIN ? "" : `<p class="help">Na tym urządzeniu nie ma klucza akcji, więc linki są tylko do podglądu. Wpisz klucz w polu Klucz albo otwórz link od kierownika akcji.</p>`)
+      + row("Ratownik (telefon)", "Zeskanuj telefonem: rola ratownik, ta akcja, może wysyłać meldunki i ślady.", link("ratownik", true))
+      + row("Operator (drugi komputer)", "Pełny dostęp: przydziały, Studio, Centrum.", link("operator", true))
+      + row("Podgląd (jury, bez zapisu)", "Widzi mapę i plan na żywo, nie może niczego zmienić.", link("", false));
+    $("shareDlg").showModal();
+  };
+  $("shareBody").onclick = async (ev) => {
+    const b = ev.target.closest("[data-copy]"); if (!b) return;
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast("Skopiowano link"); } catch (e) { toast("Zaznacz link i skopiuj ręcznie"); }
+  };
+  $("shareReset").onclick = async () => {
+    if (!confirm("Wyczyścić akcję na serwerze? Znikną meldunki, ślady, feed, przydziały i historia Studio (dla wszystkich urządzeń).")) return;
+    try { await api("/api/reset", {}); toast("Akcja wyczyszczona"); $("shareDlg").close(); boot(); } catch (e) { toast(plErr(e), 5000); }
+  };
 }
