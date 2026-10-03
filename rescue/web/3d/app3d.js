@@ -118,10 +118,20 @@ if (document.body.classList.contains('embed')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../../app/tokens.css'; document.head.appendChild(l);
   if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.dataset.theme = Q.get('theme');
 }
+// rescue-server computes runs live and the generated out/<sc>.run.json files are not committed: when the static file
+// is missing, ask the same origin's GET /api/run/<sc> before giving up (blind tests are never served there).
+const API_RUN = `/api/run/${SC}`;
+const loadRun = async () => {
+  try { return await getJSON(P.run, !!P.reveal); }
+  catch (e) {
+    if (Q.get('run') || P.reveal || !/^404 /.test(e.message)) throw e;
+    try { const r = await getJSON(API_RUN); P.run = API_RUN; return r; } catch { throw e; }
+  }
+};
 let R, SCN, TER, DEM, REV, DEM_FULL;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
-  [R, SCN, TER, DEM, REV] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : getJSON(P.run, !!P.reveal), getJSON(P.scenario, true), getJSON(P.terrain, true),
+  [R, SCN, TER, DEM, REV] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
     (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => d || getJSON(P.dem)), P.reveal ? getJSON(P.reveal, true) : null]);
   DEM_FULL = DEM; // full-resolution DEM, kept for the terrain normal map
   if (DEM.cols > 600) DEM = decimate(DEM, 2); // wide backdrop: 2x2 average keeps the mesh ~100k vertices
@@ -132,7 +142,7 @@ try {
   const missingRun = /^404 /.test(e.message) && e.message.includes('.run.json');
   document.body.dataset.state = 'error';
   $('loadmsg').innerHTML = missingRun
-    ? `Brak wyniku silnika dla scenariusza <b>${esc(SC)}</b> (<code>${esc(P.run)}</code>).<br>Wygeneruj go: <code>cd rescue && swift run rescue-demo --fast scenarios/${esc(SC)}.json</code><br><a href="?sc=zawrat">Otwórz Zawrat</a>`
+    ? `Brak wyniku silnika dla scenariusza <b>${esc(SC)}</b> (<code>${esc(P.run)}</code>, ani <code>${esc(API_RUN)}</code> na tym serwerze).<br>Uruchom <code>cd rescue && swift run rescue-server</code> i otwórz :8780/web/3d/, albo wygeneruj plik: <code>cd rescue && swift run rescue-demo --fast scenarios/${esc(SC)}.json</code><br><a href="?sc=zawrat">Otwórz Zawrat</a>`
     : `Nie udało się wczytać danych: ${esc(e.message)}.<br>Uruchom serwer w katalogu rescue/ (<code>python3 -m http.server 8000</code>) i otwórz /web/3d/. <a href="?sc=zawrat">Otwórz Zawrat</a>`;
   throw e;
 }
@@ -1046,9 +1056,11 @@ addEventListener('keydown', (e) => {
 });
 (async () => {
   const sel = $('scensel');
+  const api = await getJSON('/api/scenarios', true); // rescue-server: these run live even without a static run.json
+  const live = new Set((api?.scenarios || []).map((s) => (typeof s === 'string' ? s : s.name || s.id)));
   for (const [id, s] of Object.entries(SCENS)) {
     const o = document.createElement('option'); o.value = id; o.textContent = s.name; o.selected = id === SC;
-    if (id !== SC) { try { const r = await fetch(s.run, { method: 'HEAD' }); if (!r.ok) throw 0; } catch { o.disabled = true; o.textContent += ' (brak run.json)'; } }
+    if (id !== SC && !live.has(id)) { try { const r = await fetch(s.run, { method: 'HEAD' }); if (!r.ok) throw 0; } catch { o.disabled = true; o.textContent += ' (brak run.json)'; } }
     sel.appendChild(o);
   }
   sel.addEventListener('change', () => { const u = new URL(location.href); u.searchParams.set('sc', sel.value); u.searchParams.delete('run'); location.href = u.toString(); });
