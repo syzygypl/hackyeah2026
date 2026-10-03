@@ -1,0 +1,219 @@
+{
+  "incident": "Osoba odcięta przez wodę, zaginiona - Uherce Mineralne, łąki nad Sanem (scenariusz fikcyjny: ćwiczenie awarii zapory)",
+  "date": "2026-10-04",
+  "startClock": "05:52",
+  "subject": {
+    "name": "Jan S. (osoba fikcyjna)",
+    "age": 71,
+    "category": "swimmer",
+    "note": "Rolnik poszedł o świcie na łąki nad Sanem po krowy. O 05:31 zadzwonił do syna: 'woda wszędzie, nie mogę wrócić przez łąkę'. Potem cisza. Syn widzi z drogi zalane łąki i dzwoni na 112.",
+    "lastContact": "05:31"
+  },
+  "bbox": {
+    "south": 49.4212,
+    "west": 22.36913,
+    "north": 49.45223,
+    "east": 22.41094
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: miejsce, gdzie woda zabrała osobę (ostatnie pewne miejsce)",
+    "at": [
+      49.44237,
+      22.38808
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "R1",
+      "name": "San, km 8.2 (koryto i brzegi)",
+      "seed": [
+        49.4422,
+        22.39564
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "San, km 8.8 (koryto i brzegi)",
+      "seed": [
+        49.44183,
+        22.38753
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "San, km 9.3 (koryto i brzegi)",
+      "seed": [
+        49.44192,
+        22.38078
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "San, km 9.8 (koryto i brzegi)",
+      "seed": [
+        49.43832,
+        22.38028
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "San, km 10.4 (koryto i brzegi)",
+      "seed": [
+        49.43703,
+        22.38818
+      ]
+    },
+    {
+      "id": "R6",
+      "name": "San, km 11.0 (koryto i brzegi)",
+      "seed": [
+        49.43553,
+        22.39588
+      ]
+    },
+    {
+      "id": "R7",
+      "name": "San, km 11.6 (koryto i brzegi)",
+      "seed": [
+        49.43177,
+        22.40127
+      ]
+    },
+    {
+      "id": "R8",
+      "name": "San, km 12.3 (koryto i brzegi)",
+      "seed": [
+        49.42753,
+        22.39533
+      ]
+    },
+    {
+      "id": "R9",
+      "name": "Wyższy brzeg nad IPP (droga, zabudowa)",
+      "seed": [
+        49.4459,
+        22.39098
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "Starorzecze i łęg po drugiej stronie",
+      "seed": [
+        49.43776,
+        22.38339
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): brzeg poniżej",
+    "at": [
+      49.4373,
+      22.38818
+    ]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "05:52",
+      "title": "Teren: dolina Sanu, łęgi i brzegi, zabudowa na wyższym brzegu",
+      "detail": "Rzeka po gwałtownym przyborze: brzegi podmyte, dużo naniesionego drewna.",
+      "factor": 1
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "05:52",
+      "title": "Trudność: wezbrana rzeka, podmyte brzegi",
+      "detail": "Patrole piesze tylko z wyższego brzegu; do koryta tylko łodzie PSP/WOPR."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "05:52",
+      "title": "Warunki: po nocnej ulewie, deszcz słabnie, 9°C, wiatr 5 m/s z SW",
+      "detail": "Świt ok. 06:50. Widzialność 2 km.",
+      "visibilityM": 2000,
+      "windMs": 5,
+      "windFromDeg": 225,
+      "tempC": 9,
+      "precip": "rain",
+      "dark": true
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "05:52",
+      "title": "Pierścienie od miejsca zdarzenia (osoba w wodzie, przybliżenie)",
+      "detail": "Bez kierunku: 0.4 / 1.0 / 2.0 / 4.0 km. Woda niesie w dół rzeki - patrz ślady.",
+      "point": [
+        49.44237,
+        22.38808
+      ],
+      "quantilesKm": [
+        0.4,
+        1.0,
+        2.0,
+        4.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "06:17",
+      "title": "Ślad: czapka zaczepiona o płot pastwiska przy wodzie",
+      "detail": "Sąsiad: woda opadła o kilka cm, płot pastwiska widać na 300 m w dół rzeki.",
+      "point": [
+        49.44252,
+        22.38341
+      ],
+      "radiusM": 400,
+      "clueKind": "trace"
+    }
+  ],
+  "resources": [
+    {
+      "id": "wopr-solina",
+      "name": "Łódź WOPR Bieszczady (Polańczyk)",
+      "type": "boat",
+      "base": [
+        49.372,
+        22.425
+      ],
+      "readyAt": "06:07"
+    },
+    {
+      "id": "osp-olszanica",
+      "name": "OSP Olszanica",
+      "type": "ground",
+      "base": [
+        49.4787,
+        22.4442
+      ],
+      "readyAt": "06:17"
+    },
+    {
+      "id": "psp-lesko",
+      "name": "PSP JRG Lesko - zastęp",
+      "type": "ground",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "06:27"
+    },
+    {
+      "id": "dron-psp",
+      "name": "Dron termowizyjny PSP Krosno",
+      "type": "drone",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "06:37"
+    }
+  ]
+}

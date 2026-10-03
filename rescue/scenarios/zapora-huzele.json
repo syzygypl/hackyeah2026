@@ -1,0 +1,219 @@
+{
+  "incident": "Rodzina odcięta przez wodę, ojciec zaginiony - Huzele, dom nad Sanem (scenariusz fikcyjny: ćwiczenie awarii zapory)",
+  "date": "2026-10-04",
+  "startClock": "07:31",
+  "subject": {
+    "name": "Piotr K. (osoba fikcyjna)",
+    "age": 45,
+    "category": "swimmer",
+    "note": "Rodzina z domu na nizinie nad Sanem. Woda wdarła się do piwnic, a potem podeszła pod okna. Ojciec poszedł przez podwórko do samochodu i zniknął w wodzie. Żona z dziećmi na strychu, dzwoni na 112: 'woda ciągle przybywa'.",
+    "lastContact": "07:20"
+  },
+  "bbox": {
+    "south": 49.46547,
+    "west": 22.28124,
+    "north": 49.49404,
+    "east": 22.32834
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: miejsce, gdzie woda zabrała osobę (ostatnie pewne miejsce)",
+    "at": [
+      49.47869,
+      22.31398
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "R1",
+      "name": "San, km 23.9 (koryto i brzegi)",
+      "seed": [
+        49.47331,
+        22.31713
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "San, km 24.5 (koryto i brzegi)",
+      "seed": [
+        49.47815,
+        22.31343
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "San, km 25.0 (koryto i brzegi)",
+      "seed": [
+        49.48122,
+        22.30864
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "San, km 25.5 (koryto i brzegi)",
+      "seed": [
+        49.47877,
+        22.30305
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "San, km 26.1 (koryto i brzegi)",
+      "seed": [
+        49.47514,
+        22.29699
+      ]
+    },
+    {
+      "id": "R6",
+      "name": "San, km 26.7 (koryto i brzegi)",
+      "seed": [
+        49.47684,
+        22.29092
+      ]
+    },
+    {
+      "id": "R7",
+      "name": "San, km 27.3 (koryto i brzegi)",
+      "seed": [
+        49.48219,
+        22.29221
+      ]
+    },
+    {
+      "id": "R8",
+      "name": "San, km 28.0 (koryto i brzegi)",
+      "seed": [
+        49.48771,
+        22.29672
+      ]
+    },
+    {
+      "id": "R9",
+      "name": "Wyższy brzeg nad IPP (droga, zabudowa)",
+      "seed": [
+        49.48222,
+        22.31689
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "Starorzecze i łęg po drugiej stronie",
+      "seed": [
+        49.47408,
+        22.30928
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): brzeg poniżej",
+    "at": [
+      49.47541,
+      22.29699
+    ]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "07:31",
+      "title": "Teren: dolina Sanu, łęgi i brzegi, zabudowa na wyższym brzegu",
+      "detail": "Rzeka po gwałtownym przyborze: brzegi podmyte, dużo naniesionego drewna.",
+      "factor": 1
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "07:31",
+      "title": "Trudność: wezbrana rzeka, podmyte brzegi",
+      "detail": "Patrole piesze tylko z wyższego brzegu; do koryta tylko łodzie PSP/WOPR."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "07:31",
+      "title": "Warunki: po nocnej ulewie, deszcz słabnie, 9°C, wiatr 5 m/s z SW",
+      "detail": "Świt ok. 06:50. Widzialność 2 km.",
+      "visibilityM": 2000,
+      "windMs": 5,
+      "windFromDeg": 225,
+      "tempC": 9,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "07:31",
+      "title": "Pierścienie od miejsca zdarzenia (osoba w wodzie, przybliżenie)",
+      "detail": "Bez kierunku: 0.4 / 1.0 / 2.0 / 4.0 km. Woda niesie w dół rzeki - patrz ślady.",
+      "point": [
+        49.47869,
+        22.31398
+      ],
+      "quantilesKm": [
+        0.4,
+        1.0,
+        2.0,
+        4.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "07:53",
+      "title": "Świadek z drugiego brzegu: mężczyzna trzymał się drzewa, potem zniknął",
+      "detail": "Widziany ok. 400 m poniżej domu, przy kępie wierzb.",
+      "point": [
+        49.48089,
+        22.30986
+      ],
+      "radiusM": 400,
+      "clueKind": "sighting"
+    }
+  ],
+  "resources": [
+    {
+      "id": "psp-lesko",
+      "name": "PSP JRG Lesko - zastęp",
+      "type": "ground",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "07:46"
+    },
+    {
+      "id": "gopr-lesko",
+      "name": "GOPR Bieszczady - patrol Lesko",
+      "type": "ground",
+      "base": [
+        49.469,
+        22.3304
+      ],
+      "readyAt": "07:56"
+    },
+    {
+      "id": "psp-lodz-sanok",
+      "name": "Łódź PSP JRG Sanok",
+      "type": "boat",
+      "base": [
+        49.5609,
+        22.207
+      ],
+      "readyAt": "08:06"
+    },
+    {
+      "id": "dron-psp",
+      "name": "Dron termowizyjny PSP Krosno",
+      "type": "drone",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "08:16"
+    }
+  ]
+}

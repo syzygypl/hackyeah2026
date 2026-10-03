@@ -1,0 +1,219 @@
+{
+  "incident": "Spacerowicz z psem porwany przez wezbrany San - Załuż koło Sanoka, wał przy rzece (scenariusz fikcyjny: ćwiczenie awarii zapory)",
+  "date": "2026-10-04",
+  "startClock": "08:44",
+  "subject": {
+    "name": "Tomasz R. (osoba fikcyjna)",
+    "age": 29,
+    "category": "swimmer",
+    "note": "Wyszedł z psem na wał przeciwpowodziowy. Sąsiadka: 'San w kwadrans wyszedł z koryta, poziom wody rósł w oczach'. Pies wrócił sam, mokry. Telefon nie odpowiada.",
+    "lastContact": "08:31"
+  },
+  "bbox": {
+    "south": 49.51302,
+    "west": 22.26062,
+    "north": 49.54252,
+    "east": 22.32207
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: miejsce, gdzie woda zabrała osobę (ostatnie pewne miejsce)",
+    "at": [
+      49.52396,
+      22.30226
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "R1",
+      "name": "San, km 35.1 (koryto i brzegi)",
+      "seed": [
+        49.52432,
+        22.30974
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "San, km 35.7 (koryto i brzegi)",
+      "seed": [
+        49.52342,
+        22.30171
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "San, km 36.2 (koryto i brzegi)",
+      "seed": [
+        49.52151,
+        22.29545
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "San, km 36.7 (koryto i brzegi)",
+      "seed": [
+        49.52052,
+        22.28889
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "San, km 37.3 (koryto i brzegi)",
+      "seed": [
+        49.52243,
+        22.28118
+      ]
+    },
+    {
+      "id": "R6",
+      "name": "San, km 37.9 (koryto i brzegi)",
+      "seed": [
+        49.52689,
+        22.27699
+      ]
+    },
+    {
+      "id": "R7",
+      "name": "San, km 38.5 (koryto i brzegi)",
+      "seed": [
+        49.53226,
+        22.27591
+      ]
+    },
+    {
+      "id": "R8",
+      "name": "San, km 39.2 (koryto i brzegi)",
+      "seed": [
+        49.53592,
+        22.27031
+      ]
+    },
+    {
+      "id": "R9",
+      "name": "Wyższy brzeg nad IPP (droga, zabudowa)",
+      "seed": [
+        49.52749,
+        22.30517
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "Starorzecze i łęg po drugiej stronie",
+      "seed": [
+        49.51935,
+        22.29756
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): brzeg poniżej",
+    "at": [
+      49.5227,
+      22.28118
+    ]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "08:44",
+      "title": "Teren: dolina Sanu, łęgi i brzegi, zabudowa na wyższym brzegu",
+      "detail": "Rzeka po gwałtownym przyborze: brzegi podmyte, dużo naniesionego drewna.",
+      "factor": 1
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "08:44",
+      "title": "Trudność: wezbrana rzeka, podmyte brzegi",
+      "detail": "Patrole piesze tylko z wyższego brzegu; do koryta tylko łodzie PSP/WOPR."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "08:44",
+      "title": "Warunki: po nocnej ulewie, deszcz słabnie, 9°C, wiatr 5 m/s z SW",
+      "detail": "Świt ok. 06:50. Widzialność 2 km.",
+      "visibilityM": 2000,
+      "windMs": 5,
+      "windFromDeg": 225,
+      "tempC": 9,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "08:44",
+      "title": "Pierścienie od miejsca zdarzenia (osoba w wodzie, przybliżenie)",
+      "detail": "Bez kierunku: 0.4 / 1.0 / 2.0 / 4.0 km. Woda niesie w dół rzeki - patrz ślady.",
+      "point": [
+        49.52396,
+        22.30226
+      ],
+      "quantilesKm": [
+        0.4,
+        1.0,
+        2.0,
+        4.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "09:04",
+      "title": "Ślad: smycz na zalanym wale 500 m niżej",
+      "detail": "Patrol OSP z wału. Woda nadal płynie wysoko.",
+      "point": [
+        49.52151,
+        22.29545
+      ],
+      "radiusM": 400,
+      "clueKind": "trace"
+    }
+  ],
+  "resources": [
+    {
+      "id": "psp-lodz-sanok",
+      "name": "Łódź PSP JRG Sanok",
+      "type": "boat",
+      "base": [
+        49.5609,
+        22.207
+      ],
+      "readyAt": "08:59"
+    },
+    {
+      "id": "heli-lpr-sanok",
+      "name": "Śmigłowiec LPR (Sanok)",
+      "type": "heli",
+      "base": [
+        49.565,
+        22.23
+      ],
+      "readyAt": "09:09"
+    },
+    {
+      "id": "gopr-lesko",
+      "name": "GOPR Bieszczady - patrol Lesko",
+      "type": "ground",
+      "base": [
+        49.469,
+        22.3304
+      ],
+      "readyAt": "09:19"
+    },
+    {
+      "id": "dron-psp",
+      "name": "Dron termowizyjny PSP Krosno",
+      "type": "drone",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "09:29"
+    }
+  ]
+}

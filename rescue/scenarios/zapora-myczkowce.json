@@ -1,0 +1,219 @@
+{
+  "incident": "Wędkarz zmyty z brzegu - Myczkowce, San poniżej zapory (scenariusz fikcyjny: ćwiczenie awarii zapory)",
+  "date": "2026-10-04",
+  "startClock": "05:33",
+  "subject": {
+    "name": "Marek P. (osoba fikcyjna)",
+    "age": 52,
+    "category": "swimmer",
+    "note": "Wędkarz z Leska, łowił o świcie na Sanie kilkaset metrów poniżej zapory w Myczkowcach. O 05:12 wysłał żonie SMS: 'woda szybko rośnie, zwijam się'. Kolega z sąsiedniego stanowiska widział, jak fala wody zabrała go z kamieni. Kolega dzwoni na 112.",
+    "lastContact": "05:12"
+  },
+  "bbox": {
+    "south": 49.42392,
+    "west": 22.36913,
+    "north": 49.44939,
+    "east": 22.41945
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: miejsce, gdzie woda zabrała osobę (ostatnie pewne miejsce)",
+    "at": [
+      49.4369,
+      22.40473
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "R1",
+      "name": "San, km 6.2 (koryto i brzegi)",
+      "seed": [
+        49.43166,
+        22.40809
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "San, km 6.8 (koryto i brzegi)",
+      "seed": [
+        49.43636,
+        22.40418
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "San, km 7.3 (koryto i brzegi)",
+      "seed": [
+        49.44067,
+        22.40498
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "San, km 7.8 (koryto i brzegi)",
+      "seed": [
+        49.44306,
+        22.401
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "San, km 8.4 (koryto i brzegi)",
+      "seed": [
+        49.44173,
+        22.39297
+      ]
+    },
+    {
+      "id": "R6",
+      "name": "San, km 9.0 (koryto i brzegi)",
+      "seed": [
+        49.44205,
+        22.38478
+      ]
+    },
+    {
+      "id": "R7",
+      "name": "San, km 9.6 (koryto i brzegi)",
+      "seed": [
+        49.43976,
+        22.3788
+      ]
+    },
+    {
+      "id": "R8",
+      "name": "San, km 10.3 (koryto i brzegi)",
+      "seed": [
+        49.43709,
+        22.3868
+      ]
+    },
+    {
+      "id": "R9",
+      "name": "Wyższy brzeg nad IPP (droga, zabudowa)",
+      "seed": [
+        49.44043,
+        22.40763
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "Starorzecze i łęg po drugiej stronie",
+      "seed": [
+        49.43229,
+        22.40004
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): brzeg poniżej",
+    "at": [
+      49.442,
+      22.39297
+    ]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "05:33",
+      "title": "Teren: dolina Sanu, łęgi i brzegi, zabudowa na wyższym brzegu",
+      "detail": "Rzeka po gwałtownym przyborze: brzegi podmyte, dużo naniesionego drewna.",
+      "factor": 1
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "05:33",
+      "title": "Trudność: wezbrana rzeka, podmyte brzegi",
+      "detail": "Patrole piesze tylko z wyższego brzegu; do koryta tylko łodzie PSP/WOPR."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "05:33",
+      "title": "Warunki: po nocnej ulewie, deszcz słabnie, 9°C, wiatr 5 m/s z SW",
+      "detail": "Świt ok. 06:50. Widzialność 2 km.",
+      "visibilityM": 2000,
+      "windMs": 5,
+      "windFromDeg": 225,
+      "tempC": 9,
+      "precip": "rain",
+      "dark": true
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "05:33",
+      "title": "Pierścienie od miejsca zdarzenia (osoba w wodzie, przybliżenie)",
+      "detail": "Bez kierunku: 0.4 / 1.0 / 2.0 / 4.0 km. Woda niesie w dół rzeki - patrz ślady.",
+      "point": [
+        49.4369,
+        22.40473
+      ],
+      "quantilesKm": [
+        0.4,
+        1.0,
+        2.0,
+        4.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "05:53",
+      "title": "Świadek: wędkarz porwany przez nagłą falę, niesiony w dół rzeki",
+      "detail": "Kolega: 'woda w kilka minut podniosła się o metr, brudna, z gałęziami'.",
+      "point": [
+        49.44067,
+        22.40498
+      ],
+      "radiusM": 500,
+      "clueKind": "sighting"
+    }
+  ],
+  "resources": [
+    {
+      "id": "wopr-solina",
+      "name": "Łódź WOPR Bieszczady (Polańczyk)",
+      "type": "boat",
+      "base": [
+        49.372,
+        22.425
+      ],
+      "readyAt": "05:48"
+    },
+    {
+      "id": "psp-lesko",
+      "name": "PSP JRG Lesko - zastęp",
+      "type": "ground",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "05:58"
+    },
+    {
+      "id": "gopr-lesko",
+      "name": "GOPR Bieszczady - patrol Lesko",
+      "type": "ground",
+      "base": [
+        49.469,
+        22.3304
+      ],
+      "readyAt": "06:08"
+    },
+    {
+      "id": "dron-psp",
+      "name": "Dron termowizyjny PSP Krosno",
+      "type": "drone",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "06:18"
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "incident": "Zaginiona osoba z demencją - Olszanica, wieś przy drodze 84 (scenariusz fikcyjny: ćwiczenie awarii zapory)",
+  "date": "2026-10-04",
+  "startClock": "06:45",
+  "subject": {
+    "name": "Helena M. (osoba fikcyjna)",
+    "age": 83,
+    "category": "dementia",
+    "lastContact": "06:10",
+    "note": "Starsza pani z otępieniem, wyszła z domu w kapciach ok. 06:10, gdy córka spała. Często idzie w stronę kościoła lub do lasu nad wsią, gdzie kiedyś zbierała jagody. Córka dzwoni na 112 o 06:45."
+  },
+  "bbox": {
+    "south": 49.46147,
+    "west": 22.41792,
+    "north": 49.49857,
+    "east": 22.47599
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: dom (ostatnie pewne miejsce)",
+    "at": [
+      49.47866,
+      22.44419
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "O1",
+      "name": "Dom i podwórko (IPP)",
+      "seed": [
+        49.47866,
+        22.44419
+      ]
+    },
+    {
+      "id": "O2",
+      "name": "Droga 84 na wschód",
+      "seed": [
+        49.48002,
+        22.45663
+      ]
+    },
+    {
+      "id": "O3",
+      "name": "Droga 84 na zachód",
+      "seed": [
+        49.47776,
+        22.43175
+      ]
+    },
+    {
+      "id": "O4",
+      "name": "Las nad wsią (północ)",
+      "seed": [
+        49.48952,
+        22.44696
+      ]
+    },
+    {
+      "id": "O5",
+      "name": "Sady i stodoły",
+      "seed": [
+        49.48318,
+        22.43866
+      ]
+    },
+    {
+      "id": "O6",
+      "name": "Kościół i przystanek",
+      "seed": [
+        49.47595,
+        22.44834
+      ]
+    },
+    {
+      "id": "O7",
+      "name": "Łąki na południe",
+      "seed": [
+        49.47052,
+        22.44557
+      ]
+    },
+    {
+      "id": "O8",
+      "name": "Las na wschód",
+      "seed": [
+        49.4859,
+        22.46216
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): skraj lasu nad wsią",
+    "at": [
+      49.48816,
+      22.44626
+    ]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "06:45",
+      "title": "Teren: wieś, sady, las na stokach",
+      "detail": "Osoby z demencją zwykle blisko domu, przy drogach i w zaroślach.",
+      "factor": 1
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "06:45",
+      "title": "Warunki: mżawka, 8°C, wiatr 5 m/s z SW",
+      "detail": "Świt ok. 06:50.",
+      "visibilityM": 1500,
+      "windMs": 5,
+      "windFromDeg": 225,
+      "tempC": 8,
+      "precip": "rain",
+      "dark": true
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "06:45",
+      "title": "Koester: demencja, wieś",
+      "detail": "Pierścienie przybliżone: 25% 0.3 km, 50% 0.8 km, 75% 1.6 km, 95% 3.0 km.",
+      "point": [
+        49.47866,
+        22.44419
+      ],
+      "quantilesKm": [
+        0.3,
+        0.8,
+        1.6,
+        3.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "07:20",
+      "title": "Świadek: kierowca mleczarki widział starszą panią przy kościele o 06:30",
+      "detail": "Szła w stronę lasu.",
+      "point": [
+        49.47595,
+        22.44834
+      ],
+      "radiusM": 500,
+      "clueKind": "sighting"
+    }
+  ],
+  "resources": [
+    {
+      "id": "osp-olszanica",
+      "name": "OSP Olszanica",
+      "type": "ground",
+      "base": [
+        49.4787,
+        22.4442
+      ],
+      "readyAt": "07:00"
+    },
+    {
+      "id": "gopr-lesko",
+      "name": "GOPR Bieszczady - patrol Lesko",
+      "type": "ground",
+      "base": [
+        49.469,
+        22.3304
+      ],
+      "readyAt": "07:10"
+    },
+    {
+      "id": "dron-psp",
+      "name": "Dron termowizyjny PSP Krosno",
+      "type": "drone",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "07:20"
+    }
+  ]
+}

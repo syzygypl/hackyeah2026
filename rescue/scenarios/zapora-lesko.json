@@ -1,0 +1,219 @@
+{
+  "incident": "Samochód porwany przez wodę - Lesko, zjazd przy moście na Sanie (scenariusz fikcyjny: ćwiczenie awarii zapory)",
+  "date": "2026-10-04",
+  "startClock": "07:10",
+  "subject": {
+    "name": "Anna W. (osoba fikcyjna)",
+    "age": 34,
+    "category": "swimmer",
+    "note": "Kierowca jechała do pracy w Sanoku. Na zjeździe przy moście w Lesku woda przelała się przez drogę i zepchnęła auto do rzeki. Świadkowie z przystanku: 'fala błotnistej wody, płynęły całe drzewa'. Auto zniknęło w nurcie.",
+    "lastContact": "07:04"
+  },
+  "bbox": {
+    "south": 49.45494,
+    "west": 22.28342,
+    "north": 49.48737,
+    "east": 22.34314
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: miejsce, gdzie woda zabrała osobę (ostatnie pewne miejsce)",
+    "at": [
+      49.46638,
+      22.32544
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "R1",
+      "name": "San, km 22.3 (koryto i brzegi)",
+      "seed": [
+        49.46241,
+        22.33133
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "San, km 22.9 (koryto i brzegi)",
+      "seed": [
+        49.46584,
+        22.32489
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "San, km 23.4 (koryto i brzegi)",
+      "seed": [
+        49.46954,
+        22.32095
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "San, km 23.9 (koryto i brzegi)",
+      "seed": [
+        49.47331,
+        22.31713
+      ]
+    },
+    {
+      "id": "R5",
+      "name": "San, km 24.5 (koryto i brzegi)",
+      "seed": [
+        49.47815,
+        22.31343
+      ]
+    },
+    {
+      "id": "R6",
+      "name": "San, km 25.1 (koryto i brzegi)",
+      "seed": [
+        49.48104,
+        22.30735
+      ]
+    },
+    {
+      "id": "R7",
+      "name": "San, km 25.7 (koryto i brzegi)",
+      "seed": [
+        49.47747,
+        22.30113
+      ]
+    },
+    {
+      "id": "R8",
+      "name": "San, km 26.4 (koryto i brzegi)",
+      "seed": [
+        49.47472,
+        22.29309
+      ]
+    },
+    {
+      "id": "R9",
+      "name": "Wyższy brzeg nad IPP (droga, zabudowa)",
+      "seed": [
+        49.46991,
+        22.32835
+      ]
+    },
+    {
+      "id": "R10",
+      "name": "Starorzecze i łęg po drugiej stronie",
+      "seed": [
+        49.46177,
+        22.32074
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): brzeg poniżej",
+    "at": [
+      49.48131,
+      22.30735
+    ]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "07:10",
+      "title": "Teren: dolina Sanu, łęgi i brzegi, zabudowa na wyższym brzegu",
+      "detail": "Rzeka po gwałtownym przyborze: brzegi podmyte, dużo naniesionego drewna.",
+      "factor": 1
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "07:10",
+      "title": "Trudność: wezbrana rzeka, podmyte brzegi",
+      "detail": "Patrole piesze tylko z wyższego brzegu; do koryta tylko łodzie PSP/WOPR."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "07:10",
+      "title": "Warunki: po nocnej ulewie, deszcz słabnie, 9°C, wiatr 5 m/s z SW",
+      "detail": "Świt ok. 06:50. Widzialność 2 km.",
+      "visibilityM": 2000,
+      "windMs": 5,
+      "windFromDeg": 225,
+      "tempC": 9,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "07:10",
+      "title": "Pierścienie od miejsca zdarzenia (osoba w wodzie, przybliżenie)",
+      "detail": "Bez kierunku: 0.4 / 1.0 / 2.0 / 4.0 km. Woda niesie w dół rzeki - patrz ślady.",
+      "point": [
+        49.46638,
+        22.32544
+      ],
+      "quantilesKm": [
+        0.4,
+        1.0,
+        2.0,
+        4.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "07:28",
+      "title": "Świadek: dach auta widziany 800 m niżej, przy Huzelach",
+      "detail": "Mieszkaniec z wyższego brzegu: 'srebrne auto obracało się w nurcie'. Poziom wody nadal rośnie.",
+      "point": [
+        49.4718,
+        22.31866
+      ],
+      "radiusM": 500,
+      "clueKind": "sighting"
+    }
+  ],
+  "resources": [
+    {
+      "id": "psp-lesko",
+      "name": "PSP JRG Lesko - zastęp",
+      "type": "ground",
+      "base": [
+        49.4705,
+        22.3325
+      ],
+      "readyAt": "07:25"
+    },
+    {
+      "id": "gopr-lesko",
+      "name": "GOPR Bieszczady - patrol Lesko",
+      "type": "ground",
+      "base": [
+        49.469,
+        22.3304
+      ],
+      "readyAt": "07:35"
+    },
+    {
+      "id": "psp-lodz-sanok",
+      "name": "Łódź PSP JRG Sanok",
+      "type": "boat",
+      "base": [
+        49.5609,
+        22.207
+      ],
+      "readyAt": "07:45"
+    },
+    {
+      "id": "heli-lpr-sanok",
+      "name": "Śmigłowiec LPR (Sanok)",
+      "type": "heli",
+      "base": [
+        49.565,
+        22.23
+      ],
+      "readyAt": "07:55"
+    }
+  ]
+}
