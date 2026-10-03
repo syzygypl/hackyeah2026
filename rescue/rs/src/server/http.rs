@@ -430,6 +430,7 @@ async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -
     };
     let head = method == "HEAD";
     let inm = headers.get("if-none-match").cloned();
+    let accept_enc = headers.get("accept-encoding").cloned();
     let q = Req { method: if head { "GET".into() } else { method.clone() }, path, query, headers, body, peer };
     let t0 = Instant::now();
     let (m, p) = (method.clone(), q.path.clone());
@@ -461,12 +462,63 @@ async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -
             r.headers_mut().insert("access-control-allow-origin", HeaderValue::from_static("*"));
             return r;
         }
-        let mut r = to_http(out, head);
+        // big JSON / text answers: gzip once per body (keyed by its ETag) instead of on every request in the compression
+        // layer; the layer leaves a response that already has Content-Encoding alone. Same bytes after decompression.
+        let gz = if !head && out.body.len() >= GZ_MIN && accepts_gzip(accept_enc.as_deref()) && (out.ctype.starts_with("application/json") || out.ctype.starts_with("text/")) {
+            gz_cached(&tag, &out.body).await
+        } else {
+            None
+        };
+        let gzipped = gz.is_some();
+        let mut r = to_http(if let Some(g) = gz { Resp { body: g, ..out } } else { out }, head);
         r.headers_mut().insert("etag", HeaderValue::from_str(&tag).unwrap());
         r.headers_mut().insert("cache-control", HeaderValue::from_static("no-cache"));
+        if gzipped {
+            r.headers_mut().insert("content-encoding", HeaderValue::from_static("gzip"));
+            r.headers_mut().insert("vary", HeaderValue::from_static("accept-encoding"));
+        }
         return r;
     }
     to_http(out, head)
+}
+
+const GZ_MIN: usize = 16 * 1024;
+/// gzip bodies by ETag, up to GZ_CAP bytes of compressed data (then the cache starts over)
+static GZ: once_cell::sync::Lazy<parking_lot::Mutex<(HashMap<String, Bytes>, usize)>> =
+    once_cell::sync::Lazy::new(|| parking_lot::Mutex::new((HashMap::new(), 0)));
+const GZ_CAP: usize = 128 << 20;
+fn accepts_gzip(h: Option<&str>) -> bool {
+    h.map(|h| {
+        h.split(',').any(|t| {
+            let mut p = t.split(';');
+            let name = p.next().unwrap_or("").trim();
+            let q0 = p.any(|x| matches!(x.trim().replace(' ', "").as_str(), "q=0" | "q=0.0" | "q=0.00" | "q=0.000"));
+            (name.eq_ignore_ascii_case("gzip") || name == "*") && !q0
+        })
+    })
+    .unwrap_or(false)
+}
+async fn gz_cached(tag: &str, body: &Bytes) -> Option<Bytes> {
+    if let Some(g) = GZ.lock().0.get(tag) {
+        return Some(g.clone());
+    }
+    let b = body.clone();
+    let g = tokio::task::spawn_blocking(move || {
+        use std::io::Write;
+        let mut e = flate2::write::GzEncoder::new(Vec::with_capacity(b.len() / 4), flate2::Compression::default());
+        e.write_all(&b).ok()?;
+        e.finish().ok()
+    })
+    .await
+    .ok()??;
+    let g = Bytes::from(g);
+    let mut c = GZ.lock();
+    if c.1 + g.len() > GZ_CAP {
+        *c = (HashMap::new(), 0);
+    }
+    c.1 += g.len();
+    c.0.insert(tag.to_string(), g.clone());
+    Some(g)
 }
 
 pub async fn run() {
