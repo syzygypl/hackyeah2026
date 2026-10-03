@@ -918,6 +918,9 @@ function renderDock() {
   // step counter "k/n · HH:MM" (ported from b069c21, AI Andrzeja); Na żywo: "teraz HH:MM"
   if (S) $("dkStep").innerHTML = liveOn() ? `teraz <b>${esc(S.t)}</b>` : `<b>${store.step}</b>/${n} · ${esc(S.t)}`;
   $("stepPrev").disabled = store.step <= 1;
+  // the native range stays on top, invisible: drag + arrow keys + screen readers; our markers are the picture (ported from b069c21, AI Andrzeja)
+  $("tlFill").style.width = `calc((100% - 16px) * ${n > 1 ? ((store.step - 1) / (n - 1)).toFixed(4) : 0})`;
+  if (S) $("slider").setAttribute("aria-valuetext", `Krok ${store.step} z ${n}, ${S.t}, ${S.label}`);
   const byTitle = (t) => { const st = R.steps.find((s) => s.label === t); return st ? evKind(st) : /^ZNALEZIONO/i.test(t || "") ? "found" : "slad"; };
   const items = liveOn() && live.events.length
     ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title) }))

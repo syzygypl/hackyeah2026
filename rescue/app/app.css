@@ -435,6 +435,11 @@ body.signals,body.mode-edycja{--dock-h:166px}
 #slider::-moz-range-track{height:4px;background:transparent}
 #slider::-moz-range-thumb{width:16px;height:16px;border-radius:50%;box-sizing:border-box;background:var(--rl-card);border:3px solid var(--rl-accent)}
 .tlm{position:absolute;left:8px;right:8px;top:0;bottom:0;z-index:2;pointer-events:none}
+/* native range invisible on top of the markers (drag, arrow keys, screen readers) - ported from b069c21 (AI Andrzeja); focus shows a ring on the track */
+.tl #slider{z-index:3;opacity:0}
+.tlfill{position:absolute;left:8px;top:50%;height:4px;margin-top:-2px;border-radius:2px;background:var(--rl-accent);z-index:1;pointer-events:none}
+body.time-live .tlfill{background:var(--rl-danger)}
+.tl:has(#slider:focus-visible){outline:2px solid var(--rl-accent);outline-offset:2px;border-radius:var(--rl-radius-s)}
 .tlk{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px var(--rl-panel-solid)}
 .tlk.fut{opacity:.35}
 .tlk.k-baza{width:4px;height:4px;margin:-2px 0 0 -2px;box-shadow:none}
