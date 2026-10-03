@@ -1022,6 +1022,7 @@ subs.push((why) => {
 $("scen").onchange = () => loadScenario($("scen").value).catch((e) => toast(plErr(e), 5000));
 
 window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, setMode, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
+Object.assign(window.rescueApp, { setTime, loadScenario });   // intro.js (guided tour) drives the shell through these
 async function boot() {
   try {
     await detect();

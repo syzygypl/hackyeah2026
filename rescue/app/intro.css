@@ -1,0 +1,42 @@
+/* Intro layer (intro.js): guided Zawrat tour (spotlight + card) and the "?" manual panel. Own file, tokens only, no restyling of
+   existing elements. Navy = the highlighted thing (selection), TOPR red only on the one primary button. */
+#tourSpot{position:fixed;z-index:70;pointer-events:none;border-radius:var(--rl-radius-l);box-shadow:0 0 0 9999px rgba(35,39,42,.42);outline:3px solid var(--rl-accent);outline-offset:0;transition:left .35s,top .35s,width .35s,height .35s}
+#tourSpot.nofocus{left:50%!important;top:50%!important;width:0!important;height:0!important;outline:0}
+#tourSpot[hidden],#tourCard[hidden],#helpPanel[hidden]{display:none}
+#tourCard{position:fixed;z-index:72;width:min(380px,calc(100vw - 32px));background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow),0 0 0 1px rgba(0,0,0,.02);padding:12px 16px 14px;font:var(--rl-fs)/1.45 var(--rl-font)}
+#tourCard.busy{cursor:progress}
+#tourCard h3{margin:6px 0 4px;font-size:var(--rl-fs-xl);line-height:1.15;font-weight:700}
+#tourCard p{margin:0 0 12px;color:var(--rl-ink-2)}
+#tourCard .tc-head{display:flex;align-items:center;gap:10px}
+#tourCard .tc-n{font:600 var(--rl-fs-xs)/1 var(--rl-mono);color:var(--rl-mute);font-variant-numeric:tabular-nums}
+#tourCard .tc-dots{display:flex;gap:4px;flex:1}
+#tourCard .tc-dots i{width:16px;height:4px;border-radius:2px;background:var(--rl-line-strong)}
+#tourCard .tc-dots i.done{background:color-mix(in srgb,var(--rl-accent) 45%,transparent)}
+#tourCard .tc-dots i.on{background:var(--rl-accent)}
+#tourCard .tc-x,#helpPanel .hp-x{min-height:28px;width:30px;padding:0;border:0;background:transparent;font-size:20px;line-height:1;color:var(--rl-mute)}
+#tourCard .tc-nav{display:flex;align-items:center;gap:8px}
+#tourCard .tc-nav button{min-height:36px;padding:0 14px;font-weight:600}
+#tourCard .tc-end{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;align-items:center;margin:0 0 12px}
+#tourCard .tc-end a{padding:2px 0}
+#tourCard .tc-end a{color:var(--rl-accent);font-weight:600;text-decoration:none}
+#tourCard .tc-end button{min-height:34px;padding:0 12px;font-weight:600}
+@media (max-width:900px){
+  #tourCard{left:8px!important;right:8px;bottom:8px!important;top:auto!important;width:auto;max-height:46vh;overflow:auto}
+  #tourCard h3{font-size:var(--rl-fs-l)}
+}
+/* "?" in the header: a small round button next to Rola */
+#helpBtn{min-height:40px;width:40px;padding:0;border-radius:20px;font-weight:700;font-size:17px}
+header h1{cursor:pointer}
+#helpPanel{position:fixed;z-index:74;top:12px;right:12px;bottom:12px;width:min(420px,calc(100vw - 24px));display:flex;flex-direction:column;background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);font:var(--rl-fs)/1.5 var(--rl-font)}
+#helpPanel .hp-head{display:flex;align-items:center;padding:10px 10px 6px 18px;border-bottom:1px solid var(--rl-line)}
+#helpPanel .hp-head h2{margin:0;font-size:var(--rl-fs-l);letter-spacing:0;text-transform:none;color:var(--rl-ink)}
+#helpPanel .hp-body{overflow:auto;padding:12px 18px 18px}
+#helpPanel .hp-lead{margin:0 0 10px;color:var(--rl-ink)}
+#helpPanel .hp-tour{width:100%;min-height:40px;font-weight:700;margin-bottom:6px}
+#helpPanel h3{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rl-mute);margin:16px 0 6px}
+#helpPanel p{margin:0 0 8px;color:var(--rl-ink-2)}
+#helpPanel ul{margin:0;padding-left:18px;color:var(--rl-ink-2)}
+#helpPanel li{margin:0 0 6px}
+#helpPanel li b,#helpPanel p b{color:var(--rl-ink)}
+#helpPanel .hp-foot a{color:var(--rl-accent);font-weight:600}
+@media (max-width:900px){#helpPanel{top:8px;right:8px;bottom:8px;left:8px;width:auto}}

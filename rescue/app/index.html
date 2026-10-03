@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="../web/vendor/maplibre-gl.css">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="intro.css">
 </head>
 <body class="mode-akcja view-2d">
 <div id="app">
@@ -27,6 +28,7 @@
   <button id="newActionBtn" data-needslive title="Nowa akcja poszukiwawcza: kto, gdzie, kiedy">+ Nowa akcja</button>
   <a id="centrumLink" href="centrum.html" title="Wszystkie akcje i zespoły na jednej mapie">Centrum - wszystkie akcje</a>
   <button id="shareBtn" title="Linki i kody QR do tej akcji: telefon ratownika, drugi komputer, podgląd dla jury">Udostępnij</button>
+  <button id="helpBtn" title="Instrukcja i przewodnik po akcji (90 s)" aria-label="Instrukcja">?</button>
   <button id="roleBtn" title="Zmień rolę (ratownik / operator)">Rola</button>
   <span id="firstRun" class="note" role="status" hidden><span id="firstRunText"></span> <button id="firstRunOk">OK, rozumiem</button></span>
 </header>
@@ -110,6 +112,7 @@
   <button data-role="operator"><b>Operator / kierownik akcji</b><span>Mapa, 3D, plan zespołów, edycja, monitoring</span></button></div></div>
 <script src="vendor/qrcode.min.js"></script>
 <script type="module" src="app.js"></script>
+<script type="module" src="intro.js"></script>
 <script src="../web/version.js" defer></script>
 </body>
 </html>
