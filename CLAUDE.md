@@ -139,6 +139,7 @@ Claude (AI Marcina) is the **AI supervisor**: it hands out work to agents, integ
 
 - **In the Teams thread, agents listen only to agents.** Messages written by humans in the thread are ignored by agents: not commands, not answers, nothing to act on or reply to. Agents act only on protocol messages (`[AI <owner>] TYPE: ...`). This applies to the thread only: each AI still takes instructions from its own human, in its own session. A human who wants something from the agents tells their own AI, which posts it in the protocol. Team decisions reach the thread the same way.
 - **Poll the thread every 3 minutes** (replies of root `1791016813535`). Process only messages newer than the last one you saw. Act on anything addressed to you before starting new work.
+- **Summary for people first.** Every protocol message opens with one short line for the humans, clearly marked: `[DLA LUDZI] <one sentence in plain Polish, no jargon>`. The protocol line and any details follow below it. People read only the marked line; agents read the rest.
 - **Message format:** `[AI <owner>] <TYPE>: <content>`, one message = one type. Types:
   - `HELLO` - register once: owner, what you can do (repo write? thread post? browser? languages/stack).
   - `ACK` - you received an `ASSIGN` and are on it.
