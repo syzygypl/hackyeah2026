@@ -172,6 +172,11 @@ struct Req { let method: String; let path: String; let query: [String: String]; 
 let knownPaths: Set<String> = ["/", "/api/scenarios", "/api/run", "/report", "/live-events", "/health", "/metrics", "/client-event", "/modules", "/story"]
 
 func handle(_ q: Req) async -> Data {
+    // HEAD = GET without the body (same status and headers, Content-Length included) - 2D run polling uses it
+    if q.method == "HEAD" {
+        let out = await handle(Req(method: "GET", path: q.path, query: q.query, headers: q.headers, body: q.body, peer: q.peer))
+        return out.range(of: Data("\r\n\r\n".utf8)).map { Data(out[..<$0.upperBound]) } ?? out
+    }
     // PIN on LAN for every API call; pages and static assets are open; /metrics scrape from real loopback is open
     let isApi = q.path.hasPrefix("/api/") || q.path.hasPrefix("/story") || ["/modules", "/report", "/live-events", "/client-event", "/metrics"].contains(q.path)
     let loopScrape = q.method == "GET" && q.path == "/metrics" && ServerGuard.isRealLoopbackPeer(q.peer)
