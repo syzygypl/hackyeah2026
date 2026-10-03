@@ -116,6 +116,11 @@ All three are free on Google Fonts. SF Pro looks most like Apple, but its licenc
 | Dashboard | live console: 12 one-click attacks + 2 legit, verdict, reasons, µs per check; policy edits via authenticated PUT, atomic write, audited | f000cb6, 88f1934, 00fea5a | built |
 | IBAN in prompts | tokenized, resolved only inside payment tool calls | f3186a9 | built |
 | PII before models | models only ever see PII-redacted text; a hidden injection marks the session compromised even when the PII check already blocked the prompt | a0eda2b, 7468e6e | built |
+| Demo Mac verification (HEAD) | tiered gateway **19/20** attacks caught, 1/16 benign blocked, 36 labelled items x 5 runs (EN + PL); qwen3guard p50 **134 ms** (p95 173); Granite **521 ms** on short text, 1.9 s at 2,000 chars, 4.1 s at 6,000; **75/75** unit tests, **129/129** demo cases with real models | docs/research/demo-mac-test.md | measured. Say "on our test set"; smoke test, not a benchmark. Supersedes 194 ms / 1.4 s as headline |
+| Consensus accuracy | 18/20 caught, 4/16 benign held, 36% guard disagreement | demo-mac-test.md | measured. **Never claim consensus is better than tiered** |
+| Risk-tier escalation | arbiter, log-odds weighted votes, then allow + flag (low/medium) or deny (high/critical) | 2fcd99a | shipped in code |
+| Approval flow | `server.py` accepts unauthenticated `approved_by` (self-approved 15k transfer reproduced) | summary-1230.md | **known gap: don't present approval as secure** until fixed |
+| Polish benign prompts | 7/42 wrongly blocked (EN 0/8) | demo-mac-test.md | measured weak spot |
 | Agent model | qwen3:4b-instruct allowlisted and digest-pinned as the agent model | da52ab8 | built |
 | Real model agent | qwen3:4b ignored the hidden instruction in 3/3 runs; Airlock still sent the payment to a human | `spikes/acl-agent/README.md` | measured, n=3 |
 | Deploy | 3 commands, Python stdlib, no pip install | architecture §3 | true |
