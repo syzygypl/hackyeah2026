@@ -169,3 +169,15 @@ body.hiding #scene canvas { cursor: crosshair; }
 
 @media (max-width: 1250px) { #right { display: none; } #game { width: auto; left: 364px; right: 12px; transform: none; min-width: 0; } }
 @media (max-width: 820px) { #left { width: auto; right: 12px; bottom: auto; max-height: 40vh; } #feed, .legend { display: none; } #game { left: 12px; top: auto; bottom: 92px; } }
+
+/* cinematic mode */
+#bars i { position: fixed; left: 0; right: 0; height: 0; background: #0b0d10; z-index: 8; transition: height 0.9s cubic-bezier(.2, .8, .2, 1); }
+#bars i:first-child { top: 0; } #bars i:last-child { bottom: 0; }
+body.cinema #bars i { height: 9vh; }
+body.cinema .panel, body.cinema #feed, body.cinema #hud .btn:not(#btn-cine) { opacity: 0; pointer-events: none; }
+body.cinema #hud { z-index: 9; bottom: calc(9vh + 12px); }
+.panel, #feed, #hud .btn { transition: opacity 0.6s; }
+#caption { position: fixed; z-index: 9; left: 50%; bottom: calc(9vh + 22px); transform: translateX(-50%); max-width: 70vw; text-align: center; color: #fff; font-size: 20px; font-weight: 500; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); opacity: 0; transition: opacity 0.6s; }
+#caption b { font-family: ui-monospace, Menlo, monospace; color: #ffd27a; margin-right: 10px; }
+body.cinema #caption { opacity: 1; }
+body.cinema .lbl3d.hut, body.cinema .lbl3d.team, body.cinema .lbl3d.ring { opacity: 0; }

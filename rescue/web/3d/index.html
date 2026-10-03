@@ -66,12 +66,16 @@
 </footer>
 
 <div id="hud">
+  <button id="btn-cine" class="btn red" title="Kino: automatyczny przelot przez całą akcję (Esc kończy)">Kino</button>
+  <button id="btn-trees" class="btn on" title="Lasy i kosodrzewina">Las</button>
   <button id="btn-top" class="btn" title="Przelot do najbardziej prawdopodobnego segmentu">Lider</button>
   <button id="btn-all" class="btn" title="Cały obszar">Cały obszar</button>
   <button id="btn-rot" class="btn" title="Powolny obrót kamery">Obrót</button>
   <button id="btn-fog" class="btn on" title="Mgła i zmrok wg warunków z kroku">Pogoda</button>
 </div>
 
+<div id="bars" aria-hidden="true"><i></i><i></i></div>
+<div id="caption" aria-live="polite"></div>
 <div id="tip" class="tip" hidden></div>
 <div id="loading"><div class="spinner"></div><p id="loadmsg">Wczytywanie modelu terenu (Copernicus DEM)...</p></div>
 

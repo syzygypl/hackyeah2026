@@ -21,3 +21,9 @@ You hide the person by clicking the terrain (or "Losuj"). The map keeps the engi
 
 ## blind-01 replay
 `?sc=blind-01` reads `scenarios/blind-01-replay.json` and the reveal `blindtest/blind-01.reveal.json` (true spot pinned at the end, hider's story in the step card). It needs `out/blind-01-replay.run.json` from `swift run rescue-demo --fast scenarios/blind-01-replay.json` for the probability map; without it the page shows signals and patrols only and says so.
+
+## Look and camera
+- **Rendering:** sun disk and halo in the sky, soft shadows from the low evening sun, ACES tone mapping, aerial haze; slope-aware colouring (rock on steep ground, spruce/dwarf-pine/meadow belts by elevation, snow high up), turquoise lakes.
+- **Forests:** about 20k instanced spruce below ~1500 m and dwarf pine at 1450-1850 m, placed by elevation, slope and a noise mask (not from survey data). Button "Las" hides them; `?trees=` sets the sampling budget.
+- **Probability colour:** "times the average cell" on a log scale (average or less = no tint, 10x = full colour), the same scale at every step.
+- **Kino (cinematic mode):** letterbox, subtitles and one scripted shot per timeline step (flies to the step's signal or the leading segment, slow orbit, stays above the ridges), then pulls back to the overview. Esc or a mouse drag ends it.
