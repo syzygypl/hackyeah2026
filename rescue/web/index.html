@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rescue Locator - mapa prawdopodobieństwa</title>
-<link rel="stylesheet" href="basemap/vendor/maplibre-gl.css">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="data:,">
 </head>
@@ -76,12 +76,12 @@
 </div>
 <pre id="diag" hidden></pre>
 <script type="module">
-  // MapLibre GL JS 6.11.2 (ESM) and pmtiles 4.5.0 are shipped with the offline basemap in basemap/vendor/ (one copy, not duplicated).
+  // MapLibre GL JS 6.11.2 (ESM) and pmtiles 4.5.0: one shared copy in vendor/, also used by basemap/basemap.js.
   // Missing or broken -> app.js falls back to its Canvas 2D view.
   window.__mlFailed = false;
-  try { window.maplibregl = await import('./basemap/vendor/maplibre-gl.mjs'); }
+  try { window.maplibregl = await import('./vendor/maplibre-gl.mjs'); }
   catch (e) { window.__mlFailed = true; console.warn('[rescue] MapLibre not loaded:', e && e.message); }
-  try { if (!window.__mlFailed) await import('./basemap/vendor/pmtiles.js'); } catch (e) { console.warn('[rescue] pmtiles not loaded:', e && e.message); }
+  try { if (!window.__mlFailed) await import('./vendor/pmtiles.js'); } catch (e) { console.warn('[rescue] pmtiles not loaded:', e && e.message); }
   const s = document.createElement('script'); s.src = 'app.js'; document.body.appendChild(s);
 </script>
 </body>

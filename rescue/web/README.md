@@ -26,6 +26,7 @@ Keyboard: left / right = step, space = play / pause, Home / End = first / last s
 | `dem` | `../tools/terrain/data/zawrat-dem.json` | Copernicus DEM crop for the offline relief (hillshade + elevation tint) |
 | `live` | `../out/live-events.json` | field reports, polled every 4 s (`livePollMs`) |
 | `field` | `http://127.0.0.1:8770` | local `rescue-field serve` for the "Wyślij meldunek" box |
+| `pin` | none | PIN sent as `X-Rescue-Pin` when `rescue-field` runs on the LAN (`--host 0.0.0.0 --pin NNNN`); loopback needs none |
 | `basemap` | `basemap/` | offline basemap folder; `none` = skip |
 | `flavor` | `light` | basemap flavour passed to `offlineStyle()` (`light`, `white`, `grayscale`) |
 | `base` | first available | start background: `map`, `relief`, `topo`, `osm`, `none` |
@@ -70,7 +71,7 @@ If WebGL or MapLibre is not available, a Canvas 2D view draws the same grid, seg
 
 ## Libraries
 
-MapLibre GL JS **6.11.2** (ESM) and pmtiles **4.5.0** are not duplicated here: the page imports the copies shipped in `basemap/vendor/` (licences in `basemap/vendor/LICENSE-*.txt`). Without `basemap/` the page still works in the Canvas view.
+MapLibre GL JS **6.11.2** (ESM: `maplibre-gl.mjs`, `-shared.mjs`, `-worker.mjs`, `.css`), pmtiles **4.5.0** and @protomaps/basemaps 5.7.2 live once in `vendor/` (licences `vendor/LICENSE-*`), shared by this page and `basemap/basemap.js`. If `vendor/` is missing or the browser has no WebGL, the page falls back to its Canvas view; if `basemap/` is missing, to the offline relief.
 
 ## Checks
 

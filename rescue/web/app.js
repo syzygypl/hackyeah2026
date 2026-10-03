@@ -14,6 +14,7 @@
     dem: Q.get('dem') || '../tools/terrain/data/zawrat-dem.json',
     live: Q.get('live') || '../out/live-events.json',
     field: Q.get('field') || 'http://127.0.0.1:8770',
+    pin: Q.get('pin') || '', // only for rescue-field bound to the LAN (--host 0.0.0.0 --pin NNNN); loopback needs none
     basemap: Q.get('basemap') || 'basemap/', // folder with basemap.js (module API) or style.json; "none" = skip
     flavor: Q.get('flavor') || 'light',
     tiles: Q.get('tiles') === 'online',
@@ -690,7 +691,10 @@
       msg.textContent = 'Wysyłam...';
       try {
         const body = at ? { text, at } : { text };
-        const r = await fetch(CFG.field.replace(/\/$/, '') + '/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const headers = { 'Content-Type': 'application/json' };
+        if (CFG.pin) headers['X-Rescue-Pin'] = CFG.pin;
+        const r = await fetch(CFG.field.replace(/\/$/, '') + '/report', { method: 'POST', headers, body: JSON.stringify(body) });
+        if (r.status === 401) { msg.textContent = 'Serwer wymaga PIN-u (tryb LAN): dodaj ?pin=NNNN do adresu strony.'; return; }
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const ev = await r.json().catch(() => null);
         msg.textContent = ev && ev.parsedBy ? `Przyjęty (${ev.parsedBy}${ev.latencyMs != null ? ', ' + ev.latencyMs + ' ms' : ''}).` : 'Przyjęty.';
