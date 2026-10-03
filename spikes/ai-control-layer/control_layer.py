@@ -367,8 +367,8 @@ class ControlLayer:
                                                     json.dumps({"tool": name, "args": args}, ensure_ascii=False), pi, high,
                                                     session.purpose or "(task not stated)", "tool_args", rule.get("risk", "low"))
                 if hit:
-                    if pi.get("on_flag", "require_approval") == "deny":
-                        self._block(ev, guard, f"unsafe tool call: {why}")
+                    if pi.get("on_flag", "deny") != "require_approval":
+                        self._block(ev, guard, f"unsafe tool call: {why} -> DENIED (on_flag deny)")
                     decision = APPROVAL
                     ev["guardrails"].append(guard)
                     ev["reasons"].append(f"unsafe tool call ({why}) needs human approval")
