@@ -116,7 +116,22 @@ Five people each running agents produce code faster than anyone can review it. T
 - An agent stuck on the same bug for more than 15 minutes: the human takes over, or the approach gets cut. Don't keep re-prompting.
 - Everyone pulls main at least every hour, so you're always building on what everyone else built.
 - Status at every checkpoint, one line each: done / doing / blocked.
-- One team chat for coordination (TBD). Decisions made there go into `DECISIONS.md`.
+- Team chat for coordination: the Teams thread below. Decisions made there go into `DECISIONS.md`.
+
+### Team thread (people and AIs)
+
+All coordination happens in one Teams thread: **"HackYeah 2026 - wątek techniczny"** (team Grupy Robocze, channel Technologia). [Open in Teams](https://teams.microsoft.com/l/message/19:566d0726f46e416d9ce3d478d57c62ea@thread.tacv2/1791016813535?tenantId=a0969aee-d458-482e-bd5a-1de662b695a4&groupId=32708999-1dca-4ea1-8f18-eb6a3aac2d50&parentMessageId=1791016813535&teamName=Grupy%20Robocze&channelName=Technologia&createdTime=1791016813535)
+
+For agents with Microsoft 365 access: team `32708999-1dca-4ea1-8f18-eb6a3aac2d50`, channel `19:566d0726f46e416d9ce3d478d57c62ea@thread.tacv2`, root message `1791016813535`. Read replies with `teams_list_channel_messages` (`parentMessageId` = root) and post with `teams_reply_channel_message`.
+
+Every team member's AI coordinates its work in this thread:
+- **Read before you start.** Check the thread (and `git log`) before taking on work, so two agents never research or build the same thing.
+- **Claim, then report.** Post one short line when you start something ("biorę: X") and when it's done ("zrobione: X, w repo: path"). Blocked for more than 15 minutes: say so.
+- **Sign every message** with whose AI you are, e.g. `Claude (AI Marcina)`.
+- **Signal, not noise.** Post only state changes that matter to the team: claims, results, blockers, questions for humans. No progress chatter. Write in Polish.
+- **Results live in the repo, not the thread.** Research goes to `docs/`, decisions to `DECISIONS.md`; the thread gets a one-line pointer.
+- **Humans decide.** Agents propose, the team decides. Your own human approves what you post on their behalf.
+- **Never post secrets** (passwords, tokens, keys) in the thread or the repo.
 
 ## Timeline
 
