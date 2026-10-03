@@ -307,6 +307,9 @@ class ControlLayer:
         try:
             with self._lock:
                 self.policy = self.store.get()
+                if self.store.version != getattr(self, "_cache_policy_version", None):
+                    self.semantic.clear_cache()  # new policy (models, thresholds, categories) = fresh verdicts
+                    self._cache_policy_version = self.store.version
         except Exception:
             self.policy = None
 

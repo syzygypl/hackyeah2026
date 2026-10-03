@@ -549,6 +549,35 @@ class SemanticFailModes(unittest.TestCase):
         self.assertEqual(r["event"]["semantic"]["stages"], [])
 
 
+class SemanticCache(unittest.TestCase):
+    def tearDown(self):
+        self.fake.stop()
+
+    def test_fallback_verdict_is_never_cached(self):
+        # primary qwen3guard not installed -> llama-guard fallback answers; a false positive must not stick
+        self.fake = FakeOllama({"llama-guard3:1b": "aaa"}, reply="unsafe\nS1")
+        layer, s, _ = fresh(edit=semantic_env(self.fake.url))
+        for _ in range(2):
+            r = layer.check_prompt(s, "Read invoice INV-2041")
+            st = r["event"]["semantic"]["stages"][0]
+            self.assertEqual(st["model"], "llama-guard3:1b")
+            self.assertFalse(st.get("cached", False))
+        self.assertEqual(layer.semantic.stats["model_calls"], 2)
+        self.assertEqual(len(layer.semantic.cache), 0)
+
+    def test_primary_verdict_cached_with_ttl_and_cleared_on_policy_change(self):
+        self.fake = FakeOllama({"sileader/qwen3guard:0.6b": "q1"}, reply="Safety: Safe\nCategories: None")
+        layer, s, env = fresh(edit=semantic_env(self.fake.url, cache_ttl_s=0.3))
+        cached = lambda: layer.check_prompt(s, "hello")["event"]["semantic"]["stages"][0].get("cached", False)
+        self.assertFalse(cached())
+        self.assertTrue(cached())
+        time.sleep(0.35)
+        self.assertFalse(cached())  # TTL expired
+        self.assertTrue(cached())
+        env.edit(lambda p: p["controls"]["semantic"].update(threshold=0.55))
+        self.assertFalse(cached())  # policy changed -> cache cleared
+
+
 def _ollama_has(model):
     try:
         with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=0.5) as r:
@@ -757,7 +786,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow",
           "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "Performance": "performance"}
 
 

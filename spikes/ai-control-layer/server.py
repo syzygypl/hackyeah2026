@@ -6,6 +6,7 @@ Run:  python3 server.py [port]      (default 8787, binds 127.0.0.1)
   POST /v1/tool    {"session": "s1", "tool": "send_email", "args": {...},
                     "purpose": "the user's actual task (the judge model uses it as context)",
                     "approved_by": "optional human, simulates the approval click"}
+  POST /admin/cache/clear   drop cached model verdicts (also cleared automatically on every policy change)
   GET  /metrics    real-time metrics + per-check latency telemetry (JSON)
   GET  /audit      exportable audit log (JSONL, hash-chained)
   GET  /report     security report (markdown)
@@ -74,6 +75,10 @@ class Handler(BaseHTTPRequestHandler):
             req = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         except Exception:
             return self._send(400, {"error": "invalid JSON"})
+        if self.path == "/admin/cache/clear":
+            n = len(LAYER.semantic.cache)
+            LAYER.semantic.clear_cache()
+            return self._send(200, {"cleared": n})
         s = session(req.get("session"), req.get("purpose"))
         with s.lock:
             if self.path == "/v1/prompt":

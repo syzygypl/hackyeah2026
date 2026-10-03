@@ -151,12 +151,18 @@ class SemanticGuard:
                 out.append((model, self.installed[name]))
         return out
 
-    def _call(self, cfg, model, text, timeout_s, system=None, context=None):
+    def clear_cache(self):
+        self.cache.clear()
+
+    def _call(self, cfg, model, text, timeout_s, system=None, context=None, cacheable=False):
+        """cacheable only for a tier's PRIMARY model: fallback verdicts (e.g. llama-guard filling in while qwen3guard
+        is on cooldown) are less reliable and must not stick. Entries expire after semantic.cache_ttl_s."""
         fmt = model_format(model)
         key = hashlib.sha256(f"{model}\0{system}\0{context}\0{text}".encode()).hexdigest()
-        if key in self.cache:
+        hit = self.cache.get(key) if cacheable else None
+        if hit and time.time() - hit["_at"] < cfg.get("cache_ttl_s", 600):
             self.stats["cache_hits"] += 1
-            return dict(self.cache[key], cached=True, latency_ms=0.0)
+            return dict({k: v for k, v in hit.items() if k != "_at"}, cached=True, latency_ms=0.0)
         body = {"model": model, "stream": False, "keep_alive": cfg.get("keep_alive", "30m"),
                 "options": {"temperature": 0, "num_predict": 48},
                 "messages": ([{"role": "system", "content": system}] if system else []) + (
@@ -176,9 +182,10 @@ class SemanticGuard:
         verdict, p, cats = parse_output(fmt, resp["message"]["content"], lp)
         out = {"verdict": verdict, "p_unsafe": p, "categories": cats, "latency_ms": round((time.perf_counter_ns() - t) / 1e6, 1)}
         self.stats["model_calls"] += 1
-        if len(self.cache) > 4096:
-            self.cache.clear()
-        self.cache[key] = out
+        if cacheable and cfg.get("cache_ttl_s", 600) > 0:
+            if len(self.cache) > 4096:
+                self.cache.clear()
+            self.cache[key] = dict(out, _at=time.time())
         return out
 
     def _warm_async(self, cfg, model):
@@ -218,7 +225,8 @@ class SemanticGuard:
                 out = []
                 for crit in stage.get("criteria") or [None]:
                     r = self._call(cfg, model, text, timeout / 1000, system=crit,
-                                   context=context if fmt == "granite_guardian" else None)
+                                   context=context if fmt == "granite_guardian" else None,
+                                   cacheable=model == stage.get("model"))
                     counted = r["verdict"] != "safe" and not (fmt == "llama_guard" and r["categories"] and not blocked & set(r["categories"]))
                     out.append(dict(r, stage=name, model=model, digest=digest[:12], criterion=crit, counted=counted,
                                     category_names=[LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]))
