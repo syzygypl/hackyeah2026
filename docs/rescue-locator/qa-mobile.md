@@ -11,7 +11,7 @@ moment below the fold, the version stamp sat on the start-page cards), small tou
 text at 4.15:1 (`--rl-mute` on the paper ground, under AA 4.5:1; now fixed in tokens.css). Everything in Mateusz's area is fixed. The issues in other
 owners' areas are listed at the end, with selectors.
 
-`/app/czat.html` does not exist yet (404), so it was not tested.
+`/app/czat.html` and the Czat drawer in `/app` were tested in a second pass, once they were on main (section "Czat" below).
 
 ## Results
 
@@ -44,6 +44,21 @@ owners' areas are listed at the end, with selectors.
 | rescuer phone `/?role=ratownik&sc=zawrat` | 360, 390 | See "For AI Marcina" below | open, AI Marcina |
 | cwiczenia.html | 390, 360 | See "For AI Marcina" below | open, AI Marcina |
 | porownanie 2D frames (web/) | 390 | See "For AI Marcina" below | open, AI Marcina |
+
+## Czat (second pass, chat agent's area: chat.js, chat.css, czat.html)
+
+Walked on production: type "Widziałam go o 14:30 przy Zmarzłym Stawie, szedł w górę na Zawrat", send, confirm, see top 3 move. The parser
+answers in about 0.3 s and the confirmed run in about 2 s (czat.html) or 0.3 s (drawer, Historia). Everything below went to the chat agent
+as an INFO. Nothing here is in Mateusz's area, so nothing was changed.
+
+| Page | Width | Issue | Status |
+|---|---|---|---|
+| czat.html | 390, 360 | **Blocker.** The page renders 1967 px wide inside a 390 px viewport. `.cz-main` is a grid with `1fr`, so the column grows to the min-content of the nowrap `.ch-chips` row. Typing scrolls the view sideways, the send button is covered by other elements and can't be tapped. With `.cz-main{grid-template-columns:minmax(0,1fr)}` plus `min-width:0` on `.cz-side` and `#czChat`, the whole flow works (checked by injecting it) | open, chat agent. Shots: `qa-czat-390-blowout.jpg`, `qa-czat-360-with-fix.jpg` |
+| czat.html | 390, 360 | The 2D frame shows the full legend plus the base and layer panel (Teren/Brak, nazwy, trudność, Cały obszar) over half of a 290 px map. Use `embed=bare` or a compact legend, as in porównanie | open, chat agent |
+| czat.html | 390, 360 | The version stamp (`#rl-version`) sits on the textarea and send button | open, chat agent (e.g. `#rl-version{display:none}` under 760 px on this page) |
+| czat.html | all | `.ch-send` is 42x42. "Dodaj (symulacja)" and "Anuluj" are 39 px. Chips (`.ch-chip`) are 31 px. Header `a.brand` is 25 px and `a.app` "Pełna aplikacja" is 20 px | open, chat agent |
+| czat.html | all | One `net::ERR_METHOD_NOT_SUPPORTED` in the console after confirming | open, chat agent |
+| /app Czat drawer | 390 | Works. The drawer covers the screen and the confirmation card with its mini map is clear. But the textarea is 14.5 px, so iOS Safari zooms in on focus (needs 16 px or more). `#chBtn` is 82x33, `.ch-x` 31x32, Dodaj/Anuluj 34 px, Pokaż na mapie/Cofnij 32 px | open, chat agent. Shot: `qa-czat-drawer-390.jpg` |
 
 ## Open issues for other owners
 
