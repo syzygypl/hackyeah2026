@@ -552,8 +552,32 @@ function runURL() {
   if (store.backend === "api") return store.runUrl;
   return null;
 }
+// floating layout (app.css "floating layout"): the free area between the panels, in px from each edge of the viewport
+function isFloat() { return document.body.classList.contains("float") && innerWidth > 900; }
+function insets() {
+  if (!isFloat() || document.body.classList.contains("cinema")) return [0, 0, 0, 0];
+  const r = (id) => { const el = $(id); if (!el || getComputedStyle(el).display === "none") return null; const b = el.getBoundingClientRect(); return b.width && b.height ? b : null; }; // fixed panels have no offsetParent
+  const h = document.querySelector("header").getBoundingClientRect(), L = r("left"), Rr = r("right"), Bt = r("bottom");
+  document.documentElement.style.setProperty("--hdr-h", Math.round(h.height) + "px"); // a wrapped header pushes the rails down
+  return [Math.round(h.bottom), Rr ? Math.round(innerWidth - Rr.left) : 0, Bt ? Math.round(innerHeight - Bt.top) : 0, L ? Math.round(L.right) : 0];
+}
+function setFloat() {
+  document.body.classList.toggle("float", store.role !== "ratownik" && (store.mode === "akcja" || store.mode === "edycja"));
+  pushInsets();
+}
+let insetsKey = "";
+function pushInsets() {
+  const t = insets(), key = t.join(",");
+  if (mapReady) { const [T, R, B, L] = t; map.setPadding({ top: T, right: R, bottom: B, left: L }); }
+  if (key === insetsKey) return; insetsKey = key;
+  for (const k in FRAMES) postTo(k, { type: "insets", insets: t });
+}
+addEventListener("resize", () => setTimeout(pushInsets, 50));
 function frameURL(k) {
   const i = store.step - 1, sc = encodeURIComponent(store.scenario), ru = runURL(), po = encodeURIComponent(location.origin);
+  return frameURLBase(k, i, sc, ru, po) + "&insets=" + insets().join(",");
+}
+function frameURLBase(k, i, sc, ru, po) {
   if (k === "3d") {
     if (store.backend === "studio") return `../web/3d/index.html?embed=scene&sc=zawrat&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/story/scenario")}&step=${i}`;
     if (store.backend === "api") return `../web/3d/index.html?embed=scene&sc=${sc}&run=${encodeURIComponent(ru)}&step=${i}`;
@@ -590,7 +614,9 @@ addEventListener("message", (e) => {
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
     if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
     for (const id of evOff) postTo(k, { type: "evidence", id, on: false });
+    postTo(k, { type: "insets", insets: insets() });
   }
+  if (m.type === "cinema") { document.body.classList.toggle("cinema", !!m.on); pushInsets(); } // 3D Kino: panels step aside, full-frame shots
   if (m.type === "select" && (typeof m.segmentId === "string" || m.segmentId === null)) selectSeg(m.segmentId, k);
   if (m.type === "evidence" && typeof m.id === "string") setEvidence(m.id, !!m.on, k);
   // a view reloading itself reports its boot step before "ready": only user steps after "ready" count
@@ -616,6 +642,7 @@ function setRole(r) {
     $("center").insertBefore($("map"), $("center").firstChild);
     setMode(store.mode || "akcja");
   }
+  setFloat();
   setTimeout(() => map.resize(), 50);
 }
 // first-run hint: one line, dismissible, remembered per role
@@ -661,6 +688,7 @@ function setMode(m, v) {
   $("views").style.display = views.length ? "" : "none";
   if (m === "edycja" && store.backend !== "studio" && store.hasStudio) loadScenario("studio").catch((e) => toast(plErr(e)));
   try { localStorage.setItem("rescue-app-mode", m); } catch (e) {}
+  setFloat(); // before setView: the frames are created with the floating insets
   setView(v || lastView[m] || (views[0] || [""])[0]);
   if (store.run) renderPanels();
   if (m === "teren") showTeren();
@@ -672,7 +700,7 @@ function setView(v) {
   store.view = v; lastView[store.mode] = v;
   document.body.className = document.body.className.replace(/\bview-\w+/g, "").trim() + " view-" + v;
   document.querySelectorAll("#views button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
-  setTimeout(() => map.resize(), 0);
+  setTimeout(() => { map.resize(); pushInsets(); }, 0);
   if (store.mode === "teren") showTeren();
   sync3d("view");
   hint();
@@ -735,6 +763,7 @@ async function boot() {
     if (want && store.scenList.some((s) => s.id === want)) $("scen").value = want;
     await loadScenario($("scen").value);
     setMode(m, q.get("view"));
+    if (q.get("step") != null && Number.isFinite(+q.get("step"))) setStep(+q.get("step") + 1); // ?step= is 0-based, like the views
     initRescuer({ store, api, map, maplibregl, toast, curStep, selectSeg: (id, from) => selectSeg(id, from), onTeam: setRescuerFrame });
     try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
     let role = q.get("role"); if (!role) { try { role = localStorage.getItem("rescue-app-role"); } catch (e) {} }
