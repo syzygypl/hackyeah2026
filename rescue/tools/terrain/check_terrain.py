@@ -1,33 +1,18 @@
-"""Compare the scenario's hand-placed terrain and events with the real OSM + DEM terrain. Writes terrain_check.md.
+"""Compare each scenario's hand-placed terrain and story points with its real OSM + DEM terrain.
+Writes terrain_check.md (one section per scenario that has a <name>-terrain.json).
 
   python3 rescue/tools/terrain/check_terrain.py
+
+Hand-written findings per scenario live in findings.json ({"<name>": ["- line", ...]}) and are appended.
 """
+import glob
 import json
 import os
 import statistics as st
 
 from osm_terrain import HERE, RESCUE, dist_m, seg_dist_m, slope_deg
 
-SC = os.path.join(RESCUE, "scenarios", "zawrat.json")
-TER = os.path.join(RESCUE, "scenarios", "zawrat-terrain.json")
-DEM = os.path.join(HERE, "data", "zawrat-dem.json")
-LAKE_MATCH = {"Wielki Staw": "Wielki Staw Polski", "Przedni Staw": "Przedni Staw Polski", "Czarny Staw": "Czarny Staw Polski",
-              "Zadni Staw": "Zadni Staw Polski", "Morskie Oko": "Morskie Oko", "Zmarzły Staw": "Zmarzły Staw Gąsienicowy"}
-HUT_MATCH = {"Schronisko w Dolinie Pięciu Stawów": "Schronisko PTTK w Dolinie Pięciu Stawów Polskich",
-             "Murowaniec": "Murowaniec", "Schronisko Morskie Oko": "Schronisko PTTK Morskie Oko"}
-
-
-FINDINGS = """## 3. Findings (hand-written, 2026-10-03, from the tables above)
-
-- **Offset:** the hand-drawn trails are a median **~100 m** from the real ones (p90 ~320 m, max ~490 m), streams ~150 m (max ~610 m). Lakes are the worst: Czarny Staw and Zadni Staw are placed **1.3-1.5 km** off, Wielki Staw 630 m, Zmarzły Staw 470 m. Huts and the IPP are fine (40-135 m). So the coordinator's "~500 m offset" is right for lakes and the worst trail vertices; typical trail error is ~100 m.
-- **Effect on the demo** (`swift run rescue-demo` with the override, state before the Ratunek ping): the truth segment S7 goes from **rank 1 to rank 2**. Top 3 hold 49% in 6% of the area (was 46%), S4 Wielki Staw 22% is first, S7 19%. Area swept before reaching the find: 0.0% (was 0.2%). Rings-only rank stays 19. After the ping S7 = 90%. The story still holds; the headline "rank 1" becomes "rank 2" unless the events are re-placed.
-- **Truth / Ratunek point** (49.2196, 20.0228) is 4 m from the real red trail Zawrat - Kozia Przełęcz (Orla Perć) at 2034 m, cell mean slope ~40°. The story says "Żleb pod Zawratem" (a gully off the trail). Real terrain puts it ON a marked trail, which weakens the "found off-trail in the gully" narrative. To keep it, move the truth ~150-250 m into the gully below Zawrat toward Zmarzły Staw (Mateusz's call, zawrat.json not edited).
-- **Cell fix** (49.2205, 20.0250) sits on a 46° slope, 11 m from the yellow Zmarzły Staw - Kozia Przełęcz trail: plausible (BTS sectors are coarse anyway).
-- **Seeds:** S3 is inside the real Przedni Staw (lake), S1/S9/S17 are on steep off-trail cells, S16 (Wołoszyn) and S19 are 700-840 m from any trail. S12 "Szpiglasowa Przełęcz" is 420 m from the real yellow trail to the pass. Seeds only start the segment growth, so this is cosmetic, but S3 inside a lake and S12 off the pass are worth a nudge.
-- **Trip plan route** (green Roztoka + blue to Zawrat) is 107 m median / 280 m max from the real trails. It's fine as a 300 m-sigma corridor, but re-tracing it from the real `Zielony`/`Niebieski` polylines in zawrat-terrain.json would make the map line match the trail.
-- **Hand terrain has a "Schronisko Roztoka"**: OSM has no alpine_hut there in the bbox (the Roztoka hostel is outside or tagged differently).
-- **Steep ground:** 659 of 3600 cells (18%) are > 38° on most pixels and > 120 m from a trail. With the Swift rule `dRidge < 250 m && dTrail > 120 m -> 0.35`, the 250 m buffer around these cell-precise ridges is wide; ~70 m (half a cell diagonal) would match the DEM resolution. Alternatively Swift can read `slopeDeg` directly.
-""".splitlines()
+FINDINGS_FILE = os.path.join(HERE, "findings.json")
 
 
 def to_line(p, line):
@@ -35,81 +20,110 @@ def to_line(p, line):
 
 
 def nearest(p, feats):
+    if not feats:
+        return None, "-"
     d, f = min(((to_line(p, f["points"]), f) for f in feats), key=lambda x: x[0])
     return round(d), f["name"]
 
 
-def main():
-    sc, ter = json.load(open(SC)), json.load(open(TER))
-    dem = json.load(open(DEM))
+def norm(s):
+    s = "".join(ch for ch in s.lower() if ch.isalnum() or ch == " ")
+    return " ".join(w for w in s.split() if w not in ("schronisko", "pttk", "w", "przy", "na"))
+
+
+def match(name, real, at, key):
+    """Name match (nearest if several), else the nearest feature within 600 m by position."""
+    n = norm(name)
+    named = [r for r in real if n and norm(r["name"]) and (norm(r["name"]).startswith(n) or n.startswith(norm(r["name"]))
+                                                           or n in norm(r["name"]))]
+    pool = named or [r for r in real if dist_m(at, r[key]) < 600]
+    return min(pool, key=lambda r: dist_m(at, r[key])) if pool else None
+
+
+def stats(xs):
+    xs = sorted(xs)
+    return f"median **{st.median(xs):.0f} m**, p90 {xs[int(len(xs) * .9)]:.0f} m, max {xs[-1]:.0f} m"
+
+
+def section(path, findings):
+    name = os.path.splitext(os.path.basename(path))[0]
+    sc = json.load(open(path))
+    ter = json.load(open(path.replace(".json", "-terrain.json")))
+    dem = json.load(open(os.path.join(HERE, "data", f"{name}-dem.json")))
     sl = slope_deg(dem)
+    sy = dem.get("stepLat", dem["step"])
 
     def z_s(p):
-        r, c = int((dem["lat0"] - p[0]) / dem.get("stepLat", dem["step"])), int((p[1] - dem["lon0"]) / dem["step"])
+        r, c = int((dem["lat0"] - p[0]) / sy), int((p[1] - dem["lon0"]) / dem["step"])
         if 0 <= r < dem["rows"] and 0 <= c < dem["cols"]:
             return round(dem["z"][r][c]), round(sl[r][c])
-        return None, None
+        return "-", "-"
 
     def in_lake(p):
         return next((l["name"] for l in ter["lakes"] if dist_m(p, l["center"]) < l["radiusM"]), "")
 
-    real_trails, real_streams = ter["trails"], ter["streams"]
+    trails, streams = ter["trails"], ter["streams"]
     steep = [f for f in ter["ridges"] if "DEM" in f["name"]]
-    L = ["# Zawrat terrain check: hand-placed scenario vs real OSM + DEM", "",
-         "Generated by `python3 rescue/tools/terrain/check_terrain.py` from `scenarios/zawrat.json` (not edited) and "
-         "`scenarios/zawrat-terrain.json`. Distances in metres, slope in degrees from Copernicus DEM GLO-30 (30 m).", ""]
+    L = [f"## {name}", "", f"*{sc.get('incident', '')}* Subject: {sc.get('subject', {}).get('category', '?')}, "
+         f"age {sc.get('subject', {}).get('age', '?')}.", ""]
 
-    # 1. offsets of the hand-placed terrain
-    L += ["## 1. How far the hand-placed terrain is from reality", ""]
-    hand = sc["terrain"]
-    pts = [p for t in hand["trails"] for p in t["points"]]
-    d = [to_line(p, None) if False else min(to_line(p, t["points"]) for t in real_trails) for p in pts]
-    L += [f"- **Trail vertices** ({len(pts)} points of {len(hand['trails'])} hand-drawn trails) to the nearest real "
-          f"marked trail: median **{st.median(d):.0f} m**, p90 {sorted(d)[int(len(d) * .9)]:.0f} m, max {max(d):.0f} m."]
-    for t in hand["trails"]:
-        dd = [min(to_line(p, r["points"]) for r in real_trails) for p in t["points"]]
-        L.append(f"  - {t['name']}: median {st.median(dd):.0f} m, max {max(dd):.0f} m")
-    sp = [p for t in hand["streams"] for p in t["points"]]
-    ds = [min(to_line(p, r["points"]) for r in real_streams) for p in sp]
-    L.append(f"- **Stream vertices** ({len(sp)}) to the nearest real stream: median **{st.median(ds):.0f} m**, max {max(ds):.0f} m.")
-    real_l = {l["name"]: l for l in ter["lakes"]}
-    L.append("- **Lakes** (hand centre -> OSM centroid, radius hand/real):")
-    for l in hand["lakes"]:
-        r = real_l.get(LAKE_MATCH.get(l["name"], ""))
-        if r:
-            L.append(f"  - {l['name']}: {dist_m(l['center'], r['center']):.0f} m off, radius {l['radiusM']} / {r['radiusM']} m")
-    real_h = {h["name"]: h for h in ter["huts"]}
-    L.append("- **Huts** (hand -> OSM):")
-    for h in hand["huts"]:
-        r = real_h.get(HUT_MATCH.get(h["name"], ""))
-        L.append(f"  - {h['name']}: " + (f"{dist_m(h['at'], r['at']):.0f} m off" if r else "not in OSM as alpine_hut in the bbox"))
-    ipp = real_h[HUT_MATCH["Schronisko w Dolinie Pięciu Stawów"]]["at"]
-    L += [f"- **IPP** ({sc['ipp']['at']}) to the real Pięć Stawów hut {ipp}: {dist_m(sc['ipp']['at'], ipp):.0f} m.", ""]
+    hand = sc.get("terrain")
+    if hand:
+        L += ["**Hand-placed terrain vs real:**", ""]
+        pts = [p for t in hand.get("trails", []) for p in t["points"]]
+        if pts:
+            L.append(f"- Trail vertices ({len(pts)}) to the nearest real trail: "
+                     f"{stats([min(to_line(p, r['points']) for r in trails) for p in pts])}.")
+        sp = [p for t in hand.get("streams", []) for p in t["points"]]
+        if sp and streams:
+            L.append(f"- Stream vertices ({len(sp)}) to the nearest real stream: "
+                     f"{stats([min(to_line(p, r['points']) for r in streams) for p in sp])}.")
+        for kind, key, real in (("Lake", "center", ter["lakes"]), ("Hut", "at", ter["huts"])):
+            for f in hand.get(kind.lower() + "s", []):
+                r = match(f["name"], real, f[key], key)
+                L.append(f"- {kind} {f['name']}: " + (f"{dist_m(f[key], r[key]):.0f} m from OSM '{r['name']}'"
+                                                       + (f", radius {f['radiusM']} / {r['radiusM']} m" if kind == "Lake" else "")
+                                                       if r else "no OSM match by name"))
+        L.append("")
 
-    # 2. events and seeds against the real terrain
-    L += ["## 2. Scenario points against the real terrain", "",
-          "| What | Point | Elev | Slope | Nearest real trail | Nearest real stream | In lake | Note |", "|---|---|---|---|---|---|---|---|"]
+    L += ["| What | Point | Elev | Slope | Nearest real trail | Nearest real stream | In lake | Steep off-trail cell |",
+          "|---|---|---|---|---|---|---|---|"]
 
-    def row(what, p, note=""):
+    def row(what, p):
         z, s = z_s(p)
-        dt, nt = nearest(p, real_trails)
-        dst, ns = nearest(p, real_streams)
-        st_ = "steep off-trail cell" if any(to_line(p, f["points"]) < 71 for f in steep) else ""
-        L.append(f"| {what} | {p[0]:.4f}, {p[1]:.4f} | {z} | {s} | {dt} m ({nt}) | {dst} m ({ns}) | {in_lake(p)} | "
-                 f"{'; '.join(filter(None, [st_, note]))} |")
+        dt, nt = nearest(p, trails)
+        ds, ns = nearest(p, streams)
+        stp = "yes" if any(to_line(p, f["points"]) < 71 for f in steep) else ""
+        L.append(f"| {what} | {p[0]:.4f}, {p[1]:.4f} | {z} | {s} | {dt} m ({nt}) | {ds} m ({ns}) | {in_lake(p)} | {stp} |")
 
-    row("IPP", sc["ipp"]["at"])
-    row("Truth (find)", sc["truth"]["at"])
-    for e in sc["events"]:
+    if sc.get("ipp"):
+        row("IPP", sc["ipp"]["at"])
+    if sc.get("truth"):
+        row("**Truth (find spot)**", sc["truth"]["at"])
+    for e in sc.get("events", []):
         if e.get("point"):
-            row(f"{e['provider']} {e['at']}", e["point"], "outside bbox" if e["provider"] == "TrailheadCar" else "")
-    trip = next(e for e in sc["events"] if e["provider"] == "TripPlan")
-    dtp = [min(to_line(p, r["points"]) for r in real_trails) for p in trip["points"]]
-    for s in sc["segments"]:
+            row(f"{e['provider']} {e.get('at', '')}", e["point"])
+    for s in sc.get("segments", []):
         row(f"Seed {s['id']} {s['name']}", s["seed"])
-    L += ["", f"- **Trip plan route** ({len(trip['points'])} points, green Roztoka + blue to Zawrat) to the nearest real trail: "
-          f"median {st.median(dtp):.0f} m, max {max(dtp):.0f} m.", ""]
-    L += FINDINGS
+    for e in sc.get("events", []):
+        if e.get("points") and len(e["points"]) > 1:
+            d = [min(to_line(p, r["points"]) for r in trails) for p in e["points"]]
+            L += ["", f"- {e['provider']} {e.get('at', '')} route ({len(d)} points) to the nearest real trail: {stats(d)}."]
+    if findings.get(name):
+        L += ["", "**Findings (hand-written):**", ""] + findings[name]
+    return L + [""]
+
+
+def main():
+    findings = json.load(open(FINDINGS_FILE)) if os.path.exists(FINDINGS_FILE) else {}
+    L = ["# Terrain check: scenarios vs real OSM + DEM terrain", "",
+         "Generated by `python3 rescue/tools/terrain/check_terrain.py` from `scenarios/<name>.json` (never edited here) "
+         "and `scenarios/<name>-terrain.json`. Distances in metres; elevation and slope (degrees) from Copernicus "
+         "DEM GLO-30 (30 m pixel at the point). 'Steep off-trail cell' = within ~70 m of a 100 m cell the terrain tool "
+         "marked as > 38° and > 120 m from a trail. Hand-written findings come from `findings.json`.", ""]
+    for p in sorted(glob.glob(os.path.join(RESCUE, "scenarios", "*.json"))):
+        if not p.endswith("-terrain.json") and os.path.exists(p.replace(".json", "-terrain.json")):
+            L += section(p, findings)
     open(os.path.join(HERE, "terrain_check.md"), "w").write("\n".join(L) + "\n")
     print("\n".join(L))
 

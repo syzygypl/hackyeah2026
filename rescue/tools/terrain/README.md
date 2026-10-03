@@ -7,7 +7,8 @@ python3 rescue/tools/terrain/osm_terrain.py                                    #
 python3 rescue/tools/terrain/osm_terrain.py --scenario rescue/scenarios/<name>.json   # any scenario
 python3 rescue/tools/terrain/osm_terrain.py --scenario ... --refresh           # re-query Overpass + re-read the DEM
 python3 rescue/tools/terrain/osm_terrain.py --scenario ... --no-dem            # OSM only (no slopeDeg, no DEM ridges)
-python3 rescue/tools/terrain/check_terrain.py                                  # zawrat only: writes terrain_check.md
+python3 rescue/tools/terrain/check_terrain.py                                  # every scenario with a -terrain.json -> terrain_check.md
+# hand-written findings per scenario: findings.json (appended to terrain_check.md)
 cd rescue && swift run rescue-demo
 ```
 
@@ -40,9 +41,17 @@ Contract shape from `rescue/README.md` (coordinates `[lat, lon]`), plus two opti
 
 Swift's `Codable` ignores the two optional keys until the grid code reads them.
 
+## Generated scenarios
+
+| Scenario | Trails | Streams | Ridges | Lakes | Huts | Steep off-trail cells | DEM tiles |
+|---|---|---|---|---|---|---|---|
+| zawrat | 50 | 63 | 380 | 16 | 5 | 659 / 3600 | N49 E020 |
+| kasprowy | 39 | 72 | 218 | 14 | 5 | 264 / 3600 | N49 E019 + N49 E020 |
+| morskie-oko | 29 | 73 | 454 | 24 | 10 | 963 / 3600 | N49 E020 |
+
 ## Findings
 
-See `terrain_check.md`. In short:
+See `terrain_check.md`, one section per scenario. In short:
 - **Offsets:** the hand-drawn trails are a median ~100 m from the real ones, but some lakes are 0.5-1.5 km off.
 - **Demo impact:** with real terrain, the truth segment S7 drops from rank 1 to rank 2 before the Ratunek ping.
 - **Truth point:** it lies on the real red trail (Orla Perć), not in the gully the story describes.

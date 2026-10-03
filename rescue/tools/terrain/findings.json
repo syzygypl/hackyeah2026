@@ -1,0 +1,29 @@
+{
+ "kasprowy": [
+  "- **Demo** (`swift run rescue-demo scenarios/kasprowy.json --fast` on real terrain): find segment K3 is **rank 1** fused vs 8 with rings, top 3 hold 73% in 47% of the area, area swept before the find 1.97% vs 4.2%, K3 94% after the ping. Works. Top 3 covering 47% of the box is weak, because only 8 segments split 36 km2.",
+  "- **Truth / Ratunek** (49.2385, 19.9690, 1566 m) is off-trail (528 m) and 98 m from Wyżni Goryczkowy Potok, on a 23° slope in the Goryczkowa drainage. That's plausible for a ski-tourer who left the piste, so the story holds.",
+  "- **Cell fix** centre is only 91 m from the find spot (radius 1300 m). It's fine for the math, but a BTS sector centre that close to the victim is suspiciously precise. Consider moving it toward the real tower side (e.g. Kasprowy summit station).",
+  "- **Seed K7 'Myślenickie Turnie'** (49.2434, 19.9697) is ~950 m south of the real Myślenickie Turnie (cable car mid station, end of the green trails, 49.2517, 19.9742). **Seed K1 'Kuźnice (dół)'** (49.2516, 19.9793) actually sits by Myślenickie Turnie: Kuźnice itself is north of the bbox (49.27). Suggest: K7 -> 49.2517, 19.9742; K1 -> the north edge of the bbox on the green trail (49.2590, 19.9740), or rename it.",
+  "- **Seed K8 'Kondratowa Dolina'** (49.2340, 19.9600, 1717 m, 28°) is ~1.9 km SE of Hala Kondratowa (hut at 49.2499, 19.9517). It sits on the slope under Kopa Kondracka. Suggest ~49.2485, 19.9530 for the valley.",
+  "- **Seed K5 'Hala Gąsienicowa'** (49.2459, 19.9961) is 626 m from the nearest trail on a 33° slope. Hala Gąsienicowa's meadows around the IMGW station are at ~49.2440, 20.0010.",
+  "- Hand trails are 167 m median / 626 m max from reality (the terrain file replaces them anyway). The trip plan (off-piste descent) is 281 m median from trails, by design.",
+  "- The bbox crosses 20 E: the DEM is stitched from tiles N49 E019 + N49 E020."
+ ],
+ "morskie-oko": [
+  "- **Demo** (`swift run rescue-demo scenarios/morskie-oko.json --fast` on real terrain): find segment M3 is **rank 1** vs 3 with rings, top 3 hold 73% in 25% of the area, area swept before the find 0.08% vs 2.9%, M3 98% after the ping.",
+  "- **The scenario geometry is shifted ~250-450 m west and uphill of the real lake.** The hand-placed lake centre is 265 m off (radius 500 m vs 321 m real), and the hut 434 m off. The IPP / hut point (49.1986, 20.0672, 1430 m) is the real lake's western shore slope, not the hut (49.2015, 20.0713).",
+  "- **Truth / find spot** (49.2003, 20.0615) is at **1694 m on a 38° slope**: ~300 m above the lake surface (1395 m), in a steep off-trail cell, 716 m from the lake centre. The story is an 8-year-old found 'w zagajniku' by the outflow stream after ~1 h. The real outflow (Rybí potok) leaves the lake by the hut at ~49.2009-49.2026, 20.0712-20.0720. **Suggest truth + Clue + seed M3 at ~49.2030, 20.0725 (1390 m, forest north of the hut by Rybí potok).**",
+  "- **Seeds M1 'plaża piknikowa' (49.1995, 20.0700) and M7 'las południowy' (49.1970, 20.0700)** sit at 1394 m with 0° slope: that's **in the water** (the lake surface is 1395 m). M2 'brzeg zachodni' and M4 'ścieżka widokowa' sit 145-170 m above the lake. Shore seeds should be ~30-50 m from the shoreline: east shore / beach ~49.2000, 20.0735; the west shore path ~49.1975, 20.0655 is still at 1454 m, so pick lower.",
+  "- **Seed M8 'Szlak powrotny do Palenicy'** (49.2100, 20.0870) is 629 m from the real road (red trail Wodogrzmoty - Morskie Oko) on a 46° slope. Put it on the road, e.g. near 49.2120, 20.0830, checking the red polyline in morskie-oko-terrain.json.",
+  "- **Lake model caveat (Swift):** lakes are circles of radius sqrt(area/pi). Morskie Oko is elongated N-S, so the 321 m circle covers the hut terrace and the shore. With `inLake && dTrail > 80 -> x0.15`, shore cells can get damped, which matters for a lakeshore child scenario. A polygon lake or a smaller radius for elongated lakes would fix it (Swift, not this tool).",
+  "- Czarny Staw pod Rysami hand centre is 612 m off (only matters if the scenario's own terrain is used)."
+ ],
+ "zawrat": [
+  "- **Demo** (`swift run rescue-demo` on real terrain, zawrat.json as of fc57871): S7 **rank 1** fused vs 19 with rings, top 3 hold 42% in 8% of the area, area swept before the find 0.11% vs 41.0%, S7 89% after the ping.",
+  "- Mateusz's update fixed the earlier issues: the IPP is exactly the real hut, and the trip plan and trailhead routes are now traced on real trails (0 m).",
+  "- **Truth / Ratunek** (49.2158, 20.0188, 2001 m) is 1 m from the real blue trail Zawrat - Wyżnie Solnisko, with seed S7 'Żleb pod Zawratem' 63 m away. So the person is found ON the marked trail just below Zawrat, not in a gully off it. That's fine if the story is 'slipped on the icy trail section'; if it should be 'fell into the gully', move it 100-200 m off the trail into the steeper ground beside it.",
+  "- The hand-drawn `terrain` inside zawrat.json is still the old one (lakes 0.2-1.5 km off). It only matters if zawrat-terrain.json is missing, since the override replaces it.",
+  "- Seeds S16 Wołoszyn and S19 are 720-840 m from any trail, and S1/S2 sit on steep off-trail cells (48-61°). That's cosmetic: seeds only start the segment growth.",
+  "- **Steep ground** (all scenarios): Swift's `dRidge < 250 m && dTrail > 120 m -> 0.35` uses a 250 m buffer around cell-precise DEM ridges. ~70 m would match the DEM resolution, or Swift could read `slopeDeg` directly."
+ ]
+}
