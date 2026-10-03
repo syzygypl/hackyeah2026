@@ -1259,6 +1259,9 @@ boot();
 // ---------- "Udostępnij" (operator): join links + QR for this action. The key travels only in the link (?key=), the phone
 // keeps it and drops it from the address bar. Without a key on this device the links are view-only.
 {
+  // the QR library (vendor/qrcode.min.js) is fetched the first time the dialog opens, not with every page load
+  const qrLib = () => window.qrcode ? Promise.resolve() : (qrLib.p ||= new Promise((ok) => { const s = document.createElement("script"); s.src = "vendor/qrcode.min.js";
+    s.onload = ok; s.onerror = () => { qrLib.p = null; ok(); }; document.head.appendChild(s); }));
   const qrSVG = (text) => { try { const q = qrcode(0, "M"); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); } catch (e) { return ""; } };
   const link = (role, withKey) => {
     const u = new URL("/app/", location.origin);
@@ -1271,7 +1274,9 @@ boot();
     <input readonly value="${esc(url)}" onfocus="this.select()"><button data-copy="${esc(url)}">Kopiuj link</button></div></div>`;
   $("shareBtn").onclick = async () => {
     // rescuers get the field key (reports and clues only), never the operator key; only an operator can fetch it
+    const qrP = qrLib();
     let field = ""; if (PIN) { try { field = (await api("/api/join")).fieldKey || ""; } catch (e) {} }
+    await qrP;
     const rescuer = (() => { const u = new URL(link("ratownik", false)); if (field) u.searchParams.set("key", field); return u.toString(); })();
     $("shareBody").innerHTML = (PIN && field ? "" : `<p class="help">Na tym urządzeniu nie ma klucza operatora, więc linki są tylko do podglądu. Wpisz klucz w polu Klucz albo otwórz link operatora.</p>`)
       + row("Ratownik (telefon)", "Zeskanuj telefonem: rola ratownik, ta akcja. Klucz ratownika: tylko meldunki i ślady.", rescuer)
