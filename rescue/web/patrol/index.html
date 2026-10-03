@@ -38,6 +38,8 @@
   .dir .km { font-size: 20px; font-weight: 700; font-family: var(--rl-font-num); font-variant-numeric: tabular-nums; }
   .dir .sub2 { font-size: 12px; color: var(--rl-mute); }
   .dir.inside .arrow { background: var(--rl-ok); border-color: var(--rl-ok); }
+  .dir .northup { font-size: var(--rl-fs-xs); color: var(--rl-mute); }
+  .dir .compass-on { min-height: 32px; margin-top: var(--rl-sp-1); padding: var(--rl-sp-1) var(--rl-sp-2); font-size: var(--rl-fs-xs); font-weight: 700; border-radius: 999px; background: var(--rl-card); color: var(--rl-accent); border: 1px solid var(--rl-accent); }
   
   .flags { display: flex; flex-wrap: wrap; gap: 6px; }
   .flag { padding: 5px 10px; border-radius: 999px; background: color-mix(in srgb, var(--rl-danger) 12%, transparent); color: var(--rl-danger); border: 1px solid color-mix(in srgb, var(--rl-danger) 40%, transparent); font-weight: 700; font-size: 12.5px; line-height: 1.25; max-width: 100%; overflow-wrap: anywhere; }
@@ -226,6 +228,48 @@
   const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
   const PL = { N: "północ", NE: "płn.-wsch.", E: "wschód", SE: "płd.-wsch.", S: "południe", SW: "płd.-zach.", W: "zachód", NW: "płn.-zach." };
   const ARROW = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l7 18-7-4-7 4z"/></svg>`;
+
+  // ---------- compass: arrow relative to where the phone faces (map stays north-up) ----------
+  // heading = degrees clockwise from north, null = unknown (arrow north-up). ?heading=NN fakes it for demos.
+  var heading = qs.get("heading") != null && qs.get("heading") !== "" ? ((Number(qs.get("heading")) % 360) + 360) % 360 : null;
+  var dirBearing = null, shownRot = null, compassRaf = 0;
+  const fakeHeading = heading != null;
+  // Unwrapped rotation: always turn the short way so the CSS transition never spins 350 degrees.
+  function arrowRot() {
+    if (dirBearing == null) return shownRot || 0;
+    const target = dirBearing - (heading ?? 0);
+    if (shownRot == null) shownRot = target;
+    else shownRot += ((target - shownRot) % 360 + 540) % 360 - 180;
+    return shownRot;
+  }
+  const compassNeedsPerm = () => !fakeHeading && typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function" && store.get("rescue-patrol-compass", null) !== "denied";
+  function onHeading(h) {
+    if (h == null || isNaN(h)) return;
+    const first = heading == null;
+    heading = ((h + (screen.orientation?.angle || window.orientation || 0)) % 360 + 360) % 360;
+    if (first) { renderDir(); return; }   // drop the "północ u góry" note
+    if (compassRaf) return;
+    compassRaf = requestAnimationFrame(() => { compassRaf = 0; const s = $("dirArrow"); if (s) s.style.transform = `rotate(${Math.round(arrowRot())}deg)`; });
+  }
+  function listenCompass() {
+    if (fakeHeading || listenCompass.on) return; listenCompass.on = true;
+    if ("ondeviceorientationabsolute" in window) addEventListener("deviceorientationabsolute", e => { if (e.alpha != null) onHeading(360 - e.alpha); });
+    else addEventListener("deviceorientation", e => {
+      if (e.webkitCompassHeading != null) onHeading(e.webkitCompassHeading);   // iOS: already clockwise from north
+      else if (e.absolute && e.alpha != null) onHeading(360 - e.alpha);
+    });
+  }
+  function askCompass() {
+    DeviceOrientationEvent.requestPermission().then(r => {
+      store.set("rescue-patrol-compass", r === "granted" ? "granted" : "denied");
+      if (r === "granted") listenCompass(); else renderDir();
+    }).catch(() => {});
+  }
+  if (!fakeHeading) {
+    listenCompass();   // harmless where events need permission: they just do not fire until granted
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function" && store.get("rescue-patrol-compass", null) === "granted")   // iOS asks again per page load: re-ask silently on the first tap anywhere
+      addEventListener("click", () => { if (heading == null) askCompass(); }, { once: true, capture: true });
+  }
   function renderDir() {
     const el = $("dir"), poly = polyOf();
     if (!el) return;
@@ -234,8 +278,11 @@
     if (inside(me, poly)) { el.className = "dir inside"; el.innerHTML = `<div class="arrow">✓</div><div class="km">w sektorze</div>`; return; }
     const c = centroid(poly), d = distM(me, c), b = bearing(me, c), k = COMPASS[Math.round(b / 45) % 8];
     el.className = "dir";
-    el.innerHTML = `<div class="arrow"><svg viewBox="0 0 24 24" style="transform:rotate(${Math.round(b)}deg)" aria-hidden="true"><path d="M12 2l7 18-7-4-7 4z"/></svg></div>
-      <div class="km">${d < 1000 ? Math.round(d / 10) * 10 + " m" : (d / 1000).toFixed(1).replace(".", ",") + " km"}</div><div class="sub2">${PL[k]}</div>`;
+    dirBearing = b;
+    el.innerHTML = `<div class="arrow"><svg id="dirArrow" viewBox="0 0 24 24" style="transform:rotate(${Math.round(arrowRot())}deg)" aria-hidden="true"><path d="M12 2l7 18-7-4-7 4z"/></svg></div>
+      <div class="km">${d < 1000 ? Math.round(d / 10) * 10 + " m" : (d / 1000).toFixed(1).replace(".", ",") + " km"}</div><div class="sub2">${PL[k]}</div>
+      ${heading == null ? `<div class="northup">▲N · północ u góry</div>${compassNeedsPerm() ? `<button type="button" class="compass-on" id="compassOn">Włącz kompas</button>` : ""}` : ""}`;
+    const cb = $("compassOn"); if (cb) cb.onclick = askCompass;
     if (map?.getSource("me-line")) map.getSource("me-line").setData({ type: "Feature", geometry: { type: "LineString", coordinates: [me, c] } });
   }
 
