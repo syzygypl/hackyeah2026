@@ -808,7 +808,7 @@ function renderUI(i, ranked, searched, prev) {
   renderValue();
   document.querySelectorAll('.tick').forEach((t, k) => { t.classList.toggle('cur', k === i); t.classList.toggle('past', k < i); });
   renderProgress(i);
-  const l2 = document.querySelector('a.pill.link'); if (l2) l2.href = `../?sc=${encodeURIComponent(SC)}&step=${i}`;
+  const l2 = document.querySelector('a.pill.link'); if (l2) l2.href = `../?sc=${encodeURIComponent({ 'blind-01': 'blind-01-replay' }[SC] || SC)}&step=${i}`; // 2D scenario ids
 }
 function renderProgress(i) {
   const P = PROG, cur = P[i], W = 300, H = 74, maxMin = Math.max(1, P[P.length - 1].min);
