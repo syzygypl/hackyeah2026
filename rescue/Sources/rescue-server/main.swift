@@ -84,9 +84,12 @@ let maxReportBody = 4096, maxText = 500, maxBody = 4 << 20    // /report 4 KB, /
 
 // MARK: live runs
 
+/// Test-only scenarios: never listed (picker, /api/incidents, roster, Centrum) but /api/run/<name> still runs them (integration run.py).
+let hiddenScenarios: Set<String> = ["night-test"]
 func scenarioNames() -> [String] {
     ((try? FileManager.default.contentsOfDirectory(atPath: scenariosDir.path)) ?? [])
-        .filter { $0.hasSuffix(".json") && !$0.hasSuffix("-terrain.json") && !$0.hasPrefix("blind-") }.map { String($0.dropLast(5)) }.sorted()
+        .filter { $0.hasSuffix(".json") && !$0.hasSuffix("-terrain.json") && !$0.hasPrefix("blind-") }.map { String($0.dropLast(5)) }
+        .filter { !hiddenScenarios.contains($0) }.sorted()
 }
 func validName(_ n: String) -> Bool { !n.isEmpty && n.count <= 60 && n.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" } }
 
