@@ -109,7 +109,12 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       drape(ring, 0.014, { color: a.color, width: 1, opacity: 0.45, dashed: true }, area);
     }
   }
+  // GPS fix dots share materials that are never disposed: disposing the last one released its shader program, so every
+  // minute of a scrub re-linked it (~50 ms of main thread each); the instanced meshes are rebuilt, the materials are not
+  const dotMats = new Map(), dotGeo = new THREE.SphereGeometry(0.005, 6, 4);
+  const dotMat = (color, opacity) => { const k = color + '|' + opacity; let m = dotMats.get(k); if (!m) dotMats.set(k, m = new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity })); return m; };
   function trails(minute) {
+    for (const o of [...trail.children]) if (o.isInstancedMesh) { trail.remove(o); o.dispose(); }
     dispose(trail);
     for (const a of actors) {
       const color = selected === a.id ? danger() : a.color, opacity = selected && selected !== a.id ? 0.25 : 0.9;
@@ -130,8 +135,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       // Observed GPS fixes are solid dots, not invented one-minute GPS samples.
       const fixes = (a.fixes || []).filter((f) => f.minute <= minute && f.src === 'gps');
       if (fixes.length) {
-        const dots = new THREE.InstancedMesh(new THREE.SphereGeometry(0.005, 6, 4),
-          new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity }), fixes.length);
+        const dots = new THREE.InstancedMesh(dotGeo, dotMat(color, opacity), fixes.length);
         fixes.forEach((f, i) => { const p = v3(f.lat, f.lon, 0.027); dots.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x, p.y, p.z)); });
         dots.instanceMatrix.needsUpdate = true; trail.add(dots);
       }
