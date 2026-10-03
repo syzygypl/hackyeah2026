@@ -93,14 +93,17 @@ def suite(srv, B, live, llm, tmp):
     print("engine")
     files = sorted(f[:-5] for f in os.listdir(os.path.join(RESCUE, "scenarios")) if f.endswith(".json") and not f.endswith("-terrain.json"))
     nonblind = [n for n in files if "blind" not in n]
+    HIDDEN = {"night-test"}   # test-only, hidden from listings (main.swift hiddenScenarios) but still run and validated below
     st, d, _ = G("/api/scenarios")
     listed = [s["name"] for s in d.get("scenarios", [])] if st == 200 else []
 
     @check("engine", "scenarios_lists_all_nonblind")
     def _():
-        miss = [n for n in nonblind if n not in listed]
+        miss = [n for n in nonblind if n not in listed and n not in HIDDEN]
         assert not miss, f"missing {miss}"
-        return f"{len(nonblind)} non-blind scenarios listed"
+        shown = [n for n in HIDDEN if n in listed]
+        assert not shown, f"test-only scenarios listed: {shown}"
+        return f"{len(nonblind) - len(HIDDEN & set(nonblind))} non-blind scenarios listed, test-only hidden: {sorted(HIDDEN & set(nonblind))}"
 
     @check("engine", "scenarios_hides_blind")
     def _():

@@ -144,7 +144,8 @@ def restore(G, P, start):
 
 def checks(B, G, P, start):
     files = scenario_files()
-    nonblind = {n: s for n, s in files.items() if not is_blind(n, s)}
+    HIDDEN = {"night-test"}   # test-only, never listed and not in the roster (main.swift hiddenScenarios)
+    nonblind = {n: s for n, s in files.items() if not is_blind(n, s) and n not in HIDDEN}
     seg0 = {n: s["segments"][0]["id"] for n, s in nonblind.items() if s.get("segments")}
 
     # what the server has (probe once, read-only GETs; POST routes probed with GET too: 404 = route unknown)
