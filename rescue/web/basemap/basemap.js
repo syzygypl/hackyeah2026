@@ -61,10 +61,34 @@ export async function loadBasemap(maplibregl, file = "tatry.pmtiles") {
   p.add(new globalThis.pmtiles.PMTiles(new MemorySource(url, buf)));
 }
 
-// flavor: "light" (default, best under a heatmap), "white", "grayscale", "dark"
-export function offlineStyle({ flavor = "light", lang = "pl", file = "tatry.pmtiles", mountain = true } = {}) {
+// "paper": Protomaps light recoloured to the app's paper look (docs/rescue-locator/ui-design.md): warm ground, muted
+// water and forest, quiet roads and labels, so the POA heat and the red/navy accents stay the loudest things on the map.
+// Hex values here mirror --rl-* tokens (MapLibre styles cannot read CSS variables).
+const PAPER = {
+  background: "#ece8df", earth: "#ece8df", park_a: "#dde3d2", park_b: "#cbd9bf", wood_a: "#d6dfc9", wood_b: "#bfd1b0",
+  scrub_a: "#dfe3d2", scrub_b: "#cdd8bd", glacier: "#f6f4ef", sand: "#e8e0cc", beach: "#ebe2c8", pedestrian: "#e6e1d6",
+  hospital: "#e6dcd8", school: "#e6e0d6", industrial: "#dcdad4", aerodrome: "#e0ddd6", zoo: "#dde3d2", military: "#e0ddd6",
+  water: "#a9c7d6", buildings: "#d6cfc2", railway: "#a9a296", boundaries: "#b3aca0",
+  other: "#f3f0e8", minor_service: "#f3f0e8", minor_a: "#f3f0e8", minor_b: "#faf8f3", link: "#faf8f3", major: "#faf8f3", highway: "#fffdf8",
+  minor_service_casing: "#dcd6ca", minor_casing: "#dcd6ca", link_casing: "#dcd6ca", major_casing_early: "#d4cdbf", major_casing_late: "#d4cdbf",
+  highway_casing_early: "#cfc7b8", highway_casing_late: "#cfc7b8",
+  roads_label_minor: "#6b6f72", roads_label_minor_halo: "#faf8f3", roads_label_major: "#4a5054", roads_label_major_halo: "#faf8f3",
+  ocean_label: "#4f7a91", subplace_label: "#6b6f72", subplace_label_halo: "#faf8f3", city_label: "#23272a", city_label_halo: "#faf8f3",
+  state_label: "#8a8f92", state_label_halo: "#faf8f3", country_label: "#8a8f92", address_label: "#6b6f72", address_label_halo: "#faf8f3",
+};
+const PAPER_LANDCOVER = { grassland: "#e1e4d0", barren: "#ece4d2", urban_area: "#e4e0d8", farmland: "#e6e6d2", glacier: "#f6f4ef", scrub: "#dfe3d0", forest: "#d3dec7" };
+
+function flavorOf(bm, flavor) {
+  if (flavor !== "paper") return bm.namedFlavor(flavor);
+  const f = { ...bm.namedFlavor("light"), ...PAPER };
+  f.landcover = { ...f.landcover, ...PAPER_LANDCOVER };
+  return f;
+}
+
+// flavor: "paper" (default, app look), "light" (Protomaps original), "white", "grayscale", "dark"
+export function offlineStyle({ flavor = "paper", lang = "pl", file = "tatry.pmtiles", mountain = true } = {}) {
   const bm = globalThis.basemaps;
-  const layers = bm.layers("protomaps", bm.namedFlavor(flavor), { lang });
+  const layers = bm.layers("protomaps", flavorOf(bm, flavor), { lang });
   return {
     version: 8,
     glyphs: BASE + "fonts/{fontstack}/{range}.pbf",
@@ -72,23 +96,26 @@ export function offlineStyle({ flavor = "light", lang = "pl", file = "tatry.pmti
     sources: {
       protomaps: { type: "vector", url: "pmtiles://" + BASE + file, attribution: ATTRIBUTION },
     },
-    layers: mountain ? layers.concat(MOUNTAIN_LAYERS) : layers,
+    layers: mountain ? layers.concat(mountainLayers(flavor === "dark")) : layers,
   };
 }
 
 // Extra layers for mountain rescue on top of the Protomaps style: trails a rescuer can read at a glance,
 // peaks with elevation, huts/shelters. All from the same offline tiles.
-const MOUNTAIN_LAYERS = [
+// Trails in sand-brown (TOPR red is reserved for rank 1 / alarm), peaks in ink, huts in navy (--rl-accent).
+function mountainLayers(dark) {
+  const ink = dark ? "#eef2f5" : "#23272a", halo = dark ? "#151c22" : "#faf8f3";
+  return [
   { id: "rescue-trails-casing", type: "line", source: "protomaps", "source-layer": "roads", minzoom: 11,
     filter: ["==", ["get", "kind"], "path"],
-    paint: { "line-color": "#ffffff", "line-opacity": 0.8, "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1.5, 16, 5] } },
+    paint: { "line-color": halo, "line-opacity": 0.8, "line-width": ["interpolate", ["linear"], ["zoom"], 11, 1.5, 16, 5] } },
   { id: "rescue-trails", type: "line", source: "protomaps", "source-layer": "roads", minzoom: 11,
     filter: ["==", ["get", "kind"], "path"],
     layout: { "line-cap": "round" },
-    paint: { "line-color": "#c0392b", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.8, 16, 2.5], "line-dasharray": [2, 1.2] } },
+    paint: { "line-color": dark ? "#e9c46a" : "#8a5a00", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.8, 16, 2.5], "line-dasharray": [2, 1.2] } },
   { id: "rescue-peak-dots", type: "circle", source: "protomaps", "source-layer": "pois", minzoom: 11,
     filter: ["==", ["get", "kind"], "peak"],
-    paint: { "circle-radius": 3, "circle-color": "#3d2b1f", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1 } },
+    paint: { "circle-radius": 3, "circle-color": ink, "circle-stroke-color": halo, "circle-stroke-width": 1 } },
   { id: "rescue-peaks", type: "symbol", source: "protomaps", "source-layer": "pois", minzoom: 11,
     filter: ["==", ["get", "kind"], "peak"],
     layout: {
@@ -97,9 +124,10 @@ const MOUNTAIN_LAYERS = [
         ["get", "name"]],
       "text-font": ["Noto Sans Medium"], "text-size": 11, "text-anchor": "top", "text-offset": [0, 0.5], "text-max-width": 8,
       "symbol-sort-key": ["-", 0, ["coalesce", ["get", "elevation"], 0]] },
-    paint: { "text-color": "#3d2b1f", "text-halo-color": "#ffffff", "text-halo-width": 1.4 } },
+    paint: { "text-color": ink, "text-halo-color": halo, "text-halo-width": 1.4 } },
   { id: "rescue-huts", type: "symbol", source: "protomaps", "source-layer": "pois", minzoom: 11,
     filter: ["in", ["get", "kind"], ["literal", ["alpine_hut", "shelter", "wilderness_hut", "hut"]]],
     layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Medium"], "text-size": 12, "text-anchor": "top" },
-    paint: { "text-color": "#1f4e79", "text-halo-color": "#ffffff", "text-halo-width": 1.5 } },
-];
+    paint: { "text-color": dark ? "#7fb2e0" : "#1f4e79", "text-halo-color": halo, "text-halo-width": 1.5 } },
+  ];
+}

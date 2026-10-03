@@ -40,7 +40,7 @@
     live: Q.get('live') || '../out/live-events.json',
     field: Q.get('field') || 'http://127.0.0.1:8770',
     basemap: Q.get('basemap') || (SC.basemap || CUSTOM_RUN ? 'basemap/' : 'none'), // folder with basemap.js or style.json; "none" = skip
-    flavor: Q.get('flavor') || 'light',
+    flavor: Q.get('flavor') || 'paper',
     tiles: Q.get('tiles') === 'online',
     renderer: Q.get('renderer') || 'auto', // auto | canvas
     step: Q.get('step'),
