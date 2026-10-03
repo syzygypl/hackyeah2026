@@ -1,7 +1,7 @@
 // Rescue Locator 3D - terrain scene of the POA timeline, its source signals, and a blind test game, shown inside /app
 // (iframe, ?embed=scene): the shell owns the step card, signal list, ranking, team plan and timeline.
 // Reads the same offline files as the 2D screen: out/run.json (rescue-run/1), scenarios/<sc>.json,
-// scenarios/<sc>-terrain.json, tools/terrain/data/<sc>-dem.json and out/live-events.json.
+// scenarios/<sc>-terrain.json, tools/terrain/data/<sc>-dem.json and the live feed GET /api/live.
 // The timeline is computed by the Swift engine; the page draws it. Only the blind test game
 // updates the map in the browser (Bayes: segment POA x (1 - POD) after an empty patrol).
 import * as THREE from 'three';
@@ -37,7 +37,6 @@ const P = {
   terrain: Q.get('terrain') || SCENS[SC].terrain || `../../scenarios/${SC}-terrain.json`,
   dem: Q.get('dem') || SCENS[SC].dem || `../../tools/terrain/data/${SC}-dem.json`,
   reveal: Q.get('reveal') || SCENS[SC].reveal,
-  live: Q.get('live') || '../../out/live-events.json',
 };
 const EX = Number(Q.get('exag')) || 1.6; // vertical exaggeration
 const KM = 111.32;
@@ -1355,17 +1354,19 @@ function endGame() {
 $('btn-game').addEventListener('click', startGame);
 
 // ---------- live field reports ----------
+// rescue-server's live feed (CONTRACT.md "Live mode": GET /api/live?sc=&since=): clues as pins, reports and dispatches as
+// toasts. Without the route (static hosting) it stops after the first miss instead of polling a 404 every few seconds.
 const seenLive = new Set();
+let liveSeq = 0, liveMiss = 0;
+const hhmm = (t) => { const d = new Date(t); return isNaN(d) ? '' : d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }); };
 async function pollLive() {
-  const ev = await getJSON(P.live, true);
-  if (Array.isArray(ev)) for (const e of ev) {
-    const key = e.t + '|' + e.text; if (seenLive.has(key)) continue; seenLive.add(key);
-    toast(e);
-    for (const h of e.hints || []) {
-      const g = segs.get(h.segmentId), at = h.lat != null && h.lon != null ? [h.lat, h.lon] : g ? g.center : null; if (!at) continue;
-      if (h.type === 'clue') dyn.live.add(pin(at[0], at[1], '#b8860b', 0.26, 'Ślad: ' + esc(h.description || ''), 'sig cur', 0.018));
-      else if (h.type === 'segmentSearched' && g) drapeRuns(ringLL(g.polygon), 0.022, { color: '#b8860b', width: 2, opacity: 0.9 }, dyn.live);
-    }
+  const f = await getJSON(`/api/live?sc=${encodeURIComponent(SC)}&since=${liveSeq}`, true);
+  if (!f || !Array.isArray(f.events)) { if (++liveMiss >= 2) return; setTimeout(pollLive, 8000); return; }
+  liveMiss = 0; liveSeq = Math.max(liveSeq, f.seq || 0);
+  for (const e of f.events) {
+    const key = e.seq ?? e.t + '|' + e.title; if (seenLive.has(key)) continue; seenLive.add(key);
+    if (e.kind === 'clue' && e.lat != null && e.lon != null) dyn.live.add(pin(e.lat, e.lon, '#b8860b', 0.26, 'Ślad: ' + esc(e.title || e.note || ''), 'sig cur', 0.018));
+    if (e.kind === 'clue' || e.kind === 'report' || e.kind === 'dispatch') toast({ at: hhmm(e.t), text: e.title || e.note || '' });
   }
   setTimeout(pollLive, 4000);
 }
