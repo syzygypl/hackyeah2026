@@ -136,6 +136,12 @@ curl -s localhost:8787/audit     # JSONL export
 curl -s localhost:8787/report    # markdown report
 ```
 
+System-prompt canary (6b, OWASP LLM07):
+- **Injection:** forward system prompts through `layer.system_prompt_with_canary(session, prompt)`, which appends a per-session random token.
+- **Detection:** a model output (`check_prompt(..., "output")`) or tool argument containing it is blocked as `prompt_leak` and taints the session. That covers plain, base64/hex/URL-encoded, spaced out or re-cased forms.
+- **Audit:** it stores `[CANARY]`, not the token.
+- **Switch:** `controls.canary` in the policy.
+
 Audit privacy (7c):
 - **No raw PII:** audit records, metrics, reports and stored approval payloads never contain raw PII or secrets. Every value is replaced by `[REDACTED:<type>#<hmac10>]`.
 - **Keyed tokens:** the token is HMAC-SHA256 keyed by `ACL_AUDIT_HMAC_KEY` (env or gitignored `.env`). The same PESEL, IBAN or card yields the same token, so the security team can correlate events, but the value can't be brute-forced the way a bare hash of an 11-digit PESEL can.

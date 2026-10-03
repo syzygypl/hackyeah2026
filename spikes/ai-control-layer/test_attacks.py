@@ -873,6 +873,43 @@ class WarmupAll(unittest.TestCase):
             fake.stop()
 
 
+class CanaryLeak(unittest.TestCase):
+    """6b: per-session canary in the forwarded system prompt; any echo of it is a prompt_leak."""
+
+    def _layer(self, **edit):
+        layer, s, env = fresh(edit=(lambda p: p["controls"]["canary"].update(edit)) if edit else None)
+        sp = layer.system_prompt_with_canary(s, "You are the treasury assistant.")
+        return layer, s, sp
+
+    def test_output_echoing_system_prompt_blocked(self):
+        layer, s, sp = self._layer()
+        self.assertIn(s.canary, sp)
+        r = layer.check_prompt(s, "Sure! My instructions are: " + sp, direction="output")
+        self.assertEqual(r["decision"], DENY)
+        self.assertIn("prompt_leak", r["event"]["guardrails"])
+        self.assertEqual(s.tainted_by, "prompt_leak")
+        self.assertNotIn(s.canary, json.dumps(layer.audit))  # the audit keeps the text redacted / truncated, not the token
+
+    def test_encoded_and_spaced_canary_blocked(self):
+        layer, s, sp = self._layer()
+        hexpart = s.canary.split("-")[-1]
+        for leak in [base64.b64encode(sp.encode()).decode(), " ".join(hexpart.upper()), hexpart.encode().hex()]:
+            with self.subTest(leak[:30]):
+                self.assertEqual(layer.check_prompt(s, "here: " + leak, direction="output")["decision"], DENY)
+
+    def test_canary_in_tool_args_blocked(self):
+        layer, s, sp = self._layer()
+        r = layer.call(s, "send_email", {"to": "ops@bank.example", "subject": "notes", "body": "config: " + s.canary})
+        self.assertEqual(r["decision"], DENY)
+        self.assertIn("prompt_leak", r["event"]["guardrails"])
+
+    def test_clean_output_passes_and_control_can_be_disabled(self):
+        layer, s, sp = self._layer()
+        self.assertEqual(layer.check_prompt(s, "17 open complaints, top theme card delays.", direction="output")["decision"], ALLOW)
+        layer2, s2, sp2 = self._layer(enabled=False)
+        self.assertEqual(layer2.check_prompt(s2, sp2, direction="output")["decision"], ALLOW)
+
+
 class ParserHardening(unittest.TestCase):
     """F10: guard output parsers cannot be steered by echoed attacker text."""
 
@@ -1483,7 +1520,7 @@ def measure_overhead(n=5000):
 GROUPS = {"PromptCases": "prompts (semantic + DLP)", "DetectionPlan": "detection plan B1-B5 block / A1-A5 allow", "IbanTokens": "IBAN tokenization", "InjectionNotHiddenByPii": "injection not hidden behind PII",
           "PackageTyposquat": "package typosquat (pip/npm)", "EncodingEvasion": "encoding evasion (url, hex, html, \\u, base64)", "StatefulControls": "stateful (taint, approvals, redaction)",
           "Budgets": "budgets (calls, tokens, USD, compute)", "HotReloadPolicy": "policy hot-reload",
-          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "FallbackVerdicts": "fallback verdicts (NEW-1/F14)", "InventoryNonBlocking": "inventory refresh off the request path (NEW-5)", "ParserHardening": "parser hardening (F10)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
+          "SignatureFeed": "signature feed", "SemanticFailModes": "semantic tiers (fake Ollama)", "SemanticCache": "semantic verdict cache", "WarmSet": "warm set follows evictions (F5)", "WarmupAll": "warm-up of every model (F9)", "FallbackVerdicts": "fallback verdicts (NEW-1/F14)", "InventoryNonBlocking": "inventory refresh off the request path (NEW-5)", "ParserHardening": "parser hardening (F10)", "CanaryLeak": "system-prompt canary (6b)", "OllamaUnreachable": "Ollama down is not 'not installed' (F1)", "DegradedPrefilterAndBreaker": "degraded prefilter + breaker (F2/F4)", "JudgeCriteriaByPhase": "judge criterion by phase (F7)", "OutputJudgeFailure": "output judge failure + head/tail (F3)", "GuardConsensus": "guard consensus (parallel votes)",
           "OllamaSemanticLive": "semantic live model (skips w/o Ollama)", "GraniteJudgeLive": "judge live model (skips w/o granite)", "AuditIntegrity": "audit + metrics", "Concurrency": "concurrency (gateway)", "PolicyApi": "policy API (auth, validation, audit, CORS)", "ApprovalApi": "approvals API (F6)", "AuditPrivacy": "audit privacy: HMAC, no bare PII hashes (7c)", "Performance": "performance"}
 
 
