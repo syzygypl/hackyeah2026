@@ -100,8 +100,11 @@ func liveEvents(segments: Set<String>, seeds: [String: [Double]]) -> [[String: A
                 }
             case "clue":
                 let p: [Double]? = (h.lat != nil && h.lon != nil) ? [h.lat!, h.lon!] : h.segmentId.flatMap { seeds[$0] }
-                if let p { out.append(["provider": "Clue", "at": at, "title": "Ślad (meldunek): \(h.description ?? "?")", "detail": "Meldunek: \(r.text)", "point": p,
-                                       "radiusM": h.strength == "strong" ? 300 : h.strength == "medium" ? 500 : 800]) }
+                // ZNALEZIONO in the raw text closes the case even when the LLM's description drops the word
+                let f = r.text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+                let found = ["znaleziono", "znaleziony", "znaleziona", "odnaleziono"].contains { f.contains($0) } && !f.contains("nie znalez") && !f.contains("nie odnalez")
+                if let p { out.append(["provider": "Clue", "at": at, "title": "\(found ? "ZNALEZIONO" : "Ślad") (meldunek): \(h.description ?? "?")", "detail": "Meldunek: \(r.text)", "point": p,
+                                       "radiusM": h.strength == "strong" ? 300 : h.strength == "medium" ? 500 : 800, "found": found]) }
             case "weatherObs":
                 var w: [String: Any] = ["provider": "WeatherConditions", "at": at, "title": "Pogoda (meldunek)", "detail": "Meldunek: \(r.text)"]
                 if let v = h.visibilityM { w["visibilityM"] = v }
