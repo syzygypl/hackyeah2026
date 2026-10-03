@@ -508,6 +508,7 @@
       const empty = FC([]);
       map.addSource('base', { type: 'geojson', data: empty, attribution: M.T ? '© OpenStreetMap contributors (ODbL)' : undefined });
       map.addSource('cells', { type: 'geojson', data: FC(M.cells) });
+      map.addSource('cellsFade', { type: 'geojson', data: FC(fadeCells) });   // timeline heat crossfade: the previous picture fading out on top
       map.addSource('ov', { type: 'geojson', data: empty });
       map.addSource('segs', { type: 'geojson', data: empty });
       const P = ['==', ['geometry-type'], 'Polygon'], Ln = ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']];
@@ -515,6 +516,7 @@
       map.addLayer({ id: 'base-fill', type: 'fill', source: 'base', filter: P, paint: { 'fill-color': ['coalesce', ['get', 'fill'], '#000'], 'fill-opacity': ['coalesce', ['get', 'fillOpacity'], 0] } });
       // per-cell rgba from the shared scale (set in setHeat), alpha carried in the colour
       map.addLayer({ id: 'heat', type: 'fill', source: 'cells', paint: { 'fill-color': ['get', 'c'], 'fill-opacity': 1, 'fill-antialias': false } });
+      map.addLayer({ id: 'heat-fade', type: 'fill', source: 'cellsFade', paint: { 'fill-color': ['get', 'c'], 'fill-opacity': 0, 'fill-opacity-transition': { duration: 0 }, 'fill-antialias': false } });
       const dm = ['match', ['get', 'd']]; DIFF_COLORS.forEach((c, j) => dm.push(j, c)); dm.push('rgba(0,0,0,0)');
       map.addLayer({ id: 'diff', type: 'fill', source: 'cells', layout: { visibility: 'none' }, paint: { 'fill-color': dm, 'fill-opacity': 0.82, 'fill-antialias': false } });
       map.addLayer({ id: 'base-line', type: 'line', source: 'base', filter: ['all', Ln, ['==', ['get', 'dash'], 0]], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: lineP });
@@ -550,8 +552,22 @@
       vis('bg-flat', b !== 'map');
     };
     this.setBaseFC = (fc) => map.getSource('base').setData(fc);
-    this.setDiff = (on) => { map.setLayoutProperty('diff', 'visibility', on ? 'visible' : 'none'); map.setLayoutProperty('heat', 'visibility', on ? 'none' : 'visible'); };
+    this.setDiff = (on) => { map.setLayoutProperty('diff', 'visibility', on ? 'visible' : 'none'); for (const id of ['heat', 'heat-fade']) map.setLayoutProperty(id, 'visibility', on ? 'none' : 'visible'); };
     this.setHeat = (p) => { for (let i = 0; i < M.N; i++) { const pr = M.cells[i].properties; pr.p = p[i]; pr.c = heatRGBA(p[i], M.N); } map.getSource('cells').setData(FC(M.cells)); };
+    // timeline: crossfade to a new heat (the old picture goes on top at full opacity, the new one below, then the top fades out)
+    let fadeRaf = 0;
+    const fadeCells = M.cells.map((c) => ({ type: 'Feature', id: c.id, properties: { c: 'rgba(0,0,0,0)' }, geometry: c.geometry }));
+    this.setHeatFade = (p, ms = 380) => {
+      cancelAnimationFrame(fadeRaf);
+      if (!map.getLayer('heat-fade') || ms <= 0) { map.getLayer('heat-fade') && map.setPaintProperty('heat-fade', 'fill-opacity', 0); this.setHeat(p); return; }
+      for (let i = 0; i < M.N; i++) fadeCells[i].properties.c = M.cells[i].properties.c;
+      map.getSource('cellsFade').setData(FC(fadeCells));
+      map.setPaintProperty('heat-fade', 'fill-opacity', 1);
+      this.setHeat(p);
+      const t0 = performance.now();
+      const step = (now) => { const u = Math.max(0, Math.min(1, (now - t0) / ms)); map.setPaintProperty('heat-fade', 'fill-opacity', 1 - u); if (u < 1) fadeRaf = requestAnimationFrame(step); };
+      fadeRaf = requestAnimationFrame(step);
+    };
     this.setOverlay = (fc) => map.getSource('ov').setData(fc);
     this.setTimeline = (fc, labels) => {   // timeline mode: GeoJSON + actor name labels (HTML markers, own map, not the chips)
       map.getSource('tl').setData(fc);
@@ -721,7 +737,8 @@
     const top3 = st.slice(0, 3);
     const searched = searchedState(step);
     const ov = overlays(step, top3);
-    S.view.setHeat(p);
+    // timeline mode: the minute's frame heat stays (tlDraw); the step heat only without a frame or with a signal switched off
+    if (S.tlHeatAt == null || S.disabled.size) { S.view.setHeat(p); S.tlHeatAt = null; }
     S.view.setSegments(segFC(top3, searched));
     S.view.setOverlay(ov.fc);
     S.view.setChips(ov.chips);
@@ -766,7 +783,7 @@
     renderTimeline();
     link3d();
     document.body.dataset.step = String(step);
-    S.tlHeatAt = null; if (S.tlMf != null) tlDraw(S.tlMf);
+    if (S.tlMf != null) tlDraw(S.tlMf);
   }
 
   /* ---------- timeline mode (CONTRACT "Timeline mode" 4 + 6): the shell sends {type:'time', minute, t}; we draw each actor's
@@ -787,10 +804,18 @@
     const T = S.M && S.M.R.timeline;
     if (!T || !S.view || !S.view.setTimeline || !Array.isArray(T.actors)) return;
     const feats = [], labels = [], frames = T.frames || [];
-    let fr = null; for (const f of frames) { if (f.minute <= mf) fr = f; else break; }
+    // the frame the shell says is in force (exact per-minute frame, sent once), else the run's own frame in force
+    let fr = null;
+    if (S.tlHeld && S.tlHeldOn) fr = S.tlHeld;
+    else for (const f of frames) { if (f.minute <= mf) fr = f; else break; }
     if (fr) for (const c of fr.cov || []) { const cell = S.M.cells[c[0]]; if (cell) feats.push(feat(cell.geometry, { k: 'cov', pod: c[1] })); }
     // heat = the frame's posterior (drop-in for steps[].poaGrid); only when the frame changed and no signal is switched off
-    if (fr && Array.isArray(fr.poaGrid) && fr.poaGrid.length === S.M.N && !S.disabled.size && S.tlHeatAt !== fr.minute) { S.view.setHeat(fr.poaGrid); S.tlHeatAt = fr.minute; }
+    if (fr && Array.isArray(fr.poaGrid) && fr.poaGrid.length === S.M.N && !S.disabled.size && S.tlHeatAt !== fr.minute) {
+      // crossfade between neighbouring frames; when they come faster than the fade (fast play) just swap
+      const now = performance.now(), fast = now - (S.tlHeatTs || 0) < 300; S.tlHeatTs = now;
+      if (S.view.setHeatFade && S.tlHeatAt != null && !fast) S.view.setHeatFade(fr.poaGrid); else (S.view.setHeatFade ? S.view.setHeatFade(fr.poaGrid, 0) : S.view.setHeat(fr.poaGrid));
+      S.tlHeatAt = fr.minute;
+    }
     else if (!fr && S.tlHeatAt != null && S.lastP) { S.view.setHeat(S.lastP); S.tlHeatAt = null; }   // before the first frame: the step heat
     for (const a of T.actors) {
       const path = a.path || [], col = TLC[a.kind] || '#ffd54f', cur = tlPos(path, mf);
@@ -830,11 +855,16 @@
     return String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');
   }
   // a minute from the shell: glide from the shown minute when it is a short step forward (play / drag), jump otherwise
-  function tlTime(minute) {
+  function tlTime(minute, frame, frameMinute) {
     const T = S.M && S.M.R.timeline; if (!T) return;
+    // the shell sends the exact (per-minute) frame once, then only frameMinute while it stays in force
+    if (frame && typeof frame === 'object' && Array.isArray(frame.poaGrid) && Number.isFinite(frame.minute)) S.tlHeld = frame;
+    S.tlHeldOn = !!(S.tlHeld && Number.isFinite(frameMinute) && frameMinute === S.tlHeld.minute);
     const to = Math.min(T.endMinute, minute), from = S.tlMf;   // before startMinute: no actors yet, step heat
     cancelAnimationFrame(S.tlAnim);
-    if (from == null || to <= from || to - from > 15 || matchMedia('(prefers-reduced-motion: reduce)').matches) { S.tlMf = to; tlDraw(to); return; }
+    // a continuous stream (play / drag, a message every ~33 ms) is smooth already: follow it; glide only single forward moves
+    const now = performance.now(), streaming = now - (S.tlMsgAt || 0) < 150; S.tlMsgAt = now;
+    if (from == null || streaming || to <= from || to - from > 15 || matchMedia('(prefers-reduced-motion: reduce)').matches) { S.tlMf = to; tlDraw(to); return; }
     const t0 = performance.now(), dur = 450;
     const tick = (now) => { const u = Math.min(1, (now - t0) / dur); S.tlMf = from + (to - from) * u; tlDraw(S.tlMf); if (u < 1) S.tlAnim = requestAnimationFrame(tick); };
     S.tlAnim = requestAnimationFrame(tick);
@@ -1091,7 +1121,7 @@
     try {
       if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
       else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
-      else if (m.type === 'time' && Number.isFinite(m.minute)) tlTime(m.minute);
+      else if (m.type === 'time' && Number.isFinite(m.minute)) tlTime(m.minute, m.frame, m.frameMinute);
       else if (m.type === 'highlight') highlightActor(m);   // actor drawer (CONTRACT "Zasoby i dziennik" 6)
       else if (m.type === 'select' && (m.segmentId === null || (typeof m.segmentId === 'string' && S.M.segs.has(m.segmentId)))) selectSeg(m.segmentId, true);
       else if (m.type === 'run' && typeof m.url === 'string') reloadWith({ run: m.url }, ['runInline', 'sc', 'step']);

@@ -334,7 +334,7 @@ $("slider").oninput = () => tlScrub() ? setMinute(+$("slider").value) : setStep(
 $("events").onclick = async (e) => {
   if (suppressClick) return;
   const b = e.target.closest("button"), card = e.target.closest(".ev"); if (!card) return;
-  if (card.dataset.step) return setStep(+card.dataset.step);
+  if (card.dataset.step) return goEvent(+card.dataset.step);
   if (b) { await run(() => api("/story/edit", { id: card.dataset.id, op: b.dataset.op }), b.dataset.op === "delete" ? "Usunięto zdarzenie" : "Zamieniono kolejność (czas)"); return; }
   // select evidence: jump to its step and fly to it
   const it = D().story.items.find((i) => i.id === card.dataset.id), ev = it && it.events[0]; if (!ev) return;
@@ -342,19 +342,51 @@ $("events").onclick = async (e) => {
   const k = D().steps.findIndex((s) => s.label === ev.title); if (k >= 0) setStep(k + 1);
   if (ev.point && store.mode === "edycja") map.flyTo({ center: [ev.point[1], ev.point[0]], zoom: Math.max(map.getZoom(), 13.5), duration: 500 });
 };
-let playing = null;
+// ▶ (Mateusz): with run.timeline the playhead moves continuously (requestAnimationFrame, sub-minute), speed 1x = 1 scenario minute
+// per second (1x/2x/5x/10x/30x, remembered per device, changeable while playing), and it stops briefly exactly at every event's
+// minute (the dock shows its card). Without timeline: one step per 1400 ms / speed (min 200 ms).
+const SPEEDS = [1, 2, 5, 10, 30];
+let playing = null, speed = (() => { try { const v = +localStorage.getItem("rescue-app-speed"); return SPEEDS.includes(v) ? v : 1; } catch (e) { return 1; } })();
+function renderSpeed() { const b = $("speed"); if (b) { b.textContent = speed + "×"; b.title = `Prędkość odtwarzania: ${speed}× (1× = 1 minuta akcji na sekundę). Kliknij, aby zmienić.`; } }
+renderSpeed();
+if ($("speed")) $("speed").onclick = () => {
+  speed = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length];
+  try { localStorage.setItem("rescue-app-speed", String(speed)); } catch (e) {}
+  renderSpeed();
+  if (playing && playing.step) { clearInterval(playing.step); playing.step = setInterval(playStep, Math.max(200, 1400 / speed)); }
+};
+function stopPlay() {
+  if (!playing) return;
+  cancelAnimationFrame(playing.raf); clearInterval(playing.step); playing = null;
+  $("play").textContent = "▶"; $("play").title = "Odtwórz historię";
+}
+function playStep() { if (store.step >= D().steps.length) { stopPlay(); return; } setStep(store.step + 1); }
+function playTick(now) {
+  const P = playing; if (!P || !P.raf) return;
+  const T = tlScrub(); if (!T) { stopPlay(); return; }
+  const dt = Math.min(0.25, Math.max(0, (now - P.last) / 1000)); P.last = now;
+  if (now < P.hold) { P.raf = requestAnimationFrame(playTick); return; }
+  const from = store.minute; let m = Math.min(T.endMinute, from + dt * speed);
+  // the next event group after the playhead: land exactly on its minute (all its events in force) and hold there briefly
+  const G = evGroups(D()), nx = G.findIndex((g) => g.minute != null && g.minute > from + 1e-6 && g.minute <= m);
+  if (nx >= 0) { m = G[nx].minute; P.hold = now + (speed >= 10 ? 700 : 1200); }
+  setMinute(m);
+  if (nx >= 0) tlCard(store.step);
+  if (m >= T.endMinute) { stopPlay(); return; }
+  P.raf = requestAnimationFrame(playTick);
+}
 $("play").onclick = () => {
-  if (playing) { clearInterval(playing); playing = null; $("play").textContent = "▶"; return; }
+  if (playing) { stopPlay(); return; }
   const T = tlScrub();
-  if (T) {   // timeline mode: one frame (frameMin minutes) per 0.5 s (CONTRACT "Timeline mode" 6)
+  $("play").textContent = "❚❚"; $("play").title = "Zatrzymaj";
+  if (T) {
     if (store.minute >= T.endMinute) setMinute(tlLo(T));
-    $("play").textContent = "❚❚";
-    playing = setInterval(() => { if (!tlScrub() || store.minute >= T.endMinute) { $("play").onclick(); return; } setMinute(store.minute + (T.frameMin || 5)); }, 500);
+    playing = { raf: 0, last: performance.now(), hold: 0 };
+    playing.raf = requestAnimationFrame(playTick);
     return;
   }
   if (store.step >= D().steps.length) setStep(1);
-  $("play").textContent = "❚❚";
-  playing = setInterval(() => { if (store.step >= D().steps.length) { $("play").onclick(); return; } setStep(store.step + 1); }, 1400);
+  playing = { step: setInterval(playStep, Math.max(200, 1400 / speed)) };
 };
 
 // ---------- drag and drop (pointer events: mouse + touch; every drag also works as click card -> click map)
@@ -630,6 +662,8 @@ function syncFrame(k, why) {
     if (why === "step") postTo(k, { type: "step", i: store.step - 1 });
     return;
   }
+  // still loading (the 3D view needs ~10 s): a step move must not restart it - its "ready" picks up the current step and minute
+  if (why === "step" && F.src && !F.ready && !F.dirty) return;
   const u = frameURL(k); if (u === F.src && !F.dirty && why !== "edit" && why !== "run") return;
   clearTimeout(F.h);
   F.h = setTimeout(() => { F.src = u; F.ready = false; F.el.src = u; F.dirty = false; }, why === "step" ? 700 : 50);
@@ -648,7 +682,9 @@ addEventListener("message", (e) => {
     if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
     for (const id of evOff) postTo(k, { type: "evidence", id, on: false });
     postTo(k, { type: "insets", insets: insetsFor(F.el) });
-    if (tlDoc() && store.minute != null) postTo(k, { type: "time", minute: store.minute, t: tlClock(tlDoc(), store.minute) });
+    // the view (re)loaded: it lost the frame we sent before; send the minute and the frame in force again
+    TLP.sent[k] = null;
+    if (tlDoc() && store.minute != null) tlPostOne(k, tlDoc(), store.minute, tlFrameAt(tlDoc(), store.minute));
   }
   if (m.type === "time" && Number.isFinite(m.minute) && F.ready) setMinute(m.minute, k);
   if (m.type === "cinema") { document.body.classList.toggle("cinema", !!m.on); pushInsets(); } // 3D Kino: panels step aside, full-frame shots
@@ -817,14 +853,14 @@ const liveAvail = () => store.backend === "api" && live.ok;          // this sce
 const liveOn = () => store.time === "live" && store.backend === "api" && store.mode !== "edycja";
 const liveNow = () => liveOn() && live.ok;                            // live functions are active
 function syncFrames() { const R = D(); if (!R || !R.steps) return; for (const k in FRAMES) if (FRAMES[k].ready) postTo(k, { type: "step", i: store.step - 1 }); $("slider").value = store.step; tlSlider(); }
-async function setTime(t) {
+async function setTime(t, quiet) {
   if (t === store.time) return;
   if (t === "live" && store.backend !== "api") { toast("Ten scenariusz to tylko nagranie - nie ma akcji na żywo. Wybierz scenariusz z serwera albo „+ Nowa akcja”.", 4500); return; }
-  if (playing) $("play").onclick();
+  stopPlay();
   store.time = t; try { localStorage.setItem("rescue-app-time", t); } catch (e) {}
   if (store.backend === "api") { try { await loadScenario(store.scenario); } catch (e) { toast(plErr(e)); } }
   renderLiveHead();
-  toast(t === "live" ? "Na żywo: mapa pokazuje teraz, ze zgłoszeniami z terenu" : "Historia: nagrany przebieg akcji. Przesuń oś czasu albo naciśnij ▶", 3000);
+  if (!quiet) toast(t === "live" ? "Na żywo: mapa pokazuje teraz, ze zgłoszeniami z terenu" : "Historia: nagrany przebieg akcji. Przesuń oś czasu albo naciśnij ▶", 3000);
 }
 // the map follows a move only after the server recomputed the run (3-7 s): until then the buttons stay locked with a
 // "przeliczam" note (the 3 s live poll used to re-enable them under the old "dalej"), the run is fetched right away, and a run
@@ -845,9 +881,10 @@ async function advance(op) {
 }
 $("advNext").onclick = () => advance("next");
 // Historia: rewind the recording to its first event (local to this screen, nobody else sees it)
-$("stepPrev").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); setStep(store.step - 1); };   // ported from b069c21 (AI Andrzeja)
-$("histStart").onclick = () => { if (liveOn()) return; if (playing) $("play").onclick(); if (tlScrub()) setMinute(tlLo(tlScrub())); else setStep(1); };
+$("stepPrev").onclick = () => { if (liveOn()) return; stopPlay(); setStep(store.step - 1); };   // ported from b069c21 (AI Andrzeja)
+$("histStart").onclick = () => { if (liveOn()) return; stopPlay(); if (tlScrub()) setMinute(tlLo(tlScrub())); else setStep(1); };
 $("advStart").onclick = () => advance("start");
+$("backLive").onclick = () => setTime("live");   // Historia -> the live moment (after an event jump from Na żywo, or any time)
 $("tmode").onclick = (e) => { const b = e.target.closest("[data-t]"); if (b) setTime(b.dataset.t); };
 // live-only header actions (+ Nowa akcja, Centrum): inactive in Historia, a click explains how to switch
 document.addEventListener("click", (e) => {
@@ -875,7 +912,8 @@ function renderLiveHead() {
   // dock: Historia plays the recording; Na żywo holds the timeline at now
   const on = liveOn();
   // Na żywo: no replay; the operator moves the incident on for everyone (POST /api/advance), the server's liveCursor says what is next
-  $("slider").hidden = on; $("play").hidden = on; $("histStart").hidden = on; $("stepPrev").hidden = on; $("advBox").hidden = !on || store.role === "ratownik";
+  $("slider").hidden = on; $("play").hidden = on; $("speed").hidden = on; $("histStart").hidden = on; $("stepPrev").hidden = on;
+  $("backLive").hidden = on || plan || store.backend !== "api" || store.role === "ratownik"; $("advBox").hidden = !on || store.role === "ratownik";
   const lc = D() && D().liveCursor, nx = lc && lc.next;
   $("advNext").disabled = !!advance.busy || !liveNow() || !nx; $("advStart").disabled = !!advance.busy || !liveNow();
   $("advNextT").textContent = advance.busy ? advance.busy : !lc ? "" : nx ? `dalej ${nx.at} · ${shortEv(nx.title, evKind({ label: nx.title }))}` : "koniec nagranej akcji";
@@ -921,10 +959,32 @@ function shortEv(label, k) {
 const EV_COL = { terrain: "--rl-ev-terrain", cost: "--rl-ev-terrain", difficulty: "--rl-ev-terrain", conditions: "--rl-ev-weather", weather: "--rl-ev-weather",
   rings: "--rl-ev-rings", route: "--rl-ev-route", containment: "--rl-ev-car", sector: "--rl-ev-phone", corridor: "--rl-ev-phone", fix: "--rl-ev-phone",
   searched: "--rl-ok", found: "--rl-danger", clue: "--rl-accent", report: "--rl-accent" };
+// event groups (Mateusz): events at (nearly) the same moment - the start setup (terrain, weather, rings, IPP) or several events within
+// EV_GROUP_MIN minutes of the group's first one - are ONE marker on the timeline (count badge, tooltip lists them all), one ticker
+// item and one event card; a click lands on the group's last minute, so all of its events are in force. Steps without a minute
+// are groups of their own. Same rule for Kino (AI Andrzeja): window.rescueApp.eventGroups().
+const EV_GROUP_MIN = 2;
+function evGroups(R) {
+  const out = [];
+  (R && R.steps || []).forEach((s, i) => {
+    const m = Number.isFinite(s.minute) ? s.minute : null, g = out[out.length - 1];
+    if (g && m != null && g.first != null && m - g.first <= EV_GROUP_MIN) { g.ks.push(i + 1); g.minute = m; }
+    else out.push({ first: m, minute: m, ks: [i + 1] });
+  });
+  return out;
+}
+const groupOf = (gs, k) => gs.findIndex((g) => g.ks.includes(k));
+// the kind a group's marker shows: a find wins, else the last event that is not background ("baza")
+function grpKind(R, g) { const ks = g.ks.map((k) => evKind(R.steps[k - 1])); return ks.includes("found") ? "found" : [...ks].reverse().find((x) => x !== "baza") || ks[ks.length - 1]; }
 function renderDock() {
   const R = D(); if (!R || !R.steps || !$("tlMarks")) return;
-  const n = R.steps.length, S = curStep(), T = tlScrub();
-  $("tlMarks").innerHTML = R.steps.map((s, k) => `<i class="tlk k-${evKind(s)}${k + 1 === store.step ? " cur" : (T ? s.minute > store.minute : k + 1 > store.step) ? " fut" : ""}" style="left:${T ? (tlFrac(T, s.minute) * 100).toFixed(2) : n > 1 ? (k / (n - 1) * 100).toFixed(2) : 50}%${evKind(s) !== "found" && EV_COL[s.kind] ? `;--c:var(${EV_COL[s.kind]})` : ""}"></i>`).join("");
+  const n = R.steps.length, S = curStep(), T = tlScrub(), G = evGroups(R), N = G.length, cg = groupOf(G, store.step);
+  $("tlMarks").innerHTML = G.map((g, j) => {
+    const last = g.ks[g.ks.length - 1], kind = grpKind(R, g), ks = R.steps[(g.ks.find((k) => evKind(R.steps[k - 1]) === kind) || last) - 1];
+    const fut = T ? g.first != null && g.first > store.minute : g.ks[0] > store.step;
+    const left = T && g.minute != null ? (tlFrac(T, g.minute) * 100).toFixed(2) : N > 1 ? (j / (N - 1) * 100).toFixed(2) : 50;
+    return `<i class="tlk k-${kind}${g.ks.length > 1 ? " grp" : ""}${j === cg ? " cur" : fut ? " fut" : ""}"${g.ks.length > 1 ? ` data-n="${g.ks.length}"` : ""} style="left:${left}%${kind !== "found" && EV_COL[ks.kind] ? `;--c:var(${EV_COL[ks.kind]})` : ""}"></i>`;
+  }).join("");
   if (S) $("clock").title = S.t + " · " + S.label;
   // step counter "k/n · HH:MM" (ported from b069c21, AI Andrzeja); Na żywo: "teraz HH:MM"
   if (S) $("dkStep").innerHTML = liveOn() ? `teraz <b>${esc(S.t)}</b>` : T ? `<b>${esc(tlClock(T, store.minute))}</b> · ${store.step}/${n}` : `<b>${store.step}</b>/${n} · ${esc(S.t)}`;
@@ -933,20 +993,25 @@ function renderDock() {
   $("tlFill").style.width = `calc((100% - 16px) * ${T ? tlFrac(T, store.minute).toFixed(4) : n > 1 ? ((store.step - 1) / (n - 1)).toFixed(4) : 0})`;
   if (S) $("slider").setAttribute("aria-valuetext", T ? `${tlClock(T, store.minute)}, krok ${store.step} z ${n}, ${S.label}` : `Krok ${store.step} z ${n}, ${S.t}, ${S.label}`);
   const byTitle = (t) => { const st = R.steps.find((s) => s.label === t); return st ? evKind(st) : /^ZNALEZIONO/i.test(t || "") ? "found" : "slad"; };
+  // ticker: the groups before the current one, newest first; a group is one item ("+N" more, the tooltip lists them)
   const items = liveOn() && live.events.length
-    ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title) }))
-    : R.steps.slice(0, store.step - 1).slice(-4).reverse().map((s, j) => ({ at: s.t, label: s.label, k: evKind(s), step: store.step - 1 - j }));
-  $("ticker").innerHTML = items.map((it) => `<span class="tk k-${it.k}"${it.step && !liveOn() ? ` data-step="${it.step}"` : ""} title="${esc(it.at + " · " + it.label)}"><i></i><b>${esc(it.at)}</b><span class="tx">${esc(shortEv(it.label, it.k))}</span></span>`).join("");
+    ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, title: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title), ...liveEvTarget(e) }))
+    : G.slice(0, Math.max(0, cg)).slice(-4).reverse().map((g) => { const last = g.ks[g.ks.length - 1], s = R.steps[last - 1];
+      return { at: s.t, label: s.label, more: g.ks.length - 1, title: g.ks.map((k) => R.steps[k - 1].t + " · " + R.steps[k - 1].label).join("\n"), k: grpKind(R, g), step: last, min: g.minute }; });
+  $("ticker").innerHTML = items.map((it) => `<span class="tk k-${it.k}"${it.step ? ` data-step="${it.step}"` : ""}${it.min != null ? ` data-min="${it.min}"` : ""} title="${esc(it.title.includes("\n") ? it.title : it.at + " · " + it.title)}"><i></i><b>${esc(it.at)}</b><span class="tx">${esc(shortEv(it.label, it.k))}${it.more ? ` <em class="more">+${it.more}</em>` : ""}</span></span>`).join("");
 }
+// group number (1-based) under the pointer: the nearest marker
 function tlIndexAt(x) {
-  const r = $("tlMarks").getBoundingClientRect(), n = D().steps.length, f = Math.max(0, Math.min(1, (x - r.left) / (r.width || 1))), T = tlScrub();
-  if (T) { let best = 1, bd = 1e9; D().steps.forEach((s, k) => { const d = Math.abs(tlFrac(T, s.minute) - f); if (d < bd) { bd = d; best = k + 1; } }); return best; }   // nearest event tick
-  return n < 2 ? 1 : Math.round(f * (n - 1)) + 1;
+  const r = $("tlMarks").getBoundingClientRect(), G = evGroups(D()), N = G.length, f = Math.max(0, Math.min(1, (x - r.left) / (r.width || 1))), T = tlScrub();
+  if (T) { let best = 1, bd = 1e9; G.forEach((g, j) => { if (g.minute == null) return; const d = Math.abs(tlFrac(T, g.minute) - f); if (d < bd) { bd = d; best = j + 1; } }); return best; }
+  return N < 2 ? 1 : Math.round(f * (N - 1)) + 1;
 }
-function tlTip(k) {
-  const tip = $("tlTip"), s = k && D() && D().steps[k - 1], m = s && $("tlMarks").children[k - 1];
+// the event card of group j (1-based): one line per event "HH:MM · title"; 0 hides it
+function tlTip(j) {
+  const tip = $("tlTip"), R = D(), g = j && R && evGroups(R)[j - 1], m = g && $("tlMarks").children[j - 1];
   if (!m) { tip.hidden = true; return; }
-  tip.textContent = `${s.t} · ${shortEv(s.label, evKind(s))}`; tip.hidden = false;
+  tip.innerHTML = g.ks.map((k) => { const s = R.steps[k - 1]; return `<div>${esc(s.t)} · ${esc(shortEv(s.label, evKind(s)))}</div>`; }).join("");
+  tip.hidden = false;
   const r = m.getBoundingClientRect();
   tip.style.left = Math.max(8, Math.min(innerWidth - tip.offsetWidth - 8, r.left + r.width / 2 - tip.offsetWidth / 2)) + "px";
   tip.style.top = Math.max(8, r.top - tip.offsetHeight - 10) + "px";
@@ -955,19 +1020,27 @@ $("tl").addEventListener("pointermove", (e) => { if (D() && D().steps) { clearTi
 $("tl").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") tlTip(0); });
 $("tl").addEventListener("click", (e) => {
   if (!D() || !D().steps) return;
-  const k = tlIndexAt(e.clientX);
-  if (liveOn()) toast("Na żywo mapa pokazuje teraz. Wcześniejsze kroki przewiniesz w trybie Historia.", 3000);
-  else if (tlScrub()) { const s = D().steps[k - 1], r = $("tlMarks").getBoundingClientRect(), T = tlScrub(); if (e.target !== $("slider") && s && Math.abs((tlFrac(T, s.minute) * r.width + r.left) - e.clientX) <= 8) setMinute(s.minute); }   // tick click = jump to that minute; the range handles the rest
-  else if (k !== store.step) setStep(k);
-  tlTip(k); clearTimeout(tlTip.h); tlTip.h = setTimeout(() => tlTip(0), 2200);
+  const j = tlIndexAt(e.clientX), g = evGroups(D())[j - 1]; if (!g) return;
+  const last = g.ks[g.ks.length - 1];
+  if (liveOn()) { goEvent(last, g.minute); return; }   // Na żywo cannot rewind: Historia at that group's minute
+  else if (tlScrub()) { const r = $("tlMarks").getBoundingClientRect(), T = tlScrub(); if (e.target !== $("slider") && g.minute != null && Math.abs((tlFrac(T, g.minute) * r.width + r.left) - e.clientX) <= 8) { goEvent(last, g.minute); return; } }   // marker click = land on the group's minute; the range handles the rest
+  else if (!g.ks.includes(store.step)) setStep(last);
+  tlTip(j); clearTimeout(tlTip.h); tlTip.h = setTimeout(() => tlTip(0), 2200);
 });
-$("ticker").onclick = (e) => { const t = e.target.closest("[data-step]"); if (t && !liveOn()) setStep(+t.dataset.step); };
+$("ticker").onclick = (e) => { const t = e.target.closest("[data-step],[data-min]"); if (t) goEvent(t.dataset.step ? +t.dataset.step : 0, t.dataset.min ? +t.dataset.min : null); };
+// where a Na żywo feed item sits on the timeline: the scripted step with the same title, else its clock as a scenario minute
+function liveEvTarget(e) {
+  const R = D(), k = R && R.steps ? R.steps.findIndex((s) => s.label === e.title) + 1 : 0;
+  if (k) return { step: k };
+  const T = tlDoc(), m = T ? tlMinOfClock(T, hhmm(e.t)) : null;
+  return m != null ? { min: m } : {};
+}
 function renderLiveFeed() {
   const el = $("liveFeed"); if (!el) return;
   const K = { clue: "ślad", dispatch: "przydział", report: "meldunek", scenario: "zdarzenie", inventory: "sprzęt", fix: "pozycja" };
   // operator ACK (Mateusz): unconfirmed messages stand out, ✓ confirms one, "Potwierdź wszystkie" confirms the rest (POST /api/ack)
   const unacked = live.events.filter((e) => !e.acked && e.by !== "operator");
-  el.innerHTML = live.events.slice(-8).reverse().map((e) => `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"><span class="lft">${esc(hhmm(e.t))}</span> <b${e.team ? ` data-actor="${esc(e.team)}" title="Dziennik: ${esc(e.team)}"` : ""}>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`).join("")
+  el.innerHTML = live.events.slice(-8).reverse().map((e) => { const g = liveEvTarget(e); return `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"${g.step ? ` data-step="${g.step}"` : g.min != null ? ` data-min="${g.min}"` : ""} title="Pokaż ten moment w Historii"><span class="lft">${esc(hhmm(e.t))}</span> <b${e.team ? ` data-actor="${esc(e.team)}" title="Dziennik: ${esc(e.team)}"` : ""}>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`; }).join("")
     || `<div class="help">Brak zdarzeń na żywo. Dodaj ślad albo wyślij zespół - mapa przeliczy się od razu.</div>`;
   if ($("ackCount")) $("ackCount").textContent = unacked.length ? `Niepotwierdzone: ${unacked.length}` : "Wszystko potwierdzone";
   if ($("liveAckAll")) $("liveAckAll").disabled = !unacked.length || !liveNow();
@@ -983,6 +1056,12 @@ async function ackEvents(seq) {
   } catch (e) { toast(plErr(e)); }
 }
 if ($("liveAckAll")) $("liveAckAll").onclick = () => ackEvents(null);
+// a Na żywo feed item: that moment in Historia (exact minute); ✓ confirms without jumping
+if ($("liveFeed")) $("liveFeed").addEventListener("click", (e) => {
+  if (e.target.closest("button,.cw,input,[data-actor]")) return;   // ✓, clue weight, actor drawer keep their own clicks
+  const it = e.target.closest(".lfi[data-step],.lfi[data-min]"); if (!it) return;
+  goEvent(it.dataset.step ? +it.dataset.step : 0, it.dataset.min ? +it.dataset.min : null);
+});
 async function pollLive() {
   clearTimeout(pollLive.h);
   const sc = store.backend === "api" ? store.scenario : null;
@@ -1158,9 +1237,12 @@ boot();
 }
 
 // ---------- timeline mode (CONTRACT.md "Timeline mode" 6, AI Mateusza after AI Andrzeja): with run.timeline the dock scrubs MINUTES
-// (startMinute..endMinute, 1 min; event steps stay as ticks), and the views get {type:"time", minute, t} after every move. The step
-// in force (last step with minute <= the minute) still drives panels and the views' "step". Na żywo: held, the views get the live
-// moment's minute. Without timeline nothing here runs (old runs behave exactly as before).
+// continuously (startMinute..endMinute, fractional minutes; event steps stay as ticks), and the views get {type:"time", minute, t,
+// frameMinute, frame?} after every move (at most ~30 per second). The step in force (last step with minute <= the minute) still
+// drives panels and the views' "step". Na żywo: held, the views get the live moment's minute. Without timeline nothing here runs.
+// Frames: exact per-minute frames (GET <runUrl>&t=<minute>, cached on the server) are prefetched ahead of the playhead, so heat,
+// coverage and FOV change every minute, not every frameMin; until a minute arrives the run's own frame in force stands in.
+// `frame` is sent only when it changed for that view; `frameMinute` says which frame is in force (the view keeps the last one).
 store.minute = null;
 var tlBusy = false;
 function tlDoc() { const T = D() && D().timeline; return T && Number.isFinite(T.startMinute) && Number.isFinite(T.endMinute) && T.endMinute > T.startMinute && D().steps ? T : null; }
@@ -1168,53 +1250,142 @@ function tlScrub() { return !liveOn() && store.mode !== "edycja" ? tlDoc() : nul
 function tlLo(T) { const s0 = D() && D().steps && D().steps[0]; return Math.min(T.startMinute, s0 && Number.isFinite(s0.minute) ? s0.minute : T.startMinute); }
 function tlFrac(T, m) { const lo = tlLo(T); return Math.max(0, Math.min(1, (m - lo) / ((T.endMinute - lo) || 1))); }
 function tlClock(T, m) {
-  const [h, mm] = String(T.start || "00:00").split(":").map(Number), x = (((h * 60 + mm + m - T.startMinute) % 1440) + 1440) % 1440;   // T.start = clock of startMinute
+  const [h, mm] = String(T.start || "00:00").split(":").map(Number), x = (((h * 60 + mm + Math.floor(m + 1e-6) - T.startMinute) % 1440) + 1440) % 1440;   // T.start = clock of startMinute
   return String(Math.floor(x / 60)).padStart(2, "0") + ":" + String(x % 60).padStart(2, "0");
+}
+// scenario minute of a clock "HH:MM" (live feed items)
+function tlMinOfClock(T, c) {
+  const [h, mm] = String(c || "").split(":").map(Number), [a, b] = String(T.start || "00:00").split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(mm)) return null;
+  let x = h * 60 + mm - a * 60 - b; if (x < -720) x += 1440; if (x > 720) x -= 1440;
+  return Math.max(tlLo(T), Math.min(T.endMinute, T.startMinute + x));
 }
 // frame in force at a minute (last frame with minute <= m), null before the first frame / for a frames=0 run
 function tlFrame(T, m) { let f = null; for (const x of T.frames || []) { if (x.minute > m) break; f = x; } return f; }
+const TLF = { key: "", byMin: new Map(), busy: new Set(), failed: 0, gen: 0 };
+const TLP = { at: 0, h: 0, sent: {}, sentAt: {} };
+const tlKey = () => (store.backend === "api" && store.runUrl && tlDoc() ? store.runUrl : "");
+function tlReset() {
+  TLF.key = tlKey(); TLF.byMin = new Map(); TLF.busy = new Set(); TLF.failed = 0; TLF.gen++; TLP.sent = {};
+  const T = tlDoc(); if (T) for (const f of T.frames || []) TLF.byMin.set(f.minute, f);
+  tlPump();
+}
+// the exact frame of the minute when we have it, else the run's frame in force
+function tlFrameAt(T, m) { return (TLF.key && TLF.key === tlKey() && TLF.byMin.get(Math.floor(m + 1e-6))) || tlFrame(T, m); }
+function tlNext() {
+  const T = tlScrub(); if (!T || !TLF.key || TLF.key !== tlKey() || TLF.failed > 5) return null;
+  const lo = Math.ceil(tlLo(T)), hi = Math.floor(T.endMinute), c = Math.floor((store.minute == null ? lo : store.minute) + 1e-6);
+  const want = (m) => m >= lo && m <= hi && !TLF.byMin.has(m) && !TLF.busy.has(m);
+  for (let d = 0; d <= 20; d++) if (want(c + d)) return c + d;   // ahead of the playhead first
+  for (let d = 1; d <= 5; d++) if (want(c - d)) return c - d;
+  for (let m = lo; m <= hi; m++) if (want(m)) return m;          // then the rest, in the background
+  return null;
+}
+function tlPump() {
+  while (TLF.busy.size < 3) {
+    const m = tlNext(); if (m == null) return;
+    const gen = TLF.gen, u = TLF.key; TLF.busy.add(m);
+    api(u + (u.includes("?") ? "&" : "?") + "t=" + m).then((f) => {
+      if (gen !== TLF.gen) return;
+      TLF.busy.delete(m);
+      if (f && f.schema === "rescue-frame/1" && Array.isArray(f.poaGrid) && f.minute === m) {
+        TLF.byMin.set(m, f);
+        if (store.minute != null && Math.floor(store.minute + 1e-6) === m) { tlPostTime(undefined, true); renderPanels(); }   // the exact frame of the shown minute just arrived
+      } else TLF.failed++;
+      tlPump();
+    }).catch(() => { if (gen === TLF.gen) { TLF.busy.delete(m); TLF.failed++; tlPump(); } });
+  }
+}
 // "Gdzie szukać najpierw" from the frame: frame.segments (poa desc, coverage folded in) + areaPct from the step's segment list
 function tlSegments(S) {
-  const T = tlDoc(), f = T && store.minute != null && !liveOn() ? tlFrame(T, store.minute) : null;
+  const T = tlDoc(), f = T && store.minute != null && !liveOn() ? tlFrameAt(T, store.minute) : null;
   if (!f || !Array.isArray(f.segments) || !f.segments.length) return S.segments;
   const by = new Map(S.segments.map((g) => [g.id, g]));
   return f.segments.map((g) => ({ ...(by.get(g.id) || { areaPct: 0 }), id: g.id, name: g.name, poa: g.poa, cumPod: g.cumPod }));
 }
-function tlPostTime(from) {
+// a new frame goes to a view at most every 180 ms while playing fast (heat rebuilds are not free); the minute always goes
+function tlPostOne(k, T, m, frame) {
+  const msg = { type: "time", minute: m, t: tlClock(T, m) }, now = performance.now(), last = TLP.sent[k];
+  if (frame && last && frame !== last && playing && now - (TLP.sentAt[k] || 0) < 180 && last.minute <= m) frame = last;
+  if (frame) { msg.frameMinute = frame.minute; if (last !== frame) { msg.frame = frame; TLP.sent[k] = frame; TLP.sentAt[k] = now; } }
+  postTo(k, msg);
+}
+// throttled to ~30 messages per second (the last one always goes out); force = now
+function tlPostTime(from, force) {
+  clearTimeout(TLP.h);
+  const now = performance.now();
+  if (!force && now - TLP.at < 33) { TLP.h = setTimeout(() => tlPostTime(from, true), 34 - (now - TLP.at)); return; }
+  TLP.at = now;
   const T = tlDoc(); if (!T || store.minute == null) return;
-  const frame = tlFrame(T, store.minute);
-  for (const k in FRAMES) if (k !== from) postTo(k, { type: "time", minute: store.minute, t: tlClock(T, store.minute), ...(frame ? { frame } : {}) });
+  const frame = tlFrameAt(T, store.minute);
+  for (const k in FRAMES) if (k !== from && FRAMES[k].ready) tlPostOne(k, T, store.minute, frame);
 }
 // the range becomes a minute axis (or back to steps for a run without timeline)
 function tlSlider() {
   const T = tlScrub(), sl = $("slider");
-  if (T) { sl.min = tlLo(T); sl.max = T.endMinute; sl.step = 1; sl.value = store.minute != null ? store.minute : tlLo(T); }
+  if (T) { sl.min = tlLo(T); sl.max = T.endMinute; sl.step = "any"; sl.value = store.minute != null ? store.minute : tlLo(T); }
   else { sl.min = 1; sl.step = 1; if (D() && D().steps) { sl.max = D().steps.length; sl.value = store.step; } }
 }
+// light dock update while the playhead moves inside one step (the full renderDock rebuilds markers and ticker)
+function tlDockLive() {
+  const T = tlScrub(), R = D(), S = curStep(); if (!T || !R || !S) return;
+  $("tlFill").style.width = `calc((100% - 16px) * ${tlFrac(T, store.minute).toFixed(4)})`;
+  $("dkStep").innerHTML = `<b>${esc(tlClock(T, store.minute))}</b> · ${store.step}/${R.steps.length}`;
+}
 function setMinute(m, from) {
-  const T = tlDoc(); if (!T) return;
-  m = Math.max(tlLo(T), Math.min(T.endMinute, Math.round(m)));
-  if (m === store.minute) return;
+  const T = tlDoc(); if (!T || !Number.isFinite(m)) return;
+  m = Math.max(tlLo(T), Math.min(T.endMinute, Math.round(m * 100) / 100));
+  if (store.minute != null && Math.abs(m - store.minute) < 0.005) return;
+  const prev = store.minute == null ? null : Math.floor(store.minute + 1e-6);
   store.minute = m;
-  const R = D(); let k = 1; R.steps.forEach((s, i) => { if (s.minute <= m) k = i + 1; });
+  const R = D(); let k = 1; R.steps.forEach((s, i) => { if (s.minute <= m + 1e-6) k = i + 1; });
   if (k !== store.step) { tlBusy = true; try { setStep(k, from); } finally { tlBusy = false; } }
-  else renderPanels();   // the ranking follows the frame even inside one step
-  tlPostTime(from); tlSlider(); renderDock();
+  else if (Math.floor(m + 1e-6) !== prev) renderPanels();   // the ranking follows the minute's frame even inside one step
+  tlPostTime(from); tlSlider(); tlDockLive(); tlPump();
 }
 // an event jump (ticker, cards, ◀, a view's own step) moves the minute to that step; in live the minute follows the held step
 function tlFromStep(from) {
   const T = tlDoc(), S = curStep(); if (tlBusy || !T || !S) return;
   const m = Math.max(tlLo(T), Math.min(T.endMinute, S.minute));
   if (m === store.minute) return;
-  store.minute = m; tlPostTime(from); tlSlider(); renderDock(); renderPanels();
+  store.minute = m; tlPostTime(from, true); tlSlider(); renderDock(); renderPanels(); tlPump();
 }
+// the event's card in the dock (marker tooltip "HH:MM · title") for a moment
+function tlCard(k) { tlTip(groupOf(evGroups(D()), k) + 1); clearTimeout(tlTip.h); tlTip.h = setTimeout(() => tlTip(0), 2600); }
+// one entry for every "go to this event" click (dock marker, ticker, Sygnały card, Na żywo feed). Historia: land on the event's exact
+// minute (its exact frame is fetched first in line if it is not cached yet). Na żywo cannot rewind: switch to Historia at that minute;
+// the dock then offers "Wróć na żywo" (back to the live moment).
+async function goEvent(k, minute) {
+  stopPlay();
+  const R0 = D(), s0 = k && R0 && R0.steps[k - 1];
+  if (minute == null && s0 && Number.isFinite(s0.minute)) minute = s0.minute;
+  if (liveOn()) {
+    if (store.backend !== "api") return;
+    toast("Przełączam na Historię…", 8000);
+    await setTime("hist", true);
+    if (liveOn()) return;
+    const R = D(), kk = s0 ? R.steps.findIndex((x) => x.label === s0.label) + 1 : 0;
+    if (tlScrub() && minute != null) setMinute(minute);
+    if (kk && kk !== store.step && (!tlScrub() || R.steps[kk - 1].minute === store.minute)) setStep(kk);
+    tlCard(store.step);
+    toast(`Historia o ${tlDoc() ? tlClock(tlDoc(), store.minute) : (curStep() || {}).t || ""} - na żywo nie da się cofnąć. „Wróć na żywo” w pasku na dole.`, 4000);
+    return;
+  }
+  if (tlScrub() && minute != null) { setMinute(minute); if (k && k !== store.step && D().steps[k - 1] && D().steps[k - 1].minute === store.minute) setStep(k); }
+  else if (k) setStep(k);
+  tlCard(store.step);
+}
+// event groups for Kino and tests (same rule as the dock): [{minute, first, steps: [step index], events: [{i, t, minute, label, kind, hintId}]}]
+window.rescueApp.eventGroups = () => evGroups(D()).map((g) => ({ minute: g.minute, first: g.first, steps: g.ks.map((k) => k - 1),
+  events: g.ks.map((k) => { const s = D().steps[k - 1]; return { i: k - 1, t: s.t, minute: s.minute, label: s.label, kind: s.kind, hintId: s.hintId }; }) }));
 // a new run (scenario switch, live refetch, Historia/Na żywo): start at the current step's minute, or reset without timeline
 subs.push((why) => {
   if (why !== "load" && why !== "run" && why !== "edit" && why !== "mode") return;
   const T = tlDoc(), S = curStep();
+  if (TLF.key !== tlKey() || why === "edit") tlReset();
   if (!T) { store.minute = null; tlSlider(); return; }
   if (why === "load" || store.minute == null || liveOn() || store.minute < tlLo(T) || store.minute > T.endMinute) store.minute = Math.max(tlLo(T), Math.min(T.endMinute, S ? S.minute : tlLo(T)));
-  tlSlider(); tlPostTime(); renderDock(); renderPanels();
+  tlSlider(); tlPostTime(undefined, true); renderDock(); renderPanels();
 });
 // ---------- clue weights (wagi śladów, CONTRACT.md "Clue weights"): one block, decorates the Sygnały cards (#events) and the
 // "Na żywo" feed (#liveFeed) after they render - a small bar + number per clue, hover = "dlaczego ta waga", operator stepper

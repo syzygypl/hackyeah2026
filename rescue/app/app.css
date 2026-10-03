@@ -443,6 +443,10 @@ body.signals,body.mode-edycja{--dock-h:166px}
 #bottom>.row{min-height:42px;gap:8px;flex-wrap:nowrap}
 #bottom .ib{width:32px;height:32px;min-height:0;padding:0;flex:none;border-radius:50%;font-size:14px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
 #play{width:34px;height:34px;font-size:13px;box-shadow:none}
+/* playback speed (Historia): one compact pill, click cycles 1x/2x/5x/10x/30x; "Wróć na żywo" after an event jump from Na żywo */
+#bottom .spd{flex:none;min-height:0;height:26px;min-width:38px;padding:0 7px;border-radius:13px;font:600 12px/1 var(--rl-mono);color:var(--rl-ink)}
+#bottom .backlive{flex:none;min-height:0;height:28px;padding:0 10px;border-radius:14px;font-size:12px;font-weight:600;white-space:nowrap;color:var(--rl-danger);border:1px solid color-mix(in srgb,var(--rl-danger) 45%,transparent);background:transparent}
+#bottom .backlive:hover{background:color-mix(in srgb,var(--rl-danger) 10%,transparent)}
 #tlabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #clock{flex:0 1 300px;min-width:0;max-width:300px;font-size:12.5px}
 .dkstep{flex:none;font:500 12px/1 var(--rl-mono);color:var(--rl-mute);white-space:nowrap}.dkstep b{color:var(--rl-ink);font-weight:700}
@@ -465,6 +469,10 @@ body.time-live .tlfill{background:var(--rl-danger)}
 .tl:has(#slider:focus-visible){outline:2px solid var(--rl-accent);outline-offset:2px;border-radius:var(--rl-radius-s)}
 .tlk{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px var(--rl-panel-solid)}
 .tlk.fut{opacity:.35}
+/* a group of events at (nearly) the same moment: one bigger marker with a count badge */
+.tlm .tlk.grp{width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%}
+.tlm .tlk.grp::after{content:attr(data-n);position:absolute;left:7px;top:-9px;min-width:12px;height:12px;padding:0 3px;box-sizing:border-box;border-radius:6px;background:var(--rl-chrome);color:var(--rl-on-chrome);font:700 9px/12px var(--rl-mono);text-align:center}
+.ticker .tk .more{font-style:normal;font-weight:700;color:var(--rl-mute)}
 .tlk.k-baza{width:4px;height:4px;margin:-2px 0 0 -2px;box-shadow:none}
 .tlk.k-nic{width:3px;height:12px;margin:-6px 0 0 -1.5px;border-radius:2px}
 .tlk.k-pogoda{background:var(--rl-card);box-shadow:inset 0 0 0 2px var(--c)}
