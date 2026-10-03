@@ -175,6 +175,65 @@
    "fictional": true
   },
   {
+   "id": "dron-gopr-kpz",
+   "kind": "dron",
+   "name": "Dron termowizyjny GOPR Karkonosze",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-482",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 182.6,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 162.9,
+    "lastMaintenance": "2026-09-26"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-06",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-21",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-GOPR-KPZ-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-GOPR-KPZ-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "rodzina-dziecko-las": {
+     "name": "Dron termowizyjny GOPR Karkonosze",
+     "readyAt": "16:20"
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-psp",
    "kind": "dron",
    "name": "Dron termowizyjny PSP Krosno",
@@ -471,6 +530,108 @@
    "fictional": true
   },
   {
+   "id": "gopr-kpz-a",
+   "kind": "pieszy",
+   "name": "GOPR Karkonosze - patrol A (Karpacz)",
+   "base": "Karpacz",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-177",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-24",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-KPZ-A-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-KPZ-A-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KPZ-A-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KPZ-A-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "rodzina-dziecko-las": {
+     "name": "GOPR Karkonosze - patrol A (Karpacz)",
+     "readyAt": "16:05"
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "gopr-kpz-b",
+   "kind": "pieszy",
+   "name": "GOPR Karkonosze - patrol B (ratownicy z dyżuru domowego)",
+   "base": "ratownicy z dyżuru domowego",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-260",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-16",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-KPZ-B-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-KPZ-B-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KPZ-B-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KPZ-B-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "rodzina-dziecko-las": {
+     "name": "GOPR Karkonosze - patrol B (ratownicy z dyżuru domowego)",
+     "readyAt": "16:35"
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "gopr-lesko",
    "kind": "pieszy",
    "name": "GOPR Bieszczady - patrol Lesko",
@@ -622,6 +783,59 @@
     "zawrat": {
      "name": "Śmigłowiec TOPR",
      "readyAt": "17:50"
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "heli-lpr-jg",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Jelenia Góra)",
+   "base": "Jelenia Góra",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "HELI-564",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 3287.7,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 3217.7,
+    "lastMaintenance": "2026-09-05"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-08",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "HELI-LPR-JG-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "HELI-LPR-JG-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "HELI-LPR-JG-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "rodzina-dziecko-las": {
+     "name": "Śmigłowiec LPR (Jelenia Góra)",
+     "readyAt": "16:40"
     }
    },
    "fictional": true
@@ -792,6 +1006,50 @@
    "fictional": true
   },
   {
+   "id": "pies-gopr-kpz",
+   "kind": "pies",
+   "name": "Przewodnik z psem tropiącym GOPR",
+   "base": "baza wg scenariusza",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-794",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-09",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Aron (fikcyjny)",
+    "breed": "border collie",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-GOPR-KPZ-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "rodzina-dziecko-las": {
+     "name": "Przewodnik z psem tropiącym GOPR",
+     "readyAt": "16:50"
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "pol-a",
    "kind": "pieszy",
    "name": "Patrol Policji A (KP Nowa Huta)",
@@ -873,6 +1131,49 @@
     "krakow-nowa-huta": {
      "name": "Patrol Policji B",
      "readyAt": "17:00"
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-karpacz",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KP Karpacz)",
+   "base": "KP Karpacz",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-196",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-02",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-KARPACZ-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-KARPACZ-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "rodzina-dziecko-las": {
+     "name": "Patrol Policji (KP Karpacz)",
+     "readyAt": "15:55"
     }
    },
    "fictional": true

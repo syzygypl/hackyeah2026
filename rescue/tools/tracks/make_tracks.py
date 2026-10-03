@@ -337,6 +337,28 @@ def simulate(scenario, run, terrain, seed):
         units.append({"id": uid, "type": typ, "name": res.get("name", uid),
                       "truth": [[m, round(truth[m][0], 6), round(truth[m][1], 6)] for m in sorted(truth)],
                       "fixes": fixes, "gaps": gaps, "legs": legs})
+    for v in scenario.get("volunteers", []):             # family / volunteer groups with phone GPS (no roster unit, no engine plan)
+        rng = random.Random(f"{seed}|{scenario.get('incident')}|{v['id']}")
+        t0, t1 = clock_to_min(v["from"], start), min(clock_to_min(v["to"], start), end)
+        route = [list(p) for p in v["route"]]
+        rlen = sum(dist_m(a, b) for a, b in zip(route, route[1:])) or 1.0
+        per_min = SWEEP_KMH["ground"] * 1000 / 60
+        truth = {m: along(route, min(1.0, (m - t0) * per_min / rlen)) for m in range(t0, t1 + 1)}
+        fixes = []
+        for m0 in range(t0, t1 + 1, FIX_EVERY):
+            m = min(max(m0 + rng.randint(-1, 1), t0), t1)
+            if fixes and m <= fixes[-1]["minute"]:
+                m = fixes[-1]["minute"] + 1
+            if m > t1:
+                break
+            p = truth[m]
+            my, mx = m_per_deg(p[0])
+            e, a = abs(rng.gauss(0, 8)) + 2, rng.uniform(0, 2 * math.pi)
+            fixes.append({"minute": m, "t": min_to_clock(m, start), "lat": round(p[0] + e * math.cos(a) / my, 6),
+                          "lon": round(p[1] + e * math.sin(a) / mx, 6), "accM": 16, "src": "gps"})
+        units.append({"id": v["id"], "type": "ground", "name": v.get("name", v["id"]), "volunteer": True,
+                      "truth": [[m, round(truth[m][0], 6), round(truth[m][1], 6)] for m in sorted(truth)],
+                      "fixes": fixes, "gaps": [], "legs": [{"kind": "search", "from": t0, "to": t1, "segmentId": None}]})
     return {"schema": "rescue-tracks/1", "scenario": scenario.get("_name"), "startClock": start, "seed": seed,
             "generated": "make_tracks.py", "by": "sim v1 (AI Marcina)", "searchEvents": "replace",
             "fixIntervalMin": FIX_EVERY, "endMinute": end,

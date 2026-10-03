@@ -44,16 +44,17 @@ def main():
         doc = json.load(open(os.path.join(mt.TRACKS, f)))
         sc = json.load(open(os.path.join(mt.SCEN, n + ".json")))
         res = {r["id"]: r for r in sc.get("resources", [])}
+        vols = {v["id"] for v in sc.get("volunteers", [])}            # family / volunteer groups: tracked, not roster units
         p = f"{n}:"
         check(p + "schema", doc.get("schema") == "rescue-tracks/1", doc.get("schema"))
         check(p + "scenario name", doc.get("scenario") == n, doc.get("scenario"))
         check(p + "not blind / hidden", "blind" not in n and n not in mt.HIDDEN, n)
         actors = doc.get("units") or doc.get("actors") or []
-        check(p + "actors", len(actors) == len(res), f"{len(actors)} actors vs {len(res)} resources")
+        check(p + "actors", len(actors) == len(res) + len(vols), f"{len(actors)} actors vs {len(res)} resources + {len(vols)} volunteers")
         for u in actors:
             q = f"{p}{u['id']}:"
             kind = u.get("type") or u.get("kind")
-            check(q + "id is a scenario resource", u["id"] in res, u["id"])
+            check(q + "id is a scenario resource or volunteer", u["id"] in res or u["id"] in vols, u["id"])
             check(q + "kind", kind in KINDS and kind != "osoba", kind)   # the person's truth never goes into this file
             fx = u.get("fixes", [])
             mins = [x["minute"] for x in fx]
