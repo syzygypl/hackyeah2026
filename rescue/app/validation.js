@@ -1,5 +1,6 @@
 // Walidacja: read-only view of rescue/eval/ outputs (calibration harness, simulator). Shape: CONTRACT.md "eval".
 // Reads /eval/report.json (index) and per-run files it lists. Inline SVG charts, no libraries.
+import { renderSummary } from "./validation-summary.js"; // summary card (/eval/summary.json, rescue/eval/summary.py)
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (x, d = 0) => (x == null || isNaN(x) ? "-" : (x * 100).toFixed(d).replace(".", ",") + "%");
 const num = (x, d = 3) => (x == null || isNaN(x) ? "-" : (+x).toFixed(d).replace(".", ","));
@@ -13,6 +14,7 @@ async function getText(u) { const r = await fetch(u, { cache: "no-store" }); if 
 let ablation, detailsOpen = false;
 export async function showValidation() {
   const el = document.getElementById("val");
+  renderSummary(document.getElementById("validation-summary")); // own container, styled by the shell
   if (ablation === undefined) { try { ablation = await getJSON("/eval/ablation.json"); } catch (e) { ablation = null; } }
   await showMain(el);
   const btn = el.querySelector("#val-details-toggle");
