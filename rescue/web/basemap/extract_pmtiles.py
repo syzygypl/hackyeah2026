@@ -172,16 +172,23 @@ class Remote:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--scenario", default=os.path.join(ROOT, "scenarios", "zawrat.json"))
+    ap.add_argument("--scenario", action="append", help="scenario json, repeatable; the extract covers the union of their bboxes "
+                    "(default: every rescue/scenarios/*.json that is not a -terrain file)")
     ap.add_argument("--build", default="20261003.pmtiles", help="file name from https://build-metadata.protomaps.dev/builds.json")
     ap.add_argument("--minzoom", type=int, default=0)
     ap.add_argument("--maxzoom", type=int, default=15)
     ap.add_argument("--pad", type=float, default=0.02, help="degrees added around the scenario bbox")
-    ap.add_argument("--out", default=os.path.join(HERE, "tatry-zawrat.pmtiles"))
+    ap.add_argument("--out", default=os.path.join(HERE, "tatry.pmtiles"))
     a = ap.parse_args()
 
-    bb = json.load(open(a.scenario))["bbox"]
-    w, s, e, n = bb["west"] - a.pad, bb["south"] - a.pad, bb["east"] + a.pad, bb["north"] + a.pad
+    import glob
+    files = a.scenario or sorted(f for f in glob.glob(os.path.join(ROOT, "scenarios", "*.json")) if not f.endswith("-terrain.json"))
+    boxes = [json.load(open(f))["bbox"] for f in files]
+    w = min(b["west"] for b in boxes) - a.pad
+    s = min(b["south"] for b in boxes) - a.pad
+    e = max(b["east"] for b in boxes) + a.pad
+    n = max(b["north"] for b in boxes) + a.pad
+    print("scenarios: " + ", ".join(os.path.basename(f) for f in files), file=sys.stderr)
     src = Remote("https://build.protomaps.com/" + a.build)
     maxz = min(a.maxzoom, src.maxz)
 

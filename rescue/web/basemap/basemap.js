@@ -14,8 +14,9 @@ const BASE = new URL(".", import.meta.url).href;  // absolute URL of this folder
 export const ATTRIBUTION =
   '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors (ODbL)</a> · <a href="https://protomaps.com">Protomaps</a>';
 
-// bbox of rescue/scenarios/zawrat.json plus the 0.02° pad used by extract_pmtiles.py
-export const ZAWRAT_BOUNDS = [[19.985, 49.175], [20.1075, 49.269]];
+// tatry.pmtiles covers the union of all rescue/scenarios/*.json bboxes + 0.02° pad (see extract_pmtiles.py)
+export const TATRY_BOUNDS = [[19.92015, 49.1516], [20.12845, 49.2795]];
+export const ZAWRAT_BOUNDS = [[19.985, 49.175], [20.1075, 49.269]];   // zawrat.json / blind-01.json + pad
 
 // The whole extract (~3.5 MB) is fetched once into memory, so any static server works
 // (python3 -m http.server has no HTTP Range support, which plain pmtiles:// URLs need).
@@ -34,7 +35,7 @@ export function registerPmtiles(maplibregl) {
 }
 
 // Call before creating the map: loads the archive into memory under the same URL offlineStyle() uses.
-export async function loadBasemap(maplibregl, file = "tatry-zawrat.pmtiles") {
+export async function loadBasemap(maplibregl, file = "tatry.pmtiles") {
   const p = registerPmtiles(maplibregl);
   const url = BASE + file;
   const buf = await (await fetch(url)).arrayBuffer();
@@ -42,7 +43,7 @@ export async function loadBasemap(maplibregl, file = "tatry-zawrat.pmtiles") {
 }
 
 // flavor: "light" (default, best under a heatmap), "white", "grayscale", "dark"
-export function offlineStyle({ flavor = "light", lang = "pl", file = "tatry-zawrat.pmtiles", mountain = true } = {}) {
+export function offlineStyle({ flavor = "light", lang = "pl", file = "tatry.pmtiles", mountain = true } = {}) {
   const bm = globalThis.basemaps;
   const layers = bm.layers("protomaps", bm.namedFlavor(flavor), { lang });
   return {
