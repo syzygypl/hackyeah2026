@@ -7,6 +7,10 @@ out=tools/vercel/public
 rm -rf "$out"
 mkdir -p "$out/scenarios" "$out/tools/terrain/data" "$out/eval"
 cp -R app web out "$out/"
+# tokens.css pulls fonts.css with @import: a second render-blocking round trip on every page (~170 ms on Fast 4G).
+# The deployed copy carries the @font-face rules inline (same folder, so the font URLs stay valid); sources keep the @import.
+awk 'FNR == NR { f = f $0 "\n"; next } /^@import url\("fonts\.css"\);/ { printf "%s", f; next } { print }' app/fonts.css app/tokens.css > "$out/app/tokens.css"
+grep -q '@import' "$out/app/tokens.css" && { echo "static.sh: tokens.css still has an @import" >&2; exit 1; }
 for f in scenarios/*.json tools/terrain/data/*.json; do
   case "$(echo "$f" | tr 'A-Z' 'a-z')" in *blind*) continue ;; esac
   cp "$f" "$out/$f"
