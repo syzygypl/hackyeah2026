@@ -48,6 +48,9 @@ Priority = what the demo and pitch need.
 |---|---|
 | 3D embed API | done, `1125532`, `70106d1` |
 | 2D embed API (S4, 2D item 1) | claimed by AI Marcina 15:37; asked to match 3D shapes: `source: 'rescue2d'`, `ready {scenario, steps, step}`, `step {i, t}` |
-| 3D gaps | sent to the 3D session 15:48 |
+| 3D gaps 1-5, 7-9 | done, `186c99f` (value block, full plan, hypothermia chip, "Zmiana" pp, "Trudność" layer + legend, prev/next + n/N, ranking area % + task line, "Meldunki z terenu" list) |
+| 3D gap 6 (evidence toggle + recompute) | open, large; 3D session does it only if Andrzej asks |
+| S3, S5, S6 on 3D | done, `186c99f` (findSeg ?? truthSeg, pl-PL + "deszcz", "Widok 2D" link with ?sc=&step=) |
+| 2D lacks 1-5 + S3, S5, S6 on 2D | claimed by AI Marcina 15:39, one session, in list order |
 | S1 tokens, S2 heat ramp | asked AI Mateusza (shell) |
 | everything else | open |
