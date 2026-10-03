@@ -40,6 +40,7 @@ One screen on a laptop, scrolls on a phone. Copy in Polish, from the pitch:
 | Why (3 short lines) | Sobota 17:40, mąż nie wrócił z Zawratu, mgła, zmrok. Ratownik ma okruchy: auto na parkingu, "szedł przez Pięć Stawów", lokalizację z 112 z dokładnością 1,5 km. Dziś łączy to w głowie, na papierowej mapie; precyzyjnej lokalizacji z telefonu (AML) w Polsce nie będzie przed ~2027. |
 | How (3 steps, icon + 1 line each) | **Wskazówki** (świadek, telefon, auto, pogoda, przeszukane sektory) → **Mapa** (statystyka zaginięć Koestera + prawdziwy teren, przelicza się z każdą wskazówką, także "przeszukane, nic") → **Zespoły** (kto, dokąd, za ile minut, bezpieczeństwo: lina, dron w wietrze). |
 | Proof (one row of numbers) | 1000 symulowanych zaginięć: właściwy sektor w top 3 w **66%** vs 56% doświadczony kierownik vs 43% od ostatniego punktu. Label "symulacja, nie prawdziwe akcje", link to Walidacja. |
+| Where else (one line, links) | Ten sam silnik: woda i dryf (Śniardwy), miasto (senior z demencją, Kraków), wiele akcji naraz (Centrum). |
 | Primary CTA (the only red) | **"Zobacz akcję na Zawracie - 90 s"** → `/app/?sc=zawrat&role=operator&tour=1` (layer 2) |
 | Secondary CTAs | "Jestem ratownikiem w terenie" (`?role=ratownik`), "Nowa akcja" (opens the existing dialog), "Instrukcja" (layer 3), "Centrum - wszystkie akcje" |
 | Footer | "Bez śledzenia, tylko legalne źródła, działa offline. Wszystkie dane fikcyjne." + team + version stamp (`version.js`) |
@@ -52,15 +53,17 @@ Side effect: the role picker modal can go away for visitors coming from the star
 
 Not a card deck. A walkthrough of the real Zawrat replay in the real UI, driven by the shell (it owns `step` and `select`, see `CONTRACT.md`), 6 stops, Next / Back / Skip, about 90 s. Each stop moves the timeline, highlights one element and shows a small paper card with **what you see** and **why it matters**:
 
+Stops follow the demo order in [`najmocniejsze-funkcje.md`](najmocniejsze-funkcje.md) (features #1 and #2 in the app, #3 to #5 as the end card), and respect its "do not show" list: no POA percentages as chances, no planner that "finds faster on its own", no LLM assessment.
+
 | # | Step in the story | Highlight | Card (what / why) |
 |---|---|---|---|
 | 1 | 17:40 zgłoszenie | map | Tak wygląda mapa bez wskazówek: tylko statystyka, jak daleko odchodzą zaginieni turyści. Obszar jest ogromny. |
-| 2 | wskazówki: auto, trasa, 112 | evidence list + map | Każda wskazówka to osobna warstwa. Auto na parkingu = nie zszedł; sektor 112 zawęża teren. Mapa przelicza się sama. |
-| 3 | 18:30 | "Gdzie szukać najpierw" | Trzy pierwsze sektory to 7% obszaru. To jest "waga mapy": ranking, nie szansa w procentach. |
-| 4 | first assignments | team plan (Szczegóły) | Kto, dokąd, za ile minut. Na oblodzone płyty tylko zespół z liną. Każdy przydział ma "dlaczego". |
-| 5 | sectors back empty, drone sees nothing | map, S7 selected | "Nic nie znaleźliśmy" to też informacja: waga spływa do Żlebu pod Zawratem. |
-| 6 | 19:45 wiatr, 20:03 ZNALEZIONO | dock + right panel | Wiatr uziemia drona, plan sam wysyła śmigłowiec. 20:03 znaleziony. |
-| end | | | "Teraz Ty": Nowa akcja / Plan (przeciągnij wskazówkę na mapę) / telefon ratownika przez Udostępnij. |
+| 2 | wskazówki: auto, trasa, 112 | evidence list + map | Każda wskazówka to osobna warstwa. Auto na parkingu = nie zszedł; sektor 112 zawęża teren. Mapa przelicza się sama. Wyłącz jedną i zobacz, co wnosiła. |
+| 3 | 18:30 | "Gdzie szukać najpierw" | Trzy pierwsze sektory to 7% obszaru. Liczy się kolejność ("waga mapy"), nie procent jako szansa. |
+| 4 | first assignments | team plan (Szczegóły) | Kto, dokąd, za ile minut. Na oblodzone płyty tylko zespół z liną. Plan podpowiada, decyduje kierownik akcji. |
+| 5 | sectors back empty, drone sees nothing | map, S7 selected | "Nic nie znaleźliśmy" to też informacja: Żleb pod Zawratem idzie z #20 (same statystyki) na #1. |
+| 6 | 19:45 wiatr, 20:03 ZNALEZIONO | dock + right panel | Wiatr uziemia drona, w planie zostaje śmigłowiec do żlebu. 20:03 znaleziony. |
+| end | | | "Teraz Ty": telefon ratownika przez Udostępnij (meldunek zwykłym zdaniem, LIVE, potwierdzenie), Centrum (wiele akcji, wspólne zespoły), ten sam silnik na wodzie (Śniardwy) i w mieście (Kraków, "Widziałem"), Nowa akcja. |
 
 Implementation notes:
 - `?tour=1` starts it; a "Przewodnik" button in the header restarts it. Remember "done" in `localStorage` (wrapped in try/catch like the existing hints).
