@@ -16,7 +16,7 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/app/",
+      "destination": "/app/start.html",
       "permanent": false
     },
     {
