@@ -16,3 +16,5 @@ tools/*
 tools/terrain/*
 !tools/terrain/data
 !tools/vercel
+rs/target
+rs/golden

@@ -1,0 +1,20 @@
+# rescue-server in Rust (rescue/rs) as a Vercel Function container: same inputs and env as the Swift image (Dockerfile.vercel).
+FROM rust:1-bookworm AS build
+WORKDIR /src/rs
+# dependencies first (cached layer), then the crate
+COPY rs/Cargo.toml rs/Cargo.lock ./
+RUN mkdir -p src/bin && echo 'fn main() {}' > src/bin/rescue-server.rs && touch src/lib.rs && cargo build --release && rm -rf src target/release/.fingerprint/rescue-*
+COPY rs/src ./src
+RUN touch src/lib.rs src/bin/rescue-server.rs && cargo build --release
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY --from=build /src/rs/target/release/rescue-server /app/rescue-server
+COPY scenarios /app/scenarios
+COPY eval/sim/out /app/eval/sim/out
+COPY exercises /app/exercises
+COPY tools/terrain/data /app/tools/terrain/data
+ENV RESCUE_DIR=/tmp/rescue RESCUE_PUBLIC=1 RESCUE_LIVE_FILE=/tmp/live-events.json
+EXPOSE 80
+CMD ["sh", "-c", "mkdir -p /tmp/rescue && cp -R /app/scenarios /app/eval /app/exercises /app/tools /tmp/rescue/ && exec /app/rescue-server 80 --host 0.0.0.0"]

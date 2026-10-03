@@ -22,3 +22,5 @@ tools/terrain/data/blind-*
 eval/*
 !eval/sim
 eval/sim/out/*/cases
+rs/target
+rs/golden

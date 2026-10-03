@@ -8,6 +8,16 @@ engine (use `tokio::task::spawn_blocking` or rayon for engine runs).
 
 Hackathon rules: quickest working code, no tests suites, no refactors beyond what Rust needs. Port faithfully first.
 
+## Outputs must be IDENTICAL (Andrzej)
+
+Every response must equal the Swift one exactly: same keys, same values, same list order, and numbers equal as f64
+(not "close"). So: port arithmetic in the same order (no reassociation, no fused ops, no "simplifications"), same
+constants, same rounding calls (Swift `.rounded()` = round half away from zero = Rust `f64::round`), same iteration
+order (Swift Dictionary iteration order is random - wherever Swift output depends on it, Swift sorts or the frontend
+does not care; mirror any explicit sort; use BTreeMap / sorted keys for JSON objects), same seeded RNG. JSON objects:
+Swift writes sorted keys (`.sortedKeys`) - serialize through serde_json::Value (its Map is a BTreeMap = sorted) for
+response bodies. Integers stay integers. `rescue/rs/parity.py` compares with tolerance 0 against `rescue/rs/golden/`.
+
 ## Layout (fixed; do not rename files or modules)
 
 - `src/kit/<snake_file>.rs` = `Sources/RescueKit/<File>.swift` (`Providers/*` -> `src/kit/providers/`, `Timeline/*` ->
@@ -58,3 +68,22 @@ Hackathon rules: quickest working code, no tests suites, no refactors beyond wha
   yours are expected while others work; make YOUR files clean.
 - Reference output from the Swift server for comparison: `rescue/rs/golden/` (filled by the coordinator; file name = the
   request path with `/` -> `_`).
+
+## Who does what (coordinator: AI Andrzeja, session "rust"; Andrzej is coordinator tonight)
+
+All Swift files are claimed - do NOT start porting them:
+- agent A: engine core - scenario, location_hint, hint_provider, providers/*, probability_grid, trail_graph, water, coverage,
+  module_registry, clue_weights, story_pipeline, run_json, search_planner
+- agent B: timeline/*, advisor, assessment, exercise_probe, llm
+- agent C: field_reports/*, metrics, server_guard, studio/{eval,story,studio}
+- agent D: src/server/* (main.swift + Store.swift, axum)
+
+HELP WANTED (CLAIM through the teams session; each is independent of the port):
+1. Stateful parity flows: scripted request sequences for POST/stateful endpoints (/report, /api/clue, /api/advance, /api/ack,
+   /api/fix, /api/exercise/*, /story/new|event|edit, /api/teams/assign, /api/reset), recorded against the Swift server and
+   replayed against Rust, byte-compared like parity.py. New file rescue/rs/parity_flows.py (+ recorded outputs gitignored).
+2. Frontend page-change speed (the "every page change fast" goal): measure each page/mode switch in /app, /app/centrum.html,
+   /web/patrol, start.html (load + first map), then fix in your own area: cache headers for static assets in vercel.json
+   (immutable for vendor/, fonts/, *.pmtiles, 3d data), lazy-load 3D and heavy panels, prefetch the next view's API.
+3. Benchmark script: same request mix against Swift and Rust, p50/p95 per endpoint (rescue/rs/bench.py).
+4. After integration: x86 build check of rescue/Dockerfile.vercel-rs (Vercel builds x86; the dev box is aarch64).
