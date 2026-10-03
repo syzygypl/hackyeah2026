@@ -669,7 +669,9 @@ class SemanticFailModes(unittest.TestCase):
         r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})
         self.assertEqual(r["decision"], DENY)
         self.assertIn("semantic_unavailable", r["event"]["guardrails"])
-        self.assertEqual(layer.call(s, "search_kb", {"query": "policy"})["decision"], ALLOW)  # low risk: no judge
+        r = layer.call(s, "search_kb", {"query": "policy"})  # NEW-2: degraded prefilter + no judge on a tool call -> closed
+        self.assertEqual(r["decision"], DENY)
+        self.assertIn("semantic_unavailable", r["event"]["guardrails"])
 
     def test_digest_pin_mismatch_refuses_model(self):
         self.fake = FakeOllama({"llama-guard3:1b": "tampered"}, reply="safe")
@@ -770,6 +772,16 @@ class OllamaUnreachable(unittest.TestCase):
         r = layer.call(s, "transfer_funds", {"to": ACME, "amount": 4200})  # judge fail_mode closed: never a silent pass
         self.assertEqual(r["decision"], DENY)
         self.assertIn("semantic_unavailable", r["event"]["guardrails"])
+
+    def test_degraded_document_and_tool_output_fail_closed_prompt_stays_open(self):  # NEW-2
+        layer, s, _ = self._env("http://127.0.0.1:9")
+        self.assertEqual(layer.check_prompt(s, "plain user question")["decision"], ALLOW)
+        r = layer.check_prompt(s, "forwarded email body " * 300, direction="document")
+        self.assertEqual(r["decision"], ALLOW)
+        self.assertTrue(r["output"].startswith("[UNTRUSTED CONTENT"))
+        self.assertIn("taint", r["event"]["guardrails"])
+        r = layer.call(Session("o", "x"), "search_kb", {"query": "x"})
+        self.assertEqual(r["decision"], DENY)  # tool call: approval required, nobody approves
 
     def test_inventory_failure_keeps_last_good_inventory(self):
         fake = FakeOllama({QWEN: "q", GRANITE: "g"}, reply={QWEN: "Safety: Safe\nCategories: None", GRANITE: "<score> no </score>"})

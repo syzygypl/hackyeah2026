@@ -346,7 +346,8 @@ class SemanticGuard:
                 j = self._stage("judge", jd, cfg, allowed, text, res, context=context, phase=phase)
                 used.append(j[0]["model"])
             except StageUnavailable as e:
-                suspicious = high_risk or controversial or bool(signals)
+                suspicious = (high_risk or controversial or bool(signals)
+                              or phase in cfg.get("degraded_fail_closed_phases", ["tool_args", "tool_output", "document"]))  # NEW-2
                 # judge called only because the prefilter degraded: its failure inherits the prefilter's fail_mode;
                 # with a real reason to suspect (high risk, Controversial, heuristic signal) the judge fails closed
                 self._fail(res, "judge", jd if suspicious else dict(jd, fail_mode=pf.get("fail_mode", "open")), e, mode)
