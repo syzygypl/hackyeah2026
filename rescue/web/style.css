@@ -1,15 +1,18 @@
 /* Rescue Locator - web screen. Dark UI, projector-readable, 1280x720 first. */
+/* Colours map onto the shared tokens (decision S1, rescue/app/tokens.css). Standalone the fallbacks apply (same look);
+   in ?embed=1 tokens.css is loaded and ?theme=light switches everything. */
 :root {
-  --bg: #0e1317;
-  --panel: #151c22;
-  --panel-2: #1b242c;
-  --line: #2b3741;
-  --ink: #eef2f5;
-  --ink-2: #b7c3cd;
-  --mute: #8797a4;
-  --accent: #5ce1e6;
-  --ok: #3ee08f;
-  --warn: #f2b134;
+  --bg: var(--rl-bg, #0e1317);
+  --panel: var(--rl-panel, #151c22);
+  --panel-2: var(--rl-panel-2, #1b242c);
+  --line: var(--rl-line, #2b3741);
+  --ink: var(--rl-ink, #eef2f5);
+  --ink-2: var(--rl-ink-2, #b7c3cd);
+  --mute: var(--rl-mute, #8797a4);
+  --accent: var(--rl-accent, #5ce1e6);
+  --on-accent: var(--rl-on-accent, #062126);
+  --ok: var(--rl-ok, #3ee08f);
+  --warn: var(--rl-warn, #f2b134);
   --bad: #ff6b5a;
   --heat: #ef6548;
   --radius: 10px;
@@ -19,11 +22,11 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); }
-body { font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif; }
+body { font: 15px/1.4 var(--rl-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif); }
 code { font: 0.9em ui-monospace, Menlo, Consolas, monospace; color: var(--ink-2); }
 button { font: inherit; cursor: pointer; border-radius: 8px; border: 1px solid transparent; }
 button:disabled { opacity: 0.4; cursor: default; }
-button.primary { background: var(--accent); color: #062126; font-weight: 700; padding: 8px 16px; }
+button.primary { background: var(--accent); color: var(--on-accent); font-weight: 700; padding: 8px 16px; }
 button.ghost { background: transparent; color: var(--ink); border-color: var(--line); padding: 6px 12px; }
 button.ghost:hover:not(:disabled) { border-color: var(--ink-2); }
 button.sm { padding: 3px 9px; font-size: 13px; }
@@ -157,12 +160,12 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 /* map + floating panels */
 #mapwrap { grid-area: map; position: relative; min-height: 0; background: #1f2a24; }
 #map { position: absolute; inset: 0; }
-.floating { position: absolute; z-index: 5; background: rgba(14, 19, 23, 0.9); border: 1px solid var(--line); border-radius: var(--radius); backdrop-filter: blur(3px); }
+.floating { position: absolute; z-index: 5; background: color-mix(in srgb, var(--bg) 90%, transparent); border: 1px solid var(--line); border-radius: var(--radius); backdrop-filter: blur(3px); }
 #stepcard { top: 10px; left: 10px; max-width: min(420px, calc(100% - 200px)); padding: 8px 11px; }
 .sc-head { display: flex; gap: 8px; align-items: center; color: var(--ink-2); font-size: 13px; }
 .sc-title { font-size: 16px; font-weight: 700; margin-top: 2px; line-height: 1.25; }
 .sc-detail { font-size: 13px; color: var(--ink-2); margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.sc-wx { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: #cfe6ff; margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line); }
+.sc-wx { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line); }
 .sc-wx .ic { width: 16px; height: 16px; }
 .sc-effect { font-size: 13.5px; margin-top: 5px; display: flex; gap: 10px; flex-wrap: wrap; }
 .sc-effect .up { color: #ff9a7a; } .sc-effect .down { color: #8fd1ff; }
@@ -174,14 +177,16 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 .seg-switch { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg-switch button { flex: 1; background: transparent; color: var(--ink-2); border-radius: 0; padding: 3px 8px; font-size: 12.5px; border-right: 1px solid var(--line); }
 .seg-switch button:last-child { border-right: 0; }
-.seg-switch button.on { background: var(--accent); color: #062126; font-weight: 700; }
+.seg-switch button.on { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 .surv { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
 .surv.lv-niski { color: var(--ok); } .surv.lv-podwyższony { color: var(--warn); } .surv.lv-wysoki, .surv.lv-krytyczny { color: var(--bad); }
-#modbanner { right: 10px; top: 104px; padding: 6px 10px; font-size: 13px; border-color: var(--warn); color: #ffe2a6; max-width: 240px; }
-#netnote { left: 50%; transform: translateX(-50%); top: 10px; padding: 6px 12px; font-size: 13px; border-color: var(--warn); color: #ffe2a6; z-index: 6; }
+#modbanner { right: 10px; top: 104px; padding: 6px 10px; font-size: 13px; border-color: var(--warn); color: var(--ink); max-width: 240px; }
+#netnote { left: 50%; transform: translateX(-50%); top: 10px; padding: 6px 12px; font-size: 13px; border-color: var(--warn); color: var(--ink); z-index: 6; }
 #legend { left: 10px; bottom: 26px; padding: 6px 9px; font-size: 12px; }
 .lg-title { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; }
 .lg-row { display: grid; grid-template-columns: repeat(6, 44px); }
+.lg-ramp { height: 10px; width: 264px; border-radius: 4px; margin: 2px 0 3px; }
+.lg-stops { display: flex; justify-content: space-between; width: 264px; font-size: 10.5px; color: var(--ink-2); }
 .lg-row.lbl span { font-size: 10.5px; color: var(--ink-2); }
 .lg-sw { display: inline-block; height: 12px; width: 100%; }
 .lg-note { color: var(--mute); font-size: 11px; margin-top: 3px; }
@@ -191,7 +196,7 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--ink-2); display: flex; align
 .lg-diff { display: grid; grid-template-columns: repeat(2, auto); gap: 3px 12px; }
 .lg-diff span { display: flex; gap: 6px; align-items: center; }
 .lg-diff .lg-sw { width: 14px; }
-.tip { position: absolute; z-index: 7; pointer-events: none; background: rgba(8, 11, 14, 0.95); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 13px; max-width: 260px; }
+.tip { position: absolute; z-index: 7; pointer-events: none; background: color-mix(in srgb, var(--panel) 95%, transparent); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 13px; max-width: 260px; }
 #fatal { position: absolute; inset: 20% 15% auto; z-index: 9; background: var(--panel); border: 1px solid var(--bad); border-radius: var(--radius); padding: 16px 20px; }
 #fatal h2 { color: var(--bad); font-size: 15px; }
 

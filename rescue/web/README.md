@@ -71,6 +71,7 @@ For the combined app (`rescue/app/`). It uses the same contract as the 3D view (
 
 **Modes:**
 - `?embed=1` hides our header and both side panels, and keeps the map, legend and timeline.
+- **Theme (decision S1):** in `?embed=1` / `?embed=bare` the page loads `../app/tokens.css` (dark operational theme). `?theme=light` switches to the light print variant. `style.css` maps its colours onto `var(--rl-*)` with the old values as fallbacks, so the standalone page looks unchanged.
 - `?embed=bare` also removes the timeline, map controls and step card, leaving the map and legend.
 
 **URL parameters:** `?run=<url>`, `?step=i` and `?sc=` keep working in embed mode.
@@ -79,7 +80,7 @@ For the combined app (`rescue/app/`). It uses the same contract as the 3D view (
 
 ## What is on the screen
 
-- **Map:** POA per cell for the selected step (6 classes, one warm hue, legend in % per 100 x 100 m cell). Segment polygons from run.json; top 3 thick white with "name - POA%" labels, others "S12 · 2%" (tick "pełne nazwy" for all names). Searched segments dashed with POD. IPP marker. Per-hint overlays when the scenario is available: Koester rings, trip route, car + exit corridor, BTS sector, Ratunek ping, steep ground. Optional "trudność terenu" layer from `run.json.difficulty`. Field reports as yellow markers.
+- **Map:** POA per cell for the selected step, coloured with the shared scale from `../app/scale.js` (decision S2, same colours as 3D): times the average cell (p x N) on a log scale, stops 0.5x / 1x / 2x / 5x / 10x / 25x+, below 0.5x transparent. The legend shows the ramp and what 1x is in % per 100 x 100 m cell. Segment polygons from run.json; top 3 thick white with "name - POA%" labels, others "S12 · 2%" (tick "pełne nazwy" for all names). Searched segments dashed with POD. IPP marker. Per-hint overlays when the scenario is available: Koester rings, trip route, car + exit corridor, BTS sector, Ratunek ping, steep ground. Optional "trudność terenu" layer from `run.json.difficulty`. Field reports as yellow markers.
 - **Left:** live field reports (+ send box), then one card per hint with an icon per kind (rings, terrain, cost, route, sector, point, searched, containment, weather, difficulty, conditions).
 - **Right:** value card from `run.json.value`, team plan (`steps[].assignments` / `resources`), ranked segments (POA, area %, POA per area as "x times average"; top 3 with a reflex task line).
 - **Bottom:** timeline slider with one tick per step, Play, step buttons. The step card on the map says what the new hint is, its detail, which segments gained / lost and who leads.

@@ -74,15 +74,14 @@
   const pctAuto = (x) => { const v = x * 100; return (v >= 10 ? nf(v, 0) : v >= 1 ? nf(v, 1) : nf(v, 2)) + '%'; };
   const pp = (x) => (x >= 0 ? '+' : '-') + nf(Math.abs(x * 100), 1) + ' pp';
 
-  /* ---------- colour scale: per-cell POA, one warm hue, light -> dark ---------- */
-  const HEAT = {
-    breaks: [0.00005, 0.0001, 0.0003, 0.001, 0.003, 0.01], // fraction per cell
-    labels: ['0,005%', '0,01%', '0,03%', '0,1%', '0,3%', '1%+'],
-    colors: ['#fdd49e', '#fdbb84', '#fc8d59', '#ef6548', '#d7301f', '#990000'],
-    opac: [0.36, 0.48, 0.6, 0.7, 0.8, 0.9],
-  };
+  /* ---------- colour scale: shared with 3D (decision S2, rescue/app/scale.js, loaded by index.html) ----------
+     colour by "times the average cell" (p * N) on a log scale, stops 0.5x 1x 2x 5x 10x 25x+, below 0.5x transparent */
+  const SCALE = window.RescueScale;
+  function heatRGBA(p, N) {
+    const [r, g, b, a] = SCALE.colorFor(p, N);
+    return a > 0 ? `rgba(${r},${g},${b},${+a.toFixed(3)})` : 'rgba(0,0,0,0)';
+  }
   const DIFF_COLORS = ['#e6dfc8', '#9cc47a', '#3f7a3a', '#b8a78a', '#8f80a6', '#4b3f4a', '#4a8fd1'];
-  function heatClass(p) { let c = -1; for (let i = 0; i < HEAT.breaks.length; i++) if (p >= HEAT.breaks[i]) c = i; return c; }
 
   /* ---------- evidence kinds ---------- */
   const I = (inner) => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
@@ -161,7 +160,7 @@
     for (let i = 0; i < N; i++) {
       const r = Math.floor(i / cols), c = i % cols;
       const n = north - r * dLat, s = n - dLat, w = west + c * dLon, e = w + dLon;
-      cells.push({ type: 'Feature', id: i, properties: { i, p: 0, d: Array.isArray(R.difficulty) && R.difficulty.length === N ? R.difficulty[i] : -1 }, geometry: { type: 'Polygon', coordinates: [[[w, n], [e, n], [e, s], [w, s], [w, n]]] } });
+      cells.push({ type: 'Feature', id: i, properties: { i, p: 0, c: 'rgba(0,0,0,0)', d: Array.isArray(R.difficulty) && R.difficulty.length === N ? R.difficulty[i] : -1 }, geometry: { type: 'Polygon', coordinates: [[[w, n], [e, n], [e, s], [w, s], [w, n]]] } });
     }
     // segments: names / area / polygon from the steps, centroid from segOf
     const segs = new Map();
@@ -460,9 +459,8 @@
       const P = ['==', ['geometry-type'], 'Polygon'], Ln = ['any', ['==', ['geometry-type'], 'LineString'], ['==', ['geometry-type'], 'Polygon']];
       const lineP = { 'line-color': ['get', 'color'], 'line-width': ['get', 'width'], 'line-opacity': ['get', 'opacity'] };
       map.addLayer({ id: 'base-fill', type: 'fill', source: 'base', filter: P, paint: { 'fill-color': ['coalesce', ['get', 'fill'], '#000'], 'fill-opacity': ['coalesce', ['get', 'fillOpacity'], 0] } });
-      const heatColor = ['step', ['get', 'p'], 'rgba(0,0,0,0)']; const heatOp = ['step', ['get', 'p'], 0];
-      HEAT.breaks.forEach((b, j) => { heatColor.push(b, HEAT.colors[j]); heatOp.push(b, HEAT.opac[j]); });
-      map.addLayer({ id: 'heat', type: 'fill', source: 'cells', paint: { 'fill-color': heatColor, 'fill-opacity': heatOp, 'fill-antialias': false } });
+      // per-cell rgba from the shared scale (set in setHeat), alpha carried in the colour
+      map.addLayer({ id: 'heat', type: 'fill', source: 'cells', paint: { 'fill-color': ['get', 'c'], 'fill-opacity': 1, 'fill-antialias': false } });
       const dm = ['match', ['get', 'd']]; DIFF_COLORS.forEach((c, j) => dm.push(j, c)); dm.push('rgba(0,0,0,0)');
       map.addLayer({ id: 'diff', type: 'fill', source: 'cells', layout: { visibility: 'none' }, paint: { 'fill-color': dm, 'fill-opacity': 0.82, 'fill-antialias': false } });
       map.addLayer({ id: 'base-line', type: 'line', source: 'base', filter: ['all', Ln, ['==', ['get', 'dash'], 0]], layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: lineP });
@@ -486,7 +484,7 @@
     };
     this.setBaseFC = (fc) => map.getSource('base').setData(fc);
     this.setDiff = (on) => { map.setLayoutProperty('diff', 'visibility', on ? 'visible' : 'none'); map.setLayoutProperty('heat', 'visibility', on ? 'none' : 'visible'); };
-    this.setHeat = (p) => { for (let i = 0; i < M.N; i++) M.cells[i].properties.p = p[i]; map.getSource('cells').setData(FC(M.cells)); };
+    this.setHeat = (p) => { for (let i = 0; i < M.N; i++) { const pr = M.cells[i].properties; pr.p = p[i]; pr.c = heatRGBA(p[i], M.N); } map.getSource('cells').setData(FC(M.cells)); };
     this.setOverlay = (fc) => map.getSource('ov').setData(fc);
     this.setSegments = (fc) => map.getSource('segs').setData(fc);
     this.setChips = (chips) => {
@@ -580,10 +578,10 @@
       } else if (p) {
         const cw = (east - west) / M.cols, ch = (north - south) / M.rows;
         for (let i = 0; i < M.N; i++) {
-          const c = heatClass(p[i]); if (c < 0) continue;
+          const [cr, cg, cb, ca] = SCALE.colorFor(p[i], M.N); if (!(ca > 0)) continue;
           const r = Math.floor(i / M.cols), q = i % M.cols;
           const [x0, y0] = toXY(west + q * cw, north - r * ch), [x1, y1] = toXY(west + (q + 1) * cw, north - (r + 1) * ch);
-          ctx.globalAlpha = HEAT.opac[c]; ctx.fillStyle = HEAT.colors[c]; ctx.fillRect(x0, y0, x1 - x0 + 0.5, y1 - y0 + 0.5);
+          ctx.globalAlpha = ca; ctx.fillStyle = `rgb(${cr},${cg},${cb})`; ctx.fillRect(x0, y0, x1 - x0 + 0.5, y1 - y0 + 0.5);
         }
         ctx.globalAlpha = 1;
       }
@@ -836,9 +834,9 @@
       $('#legend').innerHTML = `<div class="lg-title">Trudność terenu (silnik)</div><div class="lg-diff">${cls.map((c) => `<span><i class="lg-sw" style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`;
       return;
     }
-    $('#legend').innerHTML = `<div class="lg-title">POA komórki 100 x 100 m</div><div class="lg-row">${HEAT.colors.map((c, j) => `<span class="lg-sw" style="background:${c};opacity:${0.35 + HEAT.opac[j] * 0.65}"></span>`).join('')}</div>
-      <div class="lg-row lbl">${HEAT.labels.map((l) => `<span>${l}</span>`).join('')}</div>
-      <div class="lg-note">średnio ${pct(1 / S.M.N, 3)} na komórkę</div>
+    $('#legend').innerHTML = `<div class="lg-title">Prawdopodobieństwo × średnia komórka</div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
+      <div class="lg-stops">${SCALE.STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
+      <div class="lg-note">1× = średnio ${pct(1 / S.M.N, 3)} na komórkę 100 x 100 m; poniżej 0,5× bez koloru</div>
       <div class="lg-keys"><span><i class="k ln-seg"></i>top 3</span><span><i class="k ln-srch"></i>przeszukany</span></div>`;
   }
 
@@ -1122,7 +1120,13 @@
   }
 
   async function boot() {
-    if (EMBED) { document.body.classList.add('embed'); if (EMBED === 'bare') document.body.classList.add('embed-bare'); }
+    if (!SCALE) return fatal('brak wspólnej skali ../app/scale.js (serwer musi działać w rescue/)');
+    if (EMBED) {
+      document.body.classList.add('embed'); if (EMBED === 'bare') document.body.classList.add('embed-bare');
+      // decision S1: embedded in the shell = its tokens (dark operational by default, ?theme=light for print), same as web/3d
+      const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../app/tokens.css'; document.head.appendChild(l);
+      if (Q.get('theme') === 'light' || Q.get('theme') === 'dark') document.documentElement.dataset.theme = Q.get('theme');
+    }
     wire();
     initScenarioSwitcher();
     initLive();

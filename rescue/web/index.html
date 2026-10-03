@@ -82,6 +82,8 @@
   try { window.maplibregl = await import('./vendor/maplibre-gl.mjs'); }
   catch (e) { window.__mlFailed = true; console.warn('[rescue] MapLibre not loaded:', e && e.message); }
   try { if (!window.__mlFailed) await import('./vendor/pmtiles.js'); } catch (e) { console.warn('[rescue] pmtiles not loaded:', e && e.message); }
+  // Shared heat scale (decision S2): same colours and stops as 3D; sets window.RescueScale for the classic app.js.
+  try { await import('../app/scale.js'); } catch (e) { console.warn('[rescue] app/scale.js not loaded:', e && e.message); }
   const s = document.createElement('script'); s.src = 'app.js'; document.body.appendChild(s);
 </script>
 </body>
