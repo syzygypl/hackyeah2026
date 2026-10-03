@@ -110,11 +110,28 @@ def ollama_chat(model, messages):
 
 
 def run(task, acl, model, scripted, approver=None, max_steps=8):
+    t = {"model": 0, "gateway": 0, "gw_calls": 0}
+
+    def gw(fn, *a, **kw):
+        t0 = time.time()
+        r = fn(*a, **kw)
+        t["gateway"] += (time.time() - t0) * 1000
+        t["gw_calls"] += 1
+        return r
+
+    try:
+        return _run(task, acl, model, scripted, approver, max_steps, gw, t)
+    finally:
+        print(f"  {DIM}timing: model {t['model'] / 1000:.1f} s | gateway {t['gateway'] / 1000:.1f} s "
+              f"over {t['gw_calls']} checks{END}")
+
+
+def _run(task, acl, model, scripted, approver, max_steps, gw, t):
     print(f"\n{BOLD}TASK{END} {task}")
     print(f"{DIM}model: {model or 'scripted (no Ollama chat model found) - replays fixed tool calls'} | "
           f"gateway: {acl.url} | session: {acl.session}{END}")
 
-    g = acl.guard_prompt(task)
+    g = gw(acl.guard_prompt, task)
     print(f"  prompt -> gateway {badge(g)} {DIM}{short(g.get('reasons'))}{END}")
     if g["final"] == "DENY":
         print(f"  {BOLD}stopped:{END} the model never saw this prompt")
@@ -134,19 +151,20 @@ def run(task, acl, model, scripted, approver=None, max_steps=8):
             messages.append({"role": "assistant", "content": text,
                              "tool_calls": [{"function": {"name": n, "arguments": a}} for n, a in calls]})
         ms = int((time.time() - t0) * 1000)
+        t["model"] += ms
 
         if not calls:
-            o = acl.guard_prompt(text, direction="output")
+            o = gw(acl.guard_prompt, text, direction="output")
             print(f"  [{step}] model answers ({ms} ms) -> gateway {badge(o)}")
             print(f"      {BOLD}answer:{END} {short(o.get('output') or text, 400)}")
             return
 
         for name, args in calls:
             print(f"  [{step}] model proposes {BOLD}{name}{END}({short(args, 120)}) {DIM}({ms} ms){END}")
-            r = acl.call_tool(name, args)
+            r = gw(acl.call_tool, name, args)
             print(f"      gateway {badge(r)} {DIM}{short(r.get('reasons'), 200)}{END}")
             if r.get("decision") == "REQUIRE_APPROVAL" and r.get("final") == "DENY" and approver:
-                r = acl.call_tool(name, args, approved_by=approver)
+                r = gw(acl.call_tool, name, args, approved_by=approver)
                 print(f"      human '{approver}' approves -> gateway {badge(r)}")
             print(f"      result: {short(r.get('output'))}")
             messages.append({"role": "tool", "tool_name": name,
