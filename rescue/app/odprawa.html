@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odprawa - Rescue Locator</title>
+<meta name="description" content="Odprawa kierownika akcji na jednej stronie A4: kogo szukamy, gdzie najpierw, kto dokąd idzie, pogoda, ostatnia godzina.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="odprawa.css">
+</head>
+<body>
+<nav class="od-bar no-print" aria-label="Odprawa">
+  <a href="start.html" class="od-back">Strona startowa</a>
+  <label>Akcja <select id="sc"></select></label>
+  <label>Godzina <input id="t" type="time" step="300"></label>
+  <span class="sp"></span>
+  <button id="print" type="button" class="primary">Drukuj / PDF</button>
+</nav>
+
+<main class="sheet" id="sheet" aria-live="polite">
+  <header class="od-head">
+    <div class="od-title">
+      <span class="od-kicker">Odprawa kierownika akcji</span>
+      <h1 id="incident">Wczytuję akcję...</h1>
+      <div class="od-meta" id="meta"></div>
+    </div>
+    <div class="od-sign">
+      <div><span>Kierownik akcji</span><i></i></div>
+      <div><span>Odprawę prowadzi / godz.</span><i></i></div>
+    </div>
+  </header>
+
+  <section class="od-grid">
+    <div class="od-mapcol">
+      <figure class="od-map">
+        <canvas id="map" width="760" height="620" role="img" aria-label="Schemat sektorów z trzema sektorami do przeszukania najpierw"></canvas>
+        <figcaption id="mapcap">Schemat sektorów (bez podkładu): czerwone 1-3 = przeszukać najpierw, kreskowane = przeszukane, kolor = waga mapy.</figcaption>
+      </figure>
+    </div>
+    <div class="od-side">
+      <section class="box">
+        <h2>Kogo szukamy</h2>
+        <p id="person"></p>
+      </section>
+      <section class="box">
+        <h2>Ostatni znany punkt</h2>
+        <p id="lkp"></p>
+      </section>
+      <section class="box">
+        <h2>Pogoda i światło</h2>
+        <p id="weather"></p>
+      </section>
+    </div>
+  </section>
+
+  <section class="box od-top">
+    <h2>Gdzie szukać najpierw <span class="mute" id="topNote"></span></h2>
+    <ol id="top3"></ol>
+  </section>
+
+  <section class="box">
+    <h2>Zespoły: przydział i bezpieczeństwo</h2>
+    <table class="od-teams">
+      <thead><tr><th>Zespół</th><th>Sektor</th><th>Zadanie</th><th>Uwagi bezpieczeństwa</th></tr></thead>
+      <tbody id="teams"></tbody>
+    </table>
+  </section>
+
+  <section class="od-two">
+    <section class="box">
+      <h2>Ostatnia godzina</h2>
+      <ul class="od-events" id="events"></ul>
+    </section>
+    <section class="box">
+      <h2>Łączność</h2>
+      <table class="od-radio">
+        <tr><th>Kanał akcji</th><td></td></tr>
+        <tr><th>Kanał zapasowy</th><td></td></tr>
+        <tr><th>Baza / punkt zborny</th><td></td></tr>
+        <tr><th>Meldunki co</th><td>30 min i po każdym sektorze</td></tr>
+        <tr><th>Alarm</th><td>112 · TOPR 985 / 601 100 300</td></tr>
+      </table>
+    </section>
+  </section>
+
+  <footer class="od-foot">
+    <b>Dane fikcyjne / narzędzie pomocnicze - decyzję podejmuje kierownik akcji.</b>
+    Kolejność sektorów to kolejność przeszukiwania (waga mapy), nie szansa znalezienia. <span id="src"></span>
+  </footer>
+</main>
+<script src="odprawa.js" defer></script>
+</body>
+</html>

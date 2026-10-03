@@ -1,0 +1,95 @@
+/* Odprawa (druk): one A4 portrait page. Screen: the same sheet on paper ground with a control bar; print: the sheet only. */
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--rl-bg);color:var(--rl-ink);font:13px/1.35 var(--rl-font);-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--rl-mono);font-variant-numeric:tabular-nums}
+.mute{color:var(--rl-mute)}
+a{color:var(--rl-accent)}
+.od-bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 16px;background:var(--rl-panel);border-bottom:1px solid var(--rl-line);backdrop-filter:blur(var(--rl-blur))}
+.od-bar .sp{flex:1}
+.od-bar label{display:inline-flex;gap:6px;align-items:center;color:var(--rl-ink-2)}
+.od-bar select,.od-bar input,.od-bar button{font:inherit;font-size:14px;min-height:40px;padding:6px 10px;border-radius:var(--rl-radius-s);border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink)}
+.od-bar button.primary{background:var(--rl-danger);border-color:var(--rl-danger);color:var(--rl-on-danger);font-weight:700;cursor:pointer}
+.od-back{font-weight:600;text-decoration:none;min-height:40px;display:inline-flex;align-items:center}
+
+.sheet{width:210mm;min-height:297mm;margin:16px auto;padding:10mm 11mm 8mm;background:#fff;box-shadow:var(--rl-shadow);display:flex;flex-direction:column;gap:3.2mm}
+.od-head{display:flex;gap:6mm;align-items:flex-start;border-bottom:2px solid var(--rl-ink);padding-bottom:2.5mm}
+.od-title{flex:1;min-width:0}
+.od-kicker{font:700 10.5px/1 var(--rl-font);letter-spacing:.12em;text-transform:uppercase;color:var(--rl-danger)}
+.od-head h1{font-size:21px;line-height:1.15;margin:3px 0 2px}
+.od-meta{font-size:12px;color:var(--rl-ink-2)}
+.od-sign{flex:none;width:62mm;display:flex;flex-direction:column;gap:2.5mm;font-size:10.5px;color:var(--rl-ink-2)}
+.od-sign div{display:flex;flex-direction:column}
+.od-sign i{display:block;border-bottom:1px solid var(--rl-ink-2);height:6mm}
+
+h2{font:700 10.5px/1.2 var(--rl-font);letter-spacing:.1em;text-transform:uppercase;color:var(--rl-ink-2);margin:0 0 1.5mm}
+h2 .mute{text-transform:none;letter-spacing:0;font-weight:400}
+.box{border:1px solid var(--rl-line-strong);border-radius:6px;padding:2.2mm 3mm}
+.box p{margin:0}
+.od-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:3mm;align-items:start}
+.od-map{margin:0}
+.od-map canvas{display:block;width:100%;height:auto;border:1px solid var(--rl-line-strong);border-radius:6px}
+.od-map figcaption{font-size:10px;color:var(--rl-mute);margin-top:1mm}
+.od-side{display:flex;flex-direction:column;gap:3mm}
+.warn{display:inline-block;margin-top:1mm;padding:0 4px;border-left:3px solid var(--rl-warn);background:color-mix(in srgb,var(--rl-warn) 18%,#fff)}
+.warn.red{border-left-color:var(--rl-danger);color:var(--rl-danger);font-weight:600}
+
+.od-top ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:2.5mm}
+.od-top li{display:flex;flex-wrap:wrap;gap:1mm 6px;align-items:baseline;border:1px solid var(--rl-line-strong);border-radius:5px;padding:1.6mm 2.2mm;font-size:13.5px}
+.od-top .rk{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 13px/1 var(--rl-font);border:2px solid var(--rl-danger);color:var(--rl-danger);align-self:center}
+.od-top li:first-child .rk{background:var(--rl-danger);color:#fff}
+.od-top .ar{flex-basis:100%;font-size:11.5px;color:var(--rl-ink-2)}
+.od-top .who{flex-basis:100%;font-size:11.5px}
+
+table{border-collapse:collapse;width:100%}
+.od-teams th,.od-teams td{text-align:left;vertical-align:top;padding:1.2mm 1.6mm;border-bottom:1px solid var(--rl-line);font-size:11.5px}
+.od-teams th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--rl-ink-2);border-bottom:1px solid var(--rl-ink-2)}
+.od-teams td:first-child{width:30%}.od-teams td:nth-child(2){width:18%}
+.od-teams tr.busy td{color:var(--rl-ink-2)}
+.flag{display:inline-block;margin:0 2px 2px 0;padding:0 4px;border-radius:3px;border:1px solid var(--rl-warn);background:color-mix(in srgb,var(--rl-warn) 18%,#fff);font-size:10.5px}
+.flag.red{border-color:var(--rl-danger);color:var(--rl-danger);background:#fff;font-weight:600}
+
+.od-two{display:grid;grid-template-columns:1.3fr 1fr;gap:3mm}
+.od-events{list-style:none;margin:0;padding:0;font-size:11.5px}
+.od-events li{padding:.6mm 0;border-bottom:1px dotted var(--rl-line-strong)}
+.od-events .mono{font-weight:700;margin-right:4px}
+.od-radio th,.od-radio td{text-align:left;font-size:11px;padding:1mm 1.4mm;border-bottom:1px solid var(--rl-line-strong);height:6.5mm}
+.od-radio th{width:42%;color:var(--rl-ink-2);font-weight:600}
+.od-foot{margin-top:auto;border-top:1px solid var(--rl-ink-2);padding-top:1.5mm;font-size:10px;color:var(--rl-ink-2)}
+.od-foot b{color:var(--rl-ink)}
+
+/* phone: the sheet becomes a normal page */
+@media screen and (max-width:820px){
+  .sheet{width:auto;min-height:0;margin:0;padding:14px 14px 20px;box-shadow:none;gap:12px}
+  .od-head{flex-direction:column;gap:8px}.od-sign{width:100%}
+  .od-grid,.od-two{grid-template-columns:1fr}
+  .od-top ol{grid-template-columns:1fr}
+  .od-teams thead{display:none}.od-teams tr{display:block;padding:6px 0;border-bottom:1px solid var(--rl-line-strong)}.od-teams td{display:block;width:auto!important;border:0;padding:1px 0;font-size:13px}
+  .od-events{font-size:13px}
+}
+/* A4 density: the sheet (screen > 820 px and print) is sized to fit one page */
+@media print,screen and (min-width:821px){
+  .sheet{font-size:11.5px;line-height:1.3;gap:2.6mm;padding:9mm 10mm 7mm}
+  .od-head h1{font-size:18px}
+  .od-sign{gap:1.5mm}.od-sign i{height:5mm}
+  .od-grid{grid-template-columns:1.2fr 1fr;gap:2.6mm}
+  .od-side{gap:2.4mm}
+  .box{padding:1.8mm 2.6mm}
+  .od-weather-note{font-size:10.5px}
+  .od-top li{font-size:12.5px;padding:1.2mm 2mm}
+  .od-teams th,.od-teams td{padding:.8mm 1.4mm;font-size:11px}
+  .od-events{font-size:11px}.od-events li{padding:.3mm 0}
+  .od-radio th,.od-radio td{height:5.5mm;padding:.6mm 1.4mm}
+}
+/* odprawa.js adds .dense / .dense2 when the content would not fit one A4 page (measured at the sheet width) */
+@media print,screen and (min-width:821px){
+  .sheet.dense{font-size:10.5px;gap:2mm}.sheet.dense .od-grid{grid-template-columns:1fr 1fr}.sheet.dense .od-teams td{font-size:10.5px}.sheet.dense .od-events{font-size:10.5px}
+  .sheet.dense2 .od-grid{grid-template-columns:.85fr 1fr}.sheet.dense2 .box{padding:1.4mm 2.2mm}.sheet.dense2 .od-radio th,.sheet.dense2 .od-radio td{height:4.6mm}
+}
+@page{size:A4 portrait;margin:0}
+@media print{
+  html,body{background:#fff}
+  .no-print{display:none!important}
+  .sheet{margin:0;box-shadow:none;width:210mm;min-height:297mm}   /* no clipping: a too-long briefing spills to page 2, never loses its footer */
+  .box,.od-map canvas,.od-top li{break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
