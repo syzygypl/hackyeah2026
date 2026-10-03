@@ -11,7 +11,7 @@ cd rescue
 swift build
 swift run rescue-demo            # replays the scenario as a live hint stream (~1.5 s), prints the summary
 swift run rescue-demo --fast     # no replay delay
-swift run rescue-demo path/to/other-scenario.json
+swift run rescue-demo path/to/other-scenario.json   # writes out/<name>.html + out/<name>.run.json
 open out/index.html              # demo screen (Leaflet + OpenTopoMap/OSM tiles, needs internet for tiles)
 ```
 
@@ -26,15 +26,18 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
 - `ProbabilityGrid` (60 x 60 cells of 100 m over 6 x 6 km): each hint becomes one multiplicative layer, POA = normalised product:
   Koester rings from the IPP x terrain features x route x 112 cell sector x point fix x terrain cost x weather x containment.
   Negative evidence ("segment searched, nothing found") multiplies the segment by `(1 - POD)`; renormalising is the Bayesian update.
-- Segments: nearest-seed regions around 19 named places (seeds in the scenario file).
-- Demo screen: per-evidence toggles (left), heatmap + segment labels (map), top 3 segments with "% probability in % area" and a task line (right), timeline slider / Play to replay the stream incl. the "searched, nothing found" re-flow and the late Ratunek ping.
+- Segments: nearest-seed regions around 20 named places (seeds in the scenario file).
+- `SearchPlanner` (searcher side, recomputed on every hint): for each available team and segment, expected find rate = POA x POD / (travel + sweep time). Terrain difficulty sets speed and POD per pass, weather sets POD multipliers, resource gates (drone grounded in wind, helicopter no-fly in fog / at night with poor visibility) and the hypothermia clock. Greedy assignment, one team per segment, each team takes the segment's hasty-task core (top-POA cells holding 70% of its POA, max 15 ha). Safety flags: exposed terrain (slab/cliff > 25%) + ice or wind > 12 m/s -> rope team only; no dogs there.
+- Demo screen: terrain-difficulty layer toggle and per-evidence toggles (left), "Przydział zespołów" team cards with status, assigned segment, ETA, expected find % and safety flags (right), weather strip on the timeline, heatmap + segment labels (map), top 3 segments with "% probability in % area" and a task line (right), timeline slider / Play to replay the stream incl. the "searched, nothing found" re-flow and the late Ratunek ping.
 
-## Demo numbers (scenario `zawrat.json`, state at 19:35 just before the Ratunek ping)
+## Demo numbers (scenario `zawrat.json` on real OSM + DEM terrain, state at 19:45 just before the Ratunek ping)
 
-- Top 3 segments hold **46% of probability in 6% of the area** (36 km2 box).
-- Fictional find spot (S7 Żleb pod Zawratem) is segment **#1** after fusion vs #19 with plain Koester rings.
-- Area to sweep in POA order before reaching the find spot: **0.2% fused vs 36.4% rings only**.
+- Top 3 segments hold **42% of probability in 8% of the area** (36 km2 box).
+- Fictional find spot (S7 Żleb pod Zawratem) is segment **#1** after fusion (from 19:35) vs #19 with plain Koester rings.
+- Area to sweep in POA order before reaching the find spot: **0.11% fused vs 41% rings only**.
+- 19:45 wind 14 m/s: drone grounded, helicopter cleared (fog blown away, NVG night flight), plan re-allocates.
 - 20:05 Ratunek ping lands inside S7, which was already #1.
+- Team allocation vs naive "biggest POA first" (same teams, same physics, simulated from 19:45): 20% chance of find after **1 h 46 min vs 2 h 00 min**, then roughly equal. Honest reading: in this scenario the planner's value is ETAs, safety gating and instant re-allocation when weather changes, not a big POS gain.
 
 ## Providers
 
@@ -49,6 +52,8 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
 | SegmentSearched | `SegmentSearchedProvider.swift` | team searched segment, nothing found, POD |
 | DronePassEmpty | `DronePassEmptyProvider.swift` | thermal drone pass, nothing found, POD |
 | RatunekPing | `RatunekPingProvider.swift` | GPS point fix with accuracy radius, arrives late |
+| TerrainDifficulty | `TerrainDifficultyProvider.swift` | classes trail / meadow / kosodrzewina / scree / slab / cliff / water from OSM cliffs/scree/scrub if present, else DEM `slopeDeg` (>45 cliff, >35 slab, >28 scree), else ridge distance. Victim layer: cliffs unlikely, gullies below steep ground likely. Searcher side: speed and POD per class |
+| WeatherConditions | `WeatherConditionsProvider.swift` | scripted visibility, wind, precipitation, temperature, darkness, ice. No POA effect; drives POD multipliers, resource gates and the hypothermia clock |
 
 ## What's mocked
 
@@ -56,11 +61,15 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
 |---|---|---|
 | Missing person, times, family interview | Made-up scenario in `scenarios/zawrat.json` | Dispatcher / police interview form |
 | All hints (cell fix, car, searches, drone, Ratunek) | Scripted events replayed by each provider at scenario time | 112 centre (CPR) feed, AML when live in PL (2027), Ratunek app, team radio / SAR app reports |
-| Terrain (trails, streams, ridges, lakes, huts) | Hand-drawn approximate polylines in the scenario; geometry is a few hundred metres off the real map | OSM trails + GUGiK DEM/LiDAR (optional `scenarios/zawrat-terrain.json` override is already read) |
+| Terrain (trails, streams, ridges, lakes, huts, slope) | Real OSM + Copernicus DEM in `scenarios/zawrat-terrain.json` (hand-drawn fallback in the scenario if missing) | Same plus GUGiK LiDAR 1 m |
 | Koester / ISRID statistics | 4 approximate hiker quantiles with attribution | Licensed ISRID tables per category, terrain, ecoregion |
-| Segments | Nearest-seed regions around 19 named spots | Hand-drawn segments along natural boundaries by the search leader |
+| Segments | Nearest-seed regions around 20 named spots | Hand-drawn segments along natural boundaries by the search leader |
 | Find spot (backtest) | One fictional point, used only for the backtest number, never fed into the grid | Historical cases (MapScore-style backtest) |
 | Real-time | 1 scenario minute = 8 ms replay | Live streams |
+| Teams and resources | 5 made-up resources in `scenarios/zawrat.json` (`resources`: id, name, type ground/dog/drone/heli, base, readyAt) | Dispatcher's live roster |
+| Speeds, POD tables, weather thresholds | Illustrative numbers in `SearchPlanner.swift` (Naismith-ish 4 km/h on trail, multipliers per terrain class; drone > 12 m/s grounded; helicopter < 500 m visibility or night with < 1000 m) | TOPR/GOPR operating rules, aircraft limits, POD from sweep-width experiments |
+| Weather timeline | Scripted `WeatherConditions` events | IMGW / TOPR stations, avalanche bulletin |
+| Hypothermia clock | Simple rule on hours since last contact, temperature, wet/wind | Medical model (e.g. cold-water / wind-chill survival tables) |
 
 ## Contracts
 
@@ -74,25 +83,43 @@ Toolchain: Swift 6.2 command line tools, SwiftPM only, no Xcode, no dependencies
   "cellM": 100, "rows": 60, "cols": 60,
   "ipp": { "name": "string", "lat": 49.2133, "lon": 20.049 },
   "segOf": ["S19", "..."],              // rows*cols, row-major, row 0 = NORTH edge, col 0 = WEST edge: segment id per cell
+  "difficulty": [0, 3, "..."],          // rows*cols, terrain difficulty class id per cell (added)
+  "difficultyClasses": [{ "id": 0, "key": "trail", "label": "szlak" }, "..."],  // 0 trail, 1 meadow, 2 dwarfPine, 3 scree, 4 slab, 5 cliff, 6 water
   "steps": [                            // one step per arrived hint, cumulative, in scenario time order
     {
       "t": "19:35",                     // scenario clock HH:mm
       "minute": 115,                    // minutes since startClock
       "label": "string",                // hint title (Polish)
       "source": "DronePassEmpty",       // provider name
-      "kind": "searched",               // rings|terrain|cost|route|sector|point|searched|containment|weather
+      "kind": "searched",               // rings|terrain|cost|route|sector|point|searched|containment|weather|difficulty|conditions
       "hintId": "DronePassEmpty-0",
       "hintsActive": ["Terrain-0", "..."],
       "poaGrid": [0.0001, "..."],       // rows*cols floats, row-major (row 0 = north), sums to 1
       "segments": [                     // sorted by poa desc
         { "id": "S7", "name": "Żleb pod Zawratem", "poa": 0.17, "areaPct": 1.5,
           "polygon": [[20.0174, 49.2193], "..."] }   // GeoJSON order [lon, lat], closed ring (convex hull of member cells)
+      ],
+      // --- added (backward compatible), search side ---
+      "weather": { "visibilityM": 1500, "windMs": 14, "tempC": -1, "precip": "none|rain|snow",
+                   "dark": true, "ice": true, "note": "string",
+                   "survival": { "hoursOut": 5.5, "level": "niski|podwyższony|wysoki|krytyczny", "text": "string" } },
+      "resources": [ { "id": "drone", "name": "string", "type": "ground|dog|drone|heli",
+                       "available": false, "reason": "uziemiony: wiatr 14 m/s > 12 m/s" } ],
+      "assignments": [                  // greedy plan for this step, best expected find rate first
+        { "resourceId": "heli", "segmentId": "S7", "segmentName": "string",
+          "etaMin": 15, "travelMin": 15, "sweepMin": 4, "poa": 0.14, "pod": 0.3,
+          "expectedFind": 0.04,         // POA x POD of the searched core
+          "ratePerHour": 0.12,          // expectedFind / (travel + sweep) hours
+          "reason": "string", "safety": ["teren eksponowany + lód: tylko zespół linowy z asekuracją"] }
       ]
     }
   ],
   "value": {                            // numbers measured at step index beforePing (0-based)
     "top3poa": 0.46, "top3area": 0.06, "rankFused": 1, "rankRings": 19,
-    "areaFused": 0.0017, "areaRings": 0.364, "truthSeg": "S7", "beforePing": 10
+    "areaFused": 0.0017, "areaRings": 0.364, "truthSeg": "S7", "beforePing": 10,
+    // added: team allocation simulation from beforePing, planned vs naive "biggest POA first" (-1 = not within 6 h)
+    "pos2hPlanned": 0.21, "pos2hNaive": 0.20, "t40Planned": 340, "t40Naive": 342, "t50Planned": -1, "t50Naive": -1,
+    "curvePlanned": [[0, 0], [15.2, 0.04], "..."], "curveNaive": [["minutes", "cumulative POS"]]
   }
 }
 ```
@@ -109,11 +136,18 @@ If present next to the scenario, it replaces `terrain` from the scenario. Same s
   "streams": [{ "name": "string", "points": [[lat, lon], "..."] }],
   "ridges":  [{ "name": "string", "points": [[lat, lon], "..."] }],   // steep off-trail ground within 250 m
   "lakes":   [{ "name": "string", "center": [lat, lon], "radiusM": 300 }],
-  "huts":    [{ "name": "string", "at": [lat, lon] }]
+  "huts":    [{ "name": "string", "at": [lat, lon] }],
+  // optional, used by TerrainDifficulty:
+  "slopeDeg":  [12.5, "..."],                                          // rows*cols, row 0 = north, degrees
+  "cliffs":    [{ "name": "string", "points": [[lat, lon], "..."] }],  // OSM natural=cliff/arete, cell within 60 m -> cliff
+  "scree":     [{ "name": "string", "points": [[lat, lon], "..."] }],  // OSM natural=scree ring, within 60 m -> scree
+  "dwarfPine": [{ "name": "string", "points": [[lat, lon], "..."] }]   // OSM natural=scrub ring, within 80 m -> kosodrzewina
 }
 ```
 
-Note: if the real terrain moves features, the scenario events (cell fix, truth, segment seeds, trip route) in `zawrat.json` may need re-placing so the story still holds.
+`zawrat.json` positions (IPP, trip route along the real green/black/blue trails, cell fix, find spot, segment seeds) are placed on the real OSM geometry from `zawrat-terrain.json`.
+
+Scenario `resources` (optional): `[{ "id", "name", "type": "ground|dog|drone|heli", "base": [lat, lon], "readyAt": "HH:mm" }]`. `WeatherConditions` events use optional fields `visibilityM, windMs, tempC, precip, dark, ice` (each event overrides only what it sets). `subject.lastContact` ("HH:mm") starts the hypothermia clock.
 
 ## Validation
 

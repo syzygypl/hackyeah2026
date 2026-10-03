@@ -80,7 +80,7 @@ print("  1. \(fused[0].id) \(fused[0].name): \(pct(fused[0].poa)) in \(pct(fused
 print("  2. \(fused[1].id) \(fused[1].name): \(pct(fused[1].poa)) in \(pct(fused[1].areaFrac)) area")
 print("  3. \(fused[2].id) \(fused[2].name): \(pct(fused[2].poa)) in \(pct(fused[2].areaFrac)) area")
 print("Backtest (fictional find spot in \(truthSeg)): segment rank \(rankFused) fused vs \(rankRings) with plain Koester rings.")
-print("Area swept in POA order before reaching the find spot: \(String(format: "%.1f", areaFused * 100))% fused vs \(String(format: "%.1f", areaRings * 100))% rings only.")
+print("Area swept in POA order before reaching the find spot: \(String(format: "%.2f", areaFused * 100))% fused vs \(String(format: "%.1f", areaRings * 100))% rings only.")
 // Search allocation value: terrain+weather-aware plan vs naive "biggest POA first", same teams, same physics
 let planC = plans[beforePing].conditions
 let smartCurve = SearchPlanner.simulate(grid: grid, poa: snaps[beforePing].poa, conditions: planC, minute: arrived[beforePing].minute, smart: true)
