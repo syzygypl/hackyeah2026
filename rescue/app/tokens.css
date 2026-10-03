@@ -1,33 +1,49 @@
-/* Rescue Locator design tokens - DECISION S1: dark operational theme (night use) from the 2D palette,
-   accent cyan, danger red from 3D, one latin-ext font stack; light print/paper variant under [data-theme=light].
-   Use: <link rel="stylesheet" href="/app/tokens.css"> then var(--rl-*). No webfont download (offline): system fonts with Polish glyphs. */
+/* Rescue Locator design tokens. Redesign 2026-10-03 (ui design, canvas https://claude.ai/artifact/MKFv412DcTTKiZsPvanixR):
+   "paper over terrain" - the scene is always full-screen, warm paper panels float over it (the standalone 3D look).
+   TOPR red is the only strong accent (rank 1, primary action, alarm); navy marks selection and links.
+   The former dark operational theme (decision S1) stays available under [data-theme=dark] for night use.
+   Use: <link rel="stylesheet" href="/app/tokens.css"> then var(--rl-*). Fonts are bundled (offline), see fonts.css. */
+@import url("fonts.css");
 :root{
-  --rl-font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans","Helvetica Neue",Arial,sans-serif; /* all cover latin-ext (ąćęłńóśźż) */
-  --rl-mono:ui-monospace,Menlo,Consolas,"Noto Sans Mono",monospace;
-  --rl-fs-xs:11px;--rl-fs-s:12px;--rl-fs:14px;--rl-fs-l:17px;--rl-fs-xl:22px;
+  --rl-font:Barlow,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Arial,sans-serif;  /* all cover latin-ext (ąćęłńóśźż) */
+  --rl-font-num:"Barlow Condensed",Barlow,"Arial Narrow",sans-serif;                          /* hero numbers (POA, %) */
+  --rl-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,"Noto Sans Mono",monospace;           /* clock, step, sources */
+  --rl-fs-xs:11.5px;--rl-fs-s:13px;--rl-fs:14.5px;--rl-fs-l:17px;--rl-fs-xl:22px;
   /* surfaces */
-  --rl-bg:#0e1317;--rl-panel:#151c22;--rl-panel-2:#1b242c;--rl-line:#2b3741;
+  --rl-bg:#ece8df;                              /* page ground (Więcej) */
+  --rl-panel:rgba(250,248,243,.93);             /* floating paper panel */
+  --rl-panel-solid:#faf8f3;
+  --rl-panel-2:#f1eee6;                         /* inset areas inside a panel */
+  --rl-card:#ffffff;                            /* cards, inputs, secondary buttons inside panels */
+  --rl-line:rgba(35,39,42,.12);
+  --rl-line-strong:rgba(35,39,42,.22);
   /* text */
-  --rl-ink:#eef2f5;--rl-ink-2:#b7c3cd;--rl-mute:#8797a4;
+  --rl-ink:#23272a;--rl-ink-2:#4a5054;--rl-mute:#6b6f72;
   /* roles */
-  --rl-accent:#5ce1e6;--rl-on-accent:#062126;
-  --rl-ok:#3ee08f;--rl-warn:#f2b134;
-  --rl-danger:#b8322a;--rl-on-danger:#ffffff;   /* alerts, ZNALEZIONO, safety flags */
+  --rl-danger:#b8322a;--rl-on-danger:#ffffff;   /* TOPR red: rank 1, primary action, alarm, ZNALEZIONO */
+  --rl-accent:#1f4e79;--rl-on-accent:#ffffff;   /* navy: selection, links, pressed toggles */
+  --rl-ok:#2d6a4f;--rl-on-ok:#ffffff;
+  --rl-warn:#e9c46a;--rl-warn-ink:#8a5a00;      /* sand fill / its readable text */
   --rl-select:#ffd84d;                          /* selected segment / evidence in both views */
+  --rl-chrome:#23272a;--rl-on-chrome:#faf8f3;   /* active tab, Kino letterbox */
   /* spacing + shape */
   --rl-sp-1:4px;--rl-sp-2:8px;--rl-sp-3:12px;--rl-sp-4:16px;--rl-sp-5:24px;
-  --rl-radius-s:6px;--rl-radius:9px;--rl-radius-l:14px;
-  --rl-shadow:0 6px 20px rgba(0,0,0,.55);
-  color-scheme:dark;
-}
-[data-theme=light]{
-  --rl-bg:#f4f1ea;--rl-panel:#ffffff;--rl-panel-2:#f7f5f0;--rl-line:#d9d4c7;
-  --rl-ink:#1d2327;--rl-ink-2:#3d4a52;--rl-mute:#6b7680;
-  --rl-accent:#0e7c86;--rl-on-accent:#ffffff;
-  --rl-ok:#2d6a4f;--rl-warn:#b7791f;
-  --rl-danger:#b8322a;--rl-on-danger:#ffffff;
-  --rl-select:#c99700;
-  --rl-shadow:0 2px 8px rgba(0,0,0,.15);
+  --rl-radius-s:8px;--rl-radius:10px;--rl-radius-l:14px;
+  --rl-shadow:0 6px 24px rgba(30,40,50,.14);
+  --rl-blur:14px;
   color-scheme:light;
 }
-@media print{:root:not([data-theme=dark]){--rl-bg:#fff;--rl-panel:#fff;--rl-panel-2:#fff;--rl-line:#bbb;--rl-ink:#000;--rl-ink-2:#222;--rl-mute:#555;--rl-accent:#0e7c86;--rl-select:#c99700;color-scheme:light}}
+[data-theme=dark]{
+  --rl-bg:#0e1317;--rl-panel:rgba(18,25,31,.88);--rl-panel-solid:#151c22;--rl-panel-2:#1b242c;--rl-card:#1b242c;
+  --rl-line:rgba(255,255,255,.09);--rl-line-strong:rgba(255,255,255,.18);
+  --rl-ink:#eef2f5;--rl-ink-2:#b7c3cd;--rl-mute:#8797a4;
+  --rl-danger:#e0574c;--rl-on-danger:#ffffff;
+  --rl-accent:#5ce1e6;--rl-on-accent:#062126;
+  --rl-ok:#3ee08f;--rl-on-ok:#04150c;
+  --rl-warn:#f2b134;--rl-warn-ink:#f2b134;
+  --rl-select:#ffd84d;
+  --rl-chrome:#eef2f5;--rl-on-chrome:#0e1317;
+  --rl-shadow:0 8px 28px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+@media print{:root:not([data-theme=dark]){--rl-bg:#fff;--rl-panel:#fff;--rl-panel-solid:#fff;--rl-panel-2:#fff;--rl-card:#fff;--rl-line:#bbb;--rl-ink:#000;--rl-ink-2:#222;--rl-mute:#555}}
