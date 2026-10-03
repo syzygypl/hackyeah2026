@@ -669,6 +669,7 @@ export const FX = {
       vec3 ip = vec3(0.0); mat3 im = mat3(1.0);
     #endif
       float gs = uGrassFade * (1.0 - smoothstep(0.72, 1.0, length(ip.xz - uGrassC.xz) / uGrassR));
+      gs *= smoothstep(0.004, 0.012, length((modelMatrix * vec4(ip, 1.0)).xyz - cameraPosition)); // first-person / ground-level camera: no blades in the lens (gone within ~4 m, full from ~12 m)
       vec2 wd = vec2(0.8, 0.6);
       float gust = 0.6 + 0.4 * sin(dot(ip.xz, wd) * 160.0 - uTime * 2.4) * (0.6 + 0.4 * sin(dot(ip.xz, vec2(-0.6, 0.8)) * 40.0 + uTime * 0.5));
       float bend = position.y * position.y * (0.1 + uWind * 6.0) * gust * uSway;
