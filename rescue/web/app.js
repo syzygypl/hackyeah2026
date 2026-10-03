@@ -381,7 +381,7 @@
       f.push(poly(circle(c.lat, c.lon, Math.max(c.radiusM || 150, 60)), { color: col, width: 1 + 2 * w, opacity: 0.3 + 0.65 * w, dash: c.applied ? 0 : 1, fill: col, fillOpacity: 0.03 + 0.15 * w }));
       const d = Math.round(6 + 12 * w);
       chips.push({ key: 'cw:' + c.id, at: [c.lon, c.lat], cls: 'chip cw' + (c.applied ? '' : ' info') + (c.override != null ? ' man' : ''),
-        html: `<i class="cwd" style="width:${d}px;height:${d}px;opacity:${(0.35 + 0.65 * w).toFixed(2)}"></i>${esc(c.typeLabel)} ${nf(w, 2)}`,
+        html: `<i class="cwd" style="width:${d}px;height:${d}px;opacity:${(0.35 + 0.65 * w).toFixed(2)}"></i>${esc(c.typeLabel)}${c.seenAt || c.t ? ' ' + esc(c.seenAt || c.t) : ''}`, // name + time on the map; the weight stays in the tooltip and the weights card
         title: `Waga ${nf(w, 2)}: ${c.title}\n${(c.why || []).join('\n')}` });
     }
     for (const h of active) {
