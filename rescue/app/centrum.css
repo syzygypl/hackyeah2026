@@ -107,8 +107,9 @@ body.zin .mk .lbl{top:-2px}
 #advisor.closed{max-height:none}
 #advisor .advh{display:flex;align-items:center;gap:10px}
 #advisor .advh h2{margin:0;flex:1}
-#advisor .advt,#advisor .advfit,#advisor .advtabs button{font:inherit;font-size:var(--rl-fs-xs);background:var(--rl-card);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-s);color:var(--rl-ink-2);padding:2px 8px;cursor:pointer}
+#advisor .advt,#advisor .advfit,#advisor .advllm,#advisor .advtabs button{font:inherit;font-size:var(--rl-fs-xs);background:var(--rl-card);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-s);color:var(--rl-ink-2);padding:2px 8px;cursor:pointer}
 #advisor .advfit{color:var(--rl-accent);border-color:var(--rl-accent);margin:6px 0 2px}
+#advisor .advllm{margin-top:6px}#advisor .advllm:disabled{opacity:.6;cursor:default}
 #advisor .lvl{font-size:11px;font-weight:700;letter-spacing:.06em;padding:2px 8px;border-radius:6px;border:1px solid var(--rl-line-strong);color:var(--rl-ink-2)}
 #advisor .lvl.alarm{background:var(--rl-danger);border-color:var(--rl-danger);color:var(--rl-on-danger)}
 #advisor .lvl.ostrzezenie{background:var(--rl-warn);border-color:var(--rl-warn);color:var(--rl-ink)}

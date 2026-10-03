@@ -8,7 +8,8 @@ import { offlineStyle, loadBasemap, REGIONS } from "../web/basemap/basemap.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const pct = (p) => Math.round((p || 0) * 100) + "%";
+// share of the search area, "1,8%" (no POA % on screen: najmocniejsze-funkcje.md "Czego NIE pokazywać", as in Akcja top 3)
+const areaTxt = (a) => (+a || 0).toFixed(1).replace(".", ",") + "%";
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const POLL_MS = 5000;
 const openURL = (sc) => `./?role=operator&mode=akcja&sc=${encodeURIComponent(sc)}`;
@@ -40,14 +41,14 @@ function splitIncident(txt, sc) {
 }
 async function loadIncidents() {
   if (tryReal("incidents")) {
-    try { const a = await api("/api/incidents"); has.incidents = true; return (Array.isArray(a) ? a : a.incidents || []).filter((x) => !/blind/i.test(x.sc)).map(normIncident); }
+    try { const a = await api("/api/incidents?fast=1"); has.incidents = true; return (Array.isArray(a) ? a : a.incidents || []).filter((x) => !/blind/i.test(x.sc)).map(normIncident); }
     catch (e) { if (e.status === 404) missing("incidents"); else throw e; }
   }
   return fallbackIncidents();
 }
 function normIncident(x) {
   return { sc: x.sc, title: x.title || "", place: x.place || x.sc, live: !!x.live, found: !!(x.ended ?? x.found), replayFound: !!x.replayFound, mode: x.mode || null, lastEventAt: x.lastEventAt || null,
-    lastClock: x.at || x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0 })), teams: x.teams || null, pending: false };
+    lastClock: x.at || x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0, areaPct: s.areaPct })), teams: x.teams || null, pending: !!x.pending };
 }
 // fallback: /api/scenarios (every 60 s) + one /api/run/<sc> at a time (first engine run can take ~15 s), summarized and cached
 let scenCache = null, scenAt = 0;
@@ -86,7 +87,7 @@ function summarize(run) {
   const steps = run.steps || [], fi = steps.findIndex((s) => s.kind === "found"), last = steps[(fi > 0 ? fi : steps.length) - 1] || {};
   const segs = (last.segments || []).slice().sort((a, b) => b.poa - a.poa).slice(0, 3);
   const assigned = new Set((last.assignments || []).map((a) => a.resourceId));
-  return { top3: segs.map((s) => ({ segmentId: s.id, name: s.name, weight: s.poa })), teams: { assigned: assigned.size, total: (last.resources || []).length },
+  return { top3: segs.map((s) => ({ segmentId: s.id, name: s.name, weight: s.poa, areaPct: s.areaPct })), teams: { assigned: assigned.size, total: (last.resources || []).length },
     replayFound: fi >= 0, lastClock: last.t || null, liveFolded: (run.liveEventsFolded || 0) > 0 };
 }
 async function pollLive() {
@@ -168,8 +169,8 @@ function render() {
   advApply();   // Doradca: re-mark linked incidents after the cards / markers were rebuilt
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
   $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
-  $("src").textContent = (has.incidents ? "/api/incidents" : "/api/scenarios + /api/run (zapas)") + " · " + (has.teams ? "/api/teams" : "zespoły: makieta w pamięci");
-  $("src").title = has.incidents ? "Źródło: GET /api/incidents" : "Serwer nie ma jeszcze /api/incidents - dane z /api/scenarios i /api/run/<sc>. Zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce (do czasu /api/teams)");
+  // data source only as a tooltip on the counts (review: no technical text in the header)
+  $("counts").title = "Źródło danych: " + (has.incidents ? "GET /api/incidents" : "GET /api/scenarios + /api/run/<sc> (zapas)") + " · zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce");
 }
 function renderCards() {
   // current incidents first, ended ones (person found) below under their own heading
@@ -181,8 +182,8 @@ function renderCards() {
     return `<article class="card ${m} ${hl === x.sc ? "hl" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
       <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="mute">${esc(x.sc)}</span><span class="when mono">${when}</span></div>
       <h3><a href="${openURL(x.sc)}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>
-      ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw · waga mapy</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span><b>${pct(s.weight)}</b></div>`).join("")}</div>`
-        : `<div class="loading">${x.pending ? "Liczę mapę (pierwsze przeliczenie do ~15 s)..." : "Brak mapy dla tej akcji."}</div>`}
+      ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw${x.top3.every((s) => s.areaPct != null) ? ` · top 3 to ${areaTxt(x.top3.reduce((a, s) => a + (+s.areaPct || 0), 0))} obszaru` : ""}</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span>${s.areaPct != null ? `<span class="mute">${areaTxt(s.areaPct)} obszaru</span>` : ""}</div>`).join("")}</div>`
+        : `<div class="loading">${x.pending ? "Liczę mapę..." : "Brak mapy dla tej akcji."}</div>`}
       <div class="cteams">${x.teams ? `Zespoły z sektorem: <span class="n">${x.teams.assigned}/${x.teams.total}</span>` : ""}
         ${mine.map((t) => `<span class="chip" title="${esc(t.name)} · ${esc(t.status)}">${esc(t.id)}</span>`).join("")}</div>
       <div class="drophint">Upuść tutaj, aby dołączyć zespół do tej akcji</div></article>`;
@@ -327,10 +328,11 @@ function announceEnded(x) {
 }
 
 // ---------- Doradca (advisor): do several incidents share one common source? GET /api/advisor (CONTRACT.md "Advisor").
-// Rules answer first (fast, cached on the server), then once per new state the model's plain-Polish summary (?llm=1).
+// Rules answer first (fast, cached on the server, polled every 60 s), then the model's plain-Polish summary (?llm=1) once per
+// page load and on the "Zapytaj model ponownie" click only - every ?llm=1 can cost a model call (the server keeps it 5 min).
 // Map: river downstream of the source (navy), the stretch the wave has not reached yet (sand, TOPR red on alarm),
 // plume cone, next towns with ETA; linked incidents ringed on the map and in the list.
-let adv = null, advSel = 0, advOpen = true, advSig = "", advLlmFor = "", advNarr = null, advBusy = false, advMiss = 0;
+let adv = null, advSel = 0, advOpen = true, advSig = "", advLlmAsked = false, advLlmBusy = false, advNarr = null, advNarrSig = "", advBusy = false, advMiss = 0;
 const advTowns = [];
 const num2 = (v) => (Math.round((v || 0) * 100) / 100).toFixed(2).replace(".", ",");
 const LEVEL = { alarm: "ALARM", ostrzezenie: "OSTRZEŻENIE", obserwacja: "DO OBSERWACJI" };
@@ -340,14 +342,16 @@ async function advTick() {
   try {
     const a = await api("/api/advisor");
     const sig = JSON.stringify((a.hypotheses || []).map((h) => [h.id, h.score, h.incidents, h.evidence.map((e) => e.text)]));
-    if (sig !== advSig) { advSig = sig; advNarr = null; if (advSel >= (a.hypotheses || []).length) advSel = 0; }
+    if (sig !== advSig) { advSig = sig; if (advSel >= (a.hypotheses || []).length) advSel = 0; }
     adv = a; advRender();
-    if ((a.hypotheses || []).length && advLlmFor !== sig) {   // the model's version, once per state, in the background
-      advLlmFor = sig;
-      api("/api/advisor?llm=1").then((b) => { if (advSig === sig && b.narrative) { advNarr = b.narrative; advRender(); } }).catch(() => {});
-    }
+    if ((a.hypotheses || []).length && !advLlmAsked) advLlm();   // the model's version: once per page load, in the background
   } catch (e) { if (e.status === 404) advMiss = Date.now() + 60000; console.warn("advisor", e); }
   advBusy = false;
+}
+function advLlm() {
+  if (advLlmBusy) return; advLlmAsked = advLlmBusy = true; advRender();
+  const sig = advSig;
+  api("/api/advisor?llm=1").then((b) => { if (b.narrative) { advNarr = b.narrative; advNarrSig = sig; } }).catch(() => {}).finally(() => { advLlmBusy = false; advRender(); });
 }
 function advRender() {
   const el = $("advisor"); if (!el || !adv) return;
@@ -364,7 +368,7 @@ function advRender() {
     const tabs = hs.length > 1 ? `<div class="advtabs">${hs.map((x, i) => `<button type="button" data-i="${i}" class="${i === advSel ? "on" : ""}">${esc(x.id)} · ${num2(x.score)}</button>`).join("")}</div>` : "";
     const name = (sc) => { const x = incidents.find((i) => i.sc === sc); return x ? short(x) : sc; };
     const bar = h.evidence.map((e) => `<i style="flex:${e.contribution}" title="${esc(e.id)} ${esc(e.label)}: ${num2(e.weight)} × ${num2(e.value)} = ${num2(e.contribution)}"></i>`).join("");
-    const narr = advNarr || adv.narrative || {};
+    const narr = (advNarrSig === advSig && advNarr) || adv.narrative || {};   // the model's text only for the state it was written for
     const by = narr.by && narr.by !== "rules" ? `model (${esc(narr.by === "llm-openai" ? "chmura" : "lokalny")})` : "reguły";
     const body = `
       <div class="advtop"><div><div class="kind">${esc(h.kindLabel)}</div><h3>${esc(h.title)}</h3>
@@ -382,11 +386,12 @@ function advRender() {
       </div>
       <section class="narr"><h4>Dla operatora <span class="mute">${by}</span></h4><p>${esc(narr.summary || "")}</p>
         ${(narr.questions || []).length ? `<div class="qs"><b>Zapytaj:</b><ul>${narr.questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul></div>` : ""}
-        ${narr.note ? `<div class="help">${esc(narr.note)}</div>` : ""}<div class="help">To hipoteza do sprawdzenia, nie potwierdzenie. Decyzja należy do kierownika akcji.</div></section>`;
+        ${narr.note ? `<div class="help">${esc(narr.note)}</div>` : ""}<button class="advllm" type="button" ${advLlmBusy ? "disabled" : ""}>${advLlmBusy ? "Model pisze..." : "Zapytaj model ponownie"}</button><div class="help">To hipoteza do sprawdzenia, nie potwierdzenie. Decyzja należy do kierownika akcji.</div></section>`;
     el.innerHTML = head + (advOpen ? tabs + body : `<p class="help one">${esc(h.title)} · wynik ${num2(h.score)} · ${h.incidents.length} akcji</p>`);
     el.querySelectorAll(".advtabs button").forEach((b) => b.onclick = () => { advSel = +b.dataset.i; advRender(); advFit(); });
     el.querySelectorAll("[data-sc]").forEach((c) => { c.onmouseenter = () => setHl(c.dataset.sc); c.onmouseleave = () => setHl(null); });
     el.querySelector(".advfit").onclick = advFit;
+    el.querySelector(".advllm").onclick = advLlm;
   }
   el.querySelector(".advt").onclick = () => { advOpen = !advOpen; try { localStorage.setItem("rescue-advisor-open", advOpen ? "1" : "0"); } catch (e) {} advRender(); };
   advApply(); advMap();
@@ -432,7 +437,7 @@ function advFit() {
   map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: wide ? { left: 440, right: 340, top: 90, bottom: Math.round(innerHeight * 0.48) } : 30, maxZoom: 11, duration: 600 });
 }
 map.on("load", () => advMap());
-setInterval(advTick, 10000);
+setInterval(advTick, 60000);
 advTick();
 
 // ---------- loop: every 5 s, never overlapping

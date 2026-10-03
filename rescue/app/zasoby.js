@@ -72,7 +72,8 @@ function render() {
   $("atLabel").textContent = d.at ? `godzina akcji ${d.at}${state.at ? "" : " (na żywo)"}` : "";
   const red = d.units.filter((u) => u.level === "red").length, amber = d.units.filter((u) => u.level === "amber").length;
   $("counts").innerHTML = `${d.units.length} zasobów${red ? ` · <b style="color:var(--rl-danger)">${red} alarm</b>` : ""}${amber ? ` · ${amber} uwaga` : ""}`;
-  $("src").textContent = `· źródło: GET /api/inventory${d.inventoryFile ? " + scenarios/inventory/inventory.json" : " (brak pliku inwentarza)"}`;
+  // data source only as a tooltip on the banner (review: no technical text on screen)
+  $("src").closest(".banner").title = `Źródło: GET /api/inventory${d.inventoryFile ? " + scenarios/inventory/inventory.json" : " (brak pliku inwentarza)"}`;
   document.querySelectorAll(".unit").forEach((el) => {
     const open = () => openActor(el.dataset.id, { sc: el.dataset.sc || state.sc || undefined, at: state.at || undefined });
     el.onclick = (e) => { if (!e.target.closest("button")) open(); };
