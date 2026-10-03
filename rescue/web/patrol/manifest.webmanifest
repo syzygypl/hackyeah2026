@@ -1,0 +1,12 @@
+{
+  "name": "Patrol - Rescue Locator",
+  "short_name": "Patrol",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "theme_color": "#faf8f3",
+  "background_color": "#ece8df",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

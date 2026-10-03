@@ -7,6 +7,8 @@
 <title>Patrol - Rescue Locator</title>
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
 <link rel="stylesheet" href="../../app/tokens.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <style>
   /* One screen for a rescuer with gloves: map on top, my sector + direction + big report buttons at the bottom.
      Colours only from app/tokens.css (docs/rescue-locator/ui-design.md): paper/light by default, ☾ = dark for night. */
@@ -114,6 +116,7 @@
 <script type="module">
   import * as maplibregl from "../vendor/maplibre-gl.mjs";
   import { offlineStyle, loadBasemap, regionFor } from "../basemap/basemap.js";
+  maplibregl.setWorkerUrl(new URL("maplibre-gl-worker.mjs", location.href).href);   // in the SW scope, so the map works offline (sw.js)
 
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -383,6 +386,11 @@
     me = [p.coords.longitude, p.coords.latitude]; renderDir();
   }, () => {}, { enableHighAccuracy: true });
   if (qs.get("me")) { me = qs.get("me").split(",").map(Number).reverse(); renderDir(); }   // ?me=lat,lon for demos without GPS
+</script>
+<script>
+  // Offline after the first open (sw.js). Then hand it what this first, uncontrolled load already fetched (map tiles, run, fonts).
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js", { scope: "./" }).then(() => navigator.serviceWorker.ready)
+    .then(r => setTimeout(() => r.active?.postMessage({ cache: [location.href, ...performance.getEntriesByType("resource").map(e => e.name)] }), 3000)).catch(() => {});
 </script>
 </body>
 </html>
