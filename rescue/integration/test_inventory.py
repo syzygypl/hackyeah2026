@@ -126,6 +126,24 @@ def suite(B):
         assert not moved, f"distance went DOWN with later at: {moved}"
         return "distance never decreases with time"
 
+    @check("inventory.incident_asset_list")
+    def _():
+        # Akcja right panel "Zasoby akcji": every unit the incident plans with is in /api/inventory?sc= with atSc == sc,
+        # one health number for the chip and at least one feed for the status dot
+        if "inv" not in state:
+            return NOT_YET
+        st, run, _ = G(f"/api/run/{SC}?frames=0")
+        assert st == 200, f"/api/run HTTP {st}"
+        want = {r["id"] for r in (run.get("steps") or [{}])[-1].get("resources") or []}
+        units = {u["id"]: u for u in state["inv"]["units"] if u.get("atSc") == SC}
+        missing = sorted(want - set(units))
+        assert not missing, f"incident units missing from the asset list: {missing}"
+        chip = ("batteryPct", "fuelPct", "fatiguePct", "workMin")
+        no_chip = [i for i, u in units.items() if not any((u.get("health") or {}).get(k) is not None for k in chip)]
+        assert not no_chip, f"no health chip value for {no_chip}"
+        assert all(u.get("feeds") for u in units.values()), "unit without feeds"
+        return f"{len(units)} units on {SC}: {sorted(units)}"
+
     @check("feeds.shape")
     def _():
         st, d, _ = G(f"/api/actors/drone/feeds?sc={SC}")
@@ -208,7 +226,7 @@ def suite(B):
         sb, sa = before["health"].get("spareBatteries"), after["health"].get("spareBatteries")
         if sb:
             assert sa == sb - 1, f"spareBatteries {sb} -> {sa}, want -1"
-        log = G(f"/api/actors/drone/log?sc={SC}&type=inventory")[1]
+        log = G(f"/api/actors/drone/log?sc={SC}&type=inventory&at=20:30")[1]   # the log runs up to at (default: the live moment)
         assert any(e["type"] == "inventory" for e in log["entries"]), "event missing from actor log"
         return f"battery {before['health']['batteryPct']} -> {after['health']['batteryPct']}, in log"
 

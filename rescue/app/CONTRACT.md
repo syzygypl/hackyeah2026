@@ -396,9 +396,9 @@ Owners: contract + server + UI = AI Mateusza; `rescue/scenarios/inventory/invent
 
 Times: every entry / state is on the SCENARIO clock (`HH:MM`, `minute` = minutes since `startClock`, like `steps[].minute`). Things known only by wall clock (live feed events posted now) are placed at the incident's live moment (`liveAt` = operator cursor, else the default live moment) and keep their ISO time in `wall`.
 
-### 1. `GET /api/actors/<id>/log?sc=<sc>&since=<HH:MM|minute>&type=<t1,t2>`
+### 1. `GET /api/actors/<id>/log?sc=<sc>&at=<HH:MM|minute>&since=<HH:MM|minute>&type=<t1,t2>`
 
-Read-only, no key. `<id>` = roster / resource id (`GET /api/teams` id, tracks actor id). `sc` = incident (default: the actor's roster `sc`, else its first `home`). `since` = only entries at or after that scenario minute. `type` = comma list filter (the UI may also filter client side). 404 for an unknown actor.
+Read-only, no key. `<id>` = roster / resource id (`GET /api/teams` id, tracks actor id). `sc` = incident (default: the actor's roster `sc`, else its first `home`). `at` = the log runs up to that scenario minute (default: the live moment `liveAt`; the answer echoes it as `at`). `since` = only entries at or after that scenario minute. `type` = comma list filter (the UI may also filter client side). 404 for an unknown actor.
 
 ```jsonc
 { "schema": "rescue-actor-log/1",

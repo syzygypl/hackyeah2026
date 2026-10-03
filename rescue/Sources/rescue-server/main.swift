@@ -1586,7 +1586,6 @@ func invHealth(kind: String, unit: [String: Any], path: [[Double]]?, atMin: Int,
         var prev = p0
         for p in path where p.count >= 3 && Int(p[2]) <= atMin {
             let m = Int(p[2])
-            apply(m)
             if p[2] > prev[2] {
                 let km = invKm(prev, p), away = invKm(p0, p) * 1000 > P("homeRadiusM"), moved = km * 1000 > 10
                 let working = away || moved
@@ -1603,6 +1602,7 @@ func invHealth(kind: String, unit: [String: Any], path: [[Double]]?, atMin: Int,
                 }
                 if kind == "pies" { if moved { work += 1; still = 0 } else { still += 1; if still >= P("restMin") { work = 0 } } }
             }
+            apply(m)   // events at minute m act on the state after the step that ends at m
             if m % 5 == 0 { series.append([Double(m), invR1(kind == "dron" ? battery : (kind == "smiglowiec" || kind == "lodz") ? fuel : fatigueAt(m))]) }
             prev = p
         }
