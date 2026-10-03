@@ -168,7 +168,7 @@ function renderMap() {
   const top = S.segments.slice(0, 3).map((s) => s.id), searched = searchedUpTo();
   map.getSource("segs").setData(FC(S.segments.filter((s) => s.polygon && s.polygon.length).map((s) => ({ type: "Feature", geometry: { type: "Polygon", coordinates: [s.polygon] },
     properties: { top: top.includes(s.id), sel: s.id === store.selSeg, show: top.includes(s.id) || searched[s.id] !== undefined || s.id === store.selSeg,
-      label: top.includes(s.id) ? `#${top.indexOf(s.id) + 1} ${s.id} ${pct(s.poa)}` : searched[s.id] !== undefined ? `${s.id} pusty, POD ${pct(searched[s.id])}` : `${s.id} ${pct(s.poa)}` } }))));
+      label: top.includes(s.id) ? `#${top.indexOf(s.id) + 1} ${s.id}` : searched[s.id] !== undefined ? `${s.id} pusty` : `${s.id}` } }))));
   const F = [];
   (R.hints || []).slice(0, store.step).forEach((h) => {
     const c = COL[h.kind] || "#5ce1e6";
@@ -201,12 +201,13 @@ function setStep(n, from) {
 function renderPanels() {
   const R = D(), S = curStep(); if (!R || !S) return;
   const t3 = S.segments.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
-  $("vbig").innerHTML = `<b>${pct(tp)}</b><span>wagi mapy<br>w <em>${Math.round(ta)}% obszaru</em> · top 3</span>`;
+  // no POA % on screen (najmocniejsze-funkcje.md "Czego NIE pokazywać"): a juror reads "45%" as a chance, it holds ~19%; show rank and area
+  $("vbig").innerHTML = `<b>${Math.round(ta)}%</b><span>obszaru to top 3<br><em>tu szukać najpierw</em></span>`;
   $("vsub").textContent = `Top 3 z ${S.segments.length} segmentów · krok ${store.step}/${R.steps.length} (${S.t})`;
   const segRows = [...t3]; const sel = S.segments.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
   $("segs").innerHTML = segRows.map((s) => { const k = S.segments.indexOf(s);
     const a = segTeam(S, s.id);
-    return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p">${pct(s.poa)} <span class="mute" style="font-size:13px">w ${(+s.areaPct).toFixed(1)}% obszaru</span></div><i class="segbar" style="--w:${Math.min(100, s.poa * 100 / Math.max(t3[0].poa, 1e-9) * 0.9).toFixed(0)}%"></i>${a ? `<div class="segteam"><span class="tk">${esc((a.name || "?")[0])}</span>${esc(a.name)}</div>` : ""}</div>`; }).join("");
+    return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p"><span class="mute" style="font-size:13px">${(+s.areaPct).toFixed(1).replace(".", ",")}% obszaru</span></div><i class="segbar" style="--w:${Math.min(100, s.poa * 100 / Math.max(t3[0].poa, 1e-9) * 0.9).toFixed(0)}%"></i>${a ? `<div class="segteam"><span class="tk">${esc((a.name || "?")[0])}</span>${esc(a.name)}</div>` : ""}</div>`; }).join("");
   const W = S.weather || {}; $("surv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
   const by = {}; (S.assignments || []).forEach((a) => by[a.resourceId] = a);
   (store.manual || []).forEach((m) => by[m.resourceId] = { ...(by[m.resourceId] && by[m.resourceId].segmentId === m.segmentId ? by[m.resourceId] : { travelMin: NaN, expectedFind: NaN, safety: [] }), ...m, reason: "Przydział operatora" + (m.at ? " o " + m.at : "") });
@@ -214,7 +215,7 @@ function renderPanels() {
     return `<div class="box team ${r.available ? "" : "off"}"><div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b><span class="pill ${r.available ? "" : "off"}">${r.available ? (a ? "przydział" : "wolny") : "niedostępny"}</span></div>
       ${r.available ? "" : `<div class="help">${esc(r.reason)}</div>`}
       ${a ? `<div>→ <b class="seglink" data-seg="${esc(a.segmentId)}" style="cursor:pointer">${esc(a.segmentId)} ${esc(a.segmentName)}</b>${a.by === "operator" ? ` <span class="pill">operator</span>` : ""}</div>${(a.safety || []).map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}
-      <details><summary>Szczegóły</summary>${isFinite(a.travelMin) ? `<div>Dojście ok. ${Math.round(a.travelMin)} min, szansa znalezienia ${pct(a.expectedFind)}.</div>` : ""}<div>${esc(a.reason || `Prawdopodobieństwo ${pct(a.poa)}, skuteczność przeszukania ${pct(a.pod)}, przeszukanie ok. ${Math.round(a.sweepMin || 0)} min.`)}</div></details>` : ""}</div>`; }).join("") || `<div class="help">Ten scenariusz nie ma jeszcze zespołów.</div>`;
+      <details><summary>Szczegóły</summary>${isFinite(a.travelMin) ? `<div>Dojście ok. ${Math.round(a.travelMin)} min.</div>` : ""}<div>${esc(a.reason || `Skuteczność przeszukania ${pct(a.pod)}, przeszukanie ok. ${Math.round(a.sweepMin || 0)} min.`)}</div></details>` : ""}</div>`; }).join("") || `<div class="help">Ten scenariusz nie ma jeszcze zespołów.</div>`;
   renderProgress(); renderEvents();
   $("clock").textContent = S.t + " · " + S.label;
   $("slider").max = R.steps.length; $("slider").value = store.step;
@@ -239,8 +240,7 @@ function renderProgress() {
     ${ids.length ? `<div class="kv"><span>Przeszukano</span><b>${ids.length} z ${S.segments.length} sektorów · ${covered.toFixed(1).replace(".", ",")}% obszaru</b></div>
     <div class="bar"><i style="width:${Math.min(100, covered).toFixed(0)}%"></i></div>` : `<div class="help">Jeszcze nic nie przeszukano.</div>`}
     <div class="kv"><span>Zespoły w akcji</span><b>${assigned} z ${avail} dostępnych</b></div>
-    ${ids.length || (v.planned && v.naive) ? `<details class="help"><summary>Szczegóły</summary>${ids.map((id) => `${esc(id)}: skuteczność ${pct(searched[id])}`).join(", ")}
-      ${v.planned && v.naive ? `<div>Znalezienie wg planu: ${esc(v.planned.findMin ?? "?")} min, przeszukiwanie od najbliższych: ${esc(v.naive.findMin ?? "?")} min</div>` : ""}</details>` : ""}`;
+    ${ids.length ? `<details class="help"><summary>Szczegóły</summary>${ids.map((id) => `${esc(id)}: skuteczność ${pct(searched[id])}`).join(", ")}</details>` : ""}`;
 }
 function renderAssess() {
   const R = D(), S = curStep(); if (!S) { $("assess").innerHTML = ""; return; }
@@ -267,11 +267,11 @@ function renderAssess() {
   // local summary from the run document (until rescue-server answers /api/assessment)
   const top = S.segments[0], W = S.weather || {}, grounded = (S.resources || []).filter((r) => !r.available);
   const lines = [];
-  lines.push(`Najbardziej prawdopodobny: <b>${esc(top.id)} ${esc(top.name)}</b> (${pct(top.poa)}).`);
+  lines.push(`Najwyżej w rankingu: <b>${esc(top.id)} ${esc(top.name)}</b> (${(+top.areaPct).toFixed(1).replace(".", ",")}% obszaru).`);
   if (W.survival) lines.push(`Hipotermia: ${esc(W.survival.level || "")} - ${esc(W.survival.hoursOut)} h od ostatniego kontaktu.`);
   if (W.visibilityM != null && W.visibilityM < 300) lines.push(`Mgła: widoczność ${esc(W.visibilityM)} m.`);
   if (grounded.length) lines.push(`Niedostępne: ${grounded.map((r) => esc(r.name.split(" (")[0]) + " (" + esc(r.reason) + ")").join(", ")}.`);
-  const a0 = (S.assignments || [])[0]; if (a0) lines.push(`Następny krok: ${esc(a0.resourceId)} -> ${esc(a0.segmentId)}, szansa ${pct(a0.expectedFind)}.`);
+  const a0 = (S.assignments || [])[0]; if (a0) lines.push(`Plan podpowiada: ${esc(a0.resourceId)} -> ${esc(a0.segmentId)} (decyzja kierownika akcji).`);
   $("assess").innerHTML = lines.map((l) => `<div style="margin-bottom:3px">${l}</div>`).join("") + `<div class="help">Krótkie podsumowanie z mapy (pełna ocena dostępna na serwerze akcji)</div>`;
 }
 $("segs").onclick = (e) => { const b = e.target.closest("[data-seg]"); if (b) { selectSeg(b.dataset.seg, "panel"); flyToSeg(b.dataset.seg); } };
