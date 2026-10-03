@@ -1,0 +1,95 @@
+{
+  "_doc": "Central policy for the AI Control Layer. Single source of truth, hot-reloaded on every request (edit and save, no restart). Invalid edits are rejected and the last good policy stays active. Removing a control or setting enabled=false turns it off. action: block | redact | flag (log only) | approve (human). mode: enforce | monitor (shadow mode: nothing is blocked, everything that would be is logged).",
+  "mode": "enforce",
+
+  "models": {
+    "_doc": "Allowed LLMs for the llm_complete tool. Paid models are budgeted in USD, local models in compute time.",
+    "allowed": ["llama3.2:3b", "qwen2.5:7b", "claude-sonnet-5-5"],
+    "pricing_usd_per_1k_tokens": {"claude-sonnet-5-5": 0.009, "llama3.2:3b": 0, "qwen2.5:7b": 0},
+    "local": ["llama3.2:3b", "qwen2.5:7b"]
+  },
+
+  "budgets": {
+    "_doc": "Per session (one agent run). Any limit hit = DENY with guardrail 'budget'.",
+    "enabled": true,
+    "max_calls": 40,
+    "max_tokens": 6000,
+    "max_usd": 0.06,
+    "max_compute_ms": 4000,
+    "usd_per_1k_tokens_default": 0.01
+  },
+
+  "controls": {
+    "obfuscation": {
+      "_doc": "Deterministic. Hidden/non-ASCII characters in tool names (zero-width, homoglyphs).",
+      "enabled": true, "action": "block"
+    },
+    "tool_authz": {
+      "_doc": "Deterministic. Tool allowlist with risk levels; unknown tools are denied (fail-closed). action=block on a tool forbids it for agents.",
+      "enabled": true,
+      "tools": {
+        "read_invoice": {"risk": "low"},
+        "query_customers": {"risk": "low", "redact_output": true},
+        "read_file": {"risk": "low", "redact_output": true},
+        "web_fetch": {"risk": "low", "egress": true},
+        "search_kb": {"risk": "low"},
+        "summarize": {"risk": "low"},
+        "llm_complete": {"risk": "low"},
+        "load_model": {"risk": "high"},
+        "run_python": {"risk": "high"},
+        "run_sql": {"risk": "high"},
+        "send_email": {"risk": "high", "egress": true},
+        "transfer_funds": {"risk": "critical"},
+        "delete_records": {"risk": "critical", "action": "block"},
+        "change_permissions": {"risk": "critical", "action": "block"}
+      }
+    },
+    "loop_detection": {
+      "_doc": "Deterministic. Same tool+args repeated more than N times = runaway agent.",
+      "enabled": true, "max_identical_calls": 3
+    },
+    "payments": {
+      "_doc": "Deterministic business rules for transfer_funds. approval_over = four-eyes threshold.",
+      "enabled": true,
+      "beneficiaries": ["DE89370400440532013000"],
+      "approval_over": 10000,
+      "session_cap": 20000
+    },
+    "sql_guard": {
+      "_doc": "Deterministic. Blocks destructive and stacked SQL (comments stripped first).",
+      "enabled": true, "action": "block"
+    },
+    "egress": {
+      "_doc": "Deterministic. Destinations (email domain / URL host) data may leave to.",
+      "enabled": true, "action": "block",
+      "allowed_domains": ["bank.example", "acme-supplies.example"]
+    },
+    "secrets": {
+      "_doc": "Deterministic. API keys, AWS keys, private keys, password= in inputs (block or redact before the tool sees them) and outputs (always redacted).",
+      "enabled": true, "action": "block"
+    },
+    "pii": {
+      "_doc": "Deterministic. email, card_number (Luhn), pesel (checksum), iban. Inputs checked on egress tools only; outputs redacted for redact_output tools, or all tools if output_scope=all.",
+      "enabled": true, "action": "block",
+      "types": ["email", "card_number", "pesel", "iban"],
+      "output_scope": "flagged_tools"
+    },
+    "attack_signatures": {
+      "_doc": "Deterministic, externally managed feed of historical AI-infrastructure exploits (file path or http(s) URL, reloaded on change). Calls matching a signature at or above min_severity are blocked.",
+      "enabled": true, "action": "block",
+      "feed": "feeds/attack_signatures.json",
+      "min_severity": "medium"
+    },
+    "prompt_injection": {
+      "_doc": "Semantic (AI-based). Scores prompts and tool outputs 0..1. backend: auto (Ollama if reachable, else heuristic) | ollama | heuristic. threshold = adherence level (lower = stricter). on_detect: taint (later high-risk calls need a human) | block.",
+      "enabled": true,
+      "backend": "auto",
+      "ollama_url": "http://localhost:11434",
+      "ollama_model": "llama3.2:3b",
+      "ollama_timeout_s": 4,
+      "threshold": 0.6,
+      "on_detect": "taint",
+      "taint_escalates": ["high", "critical"]
+    }
+  }
+}

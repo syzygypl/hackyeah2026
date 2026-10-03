@@ -68,5 +68,19 @@ def change_permissions(user, role):
     return {"ok": True}
 
 
+def llm_complete(model, prompt, max_tokens=256):
+    """Agent -> model call (local via Ollama or paid API). Mocked: canned completion."""
+    return f"[{model}] Summary: 17 open complaints, most about card delivery delays."
+
+
+def load_model(source):
+    return {"loaded": source}
+
+
+def run_python(code):
+    return {"stdout": "42"}
+
+
 TOOLS = {f.__name__: f for f in [read_invoice, query_customers, read_file, web_fetch, search_kb, summarize,
-                                 run_sql, send_email, transfer_funds, delete_records, change_permissions]}
+                                 run_sql, send_email, transfer_funds, delete_records, change_permissions,
+                                 llm_complete, load_model, run_python]}
