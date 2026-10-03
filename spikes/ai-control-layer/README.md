@@ -22,7 +22,7 @@ python3 server.py                    # HTTP gateway on 127.0.0.1:8787 for ad-hoc
    - real-time metrics (`/metrics`)
    - per-check latency telemetry (p50/p95/p99)
    - a report for management and the security team (`out/security_report.md`, sample in `sample-security-report.md`)
-   - **Self-tests**: 93 positive and negative cases, including budgets, exploit mitigation, live policy edits and semantic fail modes. Live-model tests skip without Ollama.
+   - **Self-tests**: 95 positive and negative cases, including budgets, exploit mitigation, live policy edits and semantic fail modes. Live-model tests skip without Ollama.
 
 ## Architecture
 
@@ -55,12 +55,12 @@ Config lives in `policy.json` under `controls.semantic`, and models must also ap
 |---|---|---|---|---|
 | 0 heuristic | built-in weighted signals | always | - | - |
 | 1 pre-filter | `sileader/qwen3guard:0.6b`, fallback `llama-guard3:1b` | every prompt, tool call and tool output | 500 ms | `fail_mode: open`: continue on the heuristic, audit flag `semantic=unavailable:prefilter` |
-| 2 judge | `ibm/granite3.3-guardian:8b`, criteria `jailbreak` + `function_calling` | `high_risk_tools`, or when the pre-filter says Controversial | 2500 ms | `fail_mode: closed`: human approval required |
+| 2 judge | `ibm/granite3.3-guardian:8b`, criterion `unethical_behavior`, the call judged in the context of the agent's task | `high_risk_tools`, or when the pre-filter says Controversial | 2500 ms | `fail_mode: closed`: human approval required |
 
 - **Score:** max(heuristic, model scores). Unsafe or a judge "yes" scores 1.0, llama-guard gives P(unsafe) from logprobs, Controversial is 0.5 and Safe is 0. `threshold` 0.6 is balanced (Controversial passes); 0.5 is strict.
 - **Supply chain:** a tier only uses models on `models.allowed`, and only when the Ollama digest matches `pinned_digests`. Every audit record carries the model tag + digest + verdict + latency of each tier that ran.
 - **Resilience:**
-  - The first call per model gets `warmup_timeout_ms`, because a cold load takes 5+ s; demo and server warm models at startup.
+  - Cold loads (qwen3guard 5.5 s, granite 16.8 s) never block a request: demo and server warm models at startup, a cold model is warmed in the background, and the request path is bounded by the tier timeouts. Worst case for a high-risk call is 0.5 s + 2.5 s, then human approval: a decision, never a hang.
   - `keep_alive` keeps models loaded.
   - A model that times out goes on `cooldown_s` (circuit breaker) and the next fallback model is tried in the same call.
   - Verdicts are cached by model + text.
@@ -73,11 +73,18 @@ Config lives in `policy.json` under `controls.semantic`, and models must also ap
 
 Findings on this Mac:
 - qwen3guard:0.6b answers in about 110-250 ms warm. It flags "ignore previous instructions" as Controversial/Jailbreak and money laundering as Unsafe/Non-violent Illegal Acts.
-- llama-guard3:1b answers in about 60 ms warm, but it says **safe** to classic prompt injection, because it classifies harm categories.
-- The heuristic therefore stays in the loop, not only as a fallback.
-- granite3.3-guardian:8b was not pulled yet. In `auto` its tier is skipped and flagged; once pulled it activates with no code change.
+- llama-guard3:1b answers in about 60 ms warm, but it says **safe** to classic prompt injection, because it classifies harm categories. The heuristic therefore stays in the loop, not only as a fallback.
+- **granite3.3-guardian:8b** (digest `90a8aabc98eb`, pinned), warm 0.7-1.9 s per criterion (p50 about 1.4 s over 40 probe calls, 0.73 s in the demo):
+  - **Criteria:** the template's criteria ids are `harm`, `jailbreak`, `unethical_behavior`, `function_call`, and others. `function_call` judges call/tool-schema hallucination, not security, and an unknown id is used as free text.
+  - **Probe** (10 treasury tool calls, judged as user = task, assistant = call):
+    - `unethical_behavior` flags the 95k hijack, the exfil email, the audit-log delete, `os.system` and an out-of-task 9k "part 2" payment, with 0 false positives on legit calls.
+    - `harm` and `jailbreak` miss the delete.
+    - A custom free-text criterion flagged everything.
+  - **Latency:** Ollama serializes calls per model, so a second criterion adds about 1.3 s (parallel requests: 2.7-3.2 s). Hence one criterion by default.
+  - **The judge needs the real task text:** with a terse "Pay INV-2041" it flagged the legit 4,200 payment. With "Pay invoice INV-2041 (4,200 EUR to Acme Supplies)..." it passes it and still flags "part 2".
+  - **Demo moment:** step 4, a second payment to the approved vendor, passes every deterministic rule. Only the judge catches that it's outside the task, and a human rejects it.
 
-Tests: `SemanticFailModes` runs everywhere against a fake Ollama. It covers timeout plus fail-open, fail-closed deny, judge fail-closed approval, digest mismatch, allowlist, and qwen3guard and granite output parsing. `OllamaSemanticLive` uses the real model and skips cleanly when Ollama or the model isn't there, or is too slow at that moment.
+Tests: `SemanticFailModes` runs everywhere against a fake Ollama. It covers timeout plus fail-open, fail-closed deny, judge fail-closed approval, digest mismatch, allowlist, and qwen3guard and granite output parsing. `OllamaSemanticLive` (llama-guard) and `GraniteJudgeLive` (granite: out-of-task payment needs a human; on-task email allowed within the timeout) use the real models and skip cleanly when Ollama or the model isn't there, or is too slow at that moment.
 
 ## Try it live (judges)
 

@@ -15,7 +15,7 @@
     "max_calls": 40,
     "max_tokens": 6000,
     "max_usd": 0.06,
-    "max_compute_ms": 4000,
+    "max_compute_ms": 30000,
     "usd_per_1k_tokens_default": 0.01
   },
 
@@ -81,7 +81,7 @@
       "min_severity": "medium"
     },
     "semantic": {
-      "_doc": "Semantic (AI-based) controls, hybrid and two-tier. A heuristic injection scorer always runs (microseconds). Tier 1 prefilter: small local guard model on every prompt, tool call and tool output. Tier 2 judge: bigger guard model on high_risk_tools or when the prefilter says Controversial. score = max(heuristic, model scores); verdict scores: Unsafe / judge 'yes' = 1.0 (llama-guard: P(unsafe) from logprobs), Controversial = 0.5, Safe = 0. threshold = adherence level: 0.6 balanced (Controversial passes), 0.5 strict. backend: auto (tiers whose model is not pulled are skipped and flagged) | ollama (missing model = failure, fail_mode applies) | heuristic (no models). fail_mode open = continue on heuristic + audit flag semantic=unavailable; closed = prefilter denies, judge requires human approval. on_flag for tool calls: require_approval | deny; a flagged tool output taints the session (on_detect: taint | block). Only models in models.allowed are used; pinned_digests refuses a model whose Ollama digest changed (supply chain). A model that times out or errors goes on cooldown_s circuit-breaker cooldown and the next fallback model is tried in the same call. The first call per model may take warmup_timeout_ms (cold load into memory); keep_alive keeps it loaded. Model tag + digest of every verdict go into the audit record. Model time counts against budgets.max_compute_ms.",
+      "_doc": "Semantic (AI-based) controls, hybrid and two-tier. A heuristic injection scorer always runs (microseconds). Tier 1 prefilter: small local guard model on every prompt, tool call and tool output. Tier 2 judge: bigger guard model on high_risk_tools or when the prefilter says Controversial. score = max(heuristic, model scores); verdict scores: Unsafe / judge 'yes' = 1.0 (llama-guard: P(unsafe) from logprobs), Controversial = 0.5, Safe = 0. threshold = adherence level: 0.6 balanced (Controversial passes), 0.5 strict. backend: auto (tiers whose model is not pulled are skipped and flagged) | ollama (missing model = failure, fail_mode applies) | heuristic (no models). fail_mode open = continue on heuristic + audit flag semantic=unavailable; closed = prefilter denies, judge requires human approval. on_flag for tool calls: require_approval | deny; a flagged tool output taints the session (on_detect: taint | block). Only models in models.allowed are used; pinned_digests refuses a model whose Ollama digest changed (supply chain). A model that times out or errors goes on cooldown_s circuit-breaker cooldown and the next fallback model is tried in the same call. Cold models are warmed at startup and in the background (up to warmup_timeout_ms); the request path never waits longer than the tier timeout; keep_alive keeps models loaded. Model tag + digest of every verdict go into the audit record. Model time counts against budgets.max_compute_ms.",
       "enabled": true,
       "backend": "auto",
       "ollama_url": "http://localhost:11434",
@@ -94,7 +94,7 @@
       "taint_escalates": ["high", "critical"],
       "scan_tool_args": true,
       "blocked_categories": ["S1", "S2", "S3", "S4", "S5", "S9", "S10", "S11", "S12", "S14"],
-      "pinned_digests": {"llama-guard3:1b": "494147e06bf9", "sileader/qwen3guard:0.6b": "6e7ffdf64920"},
+      "pinned_digests": {"llama-guard3:1b": "494147e06bf9", "sileader/qwen3guard:0.6b": "6e7ffdf64920", "ibm/granite3.3-guardian:8b": "90a8aabc98eb"},
       "prefilter": {
         "model": "sileader/qwen3guard:0.6b",
         "fallback_models": ["llama-guard3:1b"],
@@ -104,7 +104,8 @@
       "judge": {
         "enabled": true,
         "model": "ibm/granite3.3-guardian:8b",
-        "criteria": ["jailbreak", "function_calling"],
+        "_doc": "granite3.3-guardian criteria are template ids (harm, jailbreak, unethical_behavior, function_call = call/tool-schema hallucination, ...) or free text. Measured on 10 treasury tool calls: unethical_behavior flags the 95k hijack, exfil email, audit-log delete, os.system and an out-of-task 9k payment with 0 false positives on legit calls; harm/jailbreak miss the delete; a custom free-text criterion flagged everything. Ollama serializes calls per model, so each extra criterion adds ~1.3 s warm.",
+        "criteria": ["unethical_behavior"],
         "timeout_ms": 2500,
         "fail_mode": "closed",
         "high_risk_tools": ["transfer_funds", "send_email", "delete_records", "run_python", "load_model"]

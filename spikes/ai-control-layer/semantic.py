@@ -3,9 +3,10 @@
 Tier 0  heuristic      weighted prompt-injection signals, microseconds, zero deps, always runs
 Tier 1  pre-filter     small guard model on every prompt / tool call / tool output (sileader/qwen3guard:0.6b,
                        falls back to llama-guard3:1b), short timeout, fail_mode open = continue + audit flag
-Tier 2  judge          bigger guard model (ibm/granite3.3-guardian:8b, criteria jailbreak + function_calling)
-                       only on high-risk tools or when the pre-filter says Controversial; fail_mode closed =
-                       require human approval
+Tier 2  judge          bigger guard model (ibm/granite3.3-guardian:8b, criterion unethical_behavior) only on
+                       high-risk tools or when the pre-filter says Controversial; a tool call is judged in context
+                       (user = agent's task, assistant = proposed call); fail_mode closed = require human approval
+Request path is bounded by per-tier timeouts; cold models are warmed at startup / in the background, never inline.
 score = max(heuristic, counted model scores). Model names, timeouts, fail modes, criteria: all in policy.json.
 
 Supply chain: a stage only uses a model that is on models.allowed and whose Ollama digest matches
@@ -17,6 +18,7 @@ import hashlib
 import json
 import math
 import re
+import threading
 import time
 import unicodedata
 import urllib.request
@@ -110,7 +112,7 @@ class SemanticGuard:
         self.heuristic = HeuristicClassifier()
         self.installed, self._checked_at, self._url = {}, 0, None
         self.cache = {}
-        self.warm, self.cooldown = set(), {}  # models loaded once; circuit breaker: model -> retry-after timestamp
+        self.warm, self.cooldown, self._warming = set(), {}, set()  # models loaded once; circuit breaker: model -> retry-after timestamp
         self.stats = {"model_calls": 0, "cache_hits": 0, "errors": 0, "last_backend": None, "last_error": None}
 
     # -- model inventory (name -> digest), refreshed every 30 s
@@ -142,15 +144,18 @@ class SemanticGuard:
                 out.append((model, self.installed[name]))
         return out
 
-    def _call(self, cfg, model, text, timeout_s, system=None):
+    def _call(self, cfg, model, text, timeout_s, system=None, context=None):
         fmt = model_format(model)
-        key = hashlib.sha256(f"{model}\0{system}\0{text}".encode()).hexdigest()
+        key = hashlib.sha256(f"{model}\0{system}\0{context}\0{text}".encode()).hexdigest()
         if key in self.cache:
             self.stats["cache_hits"] += 1
             return dict(self.cache[key], cached=True, latency_ms=0.0)
         body = {"model": model, "stream": False, "keep_alive": cfg.get("keep_alive", "30m"),
                 "options": {"temperature": 0, "num_predict": 48},
-                "messages": ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": text[:6000]}]}
+                "messages": ([{"role": "system", "content": system}] if system else []) + (
+                    # judge a proposed tool call in context: user = the agent's task, assistant = the call
+                    [{"role": "user", "content": context[:2000]}, {"role": "assistant", "content": text[:6000]}] if context
+                    else [{"role": "user", "content": text[:6000]}])}
         if fmt == "llama_guard":
             body.update(logprobs=True, top_logprobs=3)
         if fmt == "granite_guardian":
@@ -169,7 +174,24 @@ class SemanticGuard:
         self.cache[key] = out
         return out
 
-    def _stage(self, name, stage, cfg, allowed, text, res):
+    def _warm_async(self, cfg, model):
+        """Load a cold model in the background (one thread per model); requests meanwhile fail per fail_mode."""
+        if model in self._warming or not cfg.get("warmup_timeout_ms", 20000):
+            return
+        self._warming.add(model)
+
+        def run():
+            try:
+                self._call(cfg, model, "warm-up", cfg.get("warmup_timeout_ms", 20000) / 1000)
+                self.warm.add(model)
+                self.cooldown.pop(model, None)
+            except Exception:
+                pass
+            finally:
+                self._warming.discard(model)
+        threading.Thread(target=run, daemon=True).start()
+
+    def _stage(self, name, stage, cfg, allowed, text, res, context=None):
         """Run one tier, walking the fallback chain. Returns results (one per criterion) or raises StageUnavailable."""
         flags = []
         cands = self._candidates(stage, cfg, allowed, flags)
@@ -180,15 +202,16 @@ class SemanticGuard:
         errors = []
         t = time.perf_counter_ns()
         for model, digest in cands:
-            timeout = stage.get("timeout_ms", 1000)
-            if model not in self.warm:  # first call loads the model into memory (cold start), allow longer once
-                timeout = max(timeout, stage.get("warmup_timeout_ms", cfg.get("warmup_timeout_ms", 0)))
+            timeout = stage.get("timeout_ms", 1000)  # hard per-tier bound: the request path never waits for a cold load
+            if model not in self.warm:
+                self._warm_async(cfg, model)
             fmt = model_format(model)
             blocked = set(cfg.get("blocked_categories", LLAMA_GUARD_CATEGORIES))
             try:
                 out = []
                 for crit in stage.get("criteria") or [None]:
-                    r = self._call(cfg, model, text, timeout / 1000, system=crit)
+                    r = self._call(cfg, model, text, timeout / 1000, system=crit,
+                                   context=context if fmt == "granite_guardian" else None)
                     counted = r["verdict"] != "safe" and not (fmt == "llama_guard" and r["categories"] and not blocked & set(r["categories"]))
                     out.append(dict(r, stage=name, model=model, digest=digest[:12], criterion=crit, counted=counted,
                                     category_names=[LLAMA_GUARD_CATEGORIES.get(c, c) for c in r["categories"]] if fmt == "llama_guard" else r["categories"]))
@@ -203,7 +226,7 @@ class SemanticGuard:
             return out
         raise StageUnavailable(f"{name}: {'; '.join(errors)}")
 
-    def score(self, text, cfg, high_risk=False, allowed=None):
+    def score(self, text, cfg, high_risk=False, allowed=None, context=None):
         """-> dict(score, backend, signals, heuristic_score, stages, flags, timings_us, fail, error)."""
         t = time.perf_counter_ns()
         h, signals = self.heuristic.score(text)
@@ -226,7 +249,7 @@ class SemanticGuard:
         controversial = any(r["verdict"] == "controversial" for r in pre)
         if jd.get("enabled", True) and jd.get("model") and (high_risk or controversial):
             try:
-                j = self._stage("judge", jd, cfg, allowed, text, res)
+                j = self._stage("judge", jd, cfg, allowed, text, res, context=context)
                 used.append(j[0]["model"])
             except StageUnavailable as e:
                 self._fail(res, "judge", jd, e, mode)

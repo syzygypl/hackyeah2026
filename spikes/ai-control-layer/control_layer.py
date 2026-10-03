@@ -281,7 +281,8 @@ class ControlLayer:
             if pi and pi.get("scan_tool_args", True) and decision != APPROVAL:
                 high = name in (pi.get("judge") or {}).get("high_risk_tools", [])
                 hit, guard, why, fail = self._timed(ev, "semantic", self._semantic, ev, session,
-                                                    json.dumps({"tool": name, "args": args}, ensure_ascii=False), pi, high)
+                                                    json.dumps({"tool": name, "args": args}, ensure_ascii=False), pi, high,
+                                                    session.purpose or "(task not stated)")
                 if hit:
                     if pi.get("on_flag", "require_approval") == "deny":
                         self._block(ev, guard, f"unsafe tool call: {why}")
@@ -535,9 +536,10 @@ class ControlLayer:
             ev["reasons"].append(f"redacted {len(labels)} sensitive value(s) from output")
         return clean
 
-    def _semantic(self, ev, session, text, pi, high_risk=False):
+    def _semantic(self, ev, session, text, pi, high_risk=False, context=None):
         """Hybrid semantic check -> (hit, guardrail, explanation, fail). fail: None | 'deny' | 'approve'."""
-        res = self.semantic.score(text, pi, high_risk=high_risk, allowed=(self.policy.get("models") or {}).get("allowed"))
+        res = self.semantic.score(text, pi, high_risk=high_risk, allowed=(self.policy.get("models") or {}).get("allowed"),
+                                  context=context)
         for k, v in res["timings_us"].items():
             ev["checks_us"][k] = round(ev["checks_us"].get(k, 0) + v, 1)
         model_ms = sum(r["latency_ms"] for r in res["stages"])
