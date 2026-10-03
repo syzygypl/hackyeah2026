@@ -232,9 +232,9 @@ public struct TrackSet: Sendable {
                 k.lat = (c["lat"] as? NSNumber)?.doubleValue; k.lon = (c["lon"] as? NSNumber)?.doubleValue
                 return k
             }
-            // report fixes with text and no explicit constraint at that minute: rules reading (TrackConstraints)
-            let places = dedup.contains { $0.src == "report" && $0.text != nil } ? TrackConstraints.gazetteer(s) : []
-            for f in dedup where f.src == "report" {
+            // fixes with text and no explicit constraint at that minute: rules reading (TrackConstraints)
+            let places = dedup.contains { $0.text != nil } ? TrackConstraints.gazetteer(s) : []
+            for f in dedup where f.text != nil {   // report fixes, and GPS fixes a phone sent with a line of text
                 guard let text = f.text, !cons.contains(where: { $0.from <= f.minute && $0.to > f.minute && $0.src != "rules" }) else { continue }
                 cons += TrackConstraints.read(text, at: f.minute, actor: id, scenario: s, places: places).constraints
             }
