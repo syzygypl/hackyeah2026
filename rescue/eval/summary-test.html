@@ -5,7 +5,7 @@
 <title>Validation summary card - local test</title>
 <link rel="stylesheet" href="../app/tokens.css">
 </head>
-<body data-state="loading" style="background:var(--rl-bg);padding:16px;max-width:520px">
+<body data-state="loading" style="background:var(--rl-bg);padding:16px;max-width:560px">
 <!-- Local test for rescue/app/validation-summary.js. Serve rescue/ (python3 -m http.server 8000) and open /eval/summary-test.html.
      body[data-state] = ready when the card rendered with its parts, else error (for web/tools/smoke.py). -->
 <div id="card"></div>
@@ -18,9 +18,12 @@
   const checks = {
     card: !!s,
     bigNumber: /\d+%/.test(s?.textContent || ""),
-    twoLines: el.querySelectorAll("svg path").length === 2,
-    legend: el.textContent.includes("silnik") && el.textContent.includes("od ostatniego znanego punktu"),
-    lossLine: el.textContent.includes("Gdzie nie pomaga") || el.textContent.includes("nie przegrywa"),
+    fourLines: el.querySelectorAll("svg path").length === 4,
+    landAndWater: !!el.querySelector('[data-env="land"]') && !!el.querySelector('[data-env="water"]'),
+    wilson: (el.textContent.match(/95% CI/g) || []).length >= 3,
+    expertOnLand: el.querySelector('[data-env="land"]')?.textContent.includes("ekspert"),
+    lossPerEnv: !!el.querySelector('[data-loss="land"]') && !!el.querySelector('[data-loss="water"]'),
+    overconfidence: el.textContent.includes("zawyżone"),
     footnote: el.textContent.includes("Symulacja (N="),
     decimalComma: !/\d\.\d+%/.test(el.textContent),
     noGlobalStyle: document.querySelectorAll("style").length === 0,
