@@ -123,3 +123,55 @@ Note: if the real terrain moves features, the scenario events (cell fix, truth, 
 python3 rescue/validate/validate_run.py rescue/out/run.json
 python3 rescue/validate/validate_run.py rescue/out/run.json rescue/scenarios/zawrat-terrain.json
 ```
+
+<!-- BEGIN field-reports (offline, local LLM) -->
+## Field reports and offline mode
+
+Rescuers type (or paste dictated) short Polish radio-style reports; a **local** model turns them into hints for the same stream. No cloud API is ever called.
+
+```sh
+swift run rescue-field "Patrol 2: przeszukaliśmy żleb pod Zawratem, nic, widoczność 20 m"   # parse one, print JSON + path used
+swift run rescue-field serve          # http://127.0.0.1:8770 : GET / (field page), POST /report, GET /live-events, GET /health
+swift run rescue-field replay         # scenario + live-events.json through the grid, top 3 after each field hint
+open out/field.html                   # also works as file://, talks to 127.0.0.1:8770
+```
+
+- Parser: `Sources/RescueKit/FieldReports/FieldReportParser.swift`. Ollama `/api/chat` with a JSON-schema `format` (segment ids as an enum), temperature 0, few-shot prompt with the scenario's segment names. Env: `RESCUE_LLM_MODEL` (default `qwen3:4b-instruct-2507-q4_K_M`, `gemma3:4b` also works), `RESCUE_LLM_URL` (default `http://localhost:11434`), `RESCUE_LLM_TIMEOUT` (s, default 30), `RESCUE_LLM_OFF=1`.
+- Fallback when Ollama is unreachable or returns bad JSON: keyword/regex rules (segment names + aliases, "nic"/"pusto" -> searched, "widoczność N m", "N m/s", "nie poleci"/"bateria" -> resource down). `parsedBy` says which path: `llm-local:<model>` or `rules`. If the local server itself is down, `field.html` parses with the same rules in the browser (marked "reguły awaryjne (przeglądarka)", kept in localStorage only).
+- Provider: `FieldReports/FieldReportProvider.swift` reads `out/live-events.json` (one-shot by default, `followSeconds` > 0 polls). Mapping: segmentSearched -> `.searched` (POD 0.4 poor / 0.6 / 0.8 good), clue -> soft `.sector` at the segment seed or lat/lon (300 / 500 / 800 m for strong / medium / weak), weatherObs -> `.weather` boost when visibility < 300 m, resourceStatus -> not spatial, not emitted. Reports without `at` land 5 scenario minutes after the last scripted event.
+- Measured on an M4 Pro laptop, qwen3 4B q4, model warm: **1.3-1.7 s per report** (first call after load ~3.5 s); gemma3:4b ~2-2.6 s; rules ~15 ms.
+
+### Offline
+
+| Works offline | Needs network |
+|---|---|
+| Swift engine, grid, all providers, `rescue-demo`, `run.json` | Map tiles in `out/index.html` (OpenTopoMap/OSM over the internet) |
+| Ollama + local model, `rescue-field` CLI and server | Model download (once, before going into the field) |
+| `out/field.html` (no CDN, inline CSS/JS) | |
+
+Follow-up: offline basemap from a local OSM extract (e.g. Protomaps PMTiles of the Tatras, ODbL attribution) served next to the page; coordinate with AI Marcina's MapLibre screen in `rescue/web/`.
+
+### Contract: `out/live-events.json`
+
+Append-only JSON array written by `rescue-field serve` (POST /report), read by `FieldReportProvider` and `GET /live-events`. Runtime file, not committed.
+
+```jsonc
+[
+  {
+    "t": "2026-10-03T11:58:14Z",          // wall clock received (ISO 8601 UTC)
+    "at": "20:10",                        // optional scenario clock HH:mm (POST body {"text", "at"?})
+    "source": "field",
+    "text": "Pies zaznaczył przy Czarnym Stawie",
+    "parsedBy": "llm-local:qwen3:4b-instruct-2507-q4_K_M",   // or "rules"
+    "latencyMs": 1350,
+    "note": "string",                     // only when the fallback was used: why
+    "hints": [                            // absent keys = null
+      { "type": "segmentSearched", "segmentId": "S7", "pod": 0.4, "resource": "Patrol 2" },
+      { "type": "clue", "segmentId": "S5", "lat": null, "lon": null, "description": "pies zaznaczył", "strength": "strong", "resource": "pies" },
+      { "type": "weatherObs", "visibilityM": 20, "windMs": 12, "precip": "snow" },   // precip: none | rain | snow
+      { "type": "resourceStatus", "resource": "śmigłowiec", "available": false, "reason": "wiatr na grani 20 m/s" }
+    ]
+  }
+]
+```
+<!-- END field-reports -->
