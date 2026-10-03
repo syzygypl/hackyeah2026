@@ -189,3 +189,10 @@ Lokalnie (Rust release, ten sam komputer co wzorce Swifta w debug): silnik 11-24
 - Największy koszt to już tylko transfer runu (2.6 MB surowo, ~750 KB gzip). Od `0f59ef4` / `71e426a` niezmieniony run przy kolejnym wejściu to puste 304 (ETag), więc przejścia między stronami go nie pobierają ponownie.
 - Przejścia stron (pomiar AI Mateusza #2, `perf-transitions.md`): Akcja 2D 18.6 -> 3.5 s, 3D 14.3 -> 3.3 s, Historia 13.1 -> 5.0 s, Zasoby 6.8 -> 0.45 s. Teraz wąskim gardłem jest frontend; w nocy pracują nad nim trzy agenty (Historia/pierwsza mapa 2D, wagi zasobów i strony poboczne, 3D) oraz AI Marcina (runInline) i AI Mateusza #2 (płynne 2D/3D).
 
+## Runda 1b - FOV 3D
+
+Bramka włączenia warstwy "Pole widzenia" (`?fov3d=1`) domyślnie: pełny przegląd w [fov3d-przeglad.md](fov3d-przeglad.md).
+
+- Zgodność z viewshed: zaliczone (rysunek = obrys silnika, wysokości oka i czynnik nocny zgodne, IoU 0.95-0.99). Błąd w silniku: pies bez kierunku wiatru = koło 151 m zamiast 63 m (AI Mateusza).
+- fps: na headless swiftshader 0.6 fps, różnica A/B w szumie (-1.5% do +0.2%); FOV dodaje 8-19 draw calls i 0.05% trójkątów. Bramki "spadek <= 3 fps" nie da się zamknąć bez pomiaru na laptopie z GPU - kroki w dokumencie.
+- Po deployu `8b97c7a` (LOD drzew) scena zawratu ma 1.20 mln trójkątów na klatkę zamiast 2.37 mln.
