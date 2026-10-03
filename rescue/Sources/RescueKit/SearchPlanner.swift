@@ -150,6 +150,25 @@ public enum SearchPlanner {
         return p.setupMin + max(0, d - off) * 1.3 / (v * trailMult) + off / (v * offMult)
     }
 
+    /// Drive + walk: public road to the access road start (x1.4 winding, 50 km/h), along the access road to the point nearest
+    /// the target (x1.2, 25 km/h), 10 min setup, then walk in like any ground team. nil without roads / vehicle.
+    static func driveTravel(_ ctx: Ctx, _ p: Profile, vehicleFrom: Coord?, seg: Int, core: [Int], _ c: LocationHint.Conditions) -> (Double, Coord)? {
+        guard let vf = vehicleFrom, !p.air else { return nil }
+        let roads = ctx.grid.scenario.accessRoads
+        guard !roads.isEmpty else { return nil }
+        let to = ctx.centroid(core)
+        var best: (Double, Coord)? = nil
+        for road in roads where road.count > 1 {
+            // drop-off: road vertex nearest the target; distance along the road from its start to there
+            guard let k = road.indices.min(by: { Geo.meters(road[$0], to) < Geo.meters(road[$1], to) }) else { continue }
+            let along = zip(road.prefix(k + 1), road.prefix(k + 1).dropFirst()).reduce(0) { $0 + Geo.meters($1.0, $1.1) }
+            let drive = 10 + Geo.meters(vf, road[0]) * 1.4 / (50_000 / 60) + along * 1.2 / (25_000 / 60)
+            let walk = travel(ctx, p, from: road[k], seg: seg, core: core, c)
+            if drive + walk < (best?.0 ?? .infinity) { best = (drive + walk, road[k]) }
+        }
+        return best
+    }
+
     static func sweep(_ ctx: Ctx, _ p: Profile, core: [Int], _ c: LocationHint.Conditions, rope: Bool) -> Double {
         let cellArea = ctx.grid.scenario.cellM * ctx.grid.scenario.cellM
         var t = 0.0
@@ -245,7 +264,8 @@ public enum SearchPlanner {
         }
     }
 
-    struct Option { let r: Int; let seg: Int; let core: [Int]; let travel: Double; let sweep: Double; let pod: Double; let poa: Double; let rate: Double; let safety: [String] }
+    struct Option { let r: Int; let seg: Int; let core: [Int]; let travel: Double; let sweep: Double; let pod: Double; let poa: Double; let rate: Double; let safety: [String]
+        var byVehicle: Bool = false }
 
     static func options(_ ctx: Ctx, _ res: [Scenario.Resource], idx: Int, from: Coord, poa: [Double], _ c: LocationHint.Conditions, urgency: Double,
                         history: [String: SegHistory] = [:]) -> [Option] {
@@ -259,7 +279,12 @@ public enum SearchPlanner {
             let segPoa = cr.reduce(0) { $0 + poa[$1] }
             if segPoa <= 0 { continue }
             let pod = cr.reduce(0) { $0 + poa[$1] * cellPod(p, r.type, ctx.grid.difficulty[$1], c) } / segPoa
-            let tr = travel(ctx, p, from: from, seg: seg, core: cr, c)
+            var tr = travel(ctx, p, from: from, seg: seg, core: cr, c)
+            var byVehicle = false
+            // a team still at its base can take the vehicle instead (once out in the field it walks)
+            if Geo.meters(from, Coord(r.base)) < 50, let (dt, _) = driveTravel(ctx, p, vehicleFrom: r.vehicleFrom.map(Coord.init), seg: seg, core: cr, c), dt < tr {
+                tr = dt; byVehicle = true
+            }
             let sw = sweep(ctx, p, core: cr, c, rope: !safety.isEmpty && r.type == "ground")
             var rate = segPoa * pod / ((tr * urgency + sw) / 60)
             // diminishing returns: prefer less-searched segments when rates are close (at most -15%),
@@ -268,7 +293,7 @@ public enum SearchPlanner {
                 rate *= 1 - 0.15 * h.cumPod
                 if h.types.contains(r.type) { rate *= 0.85 }
             }
-            out.append(Option(r: idx, seg: seg, core: cr, travel: tr, sweep: sw, pod: pod, poa: segPoa, rate: rate, safety: safety))
+            out.append(Option(r: idx, seg: seg, core: cr, travel: tr, sweep: sw, pod: pod, poa: segPoa, rate: rate, safety: safety, byVehicle: byVehicle))
         }
         return out
     }
@@ -311,8 +336,9 @@ public enum SearchPlanner {
             usedR.insert(o.r); usedS.insert(o.seg)
             let r = res[o.r], sg = s.segments[o.seg]
             let mix = Dictionary(grouping: o.core, by: { grid.difficulty[$0] }).max { $0.value.count < $1.value.count }!.key
-            let reason = String(format: "POA %.0f%%, POD %.0f%% (%@%@), dojście %.0f min, przeszukanie %.0f min",
-                                o.poa * 100, o.pod * 100, mix.label, c.visibilityM < 200 ? ", mgła" : c.dark ? ", noc" : "", o.travel, o.sweep)
+            let reason = String(format: "POA %.0f%%, POD %.0f%% (%@%@), %@ %.0f min, przeszukanie %.0f min",
+                                o.poa * 100, o.pod * 100, mix.label, c.visibilityM < 200 ? ", mgła" : c.dark ? ", noc" : "",
+                                o.byVehicle ? "dojazd autem + dojście" : "dojście", o.travel, o.sweep)
             out.append(Assignment(resourceId: r.id, resourceName: r.name, segmentId: sg.id, segmentName: sg.name,
                                   travelMin: o.travel, sweepMin: o.sweep, pod: o.pod, poa: o.poa,
                                   expectedFind: o.poa * o.pod, ratePerHour: o.rate, reason: reason, safety: o.safety))

@@ -38,6 +38,8 @@ public struct Scenario: Codable, Sendable {
         public let huts: [Spot]
         /// Optional slope in degrees per cell, row-major (row 0 = north), same rows x cols as the grid.
         public var slopeDeg: [Double]? = nil
+        /// Optional drivable access roads for rescue vehicles ([lat, lon] polylines, first point = road start).
+        public var roads: [Named]? = nil
         /// Optional OSM natural=cliff / arete lines or polygon rings ([lat, lon] points).
         public var cliffs: [Named]? = nil
         /// Optional OSM natural=scree areas (ring points).
@@ -51,6 +53,9 @@ public struct Scenario: Codable, Sendable {
         public let type: String        // ground | dog | drone | heli
         public let base: [Double]      // [lat, lon] where it starts
         public let readyAt: String     // "HH:mm" scenario clock
+        /// Where the team can board a vehicle (e.g. TOPR station in Zakopane). With roads in the terrain, ground teams
+        /// may drive to the road point nearest the target and walk from there. nil = on foot from `base` only.
+        public var vehicleFrom: [Double]? = nil
     }
     public struct Segment: Codable, Sendable {
         public let id: String
@@ -168,6 +173,15 @@ public struct Scenario: Codable, Sendable {
         if let s = e.seenAt { return minutePast(s) }
         if let r = e.title.range(of: #"\b(\d{1,2}):(\d{2})\b"#, options: .regularExpression) { return minutePast(String(e.title[r])) }
         return minute(e.at)
+    }
+
+    /// Access roads: from the terrain file, else the known Tatra rescue access road (Palenica Białczańska - Morskie Oko,
+    /// closed to private cars, open to TOPR) when it touches the grid.
+    public var accessRoads: [[Coord]] {
+        if let r = terrain.roads, !r.isEmpty { return r.map { $0.points.map(Coord.init) } }
+        let balzer: [Coord] = [[49.2546, 20.1020], [49.24695, 20.08604], [49.23383, 20.08747], [49.21873, 20.08716], [49.2100, 20.0790],
+                               [49.20118, 20.07083]].map(Coord.init)
+        return balzer.contains { $0.lat > bbox.south && $0.lat < bbox.north && $0.lon > bbox.west && $0.lon < bbox.east } ? [balzer] : []
     }
 
     public func events(for provider: String) -> [Event] {
