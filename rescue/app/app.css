@@ -323,3 +323,12 @@ body.role-ratownik #frameRescuer{flex:1;min-height:0;border-radius:0}
 .lfi{font-size:var(--rl-fs-s);padding:5px 0;border-bottom:1px solid var(--rl-line)}
 .lft{font-family:var(--rl-mono);color:var(--rl-mute)}
 .livebox[hidden],.livebox [hidden]{display:none!important}
+/* live-mode header (AI Mateusza 465161b) in the app bar: the title replaces the incident line, so the bar stays one row */
+header .livehead b{font-size:18px;max-width:26vw}
+header .lbadge{font-size:12px;padding:6px 11px;letter-spacing:.12em}
+header .lbadge.live i{width:8px;height:8px}
+body.role-operator header #status{display:none}
+#scen{max-width:190px}
+.livebox{border-top:1px solid var(--rl-line);margin-top:8px;padding:0 4px}
+.livebox button{min-height:34px;font-weight:600}
+#liveFeed{max-height:180px;overflow:auto}
