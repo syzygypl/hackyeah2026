@@ -222,7 +222,7 @@ class SemanticGuard:
         if hit and time.time() - hit["_at"] < cfg.get("cache_ttl_s", 600):
             self.stats["cache_hits"] += 1
             return dict({k: v for k, v in hit.items() if k != "_at"}, cached=True, latency_ms=0.0)
-        body = {"model": model, "stream": False, "keep_alive": cfg.get("keep_alive", "30m"),
+        body = {"model": model, "stream": False, "keep_alive": cfg.get("keep_alive", -1),
                 "options": {"temperature": 0, "num_predict": 48},
                 "messages": ([{"role": "system", "content": system}] if system else []) + (
                     # judge a proposed tool call in context: user = the agent's task, assistant = the call
