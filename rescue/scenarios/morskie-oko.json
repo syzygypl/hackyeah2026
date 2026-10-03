@@ -59,7 +59,7 @@
     { "provider": "Clue", "at": "14:22", "title": "Slad: mala klapka znaleziona przy lesie nad wyplywem potoku", "detail": "Turysta znalazl dzieciecy klapek przy sciezce w lesie, zgodny z opisem obuwia.", "point": [49.2030, 20.0725], "radiusM": 150 },
     { "provider": "SegmentSearched", "at": "14:35", "title": "Patrol GOPR: brzeg zachodni i sciezka widokowa, nic", "detail": "Zespol B przeszukal brzeg zachodni i gorna sciezke. POD 65%.", "segments": ["M2", "M4"], "pod": 0.65 },
     { "provider": "DronePassEmpty", "at": "14:45", "title": "Dron: przelot nad otwartym terenem brzegu, nic", "detail": "Dron widzi tylko otwarty teren, pod drzewami las zasloniety. POD 60% (ograniczone pod drzewostanem).", "segments": ["M1", "M2", "M4"], "pod": 0.6 },
-    { "provider": "RatunekPing", "at": "14:58", "title": "Zgloszenie: dziecko odnalezione przez psa ratowniczego w zagajniku", "detail": "Pies zaznaczyl w gestym zagajniku przy wyplywie potoku, dziecko przestraszone ale bezpieczne.", "point": [49.2030, 20.0725], "radiusM": 60 }
+    { "provider": "Clue", "at": "14:58", "title": "Meldunek: pies ratowniczy zaznaczyl w zagajniku, dziecko znalezione", "detail": "Pies zaznaczyl w gestym zagajniku przy wyplywie potoku, dziecko przestraszone ale bezpieczne. Zgloszone przez patrol, nie GPS.", "point": [49.2030, 20.0725], "radiusM": 30 }
   ],
   "resources": [
     { "id": "gopr-a", "name": "Patrol GOPR A (schronisko)", "type": "ground", "base": [49.2015, 20.0713], "readyAt": "14:00" },
