@@ -1722,7 +1722,10 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, line: make
   },
   onStopCamera: () => { if (CINE.on) cinema(false); fly = null; autoRot = false; controls.autoRotate = false; },
   onCamera: (on, actorId) => toParent({ type: 'fpp', on, actorId }),
-  getFrame: (t) => getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}`, true),
+  getFrame: async (t) => {
+    const f = await getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}`, true);
+    return f?.schema === 'rescue-frame/1' && Number.isFinite(f.minute) ? f : null;
+  },
 });
 function hover() {
   hoverPending = false; const e = lastEv, tip = $('tip'); if (!e) return;

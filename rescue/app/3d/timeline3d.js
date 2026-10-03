@@ -79,10 +79,12 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, line
       }
       flush();
       // Observed GPS fixes are solid dots, not invented one-minute GPS samples.
-      for (const fix of a.fixes || []) {
-        if (fix.minute > minute || fix.src !== 'gps') continue;
-        const dot = new THREE.Mesh(new THREE.SphereGeometry(0.005, 6, 4), new THREE.MeshBasicMaterial({ color: a.color }));
-        dot.position.copy(v3(fix.lat, fix.lon, 0.027)); trail.add(dot);
+      const fixes = (a.fixes || []).filter((f) => f.minute <= minute && f.src === 'gps');
+      if (fixes.length) {
+        const dots = new THREE.InstancedMesh(new THREE.SphereGeometry(0.005, 6, 4),
+          new THREE.MeshBasicMaterial({ color: a.color }), fixes.length);
+        fixes.forEach((f, i) => { const p = v3(f.lat, f.lon, 0.027); dots.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x, p.y, p.z)); });
+        dots.instanceMatrix.needsUpdate = true; trail.add(dots);
       }
     }
   }
