@@ -10,8 +10,8 @@ import re
 import sys
 
 TIME_RE = re.compile(r"^\d{2}:\d{2}$")
-POLAND_LAT = (48.5, 50.5)
-POLAND_LON = (18.5, 24.5)
+POLAND_LAT = (48.9, 55.0)   # whole PL (Bieszczady to the Baltic)
+POLAND_LON = (14.0, 24.2)
 
 
 def fail(errors, msg):
