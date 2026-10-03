@@ -319,3 +319,11 @@ body.embed-scene #hud { display: none; }
 body[data-state="error"] .spinner { display: none; }
 body[data-state="error"] #loadmsg { max-width: 560px; text-align: center; line-height: 1.6; color: var(--ink); }
 #loadmsg code { font-size: 12px; background: rgba(35, 39, 42, 0.08); padding: 1px 5px; border-radius: 4px; }
+
+/* insets (plumbing): inside /app the shell's floating panels cover the frame edges; overlays keep clear (--inset-* set by app3d.js) */
+body.embed-scene #sceneCtl { top: calc(var(--inset-t, 0px) + 10px); right: calc(var(--inset-r, 0px) + 10px); }
+body.embed-scene #sceneLegend { top: calc(var(--inset-t, 0px) + 10px); left: calc(var(--inset-l, 0px) + 10px); }
+body.embed-scene #feed { left: calc(var(--inset-l, 0px) + 10px); bottom: calc(var(--inset-b, 0px) + 10px); }
+body.embed-scene #game { top: calc(var(--inset-t, 0px) + 10px); left: calc((100vw + var(--inset-l, 0px) - var(--inset-r, 0px)) / 2); width: min(520px, calc(100vw - var(--inset-l, 0px) - var(--inset-r, 0px) - 40px)); min-width: 0; }
+body.embed-scene .tip { max-width: 260px; }
+body.embed-scene.cinema #sceneLegend, body.embed-scene.cinema #sceneCtl > :not(.seg-switch) { opacity: 0; pointer-events: none; }

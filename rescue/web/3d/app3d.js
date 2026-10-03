@@ -286,7 +286,19 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight); labels.setSize(innerWidth, innerHeight);
   for (const m of lineMats) m.resolution.set(innerWidth, innerHeight);
+  applyInsets();
 });
+// insets (plumbing): in /app the shell's floating panels cover the frame's edges (?insets=T,R,B,L px, then {type:'insets'}).
+// The camera's principal point moves to the middle of the free area and the overlays read --inset-* (style3d.css).
+let INSETS = (Q.get('insets') || '').split(',').map(Number);
+if (INSETS.length !== 4 || INSETS.some((v) => !Number.isFinite(v))) INSETS = [0, 0, 0, 0];
+function applyInsets() {
+  const [T, Rr, Bm, L] = INSETS, st = document.documentElement.style;
+  [['t', T], ['r', Rr], ['b', Bm], ['l', L]].forEach(([k, v]) => st.setProperty('--inset-' + k, v + 'px'));
+  const dx = (L - Rr) / 2, dy = (T - Bm) / 2;
+  if (dx || dy) camera.setViewOffset(innerWidth, innerHeight, -dx, -dy, innerWidth, innerHeight); else camera.clearViewOffset();
+}
+applyInsets();
 
 // ---------- sky, lights ----------
 const SUN_DIR = new THREE.Vector3(-0.72, 0.32, -0.38).normalize(); // low evening sun from the west
@@ -1090,7 +1102,7 @@ if (EMB === 'scene') {
   const ctl = document.createElement('div'); ctl.id = 'sceneCtl'; ctl.className = 'floating';
   ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button></div>
     <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label><label class="chk" hidden><input type="checkbox" data-b="btn-ortho"> zdjęcie</label></div>
-    <button class="full" data-b="btn-all">Cały obszar</button>`;
+    <button class="full" data-b="btn-all">Cały obszar</button><button class="full" data-b="btn-game">Test na ślepo</button>`;
   document.body.appendChild(ctl);
   ctl.addEventListener('click', (e) => { const t = e.target.closest('[data-b]'); if (!t) return; $(t.dataset.b).click(); syncCtl(); });
   if ($('btn-diff').hidden) ctl.querySelector('[data-b="btn-diff"]').closest('label').hidden = true;
@@ -1161,6 +1173,7 @@ function cineShot(i) {
 }
 function cinema(on) {
   CINE.on = on; document.body.classList.toggle('cinema', on); $('btn-cine').classList.toggle('on', on);
+  toParent({ type: 'cinema', on }); // /app hides its floating panels while Kino runs
   if (on) { stopPlay(); CINE.prevRot = autoRot; cineShot(Q.has('step') ? STEP : 0); }
   else { CINE.shot = null; overview(1.6); }
 }
@@ -1405,6 +1418,7 @@ addEventListener('message', (e) => {
   try {
     if (m.type === 'step' && Number.isInteger(m.i)) { stopPlay(); setStep(m.i); }
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
+    else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
     else if (m.type === 'evidence' && (typeof m.id === 'string' || Number.isInteger(m.id))) setEvidence(m.id, m.on !== false);
     else if (m.type === 'run' && m.run && typeof m.run === 'object') {
       sessionStorage.setItem('rescue3d-run', JSON.stringify(m.run));
