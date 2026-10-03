@@ -1,0 +1,39 @@
+{
+ "id": "cwiczenie-morskie-oko",
+ "find": [
+  49.217075,
+  20.051468
+ ],
+ "truthSegApprox": "M4",
+ "category": "dementia",
+ "behaviour": "direction_travel",
+ "stopReason": "exhausted",
+ "future": [
+  {
+   "provider": "WeatherConditions",
+   "at": "19:01",
+   "title": "Zapadł zmrok",
+   "detail": "Ciemno, czołówki.",
+   "visibilityM": 2000,
+   "windMs": 5,
+   "tempC": 1,
+   "precip": "rain",
+   "dark": true,
+   "ice": false
+  },
+  {
+   "provider": "Clue",
+   "at": "19:11",
+   "title": "Świadek: turystka widziała starszego mężczyznę bez kurtki",
+   "detail": "Zgłoszenie z zewnątrz w trakcie akcji.",
+   "point": [
+    49.214788,
+    20.054967
+   ],
+   "radiusM": 350,
+   "clueKind": "sighting",
+   "seenAt": "12:29"
+  }
+ ],
+ "source": "v2-morskie-oko/case-0061"
+}

@@ -1,0 +1,38 @@
+{
+ "id": "cwiczenie-bieszczady",
+ "find": [
+  49.145905,
+  22.531037
+ ],
+ "truthSegApprox": "B9",
+ "category": "hiker",
+ "behaviour": "follow_drainage",
+ "stopReason": "injury",
+ "future": [
+  {
+   "provider": "Clue",
+   "at": "18:45",
+   "title": "Znalezisko: rękawiczka przy potoku (zgłosił leśniczy)",
+   "detail": "Zgłoszenie z zewnątrz w trakcie akcji.",
+   "point": [
+    49.146095,
+    22.534383
+   ],
+   "radiusM": 300,
+   "clueKind": "trace"
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "19:00",
+   "title": "Zapadł zmrok",
+   "detail": "Ciemno, czołówki.",
+   "visibilityM": 500,
+   "windMs": 9,
+   "tempC": -2,
+   "precip": "none",
+   "dark": true,
+   "ice": true
+  }
+ ],
+ "source": "v2-bieszczady-wetlinska/case-0001"
+}

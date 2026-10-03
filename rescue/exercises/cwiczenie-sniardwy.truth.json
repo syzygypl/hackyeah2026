@@ -1,0 +1,38 @@
+{
+ "id": "cwiczenie-sniardwy",
+ "find": [
+  53.770375,
+  21.849957
+ ],
+ "truthSegApprox": "W4",
+ "category": "boater",
+ "behaviour": "stay_with_boat",
+ "stopReason": "ashore",
+ "future": [
+  {
+   "provider": "Clue",
+   "at": "18:10",
+   "title": "Ślad: wiosło wyrzucone na brzeg (zgłosił wędkarz)",
+   "detail": "Zgłoszenie z zewnątrz w trakcie akcji.",
+   "point": [
+    53.770474,
+    21.84984
+   ],
+   "radiusM": 400,
+   "clueKind": "trace"
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "19:00",
+   "title": "Zapadł zmrok",
+   "detail": "Ciemno, czołówki.",
+   "visibilityM": 10000,
+   "windMs": 9,
+   "windFromDeg": 304,
+   "tempC": 26,
+   "precip": "rain",
+   "dark": true
+  }
+ ],
+ "source": "v3-sniardwy/case-0001"
+}
