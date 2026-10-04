@@ -199,3 +199,24 @@ Blokerów brak.
 | 02:00 #5, #7, #8 etykiety, zasoby, 3D | **zostaje** (problemy 3, 4, 6) |
 
 Nie sprawdzone: zapisy (meldunek, przydział, ACK, ZNALEZIONO, reset), panel Sygnały (☰) i odznaczanie wskazówki, prawdziwy telefon z GPS i LTE.
+
+### 09:05 dopisek (AI Michała, przejęte po AI Denisa)
+
+**Wersja.** `/version.json` przez cały czas `7285a86` (stopka "v 7285a86 · 04.10.2026 08:13"). `origin/main` = `7aa3ae6` (09:01). Sprawdzane co 60 s od 09:04 do 09:25 (21 min): **7aa3ae6 nie wdrożony**, serwowany `app/app.css` nie ma poprawki (`:not(.role-ratownik)`). Ten sam walker co o 08:45 (tylko GET/HEAD/OPTIONS), zrzuty w `rev0905/out`. **Zablokowane żądania: 0.** Konsola czysta, brak HTTP >= 400.
+
+| Co | Wynik |
+|---|---|
+| Sygnały (☰), Historia Zawrat `step=5` i `step=8`, 1440 x 900 | **OK.** 17 kart, wszystkie z polskimi źródłami: Teren, Trudność terenu, Pogoda, Statystyka zaginięć, Plan wycieczki, Auto na parkingu, Lokalizacja 112, Przeszukany sektor, Przelot drona bez wyniku, Odnaleziony |
+| Odznaczenie wskazówki w Historii | **OK, tylko w przeglądarce, 0 zapisów.** `step=8`: "Statystyka zaginięć" (KoesterRings) wyłączona -> top 3 w 2D zmienia się z Wielki Staw / Schronisko / Szlak niebieski na Szlak niebieski / Żleb pod Zawratem / Wielki Staw, pojawia się ↺; ponowne włączenie przywraca pierwotne top 3. "Plan wycieczki" przy `step=5` (zdarzenie przyszłe) nic nie zmienia - poprawnie |
+| 3D, inne scenariusze (`view=3d&time=hist`, 25 s każdy) | **OK 9/9**: morskie-oko, rodzina-dziecko-las, bieszczady-wetlinska, kasprowy, karkonosze-sniezka, miedzyzdroje, morzycko, zapora-huzele, zapora-lesko. Wszędzie `state=ready`, prawdziwy teren (rzeźba, ortofoto, las, woda, zabudowa przy Sanie), nie płasko; etykiety #1/#2/#3 widoczne i zgodne z panelem; bez błędów JS. `/api/scenarios`: 18 scenariuszy, wszystkie `realTerrain: true` |
+| Telefon ratownika 390 x 844 (`/app/?role=ratownik&sc=zawrat`) | **bez zmian (stara wersja)**: pasek 71 px (`padding-top: 20px`), oczekiwane ok. 57 px po 7aa3ae6. Pole klucza i przycisk "ratownik" (44 px, y 20-64) mieszczą się w pasku, poziomego przewijania brak; problem 9 z 08:45 zostaje do czasu wdrożenia |
+
+#### Problemy (od najważniejszych)
+
+| # | Problem | Waga | Właściciel |
+|---|---|---|---|
+| 1 | 7aa3ae6 nie trafił na produkcję w 21 min (prod `7285a86`); poprawka telefonu ratownika niewidoczna. Wdrożenie zapewne ręczne | ważne przed pitchem, jeśli telefon jest w pokazie | właściciel wdrożenia (Vercel) |
+| 2 | Zasoby akcji w scenariuszach górskich biorą jednostki z innych regionów: Morskie Oko i Kasprowy mają "GOPR Bieszczady patrol A/B" i "Śmigłowiec Policji (Rzeszów)", a top 3 i mapa mówią "Patrol GOPR A", "Smiglowiec TOPR" | kosmetyka (poza ścieżką pokazu) | AI Marcina (inventory) |
+| 3 | Morskie Oko i Kasprowy: etykiety bez polskich znaków ("Las przy wyplywie potoku", "plaza piknikowa", "Zespol z psem lawinowym", "stacja gorna", "poza trasa") - jak problem 6 z 08:45 | kosmetyka | AI Marcina (scenariusze) |
+
+Nie sprawdzone: telefon ratownika po wdrożeniu 7aa3ae6.
