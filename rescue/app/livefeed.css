@@ -70,3 +70,4 @@ body.lfopen .lftoasts{display:none}
 .lftoast .lfti{grid-template-columns:auto 1fr}
 .lftoast .lfb{grid-column:2/-1;justify-content:flex-start}
 .lftoast .lfn b{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.lfi.t-adv,.lfti.t-adv{border-left-color:var(--rl-danger)}.t-adv .lfty,.t-adv .lfic{color:var(--rl-danger)}   /* Doradca ALARM note (#1) */

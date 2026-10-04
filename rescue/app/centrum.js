@@ -1000,6 +1000,22 @@ tlInit();
 // --- #1 (AI Mateusza #1, ASK AI Andrzeja): the collapsed Doradca shows EVERY alarm-level hypothesis, one row each (level,
 // title, score 0-1, linked incidents), so a second alarm (e.g. kolej 0,83 next to zapora 0,97) is visible without "Rozwiń".
 // A row selects that hypothesis (map + linked cards) like the tabs of the open panel. No alarm: the old one-line summary.
+// Doradca ALARM -> the bell (#1, feature A): one note per alarm hypothesis; in Symulacja 24/7 its time is the start of its 2nd
+// incident (the moment Doradca could link them), else when this page first saw it. Otwórz selects it here (panel open, map fit).
+const advSeen = new Map();
+function advNotes(now) {
+  const hs = ((adv && adv.hypotheses) || []).filter((h) => h.level === "alarm" && h.incidents.length >= 2);
+  return hs.map((h) => {
+    let ms = null;
+    if (simOn()) { const st = h.incidents.map((sc) => Math.min(...sim.view.filter((i) => i.sc === sc).map((i) => i.startMs))).filter(isFinite).sort((a, b) => a - b); if (st.length >= 2) ms = st[1]; }
+    const id = h.id + ":" + h.incidents.slice().sort().join("+");
+    if (ms == null) { if (!advSeen.has(id)) advSeen.set(id, now); ms = advSeen.get(id); }
+    const name = (sc) => { const x = incidents.find((i) => i.sc === sc); return x ? short(x) : sc; };
+    return { key: `adv:${id}|${sim.lf ? sim.lf.warsaw(ms).day : ""}`, type: "adv", ms, title: h.title, sub: h.incidents.map(name).join(", "),
+      st: `${LEVEL[h.level] || h.level} · ${akcje(h.incidents.length)} · wynik ${num2(h.score)}`,
+      onOpen: () => { const i = (adv.hypotheses || []).findIndex((x) => x.id === h.id); if (i < 0) return; advSel = i; advOpen = true; try { localStorage.setItem("rescue-advisor-open", "1"); } catch (e) {} const b = document.querySelector(".lfbell[aria-expanded=true]"); if (b) b.click(); advRender(); advFit(); } };
+  });
+}
 function advCollapsedHTML(hs, h) {
   const al = hs.map((x, i) => [x, i]).filter(([x]) => x.level === "alarm");
   if (al.length < 2) return `<p class="help one">${esc(h.title)} · ${akcje(h.incidents.length)} · <button class="advt2" type="button">Pokaż szczegóły</button></p>`;
@@ -1203,7 +1219,7 @@ async function simInit() {
   const box = document.createElement("div"); box.id = "simCards"; $("cards").before(box);
   $("simTog").onclick = () => { lf.setSimEnabled(!sim.on); if (new URLSearchParams(location.search).has("sim")) { const u = new URL(location.href); u.searchParams.delete("sim"); history.replaceState(null, "", u); location.reload(); return; } simApply(); };
   try { const s = await lf.loadSchedule(); sim.entries = s.entries; sim.source = s.source; } catch (e) { console.warn("[centrum] schedule", e); }
-  sim.bell = lf.mountBell(host, { openURL: (i, clock) => histURL(i.sc, clock) });
+  sim.bell = lf.mountBell(host, { openURL: (i, clock) => histURL(i.sc, clock), extraNotes: advNotes });   // advNotes: Doradca ALARM in the bell (#1)
   simApply();
   setInterval(simTick, 5000);
   setInterval(() => lf.acks.sync(), 15000); lf.acks.sync();

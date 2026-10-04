@@ -127,7 +127,7 @@ export const acks = {
   async ack(key, by = "operator") {
     const [id, day] = key.split("|");
     ackLocal[key] = { at: new Date(nowMs()).toISOString(), by };
-    if (ackServer !== false) {
+    if (ackServer !== false && !id.startsWith("adv:")) {   // Doradca notes (#1) are not schedule ids: the server would 404 and switch shared ACKs off
       try { const r = await api(`/api/notifications/${encodeURIComponent(id)}/ack`, { day, by }); ackServer = true; if (r && r.ackedAt) ackLocal[key] = { at: r.ackedAt, by: r.by || by }; }
       catch (e) { if (e.status === 404 || e.status === 405) ackServer = false; }
     }
@@ -195,10 +195,11 @@ export function notesFor(insts, infoOf, ms) {
 // ---------- bell + list + toasts
 const hm = (ms) => { const m = Math.floor(warsaw(ms).min); return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); };
 const ICON = {
+  adv: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4M12 17v.5"/></svg>',
   new: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18v-5a5 5 0 0 1 10 0v5M5 18h14v3H5zM12 3v2M4.5 6.5 6 8M19.5 6.5 18 8"/></svg>',
   call: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
 };
-const TYPE_LABEL = { new: "Nowa akcja", call: "Zgłoszenie" };
+const TYPE_LABEL = { new: "Nowa akcja", call: "Zgłoszenie", adv: "Doradca: wspólne źródło" };
 // path "województwo → rejon → nazwa" from the Centrum map block when it is there (window.rescueCentrum.incidentPath / pathOf)
 function pathOf(sc, d) {
   try {
@@ -242,8 +243,16 @@ export function mountBell(host, opts = {}) {
   let insts = [], notes = [], shownSig = "";
   const toasted = new Set();
   const info = {};   // sc -> describe()
-  const open = (n, ev) => { if (opts.onOpen && opts.onOpen(n.inst, n.clock, ev, n) === false) return; location.href = openURL(n.inst, n.clock, n); };
+  const open = (n, ev) => { if (n.type === "adv") { if (n.onOpen) n.onOpen(ev); else if (n.url) location.href = n.url; return; } if (opts.onOpen && opts.onOpen(n.inst, n.clock, ev, n) === false) return; location.href = openURL(n.inst, n.clock, n); };
   function itemHTML(n, now, cls) {
+    if (n.type === "adv") {   // { key, type: "adv", ms, title, sub, st, onOpen?, url? } from opts.extraNotes
+      const a = acks.get(n.key), late = !a && now - n.ms > ESCALATE_MIN * 60000;
+      return `<div class="${cls} t-adv${a ? " acked" : ""}${late ? " late" : ""}" data-key="${esc(n.key)}">`
+        + `<span class="lft"><span class="lfic" title="Doradca">${ICON.adv}</span><span class="mono">${hm(n.ms)}</span></span>`
+        + `<span class="lfn"><span class="lfty">${TYPE_LABEL.adv}</span><b>${esc(n.title)}</b><span class="lfp">${esc(n.sub || "")}</span>`
+        + `<span class="lfst">${esc(n.st || "")}${a ? ` · potwierdzone ${hm(Date.parse(a.at))}` : late ? ` · bez potwierdzenia od ${Math.floor((now - n.ms) / 60000)} min` : ""}</span></span>`
+        + `<span class="lfb"><button type="button" class="lfopen">Otwórz</button>${a ? "" : `<button type="button" class="lfack">Potwierdź</button>`}</span></div>`;
+    }
     const d = info[n.inst.sc] || { name: n.inst.sc, place: "" }, a = acks.get(n.key), late = !a && now - n.ms > ESCALATE_MIN * 60000;
     const path = pathOf(n.inst.sc, d) || [KIND_LABEL[n.inst.kind] || n.inst.kind, d.place].filter(Boolean).join(" · ");
     const head = n.type === "new" ? d.name : (n.n > 1 ? `${n.n} zgłoszenia: ` : "") + n.title;
@@ -272,6 +281,7 @@ export function mountBell(host, opts = {}) {
   function render() {
     const now = nowMs();
     notes = notesFor(insts, (sc) => info[sc], now);
+    if (opts.extraNotes) { try { notes = notes.concat(opts.extraNotes(now) || []).sort((a, b) => b.ms - a.ms); } catch (e) {} }   // host notes (Centrum: Doradca ALARM, #1)
     const rec = recent(now), un = rec.filter((n) => !acks.isAcked(n.key));
     const late = un.some((n) => now - n.ms > ESCALATE_MIN * 60000);
     const cnt = un.length; badge.hidden = !cnt; badge.textContent = cnt > 99 ? "99+" : String(cnt);
@@ -279,9 +289,9 @@ export function mountBell(host, opts = {}) {
     bell.setAttribute("aria-label", `Powiadomienia: ${cnt} niepotwierdzonych`);
     // toasts: once per page for fresh unacked notes (scenario info loaded, so the text is final); refreshed in place
     for (const n of rec.slice().reverse()) {
-      if (toasted.has(n.key) || acks.isAcked(n.key) || now - n.ms > toastMin * 60000 || (opts.toastSince && n.ms < opts.toastSince) || !info[n.inst.sc]) continue;
+      if (toasted.has(n.key) || acks.isAcked(n.key) || now - n.ms > toastMin * 60000 || (opts.toastSince && n.ms < opts.toastSince) || (n.type !== "adv" && !info[n.inst.sc])) continue;
       toasted.add(n.key); const el = document.createElement("div"); el.dataset.key = n.key; stack.prepend(el); beep();
-      { const d = info[n.inst.sc] || {}; sysNotify(`${TYPE_LABEL[n.type] || "Powiadomienie"}: ${n.title}`, [d.place, SIM_NOTE].filter(Boolean).join(" · "), n.key, () => open(n)); }
+      { const d = (n.inst && info[n.inst.sc]) || { place: n.sub }; sysNotify(`${TYPE_LABEL[n.type] || "Powiadomienie"}: ${n.title}`, [d.place, SIM_NOTE].filter(Boolean).join(" · "), n.key, () => open(n)); }
       while (stack.children.length > 3) stack.lastElementChild.remove();
     }
     for (const el of [...stack.children]) {
@@ -296,7 +306,7 @@ export function mountBell(host, opts = {}) {
     wrap.querySelector(".lfstore").textContent = acks.shared ? "potwierdzenia wspólne (serwer)" : "potwierdzenia tylko w tej przeglądarce";
     if (panel.hidden) return;
     const shown = rec.filter((n) => filter === "all" || n.type === filter);
-    const sig = JSON.stringify([filter, shown.map((n) => [n.key, n.inst.state, acks.get(n.key), Math.floor((now - n.ms) / 60000) > ESCALATE_MIN, !!info[n.inst.sc], n.n])]);
+    const sig = JSON.stringify([filter, shown.map((n) => [n.key, n.inst ? n.inst.state : n.st, acks.get(n.key), Math.floor((now - n.ms) / 60000) > ESCALATE_MIN, !!(n.inst && info[n.inst.sc]), n.n])]);
     if (sig === shownSig) return; shownSig = sig;
     list.innerHTML = shown.length ? shown.map((n) => itemHTML(n, now, "lfi")).join("") : `<div class="lfempty">Brak ${filter === "call" ? "zgłoszeń" : filter === "new" ? "nowych akcji" : "powiadomień"} w ostatnich ${windowMin} min.</div>`;
     wire(list);
