@@ -38,6 +38,19 @@
    ]
   ]
  },
+ "grzybiarz-puszcza-notecka": {
+  "file": "hillshade/grzybiarz-puszcza-notecka.png",
+  "bounds": [
+   [
+    16.017499999999984,
+    52.69138888888889
+   ],
+   [
+    16.142499999999984,
+    52.760555555555555
+   ]
+  ]
+ },
  "kajak-pieniny": {
   "file": "hillshade/kajak-pieniny.png",
   "bounds": [
