@@ -517,7 +517,7 @@ body.role-ratownik header #pinbox input{min-height:44px;font-size:16px}
 #firstRunOk,#roleBtn{min-height:44px}
 /* QA (AI Michała, Walidacja at 1920 px): outside Akcja/Plan the bar is a plain top row - room for the NA ŻYWO / HISTORIA tab above it
    (the tab names the mode, so the bar's own badge goes), and a full bar wraps instead of pushing Rola off the right edge */
-body:not(.float).time-live header,body:not(.float).time-hist header{padding-top:20px}
+body:not(.float):not(.role-ratownik).time-live header,body:not(.float):not(.role-ratownik).time-hist header{padding-top:20px}   /* the rescuer phone has no mode tab */
 body:not(.float) .livehead{display:none}
 body:not(.float) header{flex-wrap:wrap;row-gap:6px}
 /* demo review (AI Michała d1510b2) pt 1: the first-run hint lives in the floating bar (z 11) and slid under the 2D/3D switch (z 12) - lift the bar while it shows */
