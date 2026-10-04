@@ -530,3 +530,10 @@ body.float header:has(#firstRun:not([hidden])){z-index:13}
   header #pinbox input{font-size:13px;width:60px;min-width:0}
 }
 @media (max-width:1349px){ body.float header{column-gap:4px!important} #scen{max-width:120px} }   /* 1280 px (runbook minimum) still one row */
+/* the same bar at 1500-1919 px: 9-124 px too wide (1536: "Rola: operator" off screen) - the logo without the name and the key box
+   as its input only, as under 1500 px */
+@media (min-width:1500px) and (max-width:1919px){
+  header h1{font-size:0;gap:0;margin-right:0}
+  header #pinbox{font-size:0;gap:0}
+  header #pinbox input{font-size:13px;width:60px;min-width:0}
+}
