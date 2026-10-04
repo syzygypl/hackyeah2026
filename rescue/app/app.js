@@ -791,6 +791,7 @@ addEventListener("message", (e) => {
   const m = e.data, F = FRAMES[k];
   if (m.type === "ready") {
     F.ready = true;
+    if (F.visible()) window.__boot?.done(); tlPump();   // map + Top 3 on screen: boot loader fades out; minute frames may load now
     if (afterUse.hook) afterUse.hook(F.el.contentWindow);
     warmOther(k); F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown });
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
@@ -1235,6 +1236,7 @@ async function boot() {
     const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode");
     const want = q.get("sc") || (store.hasApi ? "zawrat" : null);
     if (want && store.scenList.some((s) => s.id === want)) $("scen").value = want;
+    window.__boot?.step("Silnik - mapa prawdopodobieństwa…");   // boot loader (index.html): what is loading now
     await loadScenario($("scen").value);
     setMode(m, q.get("view"));
     if (q.get("step") != null && Number.isFinite(+q.get("step"))) setStep(+q.get("step") + 1); // ?step= is 0-based, like the views
@@ -1243,10 +1245,11 @@ async function boot() {
     try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
     let role = q.get("role"); if (!role) { try { role = localStorage.getItem("rescue-app-role"); } catch (e) {} }
     if (role === "ratownik" || role === "operator") setRole(role); else { store.role = "operator"; $("rolePick").hidden = false; }
+    window.__boot?.ui(store.role === "operator" && $("rolePick").hidden && Object.values(FRAMES).some((F) => F.visible()));   // no scene view to wait for: loader off now
     hint();
     pollAlerts();
     pollLive();
-  } catch (e) { console.error(e); toast("Nie mogę połączyć się z serwerem akcji - sprawdź sieć i odśwież stronę.", 10000); }
+  } catch (e) { console.error(e); window.__boot?.done(); toast("Nie mogę połączyć się z serwerem akcji - sprawdź sieć i odśwież stronę.", 10000); }
 }
 boot();
 
@@ -1374,6 +1377,7 @@ function tlNext() {
   return null;   // only a window around the playhead (-5..+20 min); it moves with setMinute, the run's own frames cover the rest (wydajnosc.md Runda 3: ~150 requests / 2.9 MB per opening before)
 }
 function tlPump() {
+  if (!Object.values(FRAMES).some((F) => F.ready)) return;   // minute frames (&t=) only after a view is ready: at boot the run and the map get the bandwidth
   while (TLF.busy.size < 3) {
     const m = tlNext(); if (m == null) return;
     const gen = TLF.gen, u = TLF.key; TLF.busy.add(m);

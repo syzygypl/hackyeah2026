@@ -10,7 +10,7 @@ try{(function(){var q=new URLSearchParams(location.search),sc=q.get("sc")||"zawr
 if(t!=="live"&&t!=="hist"){if(q.get("key")||q.get("role")==="ratownik")t="live";else if(q.get("step")!=null)t="hist";else{try{t=localStorage.getItem("rescue-app-time")}catch(e){}if(t!=="live"&&t!=="hist")t="hist"}}
 var u="/api/run/"+sc+(t==="hist"?"?live=0":""),h={},pin="";try{pin=(localStorage.getItem("rescue-pin")||"").replace(/^"(.*)"$/,"$1")}catch(e){}
 if(pin&&["127.0.0.1","localhost","[::1]","::1"].indexOf(location.hostname)<0)h["X-Rescue-Pin"]=pin;
-window.__preRun={u:u,p:fetch(u,{headers:h,cache:"no-cache"}).then(function(r){return r.ok?r.text():null}).catch(function(){return null})}})()}catch(e){}</script>
+window.__preRun={u:u,p:fetch(u,{headers:h}).then(function(r){return r.ok?r.text():null}).catch(function(){return null})}})()}catch(e){}</script>
 <link rel="stylesheet" href="../web/vendor/maplibre-gl.css">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="dock.css">
@@ -18,9 +18,30 @@ window.__preRun={u:u,p:fetch(u,{headers:h,cache:"no-cache"}).then(function(r){re
 <link rel="stylesheet" href="intro.css">
 <link rel="stylesheet" href="chat.css">
 <link rel="stylesheet" href="mobile.css">
+<style>/* boot loader (AI Mateusza #2): one screen until the map + Top 3 are ready, instead of empty panels, a layout jump and the 2D
+   frame's dark first paint. Inline on purpose: shown with the first paint, no extra request (venue Wi-Fi: 1-3 s per request).
+   Failsafe: it hides itself after 20 s even if no script runs. */
+#boot{position:fixed;inset:0;z-index:2000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--rl-bg,#ece8df);color:var(--rl-ink,#23272a);font:500 15px/1.4 var(--rl-font,system-ui,sans-serif);transition:opacity .28s ease;animation:bootFailsafe 0s 20s forwards}
+#boot .logo{width:56px;height:40px;fill:var(--rl-ink,#23272a)}#boot .logo circle{fill:var(--rl-danger,#b8322a)}
+#boot b{font-size:20px;letter-spacing:.01em}
+#boot .bar{width:220px;height:3px;border-radius:2px;background:var(--rl-line,rgba(35,39,42,.12));overflow:hidden}
+#boot .bar i{display:block;height:100%;width:30%;background:var(--rl-accent,#1f4e79);border-radius:2px;animation:bootBar 1.1s ease-in-out infinite}
+#boot .step{color:var(--rl-mute,#5d6165);font-size:13.5px;min-height:1.4em}
+#boot.out{opacity:0;pointer-events:none}
+@keyframes bootBar{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
+@keyframes bootFailsafe{to{opacity:0;visibility:hidden;pointer-events:none}}
+@media (prefers-reduced-motion:reduce){#boot{transition:none}#boot .bar i{animation:none;width:100%;opacity:.5}}
+</style>
 </head>
-<body class="mode-akcja view-2d">
-<script>/* first paint already in the right role (app.js setRole runs only after the run loads) */try{var r=new URLSearchParams(location.search).get("role")||localStorage.getItem("rescue-app-role");if(r==="ratownik"||r==="operator")document.body.classList.add("role-"+r)}catch(e){}</script>
+<body class="mode-akcja view-2d booting">
+<div id="boot" role="status" aria-live="polite"><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg><b>Rescue Locator</b><span class="bar"><i></i></span><span class="step" id="bootStep">Teren i scenariusz…</span></div>
+<script>/* first paint already in the right role and layout: app.js setRole / setFloat / renderLiveHead run only after the run loads
+   (same rules as initTime() and setFloat(); they correct the classes later if needed) */try{var q=new URLSearchParams(location.search),B=document.body.classList,r=q.get("role")||localStorage.getItem("rescue-app-role");if(r==="ratownik"||r==="operator")B.add("role-"+r);
+var m=q.get("mode")||localStorage.getItem("rescue-app-mode")||"akcja";if(r!=="ratownik"&&(m==="akcja"||m==="edycja"))B.add("float");
+var t=q.get("time");if(t!=="live"&&t!=="hist"){if(q.get("key")||r==="ratownik")t="live";else if(q.get("step")!=null)t="hist";else{t=localStorage.getItem("rescue-app-time");if(t!=="live"&&t!=="hist")t="hist"}}if(m!=="edycja")B.add("time-"+t)}catch(e){}
+/* window.__boot: step(text) = what is loading, ui(waitMap) = shell ready (nothing to wait for -> done), done() = map + Top 3 ready: fade out */
+(function(){var el=document.getElementById("boot"),over=false,t0=Date.now();function done(){if(over)return;over=true;window.__boot.ms=Date.now()-t0;document.body.classList.remove("booting");if(!el)return;el.classList.add("out");setTimeout(function(){el.remove()},matchMedia("(prefers-reduced-motion: reduce)").matches?0:320)}
+window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&!over)x.textContent=s},ui:function(waitMap){if(!waitMap)done();else this.step("Mapa…")},done:done,get over(){return over}};setTimeout(done,15000)})();</script>
 <div id="app">
 <header>
   <h1><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</h1>
@@ -99,10 +120,10 @@ window.__preRun={u:u,p:fetch(u,{headers:h,cache:"no-cache"}).then(function(r){re
   <div class="hero"><div class="big" id="vbig">-</div><div class="help" id="vsub"></div></div>
   <div id="segs"></div>
   <details id="assets" class="assets" open><summary><h2>Zasoby akcji</h2><span id="assetsSum" class="mute"></span></summary><div id="assetList" class="assetlist"><div class="help">Wczytuję zasoby…</div></div></details>
-  <div id="liveBox" class="livebox"><div class="row"><h2>Na żywo</h2><span style="flex:1"></span><button id="liveClue" title="Dodaj ślad: kliknij potem mapę">+ Ślad</button><button id="liveSend" title="Wyślij zespół do sektora">Wyślij zespół</button></div>
+  <div id="liveBox" class="livebox"><div class="row"><h2>Na żywo</h2><span style="flex:1"></span><button id="liveClue" disabled title="Dodaj ślad: kliknij potem mapę">+ Ślad</button><button id="liveSend" disabled title="Wyślij zespół do sektora">Wyślij zespół</button></div>
     <div id="liveNote" class="livenote" role="status" hidden></div>
     <div class="row ackrow"><span id="ackCount" class="mute"></span><span style="flex:1"></span><button id="liveAckAll" title="Potwierdź wszystkie wiadomości z terenu i zdarzenia">Potwierdź wszystkie</button></div>
-    <div id="liveDispatch" class="row" hidden><select id="ldTeam" aria-label="Zespół"></select><select id="ldSeg" aria-label="Sektor"></select><button id="ldGo" class="primary">Wyślij</button></div>
+    <div id="liveDispatch" class="row" hidden><select id="ldTeam" aria-label="Zespół"></select><select id="ldSeg" aria-label="Sektor"></select><button id="ldGo" disabled class="primary">Wyślij</button></div>
     <div id="liveFeed"></div></div>
   <div id="alerts"></div>
   <details id="moreInfo" class="moreinfo"><summary>Szczegóły: plan zespołów, postęp, ocena</summary>
