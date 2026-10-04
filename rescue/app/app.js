@@ -3,7 +3,7 @@
 // `swift run rescue-server` on a laptop). Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/basemap/basemap.js";
-import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML, focusTarget, focusUnion, hoverHold } from "./dock.js";   // compact dock, shared with Ćwiczenia
+import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tipHTML, focusTarget, focusUnion, hoverHold } from "./dock.js";   // compact dock, shared with Ćwiczenia
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
 import { initRescuer, render as renderRescuer, pollTask, myTeam, startGps } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
@@ -1069,13 +1069,8 @@ function renderDock() {
   // the native range stays on top, invisible: drag + arrow keys + screen readers; our markers are the picture (ported from b069c21, AI Andrzeja)
   $("tlFill").style.width = `calc((100% - 16px) * ${T ? tlFrac(T, store.minute).toFixed(4) : n > 1 ? ((store.step - 1) / (n - 1)).toFixed(4) : 0})`;
   if (S) $("slider").setAttribute("aria-valuetext", T ? `${tlClock(T, store.minute)}, krok ${store.step} z ${n}, ${S.label}` : `Krok ${store.step} z ${n}, ${S.t}, ${S.label}`);
-  const byTitle = (t) => { const st = R.steps.find((s) => s.label === t); return st ? evKind(st) : /^ZNALEZIONO/i.test(t || "") ? "found" : "slad"; };
-  // ticker: the groups before the current one, newest first; a group is one item ("+N" more, the tooltip lists them)
-  const items = liveOn() && live.events.length
-    ? live.events.slice(-4).reverse().map((e) => ({ at: hhmm(e.t), label: e.title, title: e.title, k: e.kind === "dispatch" || e.kind === "report" ? "zespol" : e.kind === "found" ? "found" : e.kind === "clue" ? "slad" : byTitle(e.title), ...liveEvTarget(e) }))
-    : G.slice(0, Math.max(0, cg)).slice(-4).reverse().map((g) => { const last = g.ks[g.ks.length - 1], s = R.steps[last - 1];
-      return { at: s.t, label: s.label, more: g.ks.length - 1, title: g.ks.map((k) => R.steps[k - 1].t + " · " + R.steps[k - 1].label).join("\n"), k: grpKind(R, g), step: last, min: g.minute }; });
-  $("ticker").innerHTML = tickerHTML(items);
+  // no ticker chips any more (Andrzej 2026-10-04): the timeline takes their width, a point's events are its tooltip (tlTip)
+  if (tlTip.kb) tlTip(cg + 1);
 }
 // group number (1-based) under the pointer: the nearest marker
 function tlIndexAt(x) {
@@ -1095,16 +1090,20 @@ function tlTip(j) {
 }
 $("tl").addEventListener("pointermove", (e) => { if (D() && D().steps) { clearTimeout(tlTip.h); tlTip(tlIndexAt(e.clientX)); } });
 $("tl").addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") tlTip(0); });
+$("tl").addEventListener("pointerdown", (e) => { tlTip.downX = e.clientX; });
 $("tl").addEventListener("click", (e) => {
   if (!D() || !D().steps) return;
   const j = tlIndexAt(e.clientX), g = evGroups(D())[j - 1]; if (!g) return;
   const last = g.ks[g.ks.length - 1];
   if (liveOn()) { goEvent(last, g.minute); return; }   // Na żywo cannot rewind: Historia at that group's minute
-  else if (tlScrub()) { const r = $("tlMarks").getBoundingClientRect(), T = tlScrub(); if (e.target !== $("slider") && g.minute != null && Math.abs((tlFrac(T, g.minute) * r.width + r.left) - e.clientX) <= 8) { goEvent(last, g.minute); return; } }   // marker click = land on the group's minute; the range handles the rest
+  else if (tlScrub()) { const r = $("tlMarks").getBoundingClientRect(), T = tlScrub(); if (Math.abs(e.clientX - (tlTip.downX ?? e.clientX)) <= 4 && g.minute != null && Math.abs((tlFrac(T, g.minute) * r.width + r.left) - e.clientX) <= (e.pointerType === "touch" ? 16 : 8)) { goEvent(last, g.minute); return; } }   // a click (not a drag) on a point = what its ticker chip did: land on the group's minute + zoom; the range handles the rest
   else { if (!g.ks.includes(store.step)) setStep(last); focusEvent(last); }
   tlTip(j); clearTimeout(tlTip.h); tlTip.h = setTimeout(() => tlTip(0), 2200);
 });
-$("ticker").onclick = (e) => { const t = e.target.closest("[data-step],[data-min]"); if (t) goEvent(t.dataset.step ? +t.dataset.step : 0, t.dataset.min ? +t.dataset.min : null); };
+// keyboard: while the range has focus the tooltip shows the events of the current point (arrow keys move it), Esc hides it
+$("slider").addEventListener("focus", () => { if (!$("slider").matches(":focus-visible")) return; tlTip.kb = true; clearTimeout(tlTip.h); const R = D(); if (R && R.steps) tlTip(groupOf(evGroups(R), store.step) + 1); });
+$("slider").addEventListener("blur", () => { tlTip.kb = false; tlTip(0); });
+$("slider").addEventListener("keydown", (e) => { if (e.key === "Escape" && tlTip.kb) { tlTip.kb = false; tlTip(0); } });
 // where a Na żywo feed item sits on the timeline: the scripted step with the same title, else its clock as a scenario minute
 function liveEvTarget(e) {
   const R = D(), k = R && R.steps ? R.steps.findIndex((s) => s.label === e.title) + 1 : 0;
