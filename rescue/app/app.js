@@ -1324,7 +1324,7 @@ async function boot() {
     const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode");
     const want = q.get("sc") || (store.hasApi ? "zawrat" : null);
     if (want && store.scenList.some((s) => s.id === want)) $("scen").value = want;
-    window.__boot?.step("Silnik - mapa prawdopodobieństwa…");   // boot loader (index.html): what is loading now
+    window.__boot?.step("Silnik - mapa poszukiwań…");   // boot loader (index.html): what is loading now
     await loadScenario($("scen").value);
     try { history.replaceState({ ...(history.state || {}), sc: store.scenario }, ""); } catch (e) {}   // Back to the first scenario finds its sc
     setMode(m, q.get("view"));

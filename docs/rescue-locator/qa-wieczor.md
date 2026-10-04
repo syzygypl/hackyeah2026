@@ -10,7 +10,7 @@ Fixed right away: #3 and #8 (7ec0f2a). The rest goes to the owners.
 | 3 | major | /app fresh load | Up to 3 simulation toasts cover "Gdzie szukać najpierw"; on a phone half the map | #1 (appbell.js, livefeed toastSince) | fixed 7ec0f2a |
 | 4 | major | Zmień scenariusz or bell Otwórz while 3D boots in the background | Panel switches at once, 2D map shows the old scenario for 10-15 s with no loading cue (~5 s without 3D booting) | AI Andrzeja (app.js syncFrame / warmOther double buffer) | open |
 | 5 | minor | 2D+3D on direct load | 2D half ready after 33-40 s (swiftshader); 2D layer switcher under the 2D/3D control; 3D legend over "Sterowanie 3D" | AI Andrzeja (app.css, 2D toolbar) | open |
-| 6 | minor (honesty) | Plan legend, boot step, 2D title | "Prawdopodobieństwo względem średniej komórki" (scale.js), "Silnik - mapa prawdopodobieństwa…" (app.js), 2D `<title>` - elsewhere "Waga mapy" | shell (scale.js, app.js, web/index.html) | open |
+| 6 | minor (honesty) | Plan legend, boot step, 2D title | "Prawdopodobieństwo względem średniej komórki" (scale.js), "Silnik - mapa prawdopodobieństwa…" (app.js), 2D `<title>` - elsewhere "Waga mapy" | #1 (scale.js, app.js, web/index.html) | fixed (this commit) |
 | 7 | minor | Centrum ?simAt=15:40 | /api/run/dywersja-poprad{,-2}?t=07:10 -> 404 (clock past the scenario end); same for zapora-tlo-tarnica at simAt=03:00 | #2 (centrum.js simFetch for ended) | open |
 | 8 | minor | Centrum Doradca | "2 akcji" -> "2 akcje" | #1 (centrum.js) | fixed 7ec0f2a |
 | 9 | minor | Centrum ?simAt= | Header clock shows wall time while the timeline says the sim time; a card click opens /app without simAt | #2 (centrum.js) | open |

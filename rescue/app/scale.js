@@ -38,7 +38,7 @@ export function paintGrid(grid, cols, rows, canvas = document.createElement("can
 export const gradientCSS = () => `linear-gradient(90deg, ${STOPS.map((s, i) => `rgba(${s.color.join(",")},${Math.max(s.alpha, 0.35)}) ${Math.round((i / (STOPS.length - 1)) * 100)}%`).join(", ")})`;
 
 /** Legend markup: title, ramp, stop labels. Style it with the host page's tokens. */
-export function legendHTML(title = "Prawdopodobieństwo względem średniej komórki") {
+export function legendHTML(title = "Waga mapy względem średniej komórki") {
   return `<div class="rl-legend" style="font:11px/1.3 var(--rl-font,sans-serif);color:var(--rl-ink-2,#b7c3cd)">
   <div>${title}</div>
   <div style="height:8px;border-radius:4px;margin:3px 0;background:${gradientCSS()}"></div>
