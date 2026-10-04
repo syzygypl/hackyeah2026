@@ -222,10 +222,14 @@ function render() {
   renderMarkers();
   tlApply();
   advApply();   // Doradca: re-mark linked incidents after the cards / markers were rebuilt
-  const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
-  $("counts").innerHTML = `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !busyOf(t, bz)).length}/${teams.length}`;
+  countsPaint();
   // data source only as a tooltip on the counts (review: no technical text in the header)
   $("counts").title = "Źródło danych: " + (has.incidents ? "GET /api/incidents" : "GET /api/scenarios + /api/run/<sc> (zapas)") + " · zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce");
+}
+function countsPaint() {
+  const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
+  const nSim = simOn() ? sim.view.filter((i) => i.state === "live").length : null;   // sens-funkcji #7: Symulacja 24/7 on - "N trwa (1 LIVE z terenu)", matches the cards (LIVE = real feed only)
+  $("counts").innerHTML = `${nSim != null ? `<b>${nSim + nLive} trwa</b>${nLive ? ` (<b style="color:var(--rl-danger)">${nLive} LIVE</b> z terenu)` : ""}` : `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}`}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !busyOf(t, busyScs())).length}/${teams.length}`;
 }
 function renderCards() {
   if (PICK) return renderPick();
@@ -1317,20 +1321,40 @@ function simPaint() {
     if (meta[r.i.sc]) simFetch(r.i.sc, r.c5);
     else if (!sim.mwait?.[r.i.sc]) { (sim.mwait ||= {})[r.i.sc] = 1; loadMeta(r.i.sc).then((md) => { if (md) { sim.cardSig = ""; simPaint(); } else simFetch(r.i.sc, r.c5); }); }
   }
-  const sig = JSON.stringify([rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d]), tl.cur == null]);
+  const sig = JSON.stringify([rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d, !!meta[r.i.sc]]), tl.cur == null, teams.length]);   // #7: meta (state line) and the roster (team count) repaint too
   if (sig === sim.cardSig) return; sim.cardSig = sig;
+  countsPaint();   // sens-funkcji #7: header "N trwa" follows the sim cards
   const live = rows.filter((r) => r.i.state === "live"), ended = rows.filter((r) => r.i.state !== "live");
   const hm = (ms) => { const m = Math.floor(sim.lf.warsaw(ms).min); return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); };
+  // sens-funkcji #7: the card tells the state, one clock (wall, Europe/Warsaw): "trwa 0:07 · zespoły 3 · ostatnie: <event> 01:01 ·
+  // brakuje: dron do 01:20" (teams = scenario resources ready by now, missing = the next one not there yet); the scenario clock only
+  // in title; badge SYMULACJA (LIVE is for the real feed only); of the top 3 one line "#1 R17 Głębokie - tor"
+  const RT = { drone: "dron", dog: "pies", heli: "śmigłowiec", ground: "patrol", boat: "łódź", diver: "nurkowie", horse: "konni" };
+  const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t, bz = busyScs();
+  const stateLine = (r, el) => {
+    const { i, d, clk } = r, md = meta[i.sc], s0 = d && d.startClock, out = [`trwa ${Math.floor(el / 60)}:${pad2(el % 60)}`];
+    if (md && clk && s0 && toMin(clk) != null && toMin(s0) != null) {
+      const off = (c) => { let v = toMin(c) - toMin(s0); if (v < -180) v += 1440; return v; }, now = off(clk), wall = (c) => hm(i.startMs + off(c) * 60000);
+      const res = md.resources || [], on = res.filter((x) => !x.readyAt || off(x.readyAt) <= now);
+      const nT = teams.filter((t) => busyOf(t, bz) === i.sc).length;   // the roster's "W akcji" count (header "zespoły wolne" agrees); no home teams: scenario resources ready by now
+      out.push(`zespoły: ${nT || on.length}`);
+      const ev = (md.events || []).filter((e) => toMin(e.at) != null && off(e.at) > 0 && off(e.at) <= now).sort((a, b) => off(a.at) - off(b.at)).pop();
+      if (ev) out.push(`ostatnie: ${esc(cut(ev.title || ev.provider || "", 46))} ${wall(ev.at)}`);
+      const miss = res.filter((x) => x.readyAt && off(x.readyAt) > now).sort((a, b) => off(a.readyAt) - off(b.readyAt))[0];
+      if (miss) out.push(`brakuje: ${esc(RT[miss.type] || cut(miss.name || miss.id || "", 24))} do ${wall(miss.readyAt)}`);
+    }
+    return out.join(" · ");
+  };
   const card = (r) => {
     const { i, d, clk, f } = r, x = incidents.find((y) => y.sc === i.sc) || { sc: i.sc, place: (d && d.place) || i.sc, title: "" };
     const t3 = Array.isArray(f) ? f : f === "err" ? x.top3 || [] : null;
     const el = Math.floor((Math.min(simNowAt(), i.endMs) - i.startMs) / 60000);
     return `<article class="card simc ${i.state === "live" ? "live" : "found ended"}" data-sc="${esc(i.sc)}" data-key="${esc(i.key)}">
-      <div class="ctop"><span class="badge ${i.state === "live" ? "live" : "found"}">${i.state === "live" ? "LIVE" : "ZAKOŃCZONA"}</span><span class="simtag" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span><span class="when mono">zgł. ${hm(i.startMs)}</span></div>
+      <div class="ctop"><span class="badge ${i.state === "live" ? "live" : "found"}" title="${esc(sim.lf.SIM_NOTE)}">${i.state === "live" ? "SYMULACJA" : "ZAKOŃCZONA"}</span>${i.state === "live" ? "" : `<span class="simtag" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span>`}<span class="when mono">zgł. ${hm(i.startMs)}</span></div>
       ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${esc(histURL(i.sc, clk))}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(d ? d.name : i.sc)}${d && d.place ? " - " + esc(d.place) : ""}</div>
-      <div class="simt mono">${i.state === "live" ? `T+${Math.floor(el / 60)}:${pad2(el % 60)} · w scenariuszu ${esc(clk || "")}` : `zakończona ${hm(i.endMs)} · po ${i.durationMin} min`}</div>
-      ${i.state !== "live" ? "" : t3 ? (t3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw o ${esc(r.c5)}</div>${t3.slice(0, 3).map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.id || s.segmentId)} ${esc(s.name)}</span></div>`).join("")}</div>` : `<div class="loading">Brak mapy dla tej chwili.</div>`)
-        : `<div class="loading">Liczę mapę na ${esc(r.c5 || "...")}...</div>`}</article>`;
+      <div class="simt" title="${i.state === "live" && clk ? `W scenariuszu ${esc(clk)} (mapa liczona na ${esc(r.c5 || "")})` : ""}">${i.state === "live" ? stateLine(r, el) : `zakończona ${hm(i.endMs)} · po ${i.durationMin} min`}</div>
+      ${i.state !== "live" ? "" : t3 ? (t3.length ? `<div class="top3"><div class="seg" title="${esc(t3.slice(0, 3).map((s, k) => `#${k + 1} ${s.id || s.segmentId} ${s.name}`).join("\n"))}"><span class="lbl">Szukać najpierw:</span><span class="nm">#1 ${esc(t3[0].id || t3[0].segmentId)} ${esc(t3[0].name)}</span></div></div>` : `<div class="loading">Brak mapy dla tej chwili.</div>`)
+        : `<div class="loading">Liczę mapę...</div>`}</article>`;
   };
   box.innerHTML = `<h2 class="cgrp sim">${tl.mode === "sim" && tl.cur != null ? "Trwają o " + esc(tlFmt(tl.cur)) : "Trwają teraz"} <span class="cnt">${live.length}</span><span class="simh">${esc(sim.lf.SIM_NOTE)}</span></h2>`
     + (live.map(card).join("") || `<div class="help">Teraz nic nie trwa. Następne zgłoszenie: ${esc(simNext())}.</div>`) + ended.map(card).join("")
