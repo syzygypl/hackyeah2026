@@ -113,7 +113,14 @@ public enum StoryPipeline {
             backtest["truthNaive"] = SearchPlanner.truthDetection(SearchPlanner.simulateJobs(grid: grid, poa: poas[beforePing], conditions: c, minute: m, smart: false, state: st, history: hi), truthCell: tc)
         }
         summary.merge(backtest) { $1 }
-        summary["coverage"] = coverage
+        var cov = coverage
+        // audit H: the share of the Koester statistic inside the planning area (POA is normalised to it)
+        if let e = scenario.events.first(where: { $0.provider == "KoesterRings" }) {
+            let bands = grid.ringMassInside(Coord(e.point ?? scenario.ipp.at), e.quantilesKm ?? [1.1, 3.0, 5.8, 11.5])
+            cov["ringMassInside"] = (bands.reduce(0, +) * 1000).rounded() / 1000
+            cov["ringBandsInside"] = bands.map { ($0 * 1000).rounded() / 1000 }
+        }
+        summary["coverage"] = cov
         summary.merge(findInfo(grid: grid, hints: arrived, plans: plans, poas: poas)) { $1 }
         var doc = runJSONObject(scenario: scenario, grid: grid, hints: arrived, plans: plans, summary: summary)
         // extras for the studio UI (ignored by validators)

@@ -120,6 +120,20 @@ public final class ProbabilityGrid {
         }
     }
 
+    /// Koester band masses (25/25/25/20%) that fall inside the grid: Σ density x cell area per band, each capped at its mass.
+    /// POA is normalised to the grid, so this says how much of the statistic the planning area holds (audit H).
+    public func ringMassInside(_ center: Coord, _ q: [Double]) -> [Double] {
+        let b = scenario.bbox, mid = (b.north + b.south) / 2
+        let cell = (b.north - b.south) * Geo.mPerDegLat / Double(max(rows, 1)) * ((b.east - b.west) * Geo.mPerDegLat * cos(mid * .pi / 180) / Double(max(cols, 1)))
+        let qm = [0.0] + q.map { $0 * 1000 }, mass = [0.25, 0.25, 0.25, 0.20], n = min(qm.count - 1, 4)
+        var out = [Double](repeating: 0, count: n)
+        for p in centers {
+            let d = Geo.meters(p, center)
+            if let k = (0..<n).first(where: { d < qm[$0 + 1] }) { out[k] += mass[k] / (.pi * (qm[k + 1] * qm[k + 1] - qm[k] * qm[k])) * cell }
+        }
+        return (0..<n).map { min(out[$0], mass[$0]) }
+    }
+
     public func factor(for h: LocationHint) -> [Double] {
         let n = count
         switch h.evidence {

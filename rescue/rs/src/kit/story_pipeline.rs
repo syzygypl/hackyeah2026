@@ -204,6 +204,14 @@ impl StoryPipeline {
         for (k, v) in backtest {
             summary.insert(k, v);
         }
+        let mut coverage = coverage;
+        // audit H: the share of the Koester statistic inside the planning area (POA is normalised to it)
+        if let Some(e) = scenario.events.iter().find(|e| e.provider == "KoesterRings") {
+            let c = e.point.as_ref().map(|p| Coord::from_slice(p)).unwrap_or_else(|| Coord::from_slice(&scenario.ipp.at));
+            let bands = grid.ring_mass_inside(c, &e.quantiles_km.clone().unwrap_or_else(|| vec![1.1, 3.0, 5.8, 11.5]));
+            coverage.insert("ringMassInside".into(), json!((bands.iter().sum::<f64>() * 1000.0).round() / 1000.0));
+            coverage.insert("ringBandsInside".into(), json!(bands.iter().map(|x| (x * 1000.0).round() / 1000.0).collect::<Vec<_>>()));
+        }
         summary.insert("coverage".into(), Value::Object(coverage));
         for (k, v) in Self::find_info(&grid, &arrived, &plans, &poas) {
             summary.insert(k, v);

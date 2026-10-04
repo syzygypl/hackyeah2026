@@ -262,6 +262,27 @@ impl ProbabilityGrid {
             .collect()
     }
 
+    /// Koester band masses (25/25/25/20%) that fall inside the grid: Σ density x cell area per band, each capped at its mass.
+    /// POA is normalised to the grid, so this says how much of the statistic the planning area holds (audit H).
+    pub fn ring_mass_inside(&self, center: Coord, q: &[f64]) -> Vec<f64> {
+        let b = self.scenario.bbox;
+        let mid = (b.north + b.south) / 2.0;
+        let cell = (b.north - b.south) * Geo::M_PER_DEG_LAT / self.rows.max(1) as f64
+            * ((b.east - b.west) * Geo::M_PER_DEG_LAT * (mid * std::f64::consts::PI / 180.0).cos() / self.cols.max(1) as f64);
+        let mut qm = vec![0.0];
+        qm.extend(q.iter().map(|x| x * 1000.0));
+        let mass = [0.25, 0.25, 0.25, 0.20];
+        let n = (qm.len() - 1).min(4);
+        let mut out = vec![0.0f64; n];
+        for p in &self.centers {
+            let d = Geo::meters(*p, center);
+            if let Some(k) = (0..n).find(|k| d < qm[k + 1]) {
+                out[k] += mass[k] / (std::f64::consts::PI * (qm[k + 1] * qm[k + 1] - qm[k] * qm[k])) * cell;
+            }
+        }
+        (0..n).map(|k| out[k].min(mass[k])).collect()
+    }
+
     pub fn factor(&self, h: &LocationHint) -> Vec<f64> {
         use LocationHintEvidence as E;
         use ProbabilityGridDifficulty as D;
