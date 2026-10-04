@@ -17,7 +17,7 @@ import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / p
 import { createTimeline3D } from './timeline3d.js';
 import { createCoverage3D } from './coverage3d.js';
 import { createWalk3D } from './walk3d.js';
-import { createMachine, createVehicle, vehicleKind, operatorPaint, createRailcar, createDamagedTrack } from './machines3d.js'; // unit models: aircraft, boats, ground vehicles   // free walk (Spacer): first person from a clicked spot
+import { createMachine, createVehicle, vehicleKind, operatorPaint, createRailcar, createDamagedTrack, createProp } from './machines3d.js'; // unit models: aircraft, boats, ground vehicles   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
 // load in slices: the build hands the main thread back between stages (in /app the iframe shares it with the shell);
@@ -1471,7 +1471,11 @@ if (revealPin) { revealPin.visible = false; scene.add(revealPin); }
 // on the rails. Each sabotage point gets torn rails and barriers; one away from the IPP also gets a labelled pin.
 // Real size (a car is 24.5 m). Display only: the engine knows nothing of it.
 const wreck = (() => {
-  const W = SCN?.wreck; if (!W) return null;
+  const W = SCN?.wreck || (() => { // the same from "props": train-derailed {at, cars} and damaged-track {at, label}
+    const ps = SCN?.props || [], tr = ps.find((p) => p.kind === 'train-derailed'), sb = ps.filter((p) => p.kind === 'damaged-track' && p.at);
+    return tr?.at || sb.length ? { kind: tr?.at ? 'train' : 'sabotage', at: tr?.at, cars: tr?.cars, sabotage: sb.map((p) => ({ at: p.at, label: p.label })) } : null;
+  })();
+  if (!W) return null;
   const g = new THREE.Group(); g.name = 'wreck'; scene.add(g);
   const rails = (OSM?.roads || []).filter((r) => r.c === 'rail');
   const onRail = (la, lo) => { // nearest point and direction of the railway, scene units; null without one within 300 m
@@ -1506,6 +1510,32 @@ const wreck = (() => {
     if (Math.hypot(sb.at[0] - ip[0], (sb.at[1] - ip[1]) * KX) * KM > 0.15) g.add(pin(sb.at[0], sb.at[1], '#b8322a', 0.3, esc(sb.label || 'Uszkodzony tor'), 'clue', 0.02));
   }
   return g;
+})();
+// ---------- scenario props: the story's objects ("props" in the scenario file, machines3d.createProp) ----------
+// [{kind, at, heading? (deg clockwise from north), from? / until? ("HH:MM" scenario clock), label?, size?}]: real size,
+// on the ground (floating kinds on the water surface where isWater says water, an avalanche draped lump by lump), a
+// labelled pin when the prop has a label; shown only between `from` and `until` of the shown step's clock. Display only.
+const props = (() => {
+  const list = (SCN?.props || []).filter((p) => Array.isArray(p.at) && inside(p.at) && !/^(train-derailed|damaged-track)$/.test(p.kind));
+  if (!list.length) return null;
+  const out = [], v = new THREE.Vector3();
+  for (const p of list) {
+    const pr = createProp(THREE, p); if (!pr) { console.warn('3d: unknown prop kind', p.kind); continue; }
+    const [la, lo] = p.at, x = toX(lo), z = toZ(la);
+    const y = meshHeightAt(la, lo) + (pr.float && isWater(la, lo) ? 0.008 : 0) - (pr.sink || 0) * (pr.float && isWater(la, lo) ? 1 : 0.3);
+    const h = ((+p.heading || 0) * Math.PI) / 180;
+    pr.obj.position.set(x, y, z); pr.obj.rotation.y = Math.atan2(Math.cos(h), Math.sin(h));
+    if (pr.obj.userData.drape) { pr.obj.updateMatrixWorld(true); for (const [m, lift] of pr.obj.userData.drape) { m.getWorldPosition(v); m.position.y = meshHeightAt(toLat(v.z), toLon(v.x)) - y + lift; } }
+    const g = new THREE.Group(); g.name = 'prop'; g.add(pr.obj);
+    if (p.label) g.add(pin(la, lo, '#b8322a', 0.25, esc(p.label), 'clue', 0.018));
+    scene.add(g); out.push({ p, pr, g });
+  }
+  const mins = (s) => { const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
+  return {
+    list: out,
+    setClock(clock) { const c = mins(clock); for (const o of out) { const f = mins(o.p.from), u = mins(o.p.until); o.g.visible = c == null || ((f == null || c >= f) && (u == null || c < u)); } },
+    tick(dt) { for (const o of out) if (o.g.visible && o.pr.tick) o.pr.tick(dt); },
+  };
 })();
 
 // dynamic layers
@@ -1783,6 +1813,7 @@ function setStep(i, animate = true, fromTime = false) {
   i = clamp(i, 0, R.steps.length - 1);
   const prev = STEP; STEP = i;
   const s = R.steps[i], OG = gridFor(i), ranked = OG ? rankedOf(segPoa(OG)) : rankedOf(s.segments);
+  props?.setClock(s.t); // story objects appear at their clock
   WASH = new Map(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) (e.segments || []).forEach((id) => WASH.set(id, (WASH.get(id) || 0) + 1)); });
   showHeat(OG ? heatCanvasGrid(OG) : heatOf(i), animate && prev >= 0);
   drawTop(ranked);
@@ -2550,6 +2581,7 @@ function frame() {
   nearGrass?.(dt); // near grass: fade with the zoom, re-placed in slices when the target moved far
   traffic?.tick(dt); // cars along the roads
   unitCars?.tick(dt); // blue lights of deployed units' vehicles
+  props?.tick(dt); // scenario props: drifting kayak, smoke, hazard lights
   if (precip.visible) {
     const u = precipMat.uniforms; u.uCenter.value.copy(controls.target);
     u.uBox.value = clamp(camera.position.distanceTo(controls.target) * 0.9, 0.8, 8);
@@ -2582,7 +2614,7 @@ function frame() {
 
 await yieldMain();
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, coverage: POD3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt, traffic }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, coverage: POD3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt, traffic, props }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));

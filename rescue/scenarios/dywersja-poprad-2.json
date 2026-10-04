@@ -30,18 +30,6 @@
   "lakes": [],
   "huts": []
  },
- "wreck": {
-  "kind": "sabotage",
-  "sabotage": [
-   {
-    "at": [
-     49.4541,
-     20.6965
-    ],
-    "label": "Drugie uszkodzenie toru (dywersja)"
-   }
-  ]
- },
  "segments": [
   {
    "id": "R1",
@@ -389,6 +377,16 @@
     20.7142
    ],
    "readyAt": "07:30"
+  }
+ ],
+ "props": [
+  {
+   "kind": "damaged-track",
+   "at": [
+    49.4541,
+    20.6965
+   ],
+   "label": "Drugie uszkodzenie toru (dywersja)"
   }
  ]
 }

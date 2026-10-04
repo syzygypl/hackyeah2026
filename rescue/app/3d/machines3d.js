@@ -249,3 +249,77 @@ export function createDamagedTrack(THREE) {
   }
   return g;
 }
+
+// ---------- scenario props: objects of the story (scenario "props", app3d places them; real size) ----------
+// createProp(THREE, p) -> { obj, tick?, float? (sits on the water surface), sink? (km below it) } or null for an unknown
+// kind. obj's local +x = p.heading; origin on the ground. Kinds: kayak-capsized, kayak-drifting, paddle, car-in-river,
+// car-damaged, elk, avalanche (size = length m), skis, burn (size = radius m), smoke, paraglider.
+const KM = (m) => m / 1000;
+export function createProp(THREE, p) {
+  const k = p.kind, obj = new THREE.Group(); obj.rotation.order = 'YXZ'; obj.name = 'prop-' + k;
+  const mat = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6, metalness: 0.1, ...o });
+  const add = (geo, m, x = 0, y = 0, z = 0, parent = obj) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); parent.add(o); return o; };
+  let t = Math.random() * 10, tick = null, float = false, sink = 0;
+  const hazard = (len, h) => { // orange hazard lights, front and back, blinking with a night halo
+    const on = new THREE.MeshBasicMaterial({ color: 0xffa21a, toneMapped: false }), off = mat(0x6a4a1a);
+    const ls = [[len / 2, 0.6], [len / 2, -0.6], [-len / 2, 0.6], [-len / 2, -0.6]].map(([x, z]) => add(new THREE.BoxGeometry(KM(0.12), KM(0.12), KM(0.25)), off, KM(x), h, KM(z))); // len, x, z in m
+    return (dt) => { t += dt; const lit = t % 1 < 0.5; ls.forEach((l) => { l.material = lit ? on : off; l.userData.glow = lit ? ['#ffa21a', 40] : null; }); };
+  };
+  const car = (paint, crumple = 0) => { // a hatchback, 4.3 x 1.8 m; crumple = metres of crushed front
+    const L = 4.3 - crumple;
+    add(new THREE.BoxGeometry(KM(L), KM(0.75), KM(1.8)), mat(paint, { metalness: 0.3, roughness: 0.4 }), KM(-crumple / 2), KM(0.6));
+    add(new THREE.BoxGeometry(KM(2.2), KM(0.6), KM(1.6)), mat(0x2a3440, { roughness: 0.15, metalness: 0.4 }), KM(-0.4 - crumple / 2), KM(1.25));
+    for (const x of [1.35, -1.35]) for (const z of [0.82, -0.82]) add(new THREE.CylinderGeometry(KM(0.33), KM(0.33), KM(0.22), 10).rotateX(Math.PI / 2), mat(0x1c1e21, { roughness: 0.9 }), KM(x - crumple / 2), KM(0.33), KM(z));
+    if (crumple) { const hood = add(new THREE.BoxGeometry(KM(1.0), KM(0.08), KM(1.7)), mat(paint, { metalness: 0.3 }), KM(L / 2 - 0.3 - crumple / 2), KM(1.1)); hood.rotation.z = 0.5; }
+    return L;
+  };
+  if (k === 'kayak-capsized' || k === 'kayak-drifting') {
+    const hull = add(new THREE.SphereGeometry(KM(1), 16, 8).scale(2.25, 0.18, 0.31), mat(0x1f5fbf, { roughness: 0.35 }), 0, KM(0.16));
+    if (k === 'kayak-capsized') hull.rotation.x = Math.PI; // bottom up
+    else { add(new THREE.TorusGeometry(KM(0.36), KM(0.05), 6, 16).scale(1.5, 1, 1).rotateX(Math.PI / 2), mat(0x1b1d22), KM(0.2), KM(0.3)); float = true;
+      tick = (dt) => { t += dt; obj.rotation.x = Math.sin(t * 1.6) * 0.12; obj.rotation.z = Math.sin(t * 1.1) * 0.05; }; }
+  } else if (k === 'paddle') {
+    add(new THREE.CylinderGeometry(KM(0.016), KM(0.016), KM(2.2), 6).rotateZ(Math.PI / 2), mat(0x2a2d31), 0, KM(0.03));
+    for (const x of [1.15, -1.15]) add(new THREE.BoxGeometry(KM(0.45), KM(0.01), KM(0.17)), mat(0xf0c419), KM(x), KM(0.03));
+  } else if (k === 'car-in-river') {
+    const L = car(0x9a1c1c); obj.rotation.z = -0.32; float = true; sink = KM(0.9); tick = hazard(L, KM(0.8));
+  } else if (k === 'car-damaged') {
+    const L = car(0x6f7780, 1.1); tick = hazard(L, KM(0.8)); obj.rotation.x = 0.04;
+  } else if (k === 'elk') { // a dead bull elk lying on its side, ~2.7 m long
+    const fur = mat(0x3d2b1f, { roughness: 0.95 }), legs = mat(0x5b4a3a, { roughness: 0.95 });
+    add(new THREE.SphereGeometry(KM(1), 12, 8).scale(1.25, 0.42, 0.5), fur, 0, KM(0.42));
+    add(new THREE.BoxGeometry(KM(0.75), KM(0.32), KM(0.36)), fur, KM(1.55), KM(0.3), KM(0.15));
+    const ant = mat(0xcbb79a, { roughness: 0.8 });
+    for (const z of [0.25, 0.55]) add(new THREE.BoxGeometry(KM(0.5), KM(0.05), KM(0.38)), ant, KM(1.4), KM(0.55), KM(z));
+    for (const x of [0.75, 0.45, -0.6, -0.9]) { const l = add(new THREE.CylinderGeometry(KM(0.06), KM(0.05), KM(1.1), 6), legs, KM(x), KM(0.3), KM(-0.75)); l.rotation.x = Math.PI / 2 - 0.25; }
+  } else if (k === 'avalanche') { // debris tongue along +x: lumps of snow, narrowing downhill; the caller drapes the lumps on the terrain
+    const L = p.size || 300, snow = mat(0xf2f5f8, { roughness: 0.9 }); let seed = 77; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    obj.userData.drape = [];
+    for (let i = 0; i < 140; i++) {
+      const u = rnd(), w = (1 - u * 0.6) * L * 0.22, r = 1.2 + rnd() * 2.6;
+      const m = add(new THREE.IcosahedronGeometry(KM(r), 0), snow, KM(u * L), 0, KM((rnd() - 0.5) * 2 * w));
+      m.scale.set(1, 0.6, 1); m.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3); obj.userData.drape.push([m, KM(r * 0.3)]);
+    }
+  } else if (k === 'skis') {
+    for (const z of [0.12, -0.12]) { const s = add(new THREE.BoxGeometry(KM(1.75), KM(0.03), KM(0.08)), mat(0xd7261e), 0, KM(0.04), KM(z)); s.rotation.y = z * 0.8; }
+    const pole = add(new THREE.CylinderGeometry(KM(0.012), KM(0.012), KM(1.3), 6), mat(0x2a2d31), KM(0.6), KM(0.55), KM(0.5)); pole.rotation.z = 0.35;
+  } else if (k === 'burn') { // scorched ground: an irregular dark patch with a lighter ash rim and a few embers
+    const R = p.size || 40; let seed = 31; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const shape = new THREE.Shape(); for (let i = 0; i <= 24; i++) { const a = (i / 24) * Math.PI * 2, r = KM(R * (0.75 + rnd() * 0.35)); i ? shape.lineTo(Math.cos(a) * r, Math.sin(a) * r) : shape.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+    add(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2), mat(0x1a1612, { roughness: 1 }), 0, KM(0.4));
+    add(new THREE.RingGeometry(KM(R * 0.95), KM(R * 1.15), 32).rotateX(-Math.PI / 2), mat(0x8c8478, { roughness: 1, transparent: true, opacity: 0.7 }), 0, KM(0.35));
+    obj.userData.flat = true;
+    for (let i = 0; i < 8; i++) { const e = add(new THREE.SphereGeometry(KM(0.6), 6, 4), new THREE.MeshBasicMaterial({ color: 0xff5a1a, toneMapped: false }), KM((rnd() - 0.5) * R), KM(0.6), KM((rnd() - 0.5) * R)); e.userData.glow = ['#ff6a2a', 30]; }
+  } else if (k === 'smoke') { // a rising plume, ~150 m: puffs drift up and downwind, grow and fade, then start again
+    const puffs = [], N = 16, H = KM(p.size || 150);
+    for (let i = 0; i < N; i++) { const m = add(new THREE.SphereGeometry(KM(1), 10, 8), new THREE.MeshStandardMaterial({ color: 0x5e5a56, roughness: 1, transparent: true, opacity: 0.5, depthWrite: false })); m.userData.u = i / N; puffs.push(m); }
+    tick = (dt) => { for (const m of puffs) { const u = (m.userData.u = (m.userData.u + dt * 0.04) % 1); m.position.set(H * 0.35 * u * u, H * u, 0); m.scale.setScalar(KM(6 + 30 * u) * 1000); m.material.opacity = 0.55 * (1 - u); } };
+    tick(0);
+  } else if (k === 'paraglider') { // a canopy draped over the treetops (~11 m span), lines hanging, ~20 m up
+    const cols = [0xe63946, 0xffd166, 0xe63946, 0x118ab2, 0xe63946, 0xffd166, 0xe63946, 0x118ab2, 0xe63946], H = KM(p.size || 20);
+    cols.forEach((c, i) => { const a = (i / (cols.length - 1) - 0.5) * 2.2, s = add(new THREE.BoxGeometry(KM(2.6), KM(0.15), KM(1.3)), mat(c, { roughness: 0.5, side: THREE.DoubleSide }), 0, H + KM(Math.cos(a) * 2.5 - 2), KM(Math.sin(a) * 5.2)); s.rotation.x = -a * 0.9; s.rotation.z = 0.15; });
+    const lines = new THREE.LineBasicMaterial({ color: 0x333333 });
+    for (const z of [-4, -2, 0, 2, 4]) obj.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, H, KM(z)), new THREE.Vector3(KM(0.3), H - KM(6), 0)]), lines));
+  } else return null;
+  return { obj, tick, float, sink };
+}

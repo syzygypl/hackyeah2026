@@ -160,5 +160,10 @@
     { "id": "dron-psp-nowy-targ", "name": "Dron termowizyjny PSP Nowy Targ", "type": "drone", "base": [49.4228, 20.4592], "readyAt": "17:25" },
     { "id": "nurkowie-psp-nowy-sacz", "name": "Nurkowie PSP (SGRW Nowy Sącz)", "type": "diver", "base": [49.4228, 20.4592], "readyAt": "17:55" },
     { "id": "lpr-krakow", "name": "Śmigłowiec LPR (Kraków), ZRM w gotowości w Szczawnicy", "type": "heli", "base": [50.0777, 19.7848], "readyAt": "17:15" }
+  ],
+  "props": [
+    { "kind": "kayak-drifting", "at": [49.4228, 20.4592], "heading": 80, "from": "16:55", "until": "17:05" },
+    { "kind": "kayak-capsized", "at": [49.4266, 20.4415], "heading": 300, "from": "17:05", "label": "Pusty kajak na łasze (17:05)" },
+    { "kind": "paddle", "at": [49.42664, 20.44168], "heading": 40, "from": "17:05" }
   ]
 }

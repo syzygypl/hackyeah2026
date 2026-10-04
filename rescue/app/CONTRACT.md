@@ -535,3 +535,41 @@ Every clue / sighting / phone fix / no-find search gets an explicit weight 0..1 
 - **Operator override**: `POST /api/clue/weight {sc, clueId, weight: 0..1 | null (= auto), by?, title?}` -> `{ok, sc, clueId, weight, seq}`. Operator key only (the field key gets 401, `by: "ratownik"` or an `X-Rescue-Team` header 403). Stored per incident (shared store document `cw:<sc>`, laptop `out/live-cw-<sc>.json`; `/api/reset` clears it), folded only into the live run (`?live=0` Historia ignores it). Adds a feed event `kind: "weight"` ("Waga śladu (Odzież): 0,30 (ręcznie)" / "...: auto"), so every client refetches the run. `GET /api/clue/weights?sc=` -> `{sc, overrides: {clueId: {weight, by, at}}}`.
 - **UI**: app Sygnały cards and the Na żywo feed show a bar + number per clue (grey "info" = not applied, green "ręcznie" = override); hover = the `why` lines and the factor product; operator in Na żywo: − / + (0,1) and "auto". 2D: weighted clue markers = circle + chip whose dot size and opacity follow the weight at the current step.
 - Not yet: `/api/incidents` top3 cache does not key on overrides (Centrum may lag until the next clue); scent half-life weather multipliers from the proposal are not applied.
+
+## Scenario props (3D story objects) - v1
+
+Owner: AI Andrzeja (3D, `app/3d/machines3d.js` `createProp` + `app/3d/app3d.js` "scenario props"). Display only: the engine, the planner, 2D and the API ignore the field, so adding props never changes a run.
+
+Optional array `props` in `rescue/scenarios/<sc>.json` (top level, next to `resources`):
+
+```jsonc
+"props": [
+  { "kind": "kayak-capsized",          // required, one of the kinds below (an unknown kind is skipped with a console warning)
+    "at": [49.4266, 20.4415],          // required, [lat, lon] inside the 3D cut
+    "heading": 300,                    // optional, degrees clockwise from north (the object's long axis / direction), default 0
+    "from": "17:05",                   // optional, scenario clock HH:MM: shown from the first step whose clock is >= from
+    "until": "17:30",                  // optional, hidden again from this clock on (e.g. a drifting kayak that later strands)
+    "label": "Pusty kajak na łasze",   // optional, a pin with this label above the object
+    "size": 300 }                      // optional, kind-specific size in metres (see below)
+]
+```
+
+Kinds (real size, placed on the rendered terrain; `float` kinds sit on the water surface where the cut has water):
+
+| kind | object | size |
+|---|---|---|
+| `kayak-capsized` | kayak bottom up (on a bank or gravel bar) | - |
+| `kayak-drifting` | empty kayak, floats and rocks | - |
+| `paddle` | double paddle lying on the ground | - |
+| `car-in-river` | car nose-down, half under water, hazard lights blinking | - |
+| `car-damaged` | car with a crushed front, hazard lights (road shoulder) | - |
+| `elk` | dead elk (bull) lying on its side | - |
+| `avalanche` | debris tongue along `heading` (downhill), lumps draped on the terrain | length m, default 300 |
+| `skis` | pair of skis and a pole stuck in the snow | - |
+| `burn` | scorched patch with an ash rim and embers | radius m, default 40 |
+| `smoke` | rising smoke plume, animated, drifts along `heading` | height m, default 150 |
+| `paraglider` | canopy caught in the treetops with hanging lines | height above ground m, default 20 |
+| `train-derailed` | locomotive + `cars` (1-5, default 4) cars snapped to the nearest OSM railway, first cars off the embankment towards the lower side | - |
+| `damaged-track` | torn rails, crater and barriers on the nearest railway; its `label` pin is drawn only when it is > 150 m from the IPP | - |
+
+Check: open `/app/3d/?embed=scene&sc=<sc>&step=<i>` (or the app); `?stats=1` exposes `window.__r3d.props.list` (kind, visibility). The older top-level `wreck` field (`{kind: "train", at, cars, sabotage: [{at, label}]}`) still works; new scenarios use `props`.

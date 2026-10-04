@@ -30,31 +30,6 @@
   "lakes": [],
   "huts": []
  },
- "wreck": {
-  "kind": "train",
-  "at": [
-   49.479,
-   20.6818
-  ],
-  "cars": 4,
-  "label": "Wykolejony pociąg osobowy (lokomotywa + 4 wagony)",
-  "sabotage": [
-   {
-    "at": [
-     49.479,
-     20.6818
-    ],
-    "label": "Uszkodzony tor (dywersja)"
-   },
-   {
-    "at": [
-     49.4541,
-     20.6965
-    ],
-    "label": "Drugie uszkodzenie toru (ładunek nie zadziałał)"
-   }
-  ]
- },
  "segments": [
   {
    "id": "R1",
@@ -494,6 +469,32 @@
     20.6905
    ],
    "readyAt": "05:50"
+  }
+ ],
+ "props": [
+  {
+   "kind": "train-derailed",
+   "at": [
+    49.479,
+    20.6818
+   ],
+   "cars": 4
+  },
+  {
+   "kind": "damaged-track",
+   "at": [
+    49.479,
+    20.6818
+   ],
+   "label": "Uszkodzony tor (dywersja)"
+  },
+  {
+   "kind": "damaged-track",
+   "at": [
+    49.4541,
+    20.6965
+   ],
+   "label": "Drugie uszkodzenie toru (ładunek nie zadziałał)"
   }
  ]
 }
