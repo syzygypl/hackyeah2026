@@ -140,3 +140,62 @@ Poza ścieżką pokazu, do wiadomości: `rescue/web/app.js:1007` pokazuje "szans
 Działa bez uwag: Historia od `step=0` (17:40, S3/S2/S4), ▶ 30× do 20:03 ZNALEZIONO (S7 na #1), Na żywo 19:45 (S7/S4/S3), Centrum (18 akcji, pula 31/31), Śniardwy, Kraków, 3D, Zasoby, Ćwiczenia, Porównanie (bez zapisów od 8c838ab), Odprawa i karty zadań, Rodzina, landing, `/web/photo/`, `/web/patrol/` i `/web/seen/` na telefonie (duże przyciski, "łączność OK"), brak przewijania w poziomie na 390 px. W moich obszarach (patrol, seen, photo, basemap) nie znalazłem nic do poprawy.
 
 Nie sprawdzone: zapisy (meldunek, przydział, ACK, ZNALEZIONO, reset), odznaczenie właśnie "CPR 112 ... BTS 14:12" o 18:05 (przegląd odznaczył kartę terenu o 17:46 - top 3 bez zmian, jak powinno), prawdziwy telefon z GPS, Plan i Więcej. Zrzuty w scratchpadzie sesji (`rev0330/d1`, `d2`, `m1`), nie w repo.
+
+## 08:45 przed pitchem (AI Michała)
+
+**Wersja.** `/version.json`: `7285a86` (2026-10-04T06:13:53Z) = `origin/main`; stopka aplikacji "v 7285a86 · 04.10.2026 08:13". `/health`: `llm-openai`, `store: shared`, klucz wymagany.
+
+**Metoda.** Tylko odczyt: headless Chrome (swiftshader) przez DevTools, każde żądanie inne niż GET/HEAD/OPTIONS odrzucane we wszystkich ramkach. Bez resetu, formularzy, wpisów w Czacie. Ekrany 1920 x 1080, 1440 x 900, telefon 390 x 844. Zrzuty w scratchpadzie sesji (`rev0845/out`), nie w repo.
+
+**Zablokowane żądania: 2**, oba `POST /api/run` (obliczenie mapy bazowej Czatu, nie zapis): `/app/?...&time=hist&step=5&chat=1` i `/app/czat.html`. Strony działają dalej. Na żywo z `&chat=1` nic nie wysyła. Konsola czysta, brak HTTP >= 400, brak przewijania w poziomie (też 390 px); na telefonie tylko ostrzeżenie MapLibre o braku geolokalizacji (emulacja).
+
+**Stan produkcji (bez zmian od 03:30):** `/api/live` `seq: 50`, wszystkie 33 zdarzenia z `bieszczady-wetlinska`; LIVE w Centrum = Połonina Wetlińska, Zawrat jako "Odtworzenie"; `/api/incidents` 18, żadna nie zakończona; telefon TOPR A pokazuje S3 (brak przydziału S7). Reset i przydział wg runbooka (T-10) nadal potrzebne. Repo https://github.com/syzygypl/hackyeah2026 nadal 404 bez logowania.
+
+### Wyniki
+
+| Co | Wynik |
+|---|---|
+| Historia Zawrat, `step=1..10` (2D+3D, 1920) | **zgodne** panel = etykiety 2D = etykiety 3D w każdym kroku. Kroki 1-6 (17:40-17:58): S3 / S2 / S4. Kroki 7-10 (18:05-18:30, od BTS 14:12): S4 / S3 / S6. `step=0` przy 1440 i 1920: S3 / S2 / S4 |
+| Na żywo Zawrat (19:45) | S7 Żleb pod Zawratem / S4 / S3, zgodne w panelu, 2D, 3D i karcie Zawratu w Centrum |
+| 3D | prawdziwy teren (DEM, ortofoto, las, jeziora), nie płasko; Zawrat i Kraków-Nowa Huta |
+| Czas do pierwszej mapy (zimny profil, headless) | Akcja 2D Zawrat ~11 s, Śniardwy 2D ~7 s, 3D Zawrat ~10 s, 3D Kraków ~12 s, Centrum ~6 s (headless swiftshader jest wolniejszy niż laptop z GPU; runbook podaje 4-8 s) |
+| Centrum | "17 akcji · 1 LIVE · zespoły wolne: 31/31", Trwające 17; duplikat `morzycko` ukryty (aa6d8ce), zostaje "Tragedia w Moryniu"; bez błędów |
+| Czat (`&chat=1`, `czat.html`) | otwiera się; chipy per scenariusz (c0ef246): Zawrat 8 chipów ze scenariusza, Śniardwy 6 własnych (żeglarz, WOPR, W3); szuflada po lewej, panel top 3 po prawej odsłonięty |
+| Odprawa `?sc=zawrat` (f43cc5f) | prawdziwe uwagi per zespół (teren eksponowany + lód, noc w terenie stromym, bateria 26%, dron uziemiony > 12 m/s), brak pustej linii uwag; top 3 S7/S4/S3 zgodne; karty zadań i Śniardwy też OK |
+| Telefon `/web/patrol/` i `/app/?role=ratownik` (390) | OK: "łączność OK", duże przyciski, S3 + kierunek 2,4 km wschód (z `?me=`), "Włącz kompas"; `/web/seen/` OK |
+| Pasek przy 1440 | mieści się ("operator" bez "Rola:", klucz kompaktowy) |
+
+### Problemy (od najważniejszych)
+
+Blokerów brak.
+
+| # | Problem | Waga | Właściciel | Jak odtworzyć |
+|---|---|---|---|---|
+| 1 | Stan produkcji nie zresetowany: LIVE = Połonina Wetlińska (`seq: 50`), brak przydziału TOPR A -> S7 (telefon pokazuje S3). Krok 4-5 pokazu zakłada reset | ważne (operacyjne) | osoba z kluczem operatora, T-10 wg runbooka | https://rescue-locator.vercel.app/api/live |
+| 2 | Otwarty Czat zasłania lewą część mapy 2D, a mapa się nie przesuwa: przy 1440 znikają etykiety #1 Żleb pod Zawratem i #2 Wielki Staw oraz przyciski ⏮ ▶ w doku; przy 1920 #1 Żleb ucięty do "d Zawratem". Panel top 3 widać | ważne (krok "Czat" przy pytaniach jury) | AI Mateusza #2 (`rescue/app/chat.css`) albo w runbooku: po "Dodaj" zamknąć Czat (×), żeby pokazać mapę | https://rescue-locator.vercel.app/app/?role=operator&mode=akcja&view=2d&sc=zawrat&time=live&chat=1 |
+| 3 | Etykiety 2D nadal nachodzą przy IPP: "Zespół z psem" na "IPP", "Tomasz W." / "Sektor 112" na S6/S7, przy 18:05 "#3 Szlak niebieski" na S7 | kosmetyka | AI Marcina (2D) | jak #2 bez `&chat=1`; Historia `&step=7` |
+| 4 | 3D: etykiety #1/#2/#3 i "IPP" w jednym pasku przy 18:05 (2D+3D); czerwony "Test na ślepo", "FPP"; legenda 3D "Waga mapy × średnia" (2D ma "względem średniej") | kosmetyka | AI Andrzeja (`rescue/app/3d/index.html`) | https://rescue-locator.vercel.app/app/?role=operator&mode=akcja&view=split&sc=zawrat&time=hist&step=7 |
+| 5 | Dok i ticker: "Koester: turysta pieszy +4" przez cały pokaz | kosmetyka | AI Marcina | Historia `&step=0`, prawy koniec doku |
+| 6 | Centrum: nazwy bez polskich znaków ("K3 Zachodnia stok Goryczkowej (poza trasa)", "M1 ... (plaza piknikowa)"); Doradca "18 akcji" przy nagłówku "17 akcji"; "Śmigłowiec Policji (Rzeszów)" przy Zawracie i "Policja Gryfino" przy Śniardwach | kosmetyka | AI Marcina (scenariusze, inventory) / AI Mateusza #2 (Doradca) | https://rescue-locator.vercel.app/app/centrum.html |
+| 7 | 1920: tytuł akcji w pasku ucięty do "D." / "D..." obok LIVE/HISTORIA | kosmetyka | AI Marcina (`rescue/app/app.css`, `.livehead b`) | dowolny URL operatora przy 1920 |
+| 8 | `czat.html`: czwarty rząd chipów przycięty przy dolnej krawędzi; Odprawa: "5.5 h" z kropką, a w wierszu Śmigłowca TOPR uwaga "Dron uziemiony..." | kosmetyka | AI Mateusza #2 (czat) / AI Marcina (odprawa) | https://rescue-locator.vercel.app/app/czat.html, https://rescue-locator.vercel.app/app/odprawa.html?sc=zawrat |
+| 9 | Telefon, `/app/?role=ratownik`: pole "klucz" i przycisk "ratownik" przycięte od dołu przez pasek | kosmetyka | AI Marcina (app shell) | https://rescue-locator.vercel.app/app/?role=ratownik&sc=zawrat przy 390 px |
+
+### Punkty z 03:30 - stan
+
+| # z 03:30 | Stan 08:45 |
+|---|---|
+| 1 Sygnały z angielskimi nazwami | naprawione wg 290ed6b (panelu ☰ tym razem nie otwierałem) |
+| 2 Pasek przy 1440 | **naprawione** (290ed6b, 3b460e5) |
+| 3 Stan produkcji | **zostaje** (problem 1) |
+| 4 "Koester" w doku | **zostaje** (problem 5) |
+| 5 "przeszukany, POD 75%" na mapie | **naprawione** (dd890df) - samo "przeszukany" |
+| 6 Nazwy bez polskich znaków | **zostaje** (problem 6) |
+| 7 Tytuł "D..." przy 1920 | **zostaje** (problem 7) |
+| 8 Uwagi z id "topr-b: ..." | **naprawione** (74cd4af) - "Patrol TOPR B (dyżurka Murowaniec): ..." |
+| 9 Procenty bez opisu w Zasobach | **naprawione** (74cd4af) - "bateria 26%", "zmęczenie 15%", "paliwo 96%" |
+| 10 Czat wysyła `POST /api/run` | **zostaje** jako info (Historia i `czat.html`, nie zapis) |
+| 02:00 #6 duplikat Morzycka | **naprawione** (aa6d8ce); `zapora-*` nadal w Trwających (np. Huzele) |
+| 02:00 #5, #7, #8 etykiety, zasoby, 3D | **zostaje** (problemy 3, 4, 6) |
+
+Nie sprawdzone: zapisy (meldunek, przydział, ACK, ZNALEZIONO, reset), panel Sygnały (☰) i odznaczanie wskazówki, prawdziwy telefon z GPS i LTE.
