@@ -5,6 +5,7 @@
 // in-memory team roster mock seeded from the scenario files. Switching is automatic: a 404 means "not there yet".
 // MapLibre (~300 kB) is imported dynamically (initMap at the bottom): cards and roster render from the API without waiting for it.
 let maplibregl, offlineStyle, loadBasemap, REGIONS;
+import { evKind, EV_COL, shortEv, hoverHold } from "./dock.js";   // timeline (Oś czasu): same event kinds / colours / hover-hold as the /app dock
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -107,7 +108,11 @@ const meta = {}, metaP = {};
 function loadMeta(sc) {
   return metaP[sc] ||= (async () => {
     meta[sc] = null;
-    try { const s = await api("/scenarios/" + encodeURIComponent(sc) + ".json"); meta[sc] = { ipp: s.ipp && s.ipp.at, bbox: s.bbox, resources: s.resources || [] }; } catch (e) {}
+    try { const s = await api("/scenarios/" + encodeURIComponent(sc) + ".json"); meta[sc] = { ipp: s.ipp && s.ipp.at, bbox: s.bbox, resources: s.resources || [],
+      // timeline: report date + clock, scripted events (clock, provider, title), teams' readyAt
+      date: s.date || null, startClock: s.startClock || null, lastContact: (s.subject && s.subject.lastContact) || null,
+      events: (s.events || []).map((e) => ({ at: e.at, provider: e.provider, title: e.title || "" })),
+      ready: (s.resources || []).filter((r) => r.readyAt).map((r) => ({ at: r.readyAt, name: r.name || r.id })) }; } catch (e) {}
     return meta[sc];
   })();
 }
@@ -170,7 +175,9 @@ function render() {
   if (sig === shown) return;
   const selectOpen = $("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT";   // renderTeams skips then: build again next poll
   if (!dragging) { renderCards(); renderTeams(); if (!selectOpen) shown = sig; }
+  tlBuild();
   renderMarkers();
+  tlApply();
   advApply();   // Doradca: re-mark linked incidents after the cards / markers were rebuilt
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
   $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
@@ -249,6 +256,7 @@ function setHl(sc) {
   hl = sc;
   document.querySelectorAll(".card").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
   for (const [k, m] of markers) m.getElement().classList.toggle("hl", k === sc);
+  document.querySelectorAll("#tl .tlr").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
 }
 
 // ---------- map: paper ground + outline of Poland; regional offline basemaps (web/basemap) load when zoomed in
@@ -311,15 +319,19 @@ function renderMarkers() {
       m = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat([md.ipp[1], md.ipp[0]]).addTo(map);
       markers.set(x.sc, m);
     }
-    const el = m.getElement(), mode = modeOf(x);
-    el.classList.add("mk"); for (const c of ["live", "found", "plan", "replay"]) el.classList.toggle(c, c === mode); el.classList.toggle("hl", hl === x.sc);
-    el.title = `${short(x)}: ${longText(x)} - ${BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
-    el.querySelector(".lbl").textContent = short(x);
-    el.style.zIndex = mode === "live" ? 3 : 1;
+    paintMarker(x, m);
   }
   for (const [k, m] of markers) if (!incidents.some((x) => x.sc === k)) { m.remove(); markers.delete(k); }
   fitAll();
   stackLabels();
+}
+// marker look for incident x: its mode now, or at the timeline cursor (markMode: "pre" = not reported yet -> hidden)
+function paintMarker(x, m) {
+  const el = m.getElement(), mode = markMode(x);
+  el.classList.add("mk"); for (const c of ["live", "found", "plan", "replay", "pre"]) el.classList.toggle(c, c === mode); el.classList.toggle("hl", hl === x.sc);
+  el.title = `${short(x)}: ${longText(x)} - ${mode === "pre" ? "jeszcze nie zgłoszona" : BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
+  el.querySelector(".lbl").textContent = short(x);
+  el.style.zIndex = mode === "live" ? 3 : 1;
 }
 // Labels that would overlap on screen (Tatra and Bieszczady incidents sit a few km apart) move down one row at a time
 // until they are free; dots stay on their IPP. Recomputed after every zoom, since overlaps depend on the scale.
@@ -479,6 +491,165 @@ function advFit() {
 setInterval(advTick, 60000);
 advTick();
 
+// ---------- Oś czasu (timeline, AI Mateusza #2 2026-10-04): when every incident STARTED and ENDED, a Gantt row each.
+// Derived client-side, read-only, from each scenario file (loadMeta: date + startClock = the report, events[].at, resources[].readyAt)
+// and /api/incidents (found = a live find ended it, at = the live moment). Nothing per sc is hardcoded: a new scenario file shows up
+// by itself. Start = date + startClock; end = the file's "Found" event, or the live moment of a live find (zakończona); else the
+// bar is open (trwa). Cursor (scrub / ▶ 1x-30x, 1x = 1 minute per second) re-paints the map dots: hidden before the report, red
+// while it runs, green after the end; cards get "T+1:20: trwa". "Na żywo" = no cursor, the normal live view. Two axes: "od zgłoszenia"
+// (every incident at T0) and "czas rzeczywisty" (date + clock); default = real time when all reports fall within 24 h.
+// Collapsed = a thin strip with the cursor; hover (dock.js hoverHold, held 3 s) = full Gantt. Phone: a button instead of hover.
+const PROV_KIND = { Found: "found", SegmentSearched: "searched", DronePassEmpty: "searched", Weather: "weather", WeatherConditions: "conditions",
+  Terrain: "terrain", TerrainDifficulty: "difficulty", KoesterRings: "rings", TripPlan: "route", WaterDrift: "route", TrailheadCar: "containment", Cell112Fix: "sector", RatunekPing: "fix", Clue: "clue" };
+const toMin = (c) => { const m = /^(\d{1,2}):(\d{2})/.exec(c || ""); return m ? +m[1] * 60 + +m[2] : null; };
+const TL_SPEEDS = [1, 2, 5, 10, 30];
+const tl = { mode: null, auto: true, cur: null, speed: 1, play: 0, items: [], by: {}, off: new Set(), day: null, lo: 0, hi: 60, built: "" };
+try { const v = +localStorage.getItem("rescue-centrum-tl-speed"); if (TL_SPEEDS.includes(v)) tl.speed = v; } catch (e) {}
+const tlBase = (it) => tl.mode === "abs" ? it.t0 : 0;
+function tlItem(x) {
+  const md = meta[x.sc], s0 = md && toMin(md.startClock); if (s0 == null) return null;
+  const off = (c) => { const m = toMin(c); if (m == null) return null; let d = m - s0; if (d < -180) d += 1440; return d; };   // past midnight
+  const t0 = new Date(`${md.date || "2026-10-04"}T${md.startClock.slice(0, 5).padStart(5, "0")}:00`).getTime() / 60000;
+  if (!isFinite(t0)) return null;
+  const evs = [];
+  for (const e of md.events || []) {
+    const m = off(e.at), kind = PROV_KIND[e.provider] || "clue", k = evKind({ kind, source: e.provider, label: e.title });
+    if (m != null && k !== "baza") evs.push({ m, at: e.at, k, kind, title: e.title || e.provider });
+  }
+  for (const r of md.ready || []) { const m = off(r.at); if (m != null && m >= 0) evs.push({ m, at: r.at, k: "zespol", kind: "dispatch", title: `${r.name}: na miejscu / gotowy` }); }
+  evs.sort((a, b) => a.m - b.m);
+  const f = evs.find((e) => e.k === "found"), now = off(x.lastClock), last = Math.max(0, now ?? 0, ...evs.map((e) => e.m));
+  let end = null, endKind = null;
+  if (x.found) { end = now ?? (f ? f.m : last); endKind = "ended"; }   // a live ZNALEZIONO: zakończona
+  else if (f) { end = f.m; endKind = "found"; }                       // the scenario file ends with a find: znaleziono
+  return { sc: x.sc, x, t0, end, endKind, last: Math.max(last, end ?? 0), evs, start: md.startClock, date: md.date, lastContact: md.lastContact };
+}
+function tlState(it, v) { const o = v - tlBase(it); return o < 0 ? "pre" : it.end != null && o >= it.end ? it.endKind : "live"; }
+function markMode(x) {
+  const it = tl.cur != null && !tl.off.has(x.sc) && tl.by[x.sc];
+  if (!it) return modeOf(x);
+  const s = tlState(it, tl.cur); return s === "pre" ? "pre" : s === "live" ? "live" : "found";
+}
+const pad2 = (n) => String(n).padStart(2, "0");
+function tlFmt(v, axis) {
+  if (tl.mode === "rel") { const a = Math.round(Math.abs(v)); return (v < 0 ? "T-" : "T+") + Math.floor(a / 60) + ":" + pad2(a % 60); }
+  const d = new Date(v * 60000), hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes()), dm = d.getDate() + "." + pad2(d.getMonth() + 1);
+  return axis === "day" ? dm : axis === "hm" ? hm : dm + " " + hm;
+}
+const TL_STATE = { pre: "jeszcze nie zgłoszona", live: "trwa", found: "znaleziono", ended: "zakończona" };
+function tlBuild() {
+  let its = incidents.map(tlItem).filter(Boolean).sort((a, b) => a.t0 - b.t0 || a.sc.localeCompare(b.sc));
+  tl.items = its; tl.by = Object.fromEntries(its.map((i) => [i.sc, i]));
+  if (tl.auto) { const t = its.map((i) => i.t0); tl.mode = t.length && Math.max(...t) - Math.min(...t) <= 1440 ? "abs" : "rel"; }
+  const sig = JSON.stringify([tl.mode, its.map((i) => [i.sc, i.t0, i.end, i.endKind, i.last, i.evs.length, short(i.x)])]);
+  const el = $("tl"); if (!el) return;
+  el.hidden = !its.length;
+  if (sig === tl.built) return; tl.built = sig;
+  // real time over several days: the axis shows the day with the most reports (e.g. the zapora-* wave), the rest are greyed rows
+  let focus = its; tl.day = null;
+  if (tl.mode === "abs" && its.length) {
+    const byDay = {}; for (const it of its) (byDay[new Date(it.t0 * 60000).toDateString()] ||= []).push(it);
+    const ks = Object.keys(byDay);
+    if (ks.length > 1) { const best = ks.sort((a, b) => byDay[b].length - byDay[a].length || new Date(b) - new Date(a))[0]; focus = byDay[best]; tl.day = { label: tlFmt(focus[0].t0, "day"), n: focus.length, other: its.length - focus.length }; }
+  }
+  tl.off = new Set(its.filter((it) => !focus.includes(it)).map((it) => it.sc));
+  if (tl.off.size) { tl.items = its = [...focus, ...its.filter((it) => tl.off.has(it.sc))]; }
+  if (its.length) {
+    const lo = Math.min(...focus.map(tlBase)), hi = Math.max(...focus.map((it) => tlBase(it) + it.last)), pad = Math.max(10, (hi - lo) * 0.03);
+    tl.lo = lo - pad / 2; tl.hi = hi + pad;
+    if (tl.cur != null) tl.cur = Math.min(tl.hi, Math.max(tl.lo, tl.cur));
+  }
+  const P = (v) => (v - tl.lo) / (tl.hi - tl.lo) * 100, pc = (v) => P(v).toFixed(3) + "%";
+  const rows = its.map((it) => {
+    const b = tlBase(it), to = b + (it.end ?? it.last), cls = it.endKind || "open";
+    const tip = `${short(it.x)}: zgłoszenie ${it.date || ""} ${it.start}${it.lastContact ? ` (ostatni kontakt ${it.lastContact})` : ""}${it.end != null ? ` · ${TL_STATE[it.endKind]} po ${tlFmtDur(it.end)}` : " · trwa (brak końca w danych)"}`;
+    const mk = it.evs.map((e) => `<i class="tlk k-${e.k}" data-v="${b + e.m}" style="left:${pc(b + e.m)}${e.k !== "found" && EV_COL[e.kind] ? `;--c:var(${EV_COL[e.kind]})` : ""}" title="${esc(e.at + " · " + (e.k === "zespol" ? e.title : shortEv(e.title, e.k)))}"></i>`).join("");
+    if (tl.off.has(it.sc)) return `<div class="tlr off" data-sc="${esc(it.sc)}"><a class="tln" href="${openURL(it.sc)}" title="${esc(tip)}">${esc(short(it.x))}</a><div class="trk" title="${esc(tip)}"><span class="offd">inny dzień: ${esc(tlFmt(it.t0))}</span></div></div>`;
+    return `<div class="tlr" data-sc="${esc(it.sc)}"><a class="tln" href="${openURL(it.sc)}" title="${esc(tip)}">${esc(short(it.x))}</a><div class="trk" title="${esc(tip)}">`
+      + `<i class="tlb ${cls}" style="left:${pc(b)};width:${Math.max(0.4, P(to) - P(b)).toFixed(3)}%"></i>${it.end == null ? `<i class="tlt" style="left:${pc(to)};right:0"></i>` : ""}${mk}</div></div>`;
+  }).join("");
+  const mini = focus.map((it) => { const b = tlBase(it); return `<i class="ms" style="left:${pc(b)}"></i>${it.end != null ? `<i class="me ${it.endKind}" style="left:${pc(b + it.end)}"></i>` : ""}`; }).join("");
+  // axis ticks: a round step giving at most ~7 labels; real time aligned to the local clock
+  const span = tl.hi - tl.lo, step = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080, 20160, 43200, 86400].find((s) => span / s <= 7) || 172800;
+  const tz = tl.mode === "abs" ? new Date(tl.lo * 60000).getTimezoneOffset() : 0, ticks = [];
+  for (let v = Math.ceil((tl.lo - tz) / step) * step + tz; v <= tl.hi && ticks.length < 12; v += step) ticks.push(v);
+  const fmtTick = (v) => tl.mode === "rel" ? tlFmt(v) : step >= 1440 ? tlFmt(v, "day") : tlFmt(v, new Date(v * 60000).getHours() === 0 && new Date(v * 60000).getMinutes() === 0 ? "day" : "hm");
+  $("tlRows").innerHTML = `<div class="tllg"><span><i class="sw live"></i>trwa</span><span><i class="sw found"></i>znaleziono</span><span><i class="sw ended"></i>zakończona</span><span><i class="sw open"></i>brak końca w danych</span>`
+    + `<span><i class="tlk k-zespol"></i>zespół na miejscu</span><span><i class="tlk k-nic"></i>przeszukano, nic</span><span><i class="tlk k-found"></i>ZNALEZIONO</span>${tl.day ? `<span>Czas rzeczywisty: dzień ${esc(tl.day.label)} (${tl.day.n} akcji), pozostałe ${tl.day.other} w innych dniach</span>` : ""}</div>` + rows;
+  $("tlMini").innerHTML = `<span class="tln">${tl.day ? `Dzień ${esc(tl.day.label)} <b>${tl.day.n}</b>` : `Wszystkie <b>${its.length}</b>`}</span><div class="trk">${mini}</div>`;
+  $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${fmtTick(v)}</span>`).join("")}</div>`;
+  $("tl").querySelectorAll(".tlr").forEach((r) => { r.onmouseenter = () => setHl(r.dataset.sc); r.onmouseleave = () => setHl(null); });
+  for (const b of $("tl").querySelectorAll("[data-mode]")) b.classList.toggle("on", b.dataset.mode === tl.mode);
+}
+function tlFmtDur(m) { m = Math.round(m); return m >= 1440 ? `${Math.floor(m / 1440)} d ${Math.floor(m % 1440 / 60)} h` : `${Math.floor(m / 60)} h ${pad2(m % 60)} min`; }
+function tlApply() {
+  const el = $("tl"); if (!el || el.hidden) return;
+  const c = tl.cur, P = (v) => (v - tl.lo) / (tl.hi - tl.lo);
+  if (!el.classList.contains("peek") && innerWidth > 900) document.documentElement.style.setProperty("--tl-h", el.offsetHeight + 12 + "px");   // Doradca sits above the strip
+  el.classList.toggle("scrub", c != null);
+  $("tlLive").classList.toggle("on", c == null);
+  $("tlPlay").textContent = tl.play ? "❚❚" : "▶"; $("tlPlay").title = tl.play ? "Pauza" : "Odtwórz osie wszystkich akcji (1× = 1 minuta na sekundę)";
+  $("tlSpeed").textContent = tl.speed + "×";
+  const cur = $("tlCur"); cur.hidden = c == null;
+  if (c != null) cur.style.setProperty("--p", Math.min(1, Math.max(0, P(c))));
+  let n = { pre: 0, live: 0, found: 0, ended: 0 };
+  for (const it of tl.items) if (!tl.off.has(it.sc)) n[tlState(it, c ?? tl.hi)]++;
+  $("tlNow").innerHTML = c == null ? `<b>Na żywo</b> <span class="mute">przesuń kursor, aby cofnąć się w czasie</span>`
+    : `<b class="mono">${tlFmt(c)}</b> <span class="mute">trwa ${n.live} · znaleziono ${n.found + n.ended}${n.pre ? ` · jeszcze nie zgłoszone ${n.pre}` : ""}</span>`;
+  el.querySelectorAll(".tlr").forEach((r) => { const it = tl.by[r.dataset.sc]; r.dataset.s = c == null || !it ? "" : tlState(it, c); });
+  el.querySelectorAll(".tlr .tlk").forEach((k) => k.classList.toggle("fut", c != null && +k.dataset.v > c));
+  for (const [k, m] of markers) { const x = incidents.find((i) => i.sc === k); if (x) paintMarker(x, m); }
+  document.querySelectorAll("#cards .card").forEach((card) => {
+    const it = !tl.off.has(card.dataset.sc) && tl.by[card.dataset.sc], s = c != null && it ? tlState(it, c) : null;
+    card.classList.toggle("tl-pre", s === "pre");
+    let b = card.querySelector(".tlst");
+    if (!s) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement("span"); b.className = "tlst"; card.querySelector(".ctop").appendChild(b); }
+    b.className = "tlst " + s; b.textContent = `${tlFmt(c)}: ${TL_STATE[s]}`;
+  });
+}
+function tlSet(v) { tl.cur = v == null ? null : Math.min(tl.hi, Math.max(tl.lo, v)); tlApply(); }
+function tlStop() { if (tl.play) clearInterval(tl.play); tl.play = 0; }
+function tlPlay() {
+  if (tl.play) { tlStop(); tlApply(); return; }
+  if (tl.cur == null || tl.cur >= tl.hi) tl.cur = tl.lo;
+  let t = performance.now();
+  tl.play = setInterval(() => {
+    const now = performance.now(), dt = Math.min(0.5, (now - t) / 1000); t = now;
+    tl.cur = Math.min(tl.hi, tl.cur + dt * tl.speed); if (tl.cur >= tl.hi) tlStop(); tlApply();
+  }, 50);
+  tlApply();
+}
+function tlInit() {
+  const el = $("tl"); if (!el) return;
+  $("tlPlay").onclick = tlPlay;
+  $("tlSpeed").onclick = () => { tl.speed = TL_SPEEDS[(TL_SPEEDS.indexOf(tl.speed) + 1) % TL_SPEEDS.length]; try { localStorage.setItem("rescue-centrum-tl-speed", String(tl.speed)); } catch (e) {} tlApply(); };
+  $("tlLive").onclick = () => { tlStop(); tlSet(null); };
+  el.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => { if (tl.mode === b.dataset.mode) return; tl.auto = false; tl.mode = b.dataset.mode; tlStop(); tl.cur = null; tlBuild(); tlApply(); });
+  // scrub: press / drag anywhere over the tracks column (the mini strip, the axis or the Gantt rows)
+  const body = $("tlBody"), vAt = (e) => { const r = $("tlMini").querySelector(".trk").getBoundingClientRect(); return tl.lo + (tl.hi - tl.lo) * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); };
+  let drag = false;
+  body.addEventListener("pointerdown", (e) => {
+    const trk = $("tlMini").querySelector(".trk"); if (!trk || e.button > 0 || e.target.closest("a,button")) return;
+    if (e.clientX < trk.getBoundingClientRect().left - 4) return;
+    drag = true; tlStop(); try { body.setPointerCapture(e.pointerId); } catch (er) {} tlSet(vAt(e)); e.preventDefault();
+  });
+  body.addEventListener("pointermove", (e) => { if (drag) tlSet(vAt(e)); });
+  for (const t of ["pointerup", "pointercancel"]) body.addEventListener(t, () => drag = false);
+  el.addEventListener("keydown", (e) => {
+    if (e.target.closest("button,a")) return;
+    const st = (tl.hi - tl.lo) / 100;
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") { tlStop(); tlSet((tl.cur ?? tl.hi) + (e.key === "ArrowRight" ? st : -st)); e.preventDefault(); }
+  });
+  const narrow = matchMedia("(max-width:900px)");
+  if (!narrow.matches) hoverHold(el, { holdMs: 3000 });
+  $("tlMore").onclick = () => { const on = el.classList.toggle("peek"); $("tlMore").textContent = on ? "Zwiń oś" : "Oś czasu"; $("tlMore").setAttribute("aria-expanded", on); };
+  // the Doradca panel sits just above the collapsed strip
+  const ro = new ResizeObserver(() => { if (!el.classList.contains("peek")) document.documentElement.style.setProperty("--tl-h", el.hidden ? "0px" : el.offsetHeight + 12 + "px"); });
+  ro.observe(el);
+}
+tlInit();
+
 // ---------- loop: every 5 s, never overlapping
 let busy = false;
 async function tick() {
@@ -516,5 +687,5 @@ async function skeleton(teamP) {
 setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("pl-PL"); }, 1000);
 setInterval(tick, POLL_MS);
 tick();
-window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, get map() { return map; } };   // tests
+window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, get map() { return map; }, tl, tlSet };   // tests
 initMap().catch((e) => console.warn("[centrum] map", e));
