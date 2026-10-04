@@ -17,7 +17,7 @@ import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / p
 import { createTimeline3D } from './timeline3d.js';
 import { createCoverage3D } from './coverage3d.js';
 import { createWalk3D } from './walk3d.js';
-import { createMachine, createVehicle, vehicleKind, operatorPaint } from './machines3d.js'; // unit models: aircraft, boats, ground vehicles   // free walk (Spacer): first person from a clicked spot
+import { createMachine, createVehicle, vehicleKind, operatorPaint, createRailcar, createDamagedTrack } from './machines3d.js'; // unit models: aircraft, boats, ground vehicles   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
 // load in slices: the build hands the main thread back between stages (in /app the iframe shares it with the shell);
@@ -1464,6 +1464,49 @@ if (foundPin) { foundPin.visible = false; scene.add(foundPin); }
 // blind test reveal: the hider's true spot, published with the salt after the round
 const revealPin = REV?.at ? pin(REV.at[0], REV.at[1], '#b8322a', 0.55, 'Odsłonięte: tu była · ' + esc(REV.round || ''), 'target', 0.028) : null;
 if (revealPin) { revealPin.visible = false; scene.add(revealPin); }
+// ---------- wreck: a derailed train and damaged track from the scenario's "wreck" (e.g. dywersja-poprad) ----------
+// { kind: 'train', at, cars, sabotage: [{at, label}] }: the locomotive and cars sit on the nearest OSM railway at
+// `at`, heading north (the run's direction of travel is not in the data), and come off it towards the lower side of
+// the embankment: the locomotive furthest, the first car on its side, the next ones less and less, the last one still
+// on the rails. Each sabotage point gets torn rails and barriers; one away from the IPP also gets a labelled pin.
+// Real size (a car is 24.5 m). Display only: the engine knows nothing of it.
+const wreck = (() => {
+  const W = SCN?.wreck; if (!W) return null;
+  const g = new THREE.Group(); g.name = 'wreck'; scene.add(g);
+  const rails = (OSM?.roads || []).filter((r) => r.c === 'rail');
+  const onRail = (la, lo) => { // nearest point and direction of the railway, scene units; null without one within 300 m
+    const px = toX(lo), pz = toZ(la); let best = null, bd = 0.3;
+    for (const r of rails) for (let i = 0; i + 3 < r.l.length; i += 2) {
+      const ax = toX(r.l[i + 1]), az = toZ(r.l[i]), dx = toX(r.l[i + 3]) - ax, dz = toZ(r.l[i + 2]) - az, L2 = dx * dx + dz * dz || 1e-12;
+      const u = clamp(((px - ax) * dx + (pz - az) * dz) / L2, 0, 1), x = ax + u * dx, z = az + u * dz, d = Math.hypot(px - x, pz - z);
+      if (d < bd) { bd = d; const l = Math.sqrt(L2); best = { x, z, dx: dx / l, dz: dz / l }; }
+    }
+    if (best && best.dz > 0) { best.dx = -best.dx; best.dz = -best.dz; } // forward = northwards
+    return best;
+  };
+  const ground = (x, z) => meshHeightAt(toLat(z), toLon(x));
+  if (W.kind === 'train' && W.at) {
+    const a = onRail(W.at[0], W.at[1]) || { x: toX(W.at[1]), z: toZ(W.at[0]), dx: 0, dz: -1 };
+    const sx = -a.dz, sz = a.dx, side = ground(a.x + sx * 0.03, a.z + sz * 0.03) < ground(a.x - sx * 0.03, a.z - sz * 0.03) ? 1 : -1; // downhill side
+    // [along the track km, off it km, yaw deg, roll deg] from the locomotive back
+    const POSE = [[0.03, 0.011, 24, 14], [0.006, 0.008, 38, 86], [-0.019, 0.0045, 16, 9], [-0.0445, 0.0015, 6, 0], [-0.07, 0, 0, 0], [-0.0955, 0, 0, 0]];
+    for (let i = 0; i <= Math.max(1, Math.min(5, W.cars || 4)); i++) {
+      const [al, off, yaw, roll] = POSE[i], car = createRailcar(THREE, i === 0);
+      const x = a.x + a.dx * al + sx * side * off, z = a.z + a.dz * al + sz * side * off, h = Math.atan2(-a.dz, a.dx) - side * (yaw * Math.PI) / 180;
+      car.rotation.order = 'YXZ'; car.rotation.y = h; car.rotation.x = side * (roll * Math.PI) / 180;
+      const hx = Math.cos(h) * 0.011, hz = -Math.sin(h) * 0.011; // on the higher of its two ends and middle, a little sunk
+      car.position.set(x, Math.max(ground(x, z), ground(x + hx, z + hz), ground(x - hx, z - hz)) - 0.0004 + (roll > 45 ? 0.0012 : 0), z);
+      car.name = 'wreckCar'; g.add(car);
+    }
+  }
+  for (const sb of W.sabotage || []) {
+    const r = onRail(sb.at[0], sb.at[1]) || { x: toX(sb.at[1]), z: toZ(sb.at[0]), dx: 0, dz: -1 };
+    const d = createDamagedTrack(THREE); d.position.set(r.x, ground(r.x, r.z), r.z); d.rotation.y = Math.atan2(-r.dz, r.dx); g.add(d);
+    const ip = SCN?.ipp?.at || W.at || sb.at;
+    if (Math.hypot(sb.at[0] - ip[0], (sb.at[1] - ip[1]) * KX) * KM > 0.15) g.add(pin(sb.at[0], sb.at[1], '#b8322a', 0.3, esc(sb.label || 'Uszkodzony tor'), 'clue', 0.02));
+  }
+  return g;
+})();
 
 // dynamic layers
 const dyn = { top: new THREE.Group(), searched: new THREE.Group(), teams: new THREE.Group(), signals: new THREE.Group(), live: new THREE.Group(), game: new THREE.Group() };

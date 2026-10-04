@@ -156,11 +156,13 @@ export function operatorPaint(name = '') {
 }
 
 // Ground units' vehicles, parked at the unit's base (app3d places them on the nearest public road): police car,
-// city guard car, fire engine (PSP / OSP), mountain rescue off-roader (GOPR / TOPR). Units with another name (or none
+// city guard car, fire engine (PSP / OSP), mountain rescue off-roader (GOPR / TOPR), ambulance (ZRM / PRM); SOK (rail
+// security) uses the police car. Units with another name (or none
 // of these services) get no vehicle. Blue lights flash while the unit is deployed (setActive).
 export function vehicleKind(name = '') {
   if (/Straż Miejska/i.test(name)) return 'guard';
-  if (/Policj/i.test(name)) return 'police';
+  if (/Policj|SOK|Straż Ochrony Kolei/i.test(name)) return 'police'; // SOK (rail security) drives a car like the police
+  if (/ZRM|PRM|Ratownictwa Medycznego|Pogotowi/i.test(name)) return 'ambulance';
   if (/PSP|OSP|JRG|Straż Pożarna/i.test(name)) return 'fire';
   if (/GOPR|TOPR/.test(name)) return 'mountain';
   return null;
@@ -179,7 +181,8 @@ function sharedV(THREE) {
     wheel: new THREE.CylinderGeometry(0.00034, 0.00034, 0.0019, 10).rotateX(Math.PI / 2),
     bar: box(0.0005, 0.00016, 0.00045),
     tyre: mat(0x1d1f22, 0.8), white: mat(0xf2f2ef), glass: mat(0x2a3440, 0.2),
-    police: mat(0x2b4fa3), guard: mat(0xe6e9e4), fire: mat(0xc4161c), mountain: mat(0xb3121b),
+    police: mat(0x2b4fa3), guard: mat(0xe6e9e4), fire: mat(0xc4161c), mountain: mat(0xb3121b), ambulance: mat(0xf2d335),
+    vanBody: box(0.0052, 0.0022, 0.002, 0.00145, -0.0003), vanCab: box(0.0014, 0.0013, 0.0019, 0.001, 0.0026),
     blueOn: new THREE.MeshBasicMaterial({ color: 0x3d7bff, toneMapped: false }), blueOff: mat(0x1e2b4a, 0.3),
   };
   return V;
@@ -189,7 +192,9 @@ export function createVehicle(THREE, kind) {
   const g = sharedV(THREE), obj = new THREE.Group(), add = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); obj.add(o); return o; };
   obj.rotation.order = 'YXZ';
   let barY, barX = 0, len;
-  if (kind === 'fire') {
+  if (kind === 'ambulance') {
+    add(g.vanBody, g.ambulance); add(g.vanCab, g.ambulance); barY = 0.00262; barX = 0.0018; len = 0.0022;
+  } else if (kind === 'fire') {
     add(g.truckCab, g.fire); add(g.truckBody, g.fire); barY = 0.00225; barX = 0.0029; len = 0.0039;
   } else if (kind === 'mountain') {
     add(g.suvBody, g.mountain); add(g.suvCab, g.white); barY = 0.002; barX = -0.0004; len = 0.0021;
@@ -210,4 +215,37 @@ export function createVehicle(THREE, kind) {
     },
     setHeading(dx, dz) { if (Math.hypot(dx, dz) > 1e-9) obj.rotation.y = Math.atan2(-dz, dx); },
   };
+}
+
+// Rail vehicles for a scenario "wreck" (app3d places them on the OSM railway): an electric locomotive or a passenger
+// car, real size (car 24.5 m, locomotive 19.5 m), regional red livery; origin at the bottom centre, long axis = +x.
+// And a damaged-track marker: bent rails and a red-white barrier across the track.
+export function createRailcar(THREE, loco = false) {
+  const g = new THREE.Group(), L = loco ? 0.0195 : 0.0245, H = 0.0039, Wd = 0.0029;
+  const mat = (c, r = 0.5, m = 0.2) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+  const red = mat(0xc62828), white = mat(0xeeeeea), dark = mat(0x1d2126, 0.3, 0.4), grey = mat(0x55595e, 0.7);
+  const add = (geo, m, x, y, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); g.add(o); return o; };
+  add(new THREE.BoxGeometry(L, H * 0.62, Wd), red, 0, 0.0009 + H * 0.31);                     // lower body
+  add(new THREE.BoxGeometry(L, H * 0.38, Wd), white, 0, 0.0009 + H * 0.81);                   // upper body
+  add(new THREE.BoxGeometry(L * 0.96, H * 0.2, Wd * 1.02), dark, 0, 0.0009 + H * 0.72);      // window band
+  add(new THREE.BoxGeometry(L * 0.98, 0.0003, Wd * 0.9), grey, 0, 0.0009 + H + 0.00015);     // roof
+  for (const x of [L * 0.33, -L * 0.33]) add(new THREE.BoxGeometry(0.0028, 0.0008, Wd * 0.85), dark, x, 0.0004); // bogies
+  if (loco) { add(new THREE.BoxGeometry(0.0006, H * 0.3, Wd * 0.9), dark, L / 2 - 0.0002, 0.0009 + H * 0.75); add(new THREE.BoxGeometry(0.0012, 0.0006, 0.0008), dark, 0, 0.0009 + H + 0.0006); }
+  return g;
+}
+
+export function createDamagedTrack(THREE) {
+  const g = new THREE.Group(), rail = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.6, metalness: 0.5 });
+  const red = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.6 }), white = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.6 });
+  for (const z of [0.00072, -0.00072]) { // the two rails, torn and bent up
+    const a = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.00015, 0.00012), rail); a.position.set(-0.0032, 0.0002, z); a.rotation.z = 0.25; g.add(a);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.00015, 0.00012), rail); b.position.set(0.0034, 0.0004, z * 1.6); b.rotation.set(0.2, 0.35, -0.3); g.add(b);
+  }
+  const crater = new THREE.Mesh(new THREE.CircleGeometry(0.0026, 16).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: 1 }));
+  crater.position.y = 0.00008; g.add(crater);
+  for (const x of [-0.006, 0.006]) { // barrier across the track on both sides: two posts and a striped bar
+    for (const z of [0.0026, -0.0026]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.00015, 0.0011, 0.00015), white); p.position.set(x, 0.00055, z); g.add(p); }
+    for (let i = 0; i < 6; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.00012, 0.00022, 0.00087), i % 2 ? white : red); s.position.set(x, 0.00095, -0.0026 + 0.00087 * (i + 0.5)); g.add(s); }
+  }
+  return g;
 }
