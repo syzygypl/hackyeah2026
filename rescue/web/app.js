@@ -1320,7 +1320,9 @@
     if (i == null || !S.lastP) { tip.hidden = true; return; }
     const M = S.M, r = Math.floor(i / M.cols), c = i % M.cols, g = M.segList[M.segOfIdx[i]];
     const sl = M.T && M.T.slopeDeg && M.T.slopeDeg.length === M.N ? ` · nachylenie ${nf(M.T.slopeDeg[i], 0)}°` : '';
-    tip.innerHTML = `<b>${pctAuto(S.lastP[i])}</b> POA komórki (${r}, ${c})<br>${esc(g.id)} ${esc(g.name)}${sl}`;
+    // honesty rule (qa-prepitch #6): no bare POA %, no cell indices - the same 'x the average' as the legend
+    const x = S.lastP[i] * M.N, xs = x < 0.05 ? 'poniżej 0,1×' : (x < 10 ? nf(x, 1) : nf(x, 0)) + '×';
+    tip.innerHTML = `Waga mapy: <b>${xs}</b> średniej<br>${esc(g.id)} ${esc(g.name)}${sl}`;
     tip.hidden = false; tip.style.left = pt.x + 14 + 'px'; tip.style.top = pt.y + 14 + 'px';
   }
 
