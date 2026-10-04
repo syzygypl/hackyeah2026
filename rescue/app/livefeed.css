@@ -12,6 +12,7 @@
 .lfpanel{position:absolute;right:0;top:calc(100% + 8px);z-index:40;width:min(420px,calc(100vw - 24px));max-height:min(70vh,560px);display:flex;flex-direction:column;background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow)}
 .lfhead{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-bottom:1px solid var(--rl-line)}
 .lfsim{font-size:var(--rl-fs-xs);color:var(--rl-mute)}
+.lfkpi{font-size:var(--rl-fs-xs);color:var(--rl-ink-2);font-variant-numeric:tabular-nums}.lfkpi[hidden]{display:none}
 .lflist{overflow:auto;padding:4px 0}
 .lfempty{padding:14px 12px;color:var(--rl-mute);font-size:var(--rl-fs-s)}
 .lffoot{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 12px;border-top:1px solid var(--rl-line);font-size:var(--rl-fs-s)}

@@ -151,6 +151,13 @@ function persist() {   // keep two days of local ACKs
 
 // ---------- sound (off by default), one short beep via WebAudio
 const soundOn = () => ls.get("rescue-live-sound") === "1";
+// system notifications (#1): only after the operator ticks the box (browser permission), only while the tab is in the background
+const NOTIF = typeof Notification !== "undefined";
+const notifyOn = () => NOTIF && ls.get("rescue-live-notify") === "1" && Notification.permission === "granted";
+function sysNotify(title, body, tag, onclick) {
+  if (!notifyOn() || !document.hidden) return;
+  try { const x = new Notification(title, { body, tag, renotify: false }); x.onclick = () => { try { window.focus(); } catch (e) {} x.close(); if (onclick) onclick(); }; } catch (e) {}
+}
 let actx = null;
 function beep() {
   if (!soundOn()) return;
@@ -206,9 +213,9 @@ export function mountBell(host, opts = {}) {
   const wrap = document.createElement("span"); wrap.className = "lfw";
   wrap.innerHTML = `<button type="button" class="lfbell" aria-haspopup="true" aria-expanded="false" title="Powiadomienia: nowe akcje i zgłoszenia (${SIM_NOTE})">`
     + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4"/></svg><span class="lfbadge" hidden>0</span><span class="lfsr">Powiadomienia</span></button>`
-    + `<div class="lfpanel" role="dialog" aria-label="Powiadomienia: nowe akcje i zgłoszenia" hidden><div class="lfhead"><b>Powiadomienia</b><span class="lfsim">${esc(SIM_NOTE)}</span>`
+    + `<div class="lfpanel" role="dialog" aria-label="Powiadomienia: nowe akcje i zgłoszenia" hidden><div class="lfhead"><b>Powiadomienia</b><span class="lfsim">${esc(SIM_NOTE)}</span><span class="lfkpi" hidden></span>`
     + `<span class="lffil" role="group" aria-label="Filtr"><button type="button" data-f="all" class="on">Wszystko</button><button type="button" data-f="new">Nowe akcje</button><button type="button" data-f="call">Zgłoszenia</button></span></div>`
-    + `<div class="lflist"></div><div class="lffoot"><label><input type="checkbox" class="lfsound"> dźwięk</label><button type="button" class="lfall">Potwierdź wszystkie</button><span class="lfstore"></span></div></div>`;
+    + `<div class="lflist"></div><div class="lffoot"><label><input type="checkbox" class="lfsound"> dźwięk</label>${NOTIF ? `<label title="Powiadomienie systemowe, gdy karta jest w tle (przeglądarka zapyta o zgodę)"><input type="checkbox" class="lfnotify"> powiadomienia systemowe</label>` : ""}<button type="button" class="lfall">Potwierdź wszystkie</button><span class="lfstore"></span></div></div>`;
   host.appendChild(wrap);
   let stack = document.querySelector(".lftoasts");
   if (!stack) { stack = document.createElement("div"); stack.className = "lftoasts"; stack.setAttribute("aria-live", "polite"); document.body.appendChild(stack); }
@@ -217,6 +224,16 @@ export function mountBell(host, opts = {}) {
   wrap.querySelectorAll(".lffil button").forEach((b) => b.onclick = (e) => { e.stopPropagation(); filter = b.dataset.f; wrap.querySelectorAll(".lffil button").forEach((x) => x.classList.toggle("on", x === b)); shownSig = ""; render(); });
   wrap.querySelector(".lfsound").checked = soundOn();
   wrap.querySelector(".lfsound").onchange = (e) => ls.set("rescue-live-sound", e.target.checked ? "1" : "0");
+  const nb = wrap.querySelector(".lfnotify");
+  if (nb) {
+    nb.checked = notifyOn();
+    nb.onchange = async (e) => {
+      if (!e.target.checked) { ls.set("rescue-live-notify", "0"); return; }
+      let p = Notification.permission; if (p === "default") { try { p = await Notification.requestPermission(); } catch (err) { p = "denied"; } }
+      ls.set("rescue-live-notify", p === "granted" ? "1" : "0"); e.target.checked = p === "granted";
+      if (p === "denied") e.target.title = "Przeglądarka blokuje powiadomienia dla tej strony - zmień w ustawieniach witryny";
+    };
+  }
   const toggle = (on) => { panel.hidden = !on; bell.setAttribute("aria-expanded", on); document.body.classList.toggle("lfopen", on); if (on) render(); };
   bell.onclick = (e) => { e.stopPropagation(); toggle(panel.hidden); };
   const outside = (e) => { if (!panel.hidden && !wrap.contains(e.target)) toggle(false); };
@@ -246,6 +263,12 @@ export function mountBell(host, opts = {}) {
     });
   }
   const recent = (now) => notes.filter((n) => now - n.ms <= windowMin * 60000);
+  function kpi() {   // time from a note to its ACK over the notes the bell holds (#1: the pitch's response number); minutes, rounded
+    const d = notes.map((n) => { const a = acks.get(n.key); return a ? (Date.parse(a.at) - n.ms) / 60000 : null; }).filter((x) => x != null && x >= 0).sort((a, b) => a - b);
+    if (!d.length) return { n: 0 };
+    const med = d.length % 2 ? d[(d.length - 1) / 2] : (d[d.length / 2 - 1] + d[d.length / 2]) / 2, r1 = (x) => (Math.round(x * 10) / 10).toString().replace(".", ",");
+    return { n: d.length, med: r1(med), max: r1(d[d.length - 1]) };
+  }
   function render() {
     const now = nowMs();
     notes = notesFor(insts, (sc) => info[sc], now);
@@ -258,6 +281,7 @@ export function mountBell(host, opts = {}) {
     for (const n of rec.slice().reverse()) {
       if (toasted.has(n.key) || acks.isAcked(n.key) || now - n.ms > toastMin * 60000 || (opts.toastSince && n.ms < opts.toastSince) || !info[n.inst.sc]) continue;
       toasted.add(n.key); const el = document.createElement("div"); el.dataset.key = n.key; stack.prepend(el); beep();
+      { const d = info[n.inst.sc] || {}; sysNotify(`${TYPE_LABEL[n.type] || "Powiadomienie"}: ${n.title}`, [d.place, SIM_NOTE].filter(Boolean).join(" · "), n.key, () => open(n)); }
       while (stack.children.length > 3) stack.lastElementChild.remove();
     }
     for (const el of [...stack.children]) {
@@ -267,6 +291,8 @@ export function mountBell(host, opts = {}) {
       if (el._h !== h) { el._h = h; el.className = `lftoast t-${n.type}` + (h.includes(" late\"") ? " late" : ""); el.innerHTML = h; el.querySelector(".lfx").onclick = () => el.remove(); }
     }
     wire(stack);
+    const k = kpi(); const ke = wrap.querySelector(".lfkpi");
+    if (ke) { ke.hidden = !k.n; ke.textContent = k.n ? `Czas do potwierdzenia: mediana ${k.med} min, najdłużej ${k.max} min (${k.n} potw.)` : ""; }
     wrap.querySelector(".lfstore").textContent = acks.shared ? "potwierdzenia wspólne (serwer)" : "potwierdzenia tylko w tej przeglądarce";
     if (panel.hidden) return;
     const shown = rec.filter((n) => filter === "all" || n.type === filter);
@@ -286,6 +312,7 @@ export function mountBell(host, opts = {}) {
     },
     render,
     get notes() { return notes; },
+    kpi,
     destroy() { ackListeners.delete(onAck); document.removeEventListener("click", outside); document.removeEventListener("keydown", onKey); wrap.remove(); },
   };
 }

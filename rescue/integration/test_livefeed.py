@@ -128,6 +128,10 @@ def main():
         c.js("document.querySelector('.lfbell').click()")
         still = c.until(f"(()=>{{const i=document.querySelector('.lfi[data-key^=\"{key}\"]');return i?i.className:''}})()", 10)
         check("ack_persists_after_reload", again is False and "acked" in (still or ""), f"toast again={again} item={still}")
+        kp = c.until("(()=>{const k=document.querySelector('.lfpanel .lfkpi');return k&&!k.hidden?k.innerText:''})()", 10)
+        check("response_time_in_bell", bool(kp) and "mediana" in kp and "potw." in kp, kp or "")
+        nb = c.js("(()=>{const b=document.querySelector('.lfpanel .lfnotify');return b?[b.checked, Notification.permission]:null})()")
+        check("system_notify_box_off_by_default", bool(nb) and nb[0] is False, str(nb))
         # the rescuer phone: no bell, no toasts
         c.js("localStorage.removeItem('rescue-live-acks')")
         open_page(c, f"{srv.base}/app/?role=ratownik&sc=zawrat&simAt={at}", 1440, 900, False)
