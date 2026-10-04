@@ -76,7 +76,7 @@ async function loadScenario(id) {
   teamOps = []; closePop();
   let run, backend;
   if (s.id === "studio") { run = await api("/story"); backend = "studio"; }
-  else if (s.api) { const u = runUrlFor(s.run); run = (await preRun(u)) || await api(u); backend = "api"; store.runUrl = u; store.assessUrl = s.assessment; }
+  else if (s.api) { const u = runUrlFor(s.run); run = (await preRun(u)) || await api(u); backend = "api"; store.runUrl = u; store.assessUrl = s.assessment; warmRun(s.run, s.id); }
   else { run = await (await fetch(STATIC[s.id].run, { cache: "no-cache" })).json(); backend = "static"; }
   $("scen").value = s.id;
   applyRun(run, { scenario: s.id, backend, editable: backend === "studio" }, "load");
@@ -691,6 +691,13 @@ function syncFrame(k, why) {
     if (k !== "2da" || !F.el.getAttribute("src") || !F.visible()) { F.el.src = u; return; }
     // double buffer (2D): the old map stays on screen until the new view says "ready", then a 200 ms crossfade - no blank 2D
     if (F.next) F.next.remove();
+    const runOf = (x) => new URL(x, location.href).searchParams.get("run"), T = window.__rescueRunText;
+    if (F.spare && F.spareReady && runOf(F.spare.src) === runOf(u) && T && T.text === F.spareText) {   // the spare already shows this run (warmRun)
+      F.next = F.spare; F.spare = null;
+      dispatchEvent(new MessageEvent("message", { data: F.spareReady, origin: location.origin, source: F.next.contentWindow }));
+      return;
+    }
+    if (F.spare) { F.spare.remove(); F.spare = null; }
     const n = F.next = F.el.cloneNode(false); n.removeAttribute("id");
     n.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;transition:opacity .2s";
     n.src = u; F.el.after(n);
@@ -705,17 +712,49 @@ function warmOther(k) {
   for (const o in FRAMES) { const F = FRAMES[o]; if (o === k || F.warm) continue; F.warm = true;
     afterUse(() => (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(() => syncFrame(o, "load"), { timeout: 3000 })); }
 }
+// Historia <-> Na żywo: after the first interaction, when idle, the other time mode's run is fetched once (so the switch gets a
+// 304 instead of ~0.7 MB) and a hidden spare 2D view boots on it; if the run is still the same at the switch, the spare is
+// shown at once (crossfade) instead of booting a new 2D view while the operator waits
+function warmRun(base, sc) {
+  const other = store.time === "hist" ? base : base + (base.includes("?") ? "&" : "?") + "live=0";
+  let tries = 0;
+  const spare = async () => {
+    const F3 = FRAMES["3d"]; if (F3.src && !F3.ready && ++tries < 15) { setTimeout(spare, 1500); return; }   // the 3D view is booting: do not boot both at once
+    try {
+      const h = {}; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
+      const r = await fetch(other, { headers: h, cache: "no-cache" }); if (!r.ok) return;
+      const text = await r.text(), F = FRAMES["2da"];
+      if (store.scenario !== sc || store.mode !== "akcja" || store.role === "ratownik" || !F.ready || F.next) return;
+      if (F.spare) F.spare.remove();
+      const n = F.spare = F.el.cloneNode(false); n.removeAttribute("id"); F.spareText = text; F.spareReady = null;
+      n.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;transition:opacity .2s";
+      F.spareKeep = window.__rescueRunText; window.__rescueRunText = { url: new URL(other, location.href).href, text };   // runInline for the spare's boot
+      n.src = frameURLBase("2da", 0, encodeURIComponent(sc), other, encodeURIComponent(location.origin)) + "&insets=" + insetsFor(F.el).join(","); F.el.after(n);
+    } catch (e) {}
+  };
+  afterUse(() => (window.requestIdleCallback || ((f) => setTimeout(f, 1500)))(spare, { timeout: 5000 }));
+}
 // the background boot waits for the operator (first mouse move / touch / key; hover over 2D/3D starts it at once):
 // a cold visit that never touches the page does not pay the other view's ~2 MB
 function afterUse(f) {
-  const EV = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"];
-  const wins = [window, ...Object.values(FRAMES).map((F) => { try { return F.el.contentWindow && F.el.contentWindow.document && F.el.contentWindow; } catch (e) { return null; } }).filter(Boolean)];   // the scene frames cover the screen
-  let done = false; const go = () => { if (done) return; done = true; wins.forEach((w) => EV.forEach((t) => { try { w.removeEventListener(t, go, true); } catch (e) {} })); $("views").removeEventListener("pointerenter", go); f(); };
-  wins.forEach((w) => EV.forEach((t) => w.addEventListener(t, go, { capture: true, passive: true }))); $("views").addEventListener("pointerenter", go);
+  if (afterUse.used) { f(); return; }
+  if (!afterUse.q) {   // one listener set; scene frames get it when they say "ready" (afterUse.hook), as they cover the screen
+    afterUse.q = []; afterUse.EV = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"];
+    afterUse.go = () => { if (afterUse.used) return; afterUse.used = true; const q = afterUse.q; afterUse.q = []; q.forEach((g) => g()); };
+    afterUse.hook = (w) => { try { if (!afterUse.used) afterUse.EV.forEach((t) => w.addEventListener(t, afterUse.go, { capture: true, passive: true, once: true })); } catch (e) {} };
+    afterUse.hook(window); $("views").addEventListener("pointerenter", afterUse.go, { once: true });
+    for (const F of Object.values(FRAMES)) afterUse.hook(F.el.contentWindow);
+  }
+  afterUse.q.push(f);
 }
 function postTo2(F, msg) { F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
 function sync3d(why) { for (const k in FRAMES) syncFrame(k, why); }
 addEventListener("message", (e) => {
+  const sp = FRAMES["2da"];
+  if (sp.spare && sp.spare.contentWindow === e.source) {   // the hidden spare (warmRun): remember its "ready" until it is shown
+    if (e.data && e.data.source === sp.source && e.data.type === "ready") { sp.spareReady = e.data; if (sp.spareKeep !== undefined) { const T = window.__rescueRunText; if (T && T.text === sp.spareText) window.__rescueRunText = sp.spareKeep; sp.spareKeep = undefined; } }
+    return;
+  }
   const nk = Object.keys(FRAMES).find((x) => FRAMES[x].next && FRAMES[x].next.contentWindow === e.source);
   if (nk) {   // the buffered 2D view: only its "ready" counts, and it swaps in
     if (!e.data || e.data.source !== FRAMES[nk].source || e.data.type !== "ready") return;
@@ -727,6 +766,7 @@ addEventListener("message", (e) => {
   const m = e.data, F = FRAMES[k];
   if (m.type === "ready") {
     F.ready = true;
+    if (afterUse.hook) afterUse.hook(F.el.contentWindow);
     warmOther(k); F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown });
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
     if (store.selSeg) postTo(k, { type: "select", segmentId: store.selSeg });
@@ -910,9 +950,10 @@ async function setTime(t, quiet) {
   if (t === "live" && store.backend !== "api") { toast("Ten scenariusz to tylko nagranie - nie ma akcji na żywo. Wybierz scenariusz z serwera albo „+ Nowa akcja”.", 4500); return; }
   stopPlay();
   store.time = t; try { localStorage.setItem("rescue-app-time", t); } catch (e) {}
+  renderLiveHead();   // the switch answers the click at once; the map follows when the run is in
+  if (!quiet) toast(t === "live" ? "Na żywo: mapa pokazuje teraz, ze zgłoszeniami z terenu" : "Historia: nagrany przebieg akcji. Przesuń oś czasu albo naciśnij ▶", 3000);
   if (store.backend === "api") { try { await loadScenario(store.scenario); } catch (e) { toast(plErr(e)); } }
   renderLiveHead();
-  if (!quiet) toast(t === "live" ? "Na żywo: mapa pokazuje teraz, ze zgłoszeniami z terenu" : "Historia: nagrany przebieg akcji. Przesuń oś czasu albo naciśnij ▶", 3000);
 }
 // the map follows a move only after the server recomputed the run (3-7 s): until then the buttons stay locked with a
 // "przeliczam" note (the 3 s live poll used to re-enable them under the old "dalej"), the run is fetched right away, and a run
