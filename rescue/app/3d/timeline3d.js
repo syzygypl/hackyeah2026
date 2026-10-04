@@ -45,7 +45,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     tag.element.style.pointerEvents = 'auto'; tag.element.style.cursor = 'pointer';
     tag.element.onpointerdown = (e) => { labelDown = { id: a.id, x: e.clientX, y: e.clientY }; };
     tag.element.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectActor(a.id); } };
-    // helicopter, drone, boat: a model instead of the ball; the ball stays as the (invisible) click target
+    // a model for every unit kind (machines3d: aircraft, boat, foot team, dog team, divers, the missing person) instead of the ball; the ball stays as the (invisible) click target
     const machine = createMachine(THREE, a.kind, operatorPaint(a.name) || colors[a.kind] || '#555'); // operator livery when the name says it
     if (machine) { g.add(machine.obj); dot.material.visible = false; }
     g.add(dot, tag); group.add(g);
@@ -185,7 +185,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       if (a.machine) a.machine.obj.visible = fpp !== a.id;
       if (!p) continue;
       const air = a.kind === 'dron' || a.kind === 'smiglowiec';
-      a.g.position.copy(air ? eyeAt(p.lat, p.lon, a.fov?.observerHeightM || 80) : v3(p.lat, p.lon, a.machine ? 0.011 : 0.023)); // a boat rides on the water: the sea mesh is lifted 3 m and its waves add up to ~9 m (exaggerated)
+      a.g.position.copy(air ? eyeAt(p.lat, p.lon, a.fov?.observerHeightM || 80) : v3(p.lat, p.lon, !a.machine ? 0.023 : a.machine.surface === 'water' ? 0.011 : 0.0004)); // people stand on the ground; a boat / divers ride on the water: the sea mesh is lifted 3 m and its waves add up to ~9 m (exaggerated)
       if (a.machine) { // nose along the engine's track: towards the sample half a minute ahead (or from the one behind)
         const q = sampleAt(a.path, shown + 0.5), b = sampleAt(a.path, shown - 0.5);
         const [p0, p1] = q && (q.lat !== p.lat || q.lon !== p.lon) ? [p, q] : b ? [b, p] : [p, p];

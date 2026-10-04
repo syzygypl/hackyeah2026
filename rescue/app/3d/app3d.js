@@ -1784,11 +1784,11 @@ function drawTeams(s) {
     const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + (type === 'heli' || type === 'drone' ? 0.45 : 0.22) + Math.min(p0.distanceTo(p2), 6) * 0.12;
     const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2), pts = curve.getPoints(64);
     const line = makeLine(pts, { color: col, width: 1.8, opacity: 0.9, dashed: true, dash: 0.05, gap: 0.04 });
-    const mach = createMachine(THREE, type, operatorPaint(res.name) || col); // helicopter, drone, boat fly / sail the arc as a model (operator livery); teams stay a ball
+    const mach = createMachine(THREE, type, operatorPaint(res.name) || col); // aircraft fly the arc as a model (operator livery); ground teams, dogs, boats, divers go along its ground track
     const dot = mach ? mach.obj : new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: col }));
     if (!mach) { dot.scale.setScalar(0.014); dot.userData.glow = ['#' + new THREE.Color(col).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(), 100]; }
     dyn.teams.add(line, dot, label(`${esc(res.name.split(' (')[0])} · ${Math.round(a.etaMin)} min`, 'team', p1.clone()));
-    movers.push({ curve, dot, mach, mat: line.material, t: Math.random() });
+    movers.push({ curve, dot, mach, mat: line.material, t: Math.random(), speed: mach && mach.surface !== 'air' ? 0.04 : 0.15 }); // walkers loop slower (~25 s)
   }
 }
 
@@ -2493,8 +2493,12 @@ function frame() {
     const m = movers[i];
     if (m.once) { oneShot = true; m.t += dt / 1.1; m.dot.position.copy(m.curve.getPoint(Math.min(1, m.t))); if (m.t >= 1) { movers.splice(i, 1); m.done(); } }
     else {
-      m.t = (m.t + dt * 0.15) % 1; m.mat.dashOffset -= dt * 0.08;
-      if (m.mach) { m.mach.place(m.curve.getPoint(m.t)); const d = m.curve.getTangent(m.t); m.mach.setHeading(d.x, d.z); m.mach.tick(dt); }
+      m.t = (m.t + dt * (m.speed || 0.15)) % 1; m.mat.dashOffset -= dt * 0.08;
+      if (m.mach) {
+        const q = m.curve.getPoint(m.t), d = m.curve.getTangent(m.t);
+        if (m.mach.surface !== 'air') { const la = toLat(q.z), lo = toLon(q.x); q.y = meshHeightAt(la, lo) + (isWater(la, lo) ? 0.011 : 0.0004); } // walk / sail the arc's ground track
+        m.mach.place(q); m.mach.setHeading(d.x, d.z); m.mach.tick(dt);
+      }
       else m.dot.position.copy(m.curve.getPoint(m.t));
     }
   }

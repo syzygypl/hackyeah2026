@@ -1,9 +1,13 @@
 // Rescue machines: low-poly models drawn where the engine puts a unit (timeline actors, team arcs), instead of a ball.
 // Display only: position and kind come from the engine; the model adds heading, spinning rotors and a beacon.
-// Kinds: helicopter ('smiglowiec' / 'heli'), drone ('dron' / 'drone'), boat ('lodz'). Other kinds (foot teams, dogs,
-// divers, the missing person) keep their markers: createMachine returns null for them.
+// Kinds: helicopter ('smiglowiec' / 'heli'), drone ('dron' / 'drone'), boat ('lodz'), foot team of three ('pieszy' /
+// 'ground'), dog team: handler + dog ('pies' / 'dog'), divers with a diver-down buoy ('nurkowie' / 'diver'), and the
+// missing person ('osoba', the engine's estimate, a single figure). Anything else keeps its marker (null).
+// People walk (legs and arms swing) while the unit moves; the lead rescuer's head lamp gets a halo at night.
 // Scene units are km; the models are drawn ~1.5-3x real size, like the other markers, so they read from the overview.
-const KIND = { smiglowiec: 'heli', heli: 'heli', dron: 'drone', drone: 'drone', lodz: 'boat', boat: 'boat' };
+const KIND = { smiglowiec: 'heli', heli: 'heli', dron: 'drone', drone: 'drone', lodz: 'boat', boat: 'boat',
+  pieszy: 'team', ground: 'team', pies: 'dog', dog: 'dog', nurkowie: 'divers', diver: 'divers', osoba: 'person' };
+const SURFACE = { heli: 'air', drone: 'air', boat: 'water', divers: 'water' }; // the rest walks on the ground
 export const machineKind = (k) => KIND[k] || null;
 
 let G = null; // shared geometries and materials, built once per page
@@ -36,6 +40,22 @@ function shared(THREE) {
     white: new THREE.MeshStandardMaterial({ color: 0xf1f1ee, roughness: 0.5 }),
     blur: new THREE.MeshBasicMaterial({ color: 0x202428, transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide }),
     red: new THREE.MeshBasicMaterial({ color: 0xff2a1a, toneMapped: false }),
+    // people, ~11 m tall like the other markers (5-6x): limbs pivot at the hip / shoulder, forward = +x, sideways = z
+    leg: box(0.0011, 0.0048, 0.0011).translate(0, -0.0024, 0), arm: box(0.0008, 0.0038, 0.0008).translate(0, -0.0019, 0),
+    torso: box(0.0018, 0.004, 0.003), head: new THREE.SphereGeometry(0.0013, 10, 8), helmet: new THREE.SphereGeometry(0.00145, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2),
+    lamp: new THREE.SphereGeometry(0.00045, 6, 4),
+    // dog (German shepherd-ish), ~5 m at the shoulder on the same scale
+    dBodyK: box(0.0072, 0.0026, 0.0022), dSaddle: box(0.0042, 0.0008, 0.0024), dVest: box(0.0028, 0.0028, 0.0025),
+    dHead: box(0.0028, 0.0022, 0.0018), dSnout: box(0.0016, 0.001, 0.0011), dEar: box(0.0006, 0.0012, 0.0005),
+    dTail: box(0.0035, 0.0006, 0.0006).translate(-0.00175, 0, 0), dLeg: box(0.0008, 0.0031, 0.0008).translate(0, -0.00155, 0),
+    // divers: heads in the water and a diver-down buoy
+    mask: box(0.0006, 0.0007, 0.0016), buoy: new THREE.SphereGeometry(0.0013, 10, 8), mast: new THREE.CylinderGeometry(0.00015, 0.00015, 0.0055, 5).translate(0, 0.00275, 0),
+    flag: box(0.0034, 0.0022, 0.0002), stripe: box(0.0039, 0.0005, 0.00025),
+    skin: new THREE.MeshStandardMaterial({ color: 0xe0b18f, roughness: 0.8 }), trousers: new THREE.MeshStandardMaterial({ color: 0x2c3036, roughness: 0.8 }),
+    tan: new THREE.MeshStandardMaterial({ color: 0xb07a3a, roughness: 0.85 }), saddle: new THREE.MeshStandardMaterial({ color: 0x3a2a1e, roughness: 0.85 }),
+    neoprene: new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.5 }), glassB: new THREE.MeshStandardMaterial({ color: 0x9ad0e6, roughness: 0.1, metalness: 0.4 }),
+    orange: new THREE.MeshStandardMaterial({ color: 0xff7a1a, roughness: 0.5 }), flagRed: new THREE.MeshStandardMaterial({ color: 0xd8261c, roughness: 0.6, side: THREE.DoubleSide }),
+    lampOn: new THREE.MeshBasicMaterial({ color: 0xfff6d8, toneMapped: false }),
   };
   return G;
 }
@@ -44,10 +64,41 @@ function shared(THREE) {
 export function createMachine(THREE, kind, color) {
   const k = machineKind(kind); if (!k) return null;
   const g = shared(THREE), obj = new THREE.Group(), paint = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.15 });
-  obj.rotation.order = 'YXZ'; // yaw, then roll about the long axis, then pitch
+  obj.rotation.order = 'YXZ'; obj.name = 'unit-' + k; // yaw, then roll about the long axis, then pitch
   const add = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); obj.add(m); return m; };
-  let spin = [], beacon = null, t = Math.random() * 10, bob = 0;
-  if (k === 'heli') {
+  let spin = [], beacon = null, t = Math.random() * 10, bob = 0, moving = false, phase = Math.random() * 6;
+  const limbs = []; // [pivot, axis, amplitude, phase offset]: swung while walking
+  const figure = (jacket, x, z, helmet = true, lamp = false) => { // one person at (x, z), facing +x
+    const f = new THREE.Group(); f.position.set(x, 0, z); obj.add(f);
+    const part = (geo, m, px, py, pz) => { const o = new THREE.Mesh(geo, m); o.position.set(px, py, pz); f.add(o); return o; };
+    part(g.torso, jacket, 0, 0.0068, 0); part(g.head, g.skin, 0, 0.0101, 0);
+    if (helmet) part(g.helmet, g.white, 0, 0.0104, 0);
+    if (lamp) { const l = part(g.lamp, g.lampOn, 0.0013, 0.0107, 0); l.userData.glow = ['#fff6d8', 38]; }
+    for (const sz of [1, -1]) {
+      limbs.push([part(g.leg, g.trousers, 0, 0.0048, sz * 0.0007), 'z', 0.55, sz > 0 ? 0 : Math.PI]);
+      limbs.push([part(g.arm, jacket, 0, 0.0086, sz * 0.0019), 'z', 0.45, sz > 0 ? Math.PI : 0]);
+    }
+    return f;
+  };
+  if (k === 'team') {
+    figure(paint, 0.006, 0.0006, true, true); figure(paint, 0, -0.0012); figure(paint, -0.006, 0.0009);
+  } else if (k === 'person') {
+    figure(paint, 0, 0, false);
+  } else if (k === 'dog') {
+    figure(paint, -0.002, -0.0035, true, true);
+    const d = new THREE.Group(); d.position.set(0.003, 0, 0.0035); obj.add(d);
+    const part = (geo, m, px, py, pz) => { const o = new THREE.Mesh(geo, m); o.position.set(px, py, pz); d.add(o); return o; };
+    part(g.dBodyK, g.tan, 0, 0.0043, 0); part(g.dSaddle, g.saddle, -0.0005, 0.0058, 0); part(g.dVest, paint, 0.0012, 0.0044, 0);
+    part(g.dHead, g.tan, 0.0045, 0.0062, 0); part(g.dSnout, g.saddle, 0.0064, 0.0057, 0);
+    part(g.dEar, g.saddle, 0.0042, 0.0078, 0.0005); part(g.dEar, g.saddle, 0.0042, 0.0078, -0.0005);
+    const tail = part(g.dTail, g.tan, -0.0036, 0.0051, 0); tail.rotation.z = -0.5; limbs.push([tail, 'y', 0.35, 0]);
+    for (const [lx, lz, o] of [[0.0026, 0.0007, 0], [0.0026, -0.0007, Math.PI], [-0.0026, 0.0007, Math.PI], [-0.0026, -0.0007, 0]]) limbs.push([part(g.dLeg, g.tan, lx, 0.0031, lz), 'z', 0.6, o]);
+  } else if (k === 'divers') {
+    for (const [x, z] of [[0.003, 0.0022], [0.0005, -0.0024]]) { add(g.head, g.neoprene, x, 0.0006, z); add(g.mask, g.glassB, x + 0.0011, 0.0009, z); }
+    add(g.buoy, g.orange, -0.004, 0.0006, 0); add(g.mast, g.dark, -0.004, 0.0012, 0);
+    add(g.flag, g.flagRed, -0.0023, 0.0055, 0); const st = add(g.stripe, g.white, -0.0023, 0.0055, 0); st.rotation.z = -0.55;
+    bob = 0.0004;
+  } else if (k === 'heli') {
     add(g.body, paint); add(g.boom, paint); add(g.fin, paint);
     add(g.skid, g.dark, 0, -0.0065, 0.0042); add(g.skid, g.dark, 0, -0.0065, -0.0042); add(g.mast, g.dark);
     const rotor = new THREE.Group(); rotor.position.y = 0.0075;
@@ -76,13 +127,19 @@ export function createMachine(THREE, kind, color) {
       if (beacon) beacon.visible = t % 1.2 < 0.12; // anti-collision strobe (and its night halo)
       if (bob) { obj.position.y -= base.y; base.y = Math.sin(t * (k === 'boat' ? 1.7 : 2.3)) * bob; obj.position.y += base.y; }
       if (k === 'boat') obj.rotation.x = Math.sin(t * 1.3) * 0.06;
+      if (limbs.length) { // walk while moving, ease back to standing when still
+        phase += dt * (moving ? 7 : 0);
+        for (const [o, axis, amp, off] of limbs) { const want = moving ? Math.sin(phase + off) * amp : 0; o.rotation[axis] += (want - o.rotation[axis]) * Math.min(1, dt * 10); }
+      }
     },
     // heading from a direction in the x/z plane; a small nose-down pitch while it moves (aircraft)
-    setHeading(dx, dz, moving = true) {
+    setHeading(dx, dz, mv = true) {
+      moving = mv;
       if (Math.hypot(dx, dz) < 1e-9) return;
       obj.rotation.y = Math.atan2(-dz, dx);
-      if (k !== 'boat') obj.rotation.z = moving ? -0.12 : 0;
+      if (SURFACE[k] === 'air') obj.rotation.z = mv ? -0.12 : 0;
     },
+    surface: SURFACE[k] || 'ground',
     // the bob offset is part of position.y: callers set the position, then tick adds the bob again
     place(p) { obj.position.copy(p); obj.position.y += base.y; },
   };
