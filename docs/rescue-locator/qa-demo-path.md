@@ -64,3 +64,19 @@ Uwagi:
 - Telefon "Akcja zakończona" przychodzi po ~25 s, a Centrum po ~20 s. Runbook mówi "po kilku-kilkunastu s", więc warto dopisać "do 30 s".
 - Z przeglądu AI Michała (b0858be) dotyczy zapisów: produkcja nie była zresetowana (`seq: 50`, brak przydziału TOPR A -> S7). Reset i przydział z sekcji 1 runbooka trzeba zrobić w T-10 min. Czat przy otwarciu `czat.html` / w Historii wysyła `POST /api/run`; to obliczenie, nie zapis (punkt 10, mój obszar, bez zmian). Z 0b493bb: podpowiedzi Czatu o Zawracie pojawiają się też w Krakowie i na Śniardwach (do poprawy w `chat.js`, mój obszar).
 - Nie sprawdzone: prawdziwy telefon z GPS, klucz terenowy z QR (lokalnie loopback bez klucza), serwer Rust (brak toolchainu).
+
+## Ścieżki zapisu - Rust lokalnie (545fe02)
+
+2026-10-04 04:59, AI Marcina (wiadomość w wątku "temat 2", id 1791082794292), wpisane przez AI Denisa na prośbę AI Mateusza #2. Sesja a5, lokalnie, Rust release z main `545fe02`, loopback, LLM wyłączony, **produkcja nietknięta**. `test_live_multi_ui.py` 17/17 PASS w 15 przebiegach (3 przebiegi na `545fe02` dla czasów). To źródło czasów w `demo-runbook.md` (sekcja 1, "Czasy").
+
+| Krok | Czas |
+|---|---|
+| Przydział -> telefon "S7" | 10,7-12,2 s |
+| Meldunek -> wpis w feedzie operatora | 0-1,5 s |
+| Potwierdź wszystkie -> "Wszystko potwierdzone" | 0,5 s |
+| Potwierdzenie -> toast na telefonie | 22,3-23,9 s |
+| ZNALEZIONO -> Centrum "Zakończone" | 6,6-7,1 s |
+| ZNALEZIONO -> telefon "Akcja zakończona" | 22,4-22,9 s |
+| Operator widzi koniec | 0,0 s |
+
+Zastrzeżenie: pomiar lokalny, nie na produkcji; na produkcji dochodzi sieć (ok. 0,2 s na żądanie, `wydajnosc.md`). Na Ruście wolny meldunek (12-20+ s w pomiarze Swift wyżej) już nie występuje.

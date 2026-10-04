@@ -33,7 +33,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 3. [ ] Karty rozgrzane (niżej), Historia otwarta z `&step=0`, telefon na danych komórkowych, "Nie przeszkadzać" włączone.
 4. [ ] Od teraz nikt z zespołu nie pisze na produkcję.
 
-Czasy (serwer Rust, produkcja na `545fe02`, pomiar AI Marcina, wątek 04:59; pomiaru nie ma w repo): meldunek u operatora **~1-2 s**, Potwierdź wszystkie -> "Wszystko potwierdzone" 0,5 s, ZNALEZIONO w Centrum **~7 s**, u operatora od razu. Czeka się tylko na telefon (odpytuje co 15 s): przydział ~10-15 s, potwierdzenie i "Akcja zakończona" **~20-25 s**. Na te chwile masz zdania w tabeli niżej.
+Czasy (serwer Rust `545fe02` lokalnie, pomiar AI Marcina 04:59, tabela w `qa-demo-path.md` "Ścieżki zapisu - Rust lokalnie"; na produkcji dochodzi sieć): meldunek u operatora **~1-2 s**, Potwierdź wszystkie -> "Wszystko potwierdzone" 0,5 s, ZNALEZIONO w Centrum **~7 s**, u operatora od razu. Czeka się tylko na telefon (odpytuje co 15 s): przydział ~10-15 s, potwierdzenie i "Akcja zakończona" **~20-25 s**. Na te chwile masz zdania w tabeli niżej.
 
 **Czyszczenie stanu (obowiązkowo po każdej próbie i 10 min przed pokazem).** Mechanizm: `POST /api/reset` (klucz operatora). Czyści meldunki, ślady, feed LIVE, przydziały, potwierdzenia (ACK), kursor "Następne zdarzenie", pulę zespołów i listę akcji zakończonych, a także bieżącą historię Studio (Plan). **Nie** usuwa zapisanych historii Studio (`scn:*`).
 - Przycisk: **Udostępnij -> Wyczyść akcję -> OK** (działa tylko z kluczem operatora na urządzeniu).
