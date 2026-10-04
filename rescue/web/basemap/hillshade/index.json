@@ -38,6 +38,32 @@
    ]
   ]
  },
+ "dywersja-poprad-2": {
+  "file": "hillshade/dywersja-poprad-2.png",
+  "bounds": [
+   [
+    20.624166666666667,
+    49.434444444444445
+   ],
+   [
+    20.747777777777777,
+    49.516666666666666
+   ]
+  ]
+ },
+ "dywersja-poprad": {
+  "file": "hillshade/dywersja-poprad.png",
+  "bounds": [
+   [
+    20.624166666666667,
+    49.434444444444445
+   ],
+   [
+    20.747777777777777,
+    49.516666666666666
+   ]
+  ]
+ },
  "grzybiarz-puszcza-notecka": {
   "file": "hillshade/grzybiarz-puszcza-notecka.png",
   "bounds": [
@@ -103,6 +129,19 @@
    ]
   ]
  },
+ "lawina-wolowiec": {
+  "file": "hillshade/lawina-wolowiec.png",
+  "bounds": [
+   [
+    19.71111111111111,
+    49.177499999999995
+   ],
+   [
+    19.835277777777776,
+    49.25861111111111
+   ]
+  ]
+ },
  "los-augustow": {
   "file": "hillshade/los-augustow.png",
   "bounds": [
@@ -113,6 +152,58 @@
    [
     23.28791666666665,
     53.83555555555556
+   ]
+  ]
+ },
+ "mazury-burza-beldany": {
+  "file": "hillshade/mazury-burza-beldany.png",
+  "bounds": [
+   [
+    21.516249999999985,
+    53.6875
+   ],
+   [
+    21.653749999999985,
+    53.76861111111111
+   ]
+  ]
+ },
+ "mazury-burza-mikolajki": {
+  "file": "hillshade/mazury-burza-mikolajki.png",
+  "bounds": [
+   [
+    21.529583333333306,
+    53.7425
+   ],
+   [
+    21.66666666666664,
+    53.82361111111111
+   ]
+  ]
+ },
+ "mazury-burza-sniardwy": {
+  "file": "hillshade/mazury-burza-sniardwy.png",
+  "bounds": [
+   [
+    21.61624999999998,
+    53.724444444444444
+   ],
+   [
+    21.75374999999998,
+    53.80555555555556
+   ]
+  ]
+ },
+ "mazury-burza-talty": {
+  "file": "hillshade/mazury-burza-talty.png",
+  "bounds": [
+   [
+    21.477499999999992,
+    53.7875
+   ],
+   [
+    21.614583333333325,
+    53.868611111111115
    ]
   ]
  },
@@ -155,6 +246,19 @@
    ]
   ]
  },
+ "paralotniarz-beskidy": {
+  "file": "hillshade/paralotniarz-beskidy.png",
+  "bounds": [
+   [
+    18.97416666666666,
+    49.63638888888889
+   ],
+   [
+    19.09944444444444,
+    49.7175
+   ]
+  ]
+ },
  "pozar-biebrza": {
   "file": "hillshade/pozar-biebrza.png",
   "bounds": [
@@ -178,6 +282,19 @@
    [
     15.806666666666642,
     50.800555555555555
+   ]
+  ]
+ },
+ "senior-demencja-lodz": {
+  "file": "hillshade/senior-demencja-lodz.png",
+  "bounds": [
+   [
+    19.359999999999985,
+    51.73638888888889
+   ],
+   [
+    19.469999999999985,
+    51.80555555555556
    ]
   ]
  },
@@ -308,19 +425,6 @@
    [
     20.10833333333332,
     49.2625
-   ]
-  ]
- },
- "paralotniarz-beskidy": {
-  "file": "hillshade/paralotniarz-beskidy.png",
-  "bounds": [
-   [
-    18.97416666666666,
-    49.63638888888889
-   ],
-   [
-    19.09944444444444,
-    49.7175
    ]
   ]
  }
