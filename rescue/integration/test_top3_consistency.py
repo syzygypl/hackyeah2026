@@ -245,7 +245,7 @@ def main():
                 print(f"\n!! own rescue-server exited with {srv.proc.returncode}; restarting it on {srv.base}", flush=True)
                 srv.start()
             try:
-                q = f"role=operator&mode=akcja&view={a.view}&sc={sc}&time={mode}" + (f"&step={s - 1}" if s else "")
+                q = f"role=operator&mode=akcja&view={a.view}&split=1&sc={sc}&time={mode}" + (f"&step={s - 1}" if s else "")
                 c.call("Page.navigate", {"url": f"{a.base}/app/?{q}"})
                 time.sleep(2)
                 p, ok = settle(c, need3d, a.timeout)

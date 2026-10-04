@@ -101,7 +101,7 @@ def overlaps(R):
 def open_view(c, base, view, w, h, mobile=False):
     c.call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 1, "mobile": mobile})
     c.call("Emulation.setTouchEmulationEnabled", {"enabled": mobile})
-    c.call("Page.navigate", {"url": f"{base}&view={view}"})
+    c.call("Page.navigate", {"url": f"{base}&view={view}&split=1"})
     c.until("document.readyState==='complete'", 20)
     c.until("!document.body.classList.contains('booting')", 45)
     if mobile:
