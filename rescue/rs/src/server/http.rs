@@ -51,6 +51,11 @@ pub async fn handle(q: Req) -> Resp {
         let ok = if public { g_key_matches(&q.headers, &q.body, is_field_write(&q)) } else { g_authorized(&q.peer, &q.headers, &q.body) };
         if !ok {
             m_inc("reports_rejected_total", &[("reason", "pin")], 1.0);
+            // a valid rescuer (field) key on an operator change: 403 with the reason, so the app can say which key is missing
+            if public && g_key_matches(&q.headers, &q.body, true) {
+                g_log_reject(403, &q.peer, &q.method, &q.path);
+                return json_err(403, "rescuer key: this change needs the operator key");
+            }
             g_log_reject(401, &q.peer, &q.method, &q.path);
             return json_err(
                 401,
@@ -124,6 +129,20 @@ pub async fn route(q: &Req) -> Resp {
         ("POST", "/story/assessment") => {
             let step = gi(&jobj(&q.body), "step");
             ok_json(st_assessment(step).await)
+        }
+        ("GET", "/api/key") => {
+            // which key the caller holds (X-Rescue-Pin): operator | field | none (no key sent) | wrong; the key itself is never echoed
+            let given = q.h("x-rescue-pin").unwrap_or("").to_string();
+            let role = if given.is_empty() {
+                "none"
+            } else if g_key_matches(&q.headers, &q.body, false) {
+                "operator"
+            } else if g_key_matches(&q.headers, &q.body, true) {
+                "field"
+            } else {
+                "wrong"
+            };
+            ok_value(&json!({"role": role, "public": *PUBLIC_MODE}))
         }
         ("GET", "/api/join") => {
             // operator only (key checked above): the key for rescuers' join links / QR
