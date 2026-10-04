@@ -906,7 +906,8 @@ const MODES = {
 };
 const lastView = {};
 // three top tabs (redesign): Akcja, Plan (= edycja), Więcej (Teren / Monitoring / Walidacja as sub-tabs in #more)
-const TABS = [["akcja", "Akcja"], ["edycja", "Plan"], ["wiecej", "Więcej"]], MORE = ["teren", "monitoring", "walidacja"];
+const DEV = new URLSearchParams(location.search).get("dev") === "1";   // sens-funkcji #14: Monitoring / Walidacja are our tools, only with ?dev=1
+const TABS = [["akcja", "Akcja"], ["edycja", "Plan"], ["wiecej", "Więcej"]], MORE = DEV ? ["teren", "monitoring", "walidacja"] : ["teren"];
 let lastMore = "teren";
 $("modes").innerHTML = TABS.map(([k, l]) => `<button data-mode="${k}" role="tab">${l}</button>`).join("");
 $("modes").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode === "wiecej" ? lastMore : b.dataset.mode); };
@@ -914,7 +915,7 @@ $("more").innerHTML = MORE.map((k) => `<button data-mode="${k}" role="tab">${MOD
 $("more").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode); };
 $("views").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) setView(b.dataset.view); };
 function setMode(m, v) {
-  if (!MODES[m]) m = "akcja";
+  if (!MODES[m] || (!DEV && (m === "monitoring" || m === "walidacja"))) m = "akcja";
   store.mode = m;
   document.body.className = document.body.className.replace(/\bmode-\w+/g, "").trim() + " mode-" + m;
   if (MORE.includes(m)) lastMore = m;
