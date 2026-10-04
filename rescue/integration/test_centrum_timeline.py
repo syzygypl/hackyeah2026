@@ -50,7 +50,7 @@ def main():
         c = Cdp(port)
         c.call("Runtime.enable")
         # desktop: rows, markers, tooltip
-        open_page(c, f"{srv.base}/app/centrum.html", 1440, 900, False)
+        open_page(c, f"{srv.base}/app/centrum.html?sim=0", 1440, 900, False)
         rows = c.until("(()=>{const t=document.getElementById('tl');return t&&!t.hidden?document.querySelectorAll('#tl .tlr').length:0})()", 60)
         check("timeline_rows", bool(rows), f"{rows} incident rows")
         marks = c.until("document.querySelectorAll('#tl .tlr .tlk[data-at]').length", 10)
@@ -85,7 +85,7 @@ def main():
 
         # phone: a button opens the Gantt, no sideways scroll
         c.errors.clear()
-        open_page(c, f"{srv.base}/app/centrum.html", 390, 844, True)
+        open_page(c, f"{srv.base}/app/centrum.html?sim=0", 390, 844, True)
         c.until("(()=>{const t=document.getElementById('tl');return t&&!t.hidden})()", 60)
         c.js("document.getElementById('tlMore').click()")
         check("phone_button_opens_gantt", c.js("document.getElementById('tl').classList.contains('peek') && document.querySelectorAll('#tl .tlr').length>0") is True)

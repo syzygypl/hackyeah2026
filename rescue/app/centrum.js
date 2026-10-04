@@ -347,7 +347,7 @@ function renderMarkers() {
 // marker look for incident x: its mode now, or at the timeline cursor (markMode: "pre" = not reported yet -> hidden)
 function paintMarker(x, m) {
   const el = m.getElement(), mode = markMode(x);
-  el.classList.add("mk"); for (const c of ["live", "found", "plan", "replay", "pre"]) el.classList.toggle(c, c === mode); el.classList.toggle("hl", hl === x.sc);
+  el.classList.add("mk"); for (const c of ["live", "found", "plan", "replay", "pre", "idle"]) el.classList.toggle(c, c === mode); el.classList.toggle("hl", hl === x.sc);
   el.title = `${short(x)}: ${longText(x)} - ${mode === "pre" ? "jeszcze nie zgłoszona" : BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
   el.querySelector(".lbl").textContent = short(x);
   el.style.zIndex = mode === "live" ? 3 : 1;
@@ -578,6 +578,7 @@ function tlItem(x) {
 }
 function tlState(it, v) { const o = v - tlBase(it); return o < 0 ? "pre" : it.end != null && o >= it.end ? it.endKind : "live"; }
 function markMode(x) {
+  if (simMarks()) return simMarkMode(x.sc);   // Symulacja 24/7: the dot follows the scheduled occurrences (block at the end)
   const it = tl.cur != null && !tl.off.has(x.sc) && tl.by[x.sc];
   if (!it) return modeOf(x);
   const s = tlState(it, tl.cur); return s === "pre" ? "pre" : s === "live" ? "live" : "found";
@@ -585,7 +586,7 @@ function markMode(x) {
 const pad2 = (n) => String(n).padStart(2, "0");
 function tlFmt(v, axis) {
   if (tl.mode === "rel") { const a = Math.round(Math.abs(v)); return (v < 0 ? "T-" : "T+") + Math.floor(a / 60) + ":" + pad2(a % 60); }
-  if (tl.mode === "day") { const m = ((Math.floor(v) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
+  if (tl.mode === "day" || tl.mode === "sim") { const m = ((Math.floor(v) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
   const d = new Date(v * 60000), hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes()), dm = d.getDate() + "." + pad2(d.getMonth() + 1);
   return axis === "day" ? dm : axis === "hm" ? hm : dm + " " + hm;
 }
@@ -599,7 +600,9 @@ function tlHyps() {   // Doradca hypotheses (GET /api/advisor), best first: thei
 function tlBuild() {
   let its = incidents.map(tlItem).filter(Boolean).sort((a, b) => a.t0 - b.t0 || a.sc.localeCompare(b.sc));
   tl.items = its; tl.by = Object.fromEntries(its.map((i) => [i.sc, i]));
-  if (tl.auto) tl.mode = "day";   // default: Dzień w Centrum (Mateusz: bars spread like a busy day, not at T0 or across months)
+  if (tl.auto) tl.mode = simOn() ? "sim" : "day";   // default: Dzień w Centrum (Mateusz: bars spread like a busy day, not at T0 or across months); Symulacja 24/7 on: today's schedule
+  if (tl.mode === "sim" && !simOn()) tl.mode = "day";
+  if (tl.mode === "sim") { tl.items = []; tl.by = {}; tl.off = new Set(); return simTlBuild(); }
   const hyps = PICK ? [] : tlHyps();
   tlDaySlots(its, hyps);
   const sig = JSON.stringify([tl.mode, its.map((i) => [i.sc, i.t0, i.end, i.endKind, i.last, i.lc, i.evs.length, short(i.x)]), hyps.map((h) => [h.id, h.level, h.title, h.scs])]);
@@ -762,6 +765,7 @@ function tlApply() {
     const bc = "tlst " + s; if (b.className !== bc) b.className = bc; // day mode: the incident's own (real) clock at the cursor, as in Historia
     setTxt(b, s === "pre" && tl.mode === "day" ? "przed zgłoszeniem" : `${tl.mode === "abs" ? tlFmt(c, "hm") : tl.mode === "day" ? tlClockAt(it, c) : tlFmt(c)}: ${s === "pre" ? "przed zgłoszeniem" : TL_STATE[s]}`);
   });
+  if (tl.mode === "sim") simTlApply(c);
 }
 function tlSet(v) { tl.cur = v == null ? null : Math.min(tl.hi, Math.max(tl.lo, v)); tlApply(); }
 function tlStop() { if (tl.play) cancelAnimationFrame(tl.play); tl.play = 0; }
@@ -994,15 +998,40 @@ window.rescueCentrum = { get incidents() { return incidents; }, get teams() { re
 initMap().catch((e) => console.warn("[centrum] map", e));
 
 // ---------- Symulacja 24/7 (AI Mateusza #2, livefeed.js, docs/rescue-locator/live-feed.md): a fictional daily schedule of
-// incident starts (>= 100 a day, looping); the bell in the header announces each new one (toast), operators open or ACK it.
-const sim = { on: false, entries: [], source: null, insts: [], bell: null, lf: null };
+// incident starts (>= 100 a day, looping, Europe/Warsaw). On: (1) the bell in the header announces every new incident and every
+// incoming call inside a running one (toast), operators open or ACK it; (2) the occurrences running now are live cards on top of
+// the list ("Trwają teraz", one card per occurrence, so two runs of one scenario are two cards) with the top 3 from the frame at
+// their minute (GET /api/run/<sc>?t=HH:MM, cached per 5 min, at most 2 requests at once); recently ended ones fade out;
+// (3) the map dot of a scenario is live while any of its occurrences runs, idle (dim) otherwise; (4) the timeline's default
+// mode "Grafik 24/7" = today's schedule, one row per scenario; its cursor (scrub / play) moves the virtual clock of (2) and (3).
+const sim = { on: false, entries: [], source: null, insts: [], bell: null, lf: null, view: [], cardSig: "", frames: {}, fbusy: 0, info: {} };
+const simOn = () => !PICK && !!sim.lf && sim.on;
+const simMarks = () => simOn() && (tl.mode === "sim" || tl.cur == null);
+const SIM_FADE_MIN = 30;   // an ended occurrence stays (faded) this long
+function simNowAt() {   // the virtual clock: the timeline cursor in Grafik 24/7, else the wall clock
+  const n = sim.lf.nowMs();
+  if (tl.mode !== "sim" || tl.cur == null) return n;
+  return sim.lf.msAt(sim.lf.warsaw(n).day, tl.cur);
+}
+function simView() {   // occurrences running at the virtual clock + ended within SIM_FADE_MIN
+  if (!simOn()) return [];
+  const ms = simNowAt();
+  return sim.lf.instancesAt(sim.entries, ms, { pastMin: 0 }).concat(sim.lf.instancesAt(sim.entries, ms, { pastMin: SIM_FADE_MIN }).filter((i) => i.state === "ended"))
+    .filter((i, k, a) => a.findIndex((j) => j.key === i.key) === k);
+}
+function simMarkMode(sc) {
+  let m = "idle";
+  for (const i of sim.view) if (i.sc === sc) { if (i.state === "live") return "live"; m = "found"; }
+  return m;
+}
 async function simInit() {
   if (PICK) return;
   const lf = sim.lf = await import("./livefeed.js");
   const host = document.createElement("span"); host.id = "simBox";
   host.innerHTML = `<button id="simTog" type="button" aria-pressed="false" title="Symulacja 24/7: fikcyjne zgłoszenia według dobowego grafiku (ponad 100 na dobę, w pętli). Kliknij, aby włączyć / wyłączyć.">Symulacja 24/7</button><span id="simNote">${esc(lf.SIM_NOTE)}</span>`;
   $("clock").before(host);
-  $("simTog").onclick = () => { lf.setSimEnabled(!sim.on); simApply(); };
+  const box = document.createElement("div"); box.id = "simCards"; $("cards").before(box);
+  $("simTog").onclick = () => { lf.setSimEnabled(!sim.on); if (new URLSearchParams(location.search).has("sim")) { const u = new URL(location.href); u.searchParams.delete("sim"); history.replaceState(null, "", u); location.reload(); return; } simApply(); };
   try { const s = await lf.loadSchedule(); sim.entries = s.entries; sim.source = s.source; } catch (e) { console.warn("[centrum] schedule", e); }
   sim.bell = lf.mountBell(host, { openURL: (i, clock) => histURL(i.sc, clock) });
   simApply();
@@ -1012,14 +1041,116 @@ async function simInit() {
 function simApply() {
   sim.on = sim.lf.simEnabled();
   $("simTog").setAttribute("aria-pressed", sim.on); $("simTog").classList.toggle("on", sim.on);
-  $("simBox").classList.toggle("on", sim.on);
+  $("simBox").classList.toggle("on", sim.on); document.body.classList.toggle("sim", sim.on);
   const w = $("simBox").querySelector(".lfw"); if (w) w.hidden = !sim.on;
+  const b = $("tl").querySelector('[data-mode="sim"]'); if (b) b.hidden = !sim.on;
+  if (sim.on && tl.mode !== "sim") { tl.auto = true; tlStop(); tl.cur = null; }
+  tl.built = ""; tlBuild(); tlApply();
   simTick();
 }
 function simTick() {
   if (!sim.lf) return;
   sim.insts = sim.on ? sim.lf.instancesAt(sim.entries, sim.lf.nowMs(), { pastMin: 120 }) : [];
   if (sim.bell) sim.bell.update(sim.insts);
+  simPaint();
+}
+// cards + dots at the virtual clock (cheap when nothing changed: signature of keys, states and 5-min clocks)
+function simPaint() {
+  sim.view = simView();
+  for (const [k, m] of markers) {
+    const x = incidents.find((i) => i.sc === k); if (!x) continue;
+    if (m.getElement()._mm !== markMode(x)) paintMarker(x, m);
+    const n = sim.view.filter((i) => i.sc === k && i.state === "live").length, el = m.getElement();
+    if (el.dataset.simN !== String(n > 1 ? n : "")) el.dataset.simN = n > 1 ? n : "";
+  }
+  const box = $("simCards"); if (!box) return;
+  if (!simOn()) { if (box.innerHTML) { box.innerHTML = ""; sim.cardSig = ""; } return; }
+  const need = [...new Set(sim.view.map((i) => i.sc))].filter((sc) => !sim.info[sc]);
+  if (need.length) Promise.all(need.map((sc) => sim.lf.describe(sc).then((d) => { sim.info[sc] = d; }))).then(() => { sim.cardSig = ""; simPaint(); });
+  const rows = sim.view.map((i) => { const d = sim.info[i.sc], clk = d && d.startClock ? sim.lf.scenarioClock(i, d.startClock) : null, c5 = clk && simClock5(i, d.startClock); return { i, d, clk, c5, f: c5 ? sim.frames[i.sc + "|" + c5] : undefined }; });
+  for (const r of rows) if (r.c5 && r.i.state === "live" && r.f === undefined) simFetch(r.i.sc, r.c5);
+  const sig = JSON.stringify([rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d]), tl.cur == null]);
+  if (sig === sim.cardSig) return; sim.cardSig = sig;
+  const live = rows.filter((r) => r.i.state === "live"), ended = rows.filter((r) => r.i.state !== "live");
+  const hm = (ms) => { const m = Math.floor(sim.lf.warsaw(ms).min); return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); };
+  const card = (r) => {
+    const { i, d, clk, f } = r, x = incidents.find((y) => y.sc === i.sc) || { sc: i.sc, place: (d && d.place) || i.sc, title: "" };
+    const t3 = Array.isArray(f) ? f : f === "err" ? x.top3 || [] : null;
+    const el = Math.floor((Math.min(simNowAt(), i.endMs) - i.startMs) / 60000);
+    return `<article class="card simc ${i.state === "live" ? "live" : "found ended"}" data-sc="${esc(i.sc)}" data-key="${esc(i.key)}">
+      <div class="ctop"><span class="badge ${i.state === "live" ? "live" : "found"}">${i.state === "live" ? "LIVE" : "ZAKOŃCZONA"}</span><span class="simtag" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span><span class="when mono">zgł. ${hm(i.startMs)}</span></div>
+      <h3><a href="${esc(histURL(i.sc, clk))}">${esc(short(x))}</a></h3><div class="sub">${esc(d ? d.name : i.sc)}${d && d.place ? " - " + esc(d.place) : ""}</div>
+      <div class="simt mono">${i.state === "live" ? `T+${Math.floor(el / 60)}:${pad2(el % 60)} · w scenariuszu ${esc(clk || "")}` : `zakończona ${hm(i.endMs)} · po ${i.durationMin} min`}</div>
+      ${i.state !== "live" ? "" : t3 ? (t3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw o ${esc(r.c5)}</div>${t3.slice(0, 3).map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.id || s.segmentId)} ${esc(s.name)}</span></div>`).join("")}</div>` : `<div class="loading">Brak mapy dla tej chwili.</div>`)
+        : `<div class="loading">Liczę mapę na ${esc(r.c5 || "...")}...</div>`}</article>`;
+  };
+  box.innerHTML = `<h2 class="cgrp sim">${tl.mode === "sim" && tl.cur != null ? "Trwają o " + esc(tlFmt(tl.cur)) : "Trwają teraz"} <span class="cnt">${live.length}</span><span class="simh">${esc(sim.lf.SIM_NOTE)}</span></h2>`
+    + (live.map(card).join("") || `<div class="help">Teraz nic nie trwa. Następne zgłoszenie: ${esc(simNext())}.</div>`) + ended.map(card).join("")
+    + `<h2 class="cgrp">Wszystkie scenariusze <span class="mute">nagrania</span></h2>`;
+  box.querySelectorAll(".card").forEach((el) => {
+    el.onclick = (e) => { if (!e.target.closest("a")) location.href = el.querySelector("h3 a").getAttribute("href"); };
+    el.onmouseenter = () => setHl(el.dataset.sc); el.onmouseleave = () => setHl(null);
+  });
+}
+function simNext() {
+  const ms = simNowAt(), w = sim.lf.warsaw(ms), m = w.min;
+  const e = sim.entries.map((x) => ({ x, d: ((toMin(x.start) - m) % 1440 + 1440) % 1440 })).sort((a, b) => a.d - b.d)[0];
+  return e ? `${e.x.start} (${short({ sc: e.x.sc, place: e.x.sc })})` : "-";
+}
+function simClock5(i, s0) { const b = toMin(s0), m = (b + Math.floor(Math.max(0, i.elapsedMin) / 5) * 5) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
+function simFetch(sc, clk) {
+  const key = sc + "|" + clk;
+  if (sim.fbusy >= 2 || key in sim.frames || (tl.play && performance.now() - (sim.flast || 0) < 1500)) return;
+  sim.flast = performance.now();
+  sim.fbusy++; sim.frames[key] = undefined;
+  api(`/api/run/${encodeURIComponent(sc)}?t=${encodeURIComponent(clk)}`)
+    .then((f) => { sim.frames[key] = (f.segments || []).slice().sort((a, b) => (b.poa || 0) - (a.poa || 0)).slice(0, 3).map((s) => ({ id: s.id, name: s.name })); })
+    .catch(() => { sim.frames[key] = "err"; })
+    .finally(() => { sim.fbusy--; sim.cardSig = ""; if (!tl.play) simPaint(); });
+}
+// timeline "Grafik 24/7": 0..1440 min of today, one row per scenario, a bar per occurrence (the one from yesterday that runs past
+// midnight starts at 0:00); bars red while running at the cursor, green after, faint before
+function simTlBuild() {
+  tl.lo = 0; tl.hi = 1440;
+  if (tl.cur != null) tl.cur = Math.min(tl.hi, Math.max(tl.lo, tl.cur));
+  const byS = {};
+  for (const e of sim.entries) { const s = toMin(e.start); if (s == null) continue; (byS[e.sc] ||= []).push([s, s + (e.durationMin || 30), e]); }
+  const scs = Object.keys(byS).sort((a, b) => Math.min(...byS[a].map((v) => v[0])) - Math.min(...byS[b].map((v) => v[0])));
+  const sig = JSON.stringify(["sim", scs.length, sim.entries.length]);
+  const el = $("tl"); el.hidden = !sim.entries.length;
+  if (sig === tl.built) return; tl.built = sig;
+  const pc = (v) => (v / 1440 * 100).toFixed(3) + "%";
+  const nameOf = (sc) => { const x = incidents.find((y) => y.sc === sc) || { sc, place: sc }; let p = null; try { p = window.rescueCentrum.pathOf && window.rescueCentrum.pathOf(x); } catch (e) {} return { s: short(x), p: p || longText(x) }; };
+  const rows = scs.map((sc) => {
+    const n = nameOf(sc), bars = [];
+    for (const [a, b, e] of byS[sc]) {
+      const tip = `${n.s}: zgłoszenie ${e.start}, ${e.durationMin} min`;
+      bars.push([a, Math.min(b, 1440), tip]); if (b > 1440) bars.push([a - 1440, b - 1440, tip + " (od wczoraj)"]);
+    }
+    return `<div class="tlr" data-sc="${esc(sc)}"><a class="tln" href="${openURL(sc)}" title="${esc(n.p)}">${esc(n.s)}</a><div class="trk">`
+      + bars.map(([a, b, tip]) => `<i class="tlb sb" data-a="${a}" data-b="${b}" title="${esc(tip)}" style="left:${pc(Math.max(0, a))};width:${Math.max(0.3, (b - Math.max(0, a)) / 14.4).toFixed(3)}%"></i>`).join("") + `</div></div>`;
+  }).join("");
+  const ticks = []; for (let v = 0; v <= 1440; v += 180) ticks.push(v);
+  $("tlRows").innerHTML = `<div class="tllg"><span><i class="sw live"></i>trwa</span><span><i class="sw found"></i>zakończona</span><span><i class="sw simpre"></i>jeszcze nie zgłoszona</span>`
+    + `<span class="daynote"><b>Grafik 24/7:</b> ${esc(sim.lf.SIM_NOTE)} · ${sim.entries.length} zgłoszeń na dobę. Kursor = co trwało o tej godzinie (karty i mapa).</span>`
+    + `<span class="keys">Klawisze: ← → krok, Shift = duży krok, spacja = odtwórz, Home / End, Esc = teraz</span></div>` + rows;
+  $("tlMini").innerHTML = `<span class="tln" title="${esc(sim.lf.SIM_NOTE)}">Doba <b>${sim.entries.length}</b></span><div class="trk">${sim.entries.map((e) => `<i class="ms" style="left:${pc(toMin(e.start))}"></i>`).join("")}<i class="simnow"></i></div>`;
+  $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${tlFmt(v % 1440 === 0 && v ? 1439.99 : v)}</span>`).join("")}</div>`;
+  $("tl").querySelectorAll(".tlr").forEach((r) => { r.onmouseenter = () => setHl(r.dataset.sc); r.onmouseleave = () => setHl(null); });
+  for (const b of $("tl").querySelectorAll("[data-mode]")) b.classList.toggle("on", b.dataset.mode === tl.mode);
+  tl.rowEls = []; tl.kEls = []; tl.hEls = []; tl.feed = []; tl.feedKey = null;
+  tl.simBars = [...$("tlRows").querySelectorAll(".sb")].map((b) => ({ b, a: +b.dataset.a, z: +b.dataset.b }));
+}
+function simTlApply(c) {
+  if (!sim.lf) return;
+  const nowMin = sim.lf.warsaw(sim.lf.nowMs()).min, v = c ?? nowMin;
+  for (const o of tl.simBars || []) { const s = v < o.a ? "pre" : v < o.z ? "live" : "found"; if (o.s !== s) { o.s = s; o.b.className = "tlb sb " + s; } }
+  const fd = $("tlFeed"); if (fd && !fd.hidden) fd.hidden = true;   // the incident feed of the other modes; the bell is the feed here
+  const nw = $("tlMini").querySelector(".simnow"); if (nw) nw.style.left = (nowMin / 14.4).toFixed(3) + "%";
+  simPaint();
+  const n = sim.view.filter((i) => i.state === "live").length;
+  setHtml($("tlNow"), c == null ? `<b>Teraz ${esc(tlFmt(nowMin))}</b> <span class="tlday" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span> <span class="tlc">trwa <b>${n}</b></span> <span class="mute">przesuń kursor albo ▶, aby zobaczyć dobę</span>`
+    : `<b class="mono">${tlFmt(c)}</b> <span class="tlday" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span> <span class="tlc">trwa <b>${n}</b></span>`);
 }
 simInit().catch((e) => console.warn("[centrum] sim", e));
 window.rescueSim = sim;   // tests

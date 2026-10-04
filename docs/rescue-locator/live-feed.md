@@ -28,11 +28,19 @@ Generator: `python3 rescue/tools/make_schedule.py [--seed 2026] [--out ...]` -> 
 
 ## 2. Virtual live clock (client, today)
 
-At wall clock `now` (Warsaw): active = entries with `start <= now < start + durationMin`, from today's and yesterday's schedule (entries crossing midnight). For each active occurrence, scenario minute = `now - start`, mapped onto the scenario's clock (`startClock + elapsed`); the state comes from `GET /api/run/<sc>?t=HH:MM` (one frame, cached per occurrence and 5 min, throttled). Two occurrences of the same scenario are distinct cards (by `key`). `?simAt=HH:MM` on the page pins the clock (demo, tests).
+At wall clock `now` (Warsaw): active = entries with `start <= now < start + durationMin`, from today's and yesterday's schedule (entries crossing midnight). For each active occurrence, scenario minute = `now - start`, mapped onto the scenario's clock (`startClock + elapsed`); the state comes from `GET /api/run/<sc>?t=HH:MM` (one frame, cached per occurrence and 5 min, throttled). Two occurrences of the same scenario are distinct cards (by `key`). `?simAt=HH:MM` on the page pins the clock (demo, tests); `?sim=0|1` overrides the switch.
+
+Centrum with the switch on: "Trwają teraz" cards on top of the list (one per occurrence, LIVE + "symulacja", T+ and the scenario clock, top 3 at that minute; ended ones stay faded for 30 min), the scenario's map dot is live while any occurrence runs (label "×2" for two at once) and dim otherwise, and the timeline opens in **Grafik 24/7**: today's schedule, one row per scenario, a bar per occurrence; the cursor (scrub / play) moves the virtual clock of the cards and dots.
 
 Client module: `rescue/app/livefeed.js` (API documented at the top: `loadSchedule`, `instancesAt`, `scenarioClock`, `describe`, `acks`, `mountBell`).
 
 ## 3. Notifications (client, today)
+
+Two kinds of notes, different icon and colour, filters **Wszystko / Nowe akcje / Zgłoszenia** in the bell list:
+
+- **Nowa akcja** (amber, siren icon): an occurrence starts (the 112 report that opens it). ACK key `<id>|<day>`.
+- **Zgłoszenie** (navy, phone icon): an incoming call inside a running occurrence = the scenario's call-like events at their scenario clock, mapped onto the occurrence's wall clock: `Cell112Fix` (CPR 112 / BTS), `RatunekPing`, `Clue` whose title names a witness / report / phone / radio / family (`Świadek`, `Zgłoszenie`, `Widziałem`, `Radio klubowe`, `telefon`, `112`, ...). Calls of one occurrence within 2 min are one note ("2 zgłoszenia: ..."). ACK key `<id>#HHMM|<day>` (HHMM = scenario clock of the call). "Otwórz" = Historia at that minute.
+- The incident line uses Centrum's `window.rescueCentrum.incidentPath(sc)` / `pathOf(x)` ("województwo → rejon → nazwa") when the map block provides it, else type · place.
 
 - Toast once per page for every occurrence that started within the last 15 min and is not acked; the bell lists every occurrence of the last 60 min (time, incident name, type, region, trwa / zakończona, ack state), newest first.
 - Unacked for more than 5 min = escalation (red toast, red pulsing bell, "bez potwierdzenia od N min").
@@ -58,7 +66,7 @@ Reads `scenarios/schedule/schedule-24h.json`. `active` saves the clients the clo
 
 ### `POST /api/notifications/<id>/ack {day, by?}` -> `{ ok, id, day, ackedAt, by }`
 
-Stores the ACK of occurrence `id|day` (first ACK wins; a second answers the stored one). 404 for an unknown `id`. Shared store doc `acks:<day>` on Vercel, memory locally. Optionally adds a feed event `kind: "ack"` so `/api/live` shows who acknowledged.
+`id` = an entry id (`zawrat@1412`, new incident) or entry id + `#HHMM` (`zawrat@1412#1805`, a call at scenario clock 18:05; URL-encode the `#`). Stores the ACK of `id|day` (first ACK wins; a second answers the stored one). 404 for an unknown `id`. Shared store doc `acks:<day>` on Vercel, memory locally. Optionally adds a feed event `kind: "ack"` so `/api/live` shows who acknowledged.
 
 ### `GET /api/notifications?since=<ms>` -> `{ now, acks: [{ id, day, ackedAt, by }] }`
 

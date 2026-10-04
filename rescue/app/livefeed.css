@@ -47,3 +47,25 @@
 }
 @media (prefers-reduced-motion:reduce){.lfbell.late,.lftoast{animation:none}}
 body.lfopen .lftoasts{display:none}
+/* note types: Nowa akcja (warn / red) vs Zgłoszenie (navy accent, phone icon); filters */
+.lft{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:var(--rl-fs-s);color:var(--rl-ink-2)}
+.lfic{display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;background:var(--rl-warn);color:var(--rl-warn-ink)}
+.lfic svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linejoin:round;stroke-linecap:round}
+.t-call .lfic{background:color-mix(in srgb,var(--rl-accent) 16%,transparent);color:var(--rl-accent)}
+.late .lfic{background:var(--rl-danger);color:var(--rl-on-danger)}
+.lfi.t-call,.lfti.t-call{border-left-color:var(--rl-accent)}
+.lfi.t-call.late,.lfti.t-call.late{border-left-color:var(--rl-danger)}
+.lfty{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--rl-warn-ink)}
+.t-call .lfty{color:var(--rl-accent)}
+.late .lfty{color:var(--rl-danger)}
+.lfn .lfp{color:var(--rl-ink-2)}
+.lffil{display:flex;margin-top:6px}
+.lffil button{min-height:44px;padding:0 10px;border:1px solid var(--rl-line-strong);background:var(--rl-panel-2);color:var(--rl-ink-2);font:inherit;font-size:var(--rl-fs-s);cursor:pointer}
+.lffil button + button{margin-left:-1px}
+.lffil button:first-child{border-radius:var(--rl-radius-s) 0 0 var(--rl-radius-s)}.lffil button:last-child{border-radius:0 var(--rl-radius-s) var(--rl-radius-s) 0}
+.lffil button.on{background:var(--rl-accent);border-color:var(--rl-accent);color:var(--rl-on-accent)}
+.lftoast .lfti{padding-top:10px;padding-right:44px}
+.lfw[hidden],.lfpanel[hidden],.lfbadge[hidden]{display:none}
+.lftoast .lfti{grid-template-columns:auto 1fr}
+.lftoast .lfb{grid-column:2/-1;justify-content:flex-start}
+.lftoast .lfn b{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}

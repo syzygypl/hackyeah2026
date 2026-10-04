@@ -358,3 +358,19 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 #simNote{font-size:var(--rl-fs-xs);color:var(--rl-warn-ink);max-width:16em;line-height:1.2}
 #simBox:not(.on) #simNote{display:none}
 @media (max-width:900px){#simTog{min-height:44px}#simNote{max-width:none}}
+/* Symulacja 24/7: live cards on top of the list, idle dots, Grafik 24/7 bars */
+#simCards .cgrp.sim{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px}
+#simCards .simh{flex-basis:100%;font-size:var(--rl-fs-xs);font-weight:400;text-transform:none;letter-spacing:0;color:var(--rl-warn-ink)}
+.card.simc .simtag{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:var(--rl-warn);color:var(--rl-ink)}
+.card.simc .simt{font-size:var(--rl-fs-xs);color:var(--rl-ink-2);margin:2px 0 4px}
+.card.simc.ended{opacity:.55}
+@media (prefers-reduced-motion:no-preference){.card.simc{animation:simin .3s ease-out}}
+@keyframes simin{from{opacity:0;transform:translateY(-6px)}}
+.mk.idle .dot{width:10px;height:10px;inset:3px;border-width:2px;opacity:.55;box-shadow:none}
+.mk.idle .lbl{opacity:.6;font-weight:400}
+.mk[data-sim-n]:not([data-sim-n=""]) .lbl::after{content:" ×" attr(data-sim-n);color:var(--rl-danger);font-weight:700}
+#tlBody .tlb.sb{opacity:.85}
+#tlBody .tlb.sb.pre{background:transparent;box-shadow:inset 0 0 0 1.5px var(--rl-line-strong)}
+#tlBody .tlb.sb.found{background:var(--rl-ok);opacity:.55}
+#tl .sw.simpre{background:transparent;box-shadow:inset 0 0 0 1.5px var(--rl-line-strong)}
+#tlMini .simnow{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--rl-danger)}
