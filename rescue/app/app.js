@@ -799,7 +799,7 @@ addEventListener("message", (e) => {
   const m = e.data, F = FRAMES[k];
   if (m.type === "ready") {
     F.ready = true;
-    if (F.visible()) window.__boot?.done(); tlPump();   // map + Top 3 on screen: boot loader fades out; minute frames may load now
+    if (F.visible() && (!switchTo || new URL(F.el.src).searchParams.get("sc") === switchTo)) window.__boot?.done(); tlPump();   // after a switch only the new scenario's view (a late "ready" of the previous one's must not lift the loader)   // map + Top 3 on screen: boot loader fades out; minute frames may load now
     if (afterUse.hook) afterUse.hook(F.el.contentWindow);
     warmOther(k); F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown });
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
@@ -1262,14 +1262,15 @@ addEventListener("message", (e) => {
   if (!PICK.fr || e.source !== PICK.fr.contentWindow || e.origin !== location.origin || !e.data || typeof e.data !== "object") return;
   const d = e.data;
   if (d.type === "rl-pick-ready") { PICK.ready = true; clearTimeout(PICK.wait); PICK.el.querySelector(".pickslow").hidden = true; if (PICK.open) pickPost({ type: "rl-pick-show", sc: store.scenario }); }
-  else if (d.type === "rl-pick" && typeof d.sc === "string") { pickClose(false); switchScenario(d.sc); }
+  else if (d.type === "rl-pick" && typeof d.sc === "string") { switchScenario(d.sc, true, true); pickClose(false); }   // loader first: it replaces the opaque overlay, no flash of the old map
   else if (d.type === "rl-pick-cancel") pickClose(false);
 });
 addEventListener("keydown", (e) => { if (e.key === "Escape" && PICK.open) { e.preventDefault(); pickClose(true); } });
 $("scenPick").onclick = () => pickOpen();
 // a scenario switch in place: the URL follows (pushState: Back returns to the previous scenario), the run, panels and views reload
 // their data only; what belonged to the old incident (selection, playback, the hidden 2D spare of the other time mode) is dropped
-async function switchScenario(sc, push = true) {
+let switchTo = null;   // the scenario a switch is loading (boot loader: whose "ready" counts)
+async function switchScenario(sc, push = true, fromPick = false) {
   if (!store.scenList.some((s) => s.id === sc && !s.disabled)) { toast("Nieznany scenariusz: " + sc, 4000); return; }
   if (push) {
     const u = new URL(location.href), q = u.searchParams;
@@ -1278,10 +1279,14 @@ async function switchScenario(sc, push = true) {
     if (sc !== store.scenario) history.pushState({ sc }, "", u);
   }
   if (sc === store.scenario) return;
+  switchTo = sc; window.__boot?.show("Teren i scenariusz…", fromPick);   // boot loader again (index.html) until the new map is on screen
   stopPlay();
   Object.assign(store, { selSeg: null, selEv: null });
   const sp = FRAMES["2da"]; if (sp.spare) { sp.spare.remove(); sp.spare = null; sp.spareReady = null; }
-  try { await loadScenario(sc); } catch (e) { toast(plErr(e), 5000); }
+  window.__boot?.step("Silnik - mapa prawdopodobieństwa…");
+  try { await loadScenario(sc); } catch (e) { toast(plErr(e), 5000); window.__boot?.done(); return; }
+  if (store.scenario !== sc) return;   // a newer switch (Back/Forward) took over: its own loader
+  if (store.role === "operator" && Object.values(FRAMES).some((F) => F.visible())) window.__boot?.step("Mapa…"); else window.__boot?.done();   // no scene view to wait for
 }
 // the livefeed bell (appbell.js, AI Mateusza #1): "Otwórz" = this incident in Historia at its clock, in place, one run load
 async function openAt(sc, clock) {

@@ -27,7 +27,7 @@ window.__preRun={u:u,p:fetch(u,{headers:h}).then(function(r){return r.ok?r.text(
 #boot .bar{width:220px;height:3px;border-radius:2px;background:var(--rl-line,rgba(35,39,42,.12));overflow:hidden}
 #boot .bar i{display:block;height:100%;width:30%;background:var(--rl-accent,#1f4e79);border-radius:2px;animation:bootBar 1.1s ease-in-out infinite}
 #boot .step{color:var(--rl-mute,#5d6165);font-size:13.5px;min-height:1.4em}
-#boot.out{opacity:0;pointer-events:none}
+#boot.out{opacity:0;pointer-events:none}#boot[hidden]{display:none}
 @keyframes bootBar{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}
 @keyframes bootFailsafe{to{opacity:0;visibility:hidden;pointer-events:none}}
 @media (prefers-reduced-motion:reduce){#boot{transition:none}#boot .bar i{animation:none;width:100%;opacity:.5}}
@@ -39,9 +39,15 @@ window.__preRun={u:u,p:fetch(u,{headers:h}).then(function(r){return r.ok?r.text(
    (same rules as initTime() and setFloat(); they correct the classes later if needed) */try{var q=new URLSearchParams(location.search),B=document.body.classList,r=q.get("role")||localStorage.getItem("rescue-app-role");if(r==="ratownik"||r==="operator")B.add("role-"+r);
 var m=q.get("mode")||localStorage.getItem("rescue-app-mode")||"akcja";if(r!=="ratownik"&&(m==="akcja"||m==="edycja"))B.add("float");
 var t=q.get("time");if(t!=="live"&&t!=="hist"){if(q.get("key")||r==="ratownik")t="live";else if(q.get("step")!=null)t="hist";else{t=localStorage.getItem("rescue-app-time");if(t!=="live"&&t!=="hist")t="hist"}}if(m!=="edycja")B.add("time-"+t)}catch(e){}
-/* window.__boot: step(text) = what is loading, ui(waitMap) = shell ready (nothing to wait for -> done), done() = map + Top 3 ready: fade out */
-(function(){var el=document.getElementById("boot"),over=false,t0=Date.now();function done(){if(over)return;over=true;window.__boot.ms=Date.now()-t0;document.body.classList.remove("booting");if(!el)return;el.classList.add("out");setTimeout(function(){el.remove()},matchMedia("(prefers-reduced-motion: reduce)").matches?0:320)}
-window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&!over)x.textContent=s},ui:function(waitMap){if(!waitMap)done();else this.step("Mapa…")},done:done,get over(){return over}};setTimeout(done,15000)})();</script>
+/* window.__boot: step(text) = what is loading, ui(waitMap) = shell ready (nothing to wait for -> done), done() = map + Top 3 ready: fade out,
+   show(text, instant) = a scenario switch (app.js switchScenario): the same screen again (fade in; instant when it replaces the opaque pick
+   overlay), steps reset, the next "ready" of a visible frame calls done(); 15 s failsafe per step (a cold live run can take 10+ s) */
+(function(){var el=document.getElementById("boot"),over=false,t0=Date.now(),gen=0,ht,fs,RM=function(){return matchMedia("(prefers-reduced-motion: reduce)").matches};
+function done(){if(over)return;over=true;window.__boot.ms=Date.now()-t0;document.body.classList.remove("booting");if(!el)return;el.classList.add("out");var g=gen;clearTimeout(ht);ht=setTimeout(function(){if(g===gen)el.hidden=true},RM()?0:320)}
+function show(s,instant){if(!el)return;var g=++gen;clearTimeout(ht);clearTimeout(fs);over=false;t0=Date.now();el.style.animation="none";var x=document.getElementById("bootStep");if(x)x.textContent=s||"Teren i scenariusz…";
+if(el.hidden){el.classList.add("out");el.hidden=false}if(instant||RM()){el.style.transition="none";el.classList.remove("out");void el.offsetWidth;el.style.transition=""}else{void el.offsetWidth;el.classList.remove("out")}
+fs=setTimeout(function(){if(g===gen)done()},15000)}
+window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&!over){x.textContent=s;if(gen){var g=gen;clearTimeout(fs);fs=setTimeout(function(){if(g===gen)done()},15000)}}},ui:function(waitMap){if(!waitMap)done();else this.step("Mapa…")},done:done,show:show,get over(){return over}};setTimeout(function(){if(!gen)done()},15000)})();</script>
 <div id="app">
 <header>
   <h1><svg class="logo" viewBox="0 0 40 28" aria-hidden="true"><path d="M1 26 13 8l6 8 5-6 15 16z"/><circle cx="31" cy="7" r="3"/></svg>Rescue Locator</h1>
