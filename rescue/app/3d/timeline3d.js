@@ -274,5 +274,8 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     return { lat: use.reduce((s, q) => s + q[0], 0) / use.length, lon: use.reduce((s, q) => s + q[1], 0) / use.length };
   }
   return { get want() { return want; }, setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, fields, actorFocus, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
-    get following() { return fpp; }, get actorCount() { return actors.filter((a) => a.g.visible).length; } };
+    get following() { return fpp; }, get actorCount() { return actors.filter((a) => a.g.visible).length; }, placeActor, positionOf };
+  // click-to-move (app3d.js, top-down view, live only): put a unit at lat/lon through the same manual override as WASD
+  function placeActor(id, lat, lon, hd) { const m = manual.get(id); manual.set(id, { lat, lon, hd: Number.isFinite(hd) ? hd : m ? m.hd : 0 }); wake(); }   // the WASD map: one override path
+  function positionOf(id) { const m = manual.get(id); if (m && isLive()) return { lat: m.lat, lon: m.lon }; const a = actors.find((x) => x.id === id); const p = a && shown != null ? sampleAt(a.path, shown) : null; return p ? { lat: p.lat, lon: p.lon } : null; }
 }

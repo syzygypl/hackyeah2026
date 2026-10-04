@@ -2229,6 +2229,7 @@ host.addEventListener('pointerup', (e) => {
   if (WALK?.click(h)) return;   // Spacer armed: this click picks the start; walking: clicks only look around
   if (G.phase === 'off' && TL3D?.pickActor(ray, h ? ray.ray.origin.distanceTo(h.point) : Infinity)) return;
   if (!h) return;
+  if (G.phase === 'off' && TL3D?.selected && !TL3D.following && TL_LIVE && !P.reveal) return moveUnit3d(TL3D.selected, toLat(h.point.z), toLon(h.point.x)); // click-to-move
   if (G.phase === 'hide') return hideAt(toLat(h.point.z), toLon(h.point.x));
   const k = cellOf(toLat(h.point.z), toLon(h.point.x)); if (k < 0) return;
   if (G.phase === 'off') selectSeg(R.segOf[k], { fly: false });
@@ -2523,6 +2524,31 @@ async function postMove(unit, lat, lon, headingDeg, t) {
     }
     await fetch('/api/fix', { method: 'POST', headers: H, body: JSON.stringify({ sc: SC, actor: unit, t, lat: la, lon: lo, accM: 5, src: 'est' }) }); // an older server: a live fix (gps / report / est)
   } catch (e) { console.warn('3d: position post failed', e); }
+}
+// Click-to-move (top-down / orbit view, live only): with a unit selected, a click on the terrain sends it there - a dashed
+// line and a target ring show the move, the unit glides there in 1.2 s (the same manual override as WASD) and the
+// position goes to the server through postMove (/api/positions source manual). Esc or a click on the unit cancels.
+let MOVE3D = null;
+function moveUnit3d(id, lat, lon) {
+  const from = TL3D.positionOf(id); if (!from) return;
+  if (MOVE3D) { cancelAnimationFrame(MOVE3D.raf); clearTimeout(MOVE3D.tm); scene.remove(MOVE3D.g); disposeGroup(MOVE3D.g); }
+  const g = new THREE.Group(), N = 24, pts = [];
+  for (let i = 0; i <= N; i++) { const k = i / N; pts.push(v3(from.lat + (lat - from.lat) * k, from.lon + (lon - from.lon) * k, 0.03)); }
+  const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0xe8590c, dashSize: 0.04, gapSize: 0.025, depthTest: false }));
+  ln.computeLineDistances(); ln.renderOrder = 10; g.add(ln);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.022, 0.034, 32), new THREE.MeshBasicMaterial({ color: 0xe8590c, side: THREE.DoubleSide, depthTest: false, transparent: true, opacity: 0.9 }));
+  ring.rotation.x = -Math.PI / 2; ring.position.copy(v3(lat, lon, 0.02)); ring.renderOrder = 10; g.add(ring);
+  scene.add(g);
+  const hd = (Math.atan2((lon - from.lon) * Math.cos((lat * Math.PI) / 180), lat - from.lat) * 180 / Math.PI + 360) % 360;
+  postMove(id, lat, lon, hd);
+  const t0 = performance.now(), D = 1200, M = { g };
+  const step = (now) => {
+    const k = Math.min(1, (now - t0) / D), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    TL3D.placeActor(id, from.lat + (lat - from.lat) * e, from.lon + (lon - from.lon) * e, hd * Math.PI / 180); wake();
+    if (k < 1) M.raf = requestAnimationFrame(step);
+    else M.tm = setTimeout(() => { scene.remove(g); disposeGroup(g); if (MOVE3D === M) MOVE3D = null; wake(); }, 4000);
+  };
+  M.raf = requestAnimationFrame(step); MOVE3D = M;
 }
 function applyMsg(m) {
   fromParent = true;
