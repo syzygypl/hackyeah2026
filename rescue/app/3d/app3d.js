@@ -2226,6 +2226,7 @@ cv.addEventListener('pointerleave', () => { $('tip').hidden = true; });
 host.addEventListener('pointerdown', (e) => { downAt = e.target.closest('[data-actor-id]') ? null : [e.clientX, e.clientY]; });
 host.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5) return;
+  if (e.target.closest?.('.lbl3d')) return; // a unit label handles its own click (timeline3d); here it would be a click-to-move to the ground behind it
   const h = pick(e);
   if (WALK?.click(h)) return;   // Spacer armed: this click picks the start; walking: clicks only look around
   if (G.phase === 'off' && TL3D?.pickActor(ray, h ? ray.ray.origin.distanceTo(h.point) : Infinity)) return;
@@ -2530,7 +2531,7 @@ async function postMove(unit, lat, lon, headingDeg, t) {
 }
 // Click-to-move (top-down / orbit view, live only): with a unit selected, a click on the terrain sends it there - a dashed
 // line and a target ring show the move, the unit glides there in 1.2 s (the same manual override as WASD) and the
-// position goes to the server through postMove (/api/positions source manual). Esc or a click on the unit cancels.
+// position goes to the server through postMove (/api/positions source manual) at once; a new click replaces the line.
 let MOVE3D = null;
 function moveUnit3d(id, lat, lon) {
   const from = TL3D.positionOf(id); if (!from) return;
