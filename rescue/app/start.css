@@ -87,11 +87,16 @@ a{color:var(--rl-accent)}
 .st-fam{border-color:var(--rl-danger)}.st-fam .st-ico svg{stroke:var(--rl-danger)}
 /* phones (mobile QA, AI Mateusza #2): "Ktoś zaginął" sat 2 screens down at 360 px - the 112 call goes above the fold, under the
    header. Desktop: hidden, the family block below stays the way in */
-.st-sos{display:none}
+/* laptop (sens-funkcji #21): the same 112 line as a narrow strip above the hero, not hidden under the fold */
+.st-sos{display:flex;align-items:center;gap:6px 18px;flex-wrap:wrap;margin-top:-10px;padding:8px 16px;border-radius:12px;background:color-mix(in srgb,var(--rl-danger) 8%,var(--rl-panel-solid));border:1px solid color-mix(in srgb,var(--rl-danger) 30%,transparent)}
+.st-sos-call{color:var(--rl-danger);font-weight:700;text-decoration:none}
+.st-sos-call small{font-size:inherit;font-weight:600;color:var(--rl-ink)}
+.st-sos-more{color:var(--rl-danger);font-weight:600}
+.st-foot .st-srv{margin-left:0}
 @media (max-width:600px){
-  .st-sos{display:flex;flex-direction:column;gap:6px;margin-top:-8px}
+  .st-sos{display:flex;flex-direction:column;align-items:stretch;gap:6px;margin-top:-8px;padding:0;background:none;border:0}
   .st-sos-call{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:6px 16px;border-radius:14px;background:var(--rl-danger);color:var(--rl-on-danger);font:700 22px/1.1 var(--rl-font);text-decoration:none;box-shadow:0 4px 14px color-mix(in srgb,var(--rl-danger) 30%,transparent)}
-  .st-sos-call small{font-size:16px;font-weight:600}
+  .st-sos-call small{font-size:16px;font-weight:600;color:inherit}
   .st-sos-more{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;font-weight:600;color:var(--rl-danger)}
   .st-sos-call:focus-visible,.st-sos-more:focus-visible{outline:3px solid var(--rl-accent);outline-offset:3px}
 }
