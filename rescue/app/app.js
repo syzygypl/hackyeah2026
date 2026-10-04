@@ -1151,7 +1151,7 @@ async function pollLive() {
         live.events = [...live.events, ...(d.events || []).filter((e) => !have.has(e.seq))].slice(-30);
         const changed = !first && d.seq !== live.seq;
         live.seq = d.seq; live.ok = true;
-        if (changed) await onLiveChange(restarted ? [] : d.events || []);
+        if (changed) { renderLiveHead(); renderLiveFeed(); await onLiveChange(restarted ? [] : d.events || []); }   // the feed shows the event at once, the run follows (12 -> 5 s, AI Mateusza #2 1791081081523)
       }
     } catch (e) { live.ok = false; }
   } else live.ok = false;
