@@ -305,7 +305,7 @@ body.embed-scene #hud .btn.chk input { margin: 0; accent-color: var(--rl-accent,
 body.embed-scene #feed { left: 10px; bottom: 10px; }
 
 /* 2D-style top-3 chips on the map */
-.lbl3d.top3 { font-size: 12px; }
+.lbl3d.top3 { font-size: 12px; z-index: 100000 !important; } /* above every chip (declutter in app3d.js); beats CSS2DRenderer's inline depth order */
 .lbl3d.top3 .rk { color: var(--rl-danger, #b8322a); margin-right: 2px; }
 /* embed=scene control box, same structure as 2D #mapctl */
 body.embed-scene #hud { display: none; }

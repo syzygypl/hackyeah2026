@@ -747,7 +747,45 @@ function disposeGroup(g) {
 function label(html, cls, pos) {
   const el = document.createElement('div'); el.className = 'lbl3d ' + (cls || ''); el.innerHTML = html; labelsDirty = true;
   el.style.willChange = 'transform'; // own compositor layer: moving a label is not a repaint of its shadow over the canvas (-4 ms/frame while orbiting)
-  const o = new CSS2DObject(el); o.position.copy(pos); return o;
+  const o = new CSS2DObject(el); o.position.copy(pos); LBLS.add(o); return o;
+}
+// ---------- label declutter (AI Mateusza #2) ----------
+// Screen-space pass after the CSS2D layout: labels by priority (top 3 > IPP / find / selected unit > unit and team chips,
+// current signal > older signal chips > huts, rings), each placed where it does not overlap one already placed - a pin label
+// (IPP, find) may step up or down one line first, the rest fade out (opacity, no clicks). Top 3 always stay, on top of
+// everything (style3d.css). Sizes are measured once per text (no layout reads while orbiting); ~0.1 ms for 50 labels, at most 10 Hz.
+const LBLS = new Set(), LB_SIZE = new WeakMap(), _lp = new THREE.Vector3();
+const lbPrio = (el) => { const c = el.classList;
+  return c.contains('top3') ? 6 : c.contains('ipp') || c.contains('found') || c.contains('target') ? 5 : c.contains('patrol') ? 4.5
+    : c.contains('team') || c.contains('cur') ? 4 : c.contains('sig') ? 3 : c.contains('hut') ? 2 : 1; };
+let lbAt = 0, lbDue = true;
+function declutter(now) {
+  if (now - lbAt < 100) { lbDue = true; return; }
+  lbAt = now; lbDue = false;
+  const W = innerWidth, H = innerHeight, items = [];
+  for (const o of LBLS) {
+    const el = o.element; let root = o; while (root.parent) root = root.parent;
+    if (root !== scene) { if (o.userData.lbSeen && !el.isConnected) LBLS.delete(o); continue; }
+    o.userData.lbSeen = true;
+    if (el.style.display === 'none' || el.style.visibility === 'hidden' || !el.isConnected) continue;
+    const txt = el.textContent; let sz = LB_SIZE.get(el);
+    if (!sz || sz.t !== txt || !sz.w) { el.style.translate = ''; sz = { t: txt, w: el.offsetWidth, h: el.offsetHeight }; LB_SIZE.set(el, sz); }
+    o.getWorldPosition(_lp).project(camera);
+    const x = ((_lp.x + 1) * W) / 2, y = ((1 - _lp.y) * H) / 2;
+    items.push({ el, x, y, w: sz.w + 4, h: sz.h + 2, p: lbPrio(el) + (el.getAttribute('aria-pressed') === 'true' ? 1.5 : 0), d: _lp.z });
+  }
+  items.sort((a, b) => b.p - a.p || a.d - b.d);
+  const placed = [], hit = (l, t, w, h) => placed.some((b) => l < b.l + b.w && l + w > b.l && t < b.t + b.h && t + h > b.t);
+  for (const it of items) {
+    let dy = 0, ok = it.p >= 6; // top 3: always shown (two top-3 labels may touch; never hidden)
+    if (!ok) for (const c of it.p >= 5 ? [0, -it.h, it.h] : [0]) if (!hit(it.x - it.w / 2, it.y - it.h / 2 + c, it.w, it.h)) { dy = c; ok = true; break; }
+    const st = it.el.style;
+    if (!st.transition) st.transition = 'opacity .18s';
+    st.opacity = ok ? '' : '0';
+    if (!ok) st.pointerEvents = 'none'; else if (it.el.dataset.actorId) st.pointerEvents = 'auto';
+    st.translate = dy ? `0 ${dy}px` : '';
+    if (ok) placed.push({ l: it.x - it.w / 2, t: it.y - it.h / 2 + dy, w: it.w, h: it.h });
+  }
 }
 const ballGeo = new THREE.SphereGeometry(1, 16, 12);
 // night glow halos (see "night glow"): [colour, size px] by pin class; any object with userData.glow gets one
@@ -2335,7 +2373,8 @@ function frame() {
   renderer.render(scene, camera);
   if (GPU_SYNC) renderer.getContext().finish(); // ?gpu=1: stats count the GPU time in "render" (diagnostic only)
   const c1 = performance.now();
-  if (moved || timelineMoving || labelsDirty || now - lastLabels > 1000) { labels.render(scene, camera); TL3D?.layoutLabels(); labelsDirty = false; lastLabels = now; nL++; }
+  if (moved || timelineMoving || labelsDirty || now - lastLabels > 1000) { labels.render(scene, camera); TL3D?.layoutLabels(); labelsDirty = false; lastLabels = now; nL++; lbDue = true; }
+  if (lbDue) declutter(now);
   if (statsEl) {
     const c2 = performance.now();
     statN++; statT += interval; cpuR += c1 - c0; cpuL += c2 - c1; cpuF += c0 - now; statCalls = renderer.info.render.calls; statTris = renderer.info.render.triangles;
