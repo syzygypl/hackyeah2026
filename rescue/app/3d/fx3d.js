@@ -696,8 +696,11 @@ export const FX = {
       vec4 mv = modelViewMatrix * vec4(w, 1.0);
       gl_Position = projectionMatrix * mv;
       // snow: small flakes (about a third of the old size), capped at 4 px on screen so a zoomed-out view never shows blobs
-      gl_PointSize = min(uBox * mix(0.011, 0.0018, uKind) * (0.6 + 0.7 * aRnd) * uPx / max(-mv.z, 0.05), mix(64.0, 4.0, uKind));
-      vA = uAmt * step(aRnd, uAmt) * smoothstep(0.0, 0.08, p.y) * smoothstep(1.0, 0.9, p.y) * smoothstep(0.0, 0.1, p.x) * smoothstep(1.0, 0.9, p.x);
+      // rain (readability, AI Mateusza #2): streaks capped at 26 px (was 64), half the drops, and the front half of the box
+      // (between the camera and the orbit target) thinned to 15%, so the heat map and the top-3 outlines read through it
+      gl_PointSize = min(uBox * mix(0.011, 0.0018, uKind) * (0.6 + 0.7 * aRnd) * uPx / max(-mv.z, 0.05), mix(26.0, 4.0, uKind));
+      float nearThin = mix(mix(0.15, 1.0, smoothstep(uBox * 0.6, uBox * 1.05, -mv.z)), 1.0, uKind);
+      vA = uAmt * nearThin * step(aRnd, uAmt * mix(0.5, 1.0, uKind)) * smoothstep(0.0, 0.08, p.y) * smoothstep(1.0, 0.9, p.y) * smoothstep(0.0, 0.1, p.x) * smoothstep(1.0, 0.9, p.x);
     }`,
     fragment: `varying float vA;
     void main() {
@@ -706,7 +709,7 @@ export const FX = {
         ? (1.0 - smoothstep(0.02, 0.07, abs(c.x - c.y * uWind * 5.0))) * (1.0 - smoothstep(0.25, 0.5, abs(c.y)))
         : 1.0 - smoothstep(0.15, 0.5, length(c));
       vec3 col = mix(vec3(0.72, 0.8, 0.9), vec3(1.0), uKind) * mix(0.45, 1.0, uDay);
-      gl_FragColor = vec4(col, a * vA * mix(0.5, 0.95, uKind));
+      gl_FragColor = vec4(col, a * vA * mix(0.34, 0.95, uKind));
       if (gl_FragColor.a < 0.01) discard;
     }`,
   }),
