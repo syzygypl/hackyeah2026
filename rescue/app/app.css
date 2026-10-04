@@ -581,3 +581,16 @@ body.mode-edycja header>#tmode,body.mode-edycja header>.scenlbl,body.mode-edycja
   header>button:not(#newActionBtn),header>a:not(#centrumLink),header>.scenlbl>button,header .views button{font-size:13px!important}   /* not the two short-label links (font-size:0 + ::after) */
   header>h1 .logo{margin-right:0}
 }
+/* sens-funkcji #15: no key field in the desktop bar - a lock (open = this device may change the action, colour = role), the field in Udostępnij;
+   the phone menu (mobile.css, under 601 px) and the rescuer's 401 box keep the field in the bar */
+@media (min-width:601px){body:not(.role-ratownik) header>#pinbox{display:none!important}}
+#keyLock{display:inline-flex;align-items:center;justify-content:center;min-width:36px;color:var(--rl-mute)}
+#keyLock[hidden]{display:none}
+#keyLock .kl-o{display:none}
+body.key-operator #keyLock .kl-o,body.key-field #keyLock .kl-o{display:inline}
+body.key-operator #keyLock .kl-c,body.key-field #keyLock .kl-c{display:none}
+body.key-operator #keyLock{color:var(--rl-ok)}body.key-field #keyLock{color:var(--rl-warn)}body.key-wrong #keyLock,body.pin-asked #keyLock{color:var(--rl-danger)}
+header #pinbox .kstate{display:none}
+#shareDlg #pinbox:not([style*="none"]){display:flex!important;align-items:center;gap:10px;padding:0 0 10px;font-size:var(--rl-fs-m,14px)}
+#shareDlg #pinbox input{flex:0 1 200px;width:auto;margin:0}
+#shareDlg #pinbox .kstate{color:var(--rl-mute);font-size:var(--rl-fs-s,12px)}

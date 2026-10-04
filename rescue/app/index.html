@@ -60,7 +60,8 @@ window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&
   <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button></span>
   <span style="flex:1"></span>
   <span class="edit-only edit-mode"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
-  <label id="pinbox" style="display:none" title="Klucz akcji: pozwala zmieniać akcję (meldunki, przydziały, Studio). Bez klucza tylko podgląd.">Klucz <input id="pin" size="8" autocomplete="off" placeholder="klucz" aria-label="Klucz akcji"></label>
+  <label id="pinbox" style="display:none" title="Klucz akcji: pozwala zmieniać akcję (meldunki, przydziały, Studio). Bez klucza tylko podgląd.">Klucz <input id="pin" type="password" size="8" autocomplete="off" placeholder="klucz" aria-label="Klucz akcji"><span class="kstate"></span></label>
+  <button id="keyLock" type="button" hidden title="Klucz akcji: wpisz go w oknie Udostępnij" aria-label="Klucz akcji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path class="kl-c" d="M8 11V7a4 4 0 0 1 8 0v4"/><path class="kl-o" d="M8 11V7a4 4 0 0 1 7.6-1.8"/></svg></button>
   <span id="status" class="mute"></span>
   <button id="newActionBtn" data-needslive title="Nowa akcja poszukiwawcza: kto, gdzie, kiedy">+ Nowa akcja</button>
   <a id="centrumLink" href="centrum.html" title="Wszystkie akcje i zespoły na jednej mapie">Centrum - wszystkie akcje</a>
@@ -73,6 +74,7 @@ window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&
 <span id="views" class="views" role="tablist" aria-label="Widok"></span>
 <dialog id="shareDlg" aria-label="Udostępnij akcję"><form method="dialog">
   <h2>Udostępnij akcję</h2>
+  <div id="keySlot"></div>
   <div id="shareBody"></div>
   <div class="shfoot"><button type="button" id="shareReset" title="Czyści meldunki, ślady, feed, przydziały i historię Studio na serwerze">Wyczyść akcję</button><span style="flex:1"></span><button value="close">Zamknij</button></div>
 </form></dialog>

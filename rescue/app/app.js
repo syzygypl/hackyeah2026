@@ -16,7 +16,7 @@ const JOINED = !!new URLSearchParams(location.search).get("key");   // opened fr
 // action key (write access): arrives once in the join link / QR (?key=), is kept on this device and removed from the address bar
 { const k = new URLSearchParams(location.search).get("key"); if (k) { try { localStorage.setItem("rescue-pin", k.trim()); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("key"); history.replaceState(null, "", u); } }
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}   // raw like field/ops/2D; web/patrol writes it JSON-quoted
-if (!LOOPBACK) { $("pinbox").style.display = ""; if (!PIN) document.body.classList.add("pin-needed"); /* the field screen hides the box once a key came with the share link */ $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} keyProbe(true); boot(); }; }
+if (!LOOPBACK) { $("pinbox").style.display = ""; $("keyLock").hidden = false; $("keyLock").onclick = () => $("shareBtn").click(); $("pin").onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); $("pin").blur(); } };   /* Enter inside the Udostępnij form must not close it: blur commits the key */ if (!PIN) document.body.classList.add("pin-needed"); /* the field screen hides the box once a key came with the share link */ $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} keyProbe(true); boot(); }; }
 // GET /api/key (rs server, 4d3bc58): which key this device holds - operator | field | none | wrong, never the key itself. The box says it
 // (title + colour); pin-needed clears only once the server confirmed a key. 404 / anything else (Swift server, older deploy): today's behaviour.
 // A key typed in another tab or frame (storage event) is picked up and re-checked; a probe for an older key is ignored (sequence number)
@@ -29,8 +29,9 @@ async function keyProbe(told) {
   if (seq !== keyProbe.seq || sent !== PIN) return;   // the key changed meanwhile: a newer probe answers
   const B = document.body.classList, box = $("pinbox");
   B.remove("key-operator", "key-field", "key-wrong", "key-none");
-  if (!KEY_TXT[role]) { box.removeAttribute("data-key"); return; }   // no /api/key here: keep today's behaviour
-  B.add("key-" + role); box.dataset.key = role; box.title = KEY_TXT[role];
+  if (!KEY_TXT[role]) { box.removeAttribute("data-key"); box.querySelector(".kstate").textContent = ""; return; }   // no /api/key here: keep today's behaviour
+  B.add("key-" + role); box.dataset.key = role; box.title = KEY_TXT[role]; $("keyLock").title = KEY_TXT[role] + " (kliknij: Udostępnij)";
+  box.querySelector(".kstate").textContent = { operator: "kierownik akcji: możesz zmieniać", field: "ratownik: meldunki i ślady", wrong: "nieprawidłowy: tylko podgląd", none: "brak: tylko podgląd" }[role];   // sens-funkcji #15: the key box lives in Udostępnij, it says the role there
   if (role === "operator" || role === "field") B.remove("pin-needed", "pin-asked"); else B.add("pin-needed");
   if (told) toast(role === "operator" ? "Klucz kierownika akcji przyjęty: możesz zmieniać akcję." : KEY_TXT[role], role === "operator" ? 3000 : 6000);
 }
@@ -39,7 +40,7 @@ addEventListener("storage", (e) => { if (e.key !== "rescue-pin" && e.key !== nul
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
   const r = await fetch(path, body === undefined ? { headers: h, cache: /^\/api\/run\/[^?]*\?(.*&)?live=0(&|$)/.test(path) ? "default" : "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });   // only the recorded run and its &t= frames (live=0): server max-age=10 + CDN (b892f5c); everything else stays no-cache
-  if (r.status === 401) { document.body.classList.add("pin-needed", "pin-asked"); clearTimeout(api.calm); api.calm = setTimeout(() => { if (document.activeElement !== $("pin")) document.body.classList.remove("pin-asked"); }, 20000); throw new Error(PIN ? "Klucz akcji na tym urządzeniu jest nieprawidłowy: wpisz klucz kierownika akcji w polu Klucz albo otwórz link „Udostępnij”." : "Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz."); }
+  if (r.status === 401) { document.body.classList.add("pin-needed", "pin-asked"); clearTimeout(api.calm); api.calm = setTimeout(() => { if (document.activeElement !== $("pin")) document.body.classList.remove("pin-asked"); }, 20000); throw new Error(PIN ? "Klucz akcji na tym urządzeniu jest nieprawidłowy: wpisz klucz kierownika akcji w oknie „Udostępnij” (kłódka w pasku)." : "Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w oknie „Udostępnij” (kłódka w pasku)."); }
   if (r.status === 403) { if (store.role !== "ratownik") document.body.classList.add("pin-needed"); throw new Error("To klucz ratownika (meldunki i ślady). Ta zmiana wymaga klucza kierownika akcji: wpisz go w polu Klucz albo otwórz link „Udostępnij” od kierownika."); }
   if (r.status === 404) throw new Error("Nie znaleziono danych na serwerze.");
   if (r.status >= 500) throw new Error("Serwer zgłosił błąd - spróbuj ponownie za chwilę.");
@@ -1435,12 +1436,14 @@ boot();
     let field = ""; if (PIN) { try { field = (await api("/api/join")).fieldKey || ""; } catch (e) {} }
     await qrP;
     const rescuer = (() => { const u = new URL(link("ratownik", false)); if (field) u.searchParams.set("key", field); return u.toString(); })();
-    $("shareBody").innerHTML = (PIN && field ? "" : `<p class="help">Na tym urządzeniu nie ma klucza operatora, więc linki są tylko do podglądu. Wpisz klucz w polu Klucz albo otwórz link operatora.</p>`)
+    $("shareBody").innerHTML = (PIN && field ? "" : `<p class="help">Na tym urządzeniu nie ma klucza operatora, więc linki są tylko do podglądu. Wpisz klucz powyżej albo otwórz link operatora.</p>`)
       + row("Ratownik (telefon)", "Zeskanuj telefonem: rola ratownik, ta akcja. Klucz ratownika: tylko meldunki i ślady.", rescuer)
       + row("Operator (drugi komputer)", "Pełny dostęp: przydziały, Studio, Centrum, czyszczenie akcji. Nie pokazuj na rzutniku.", link("operator", !!field))
       + row("Podgląd (jury, bez zapisu)", "Widzi mapę i plan na żywo, nie może niczego zmienić.", link("", false));
+    $("keySlot").append($("pinbox"));   // sens-funkcji #15: the key box sits in Udostępnij while it is open, back in the bar (rescuer 401, phone menu) on close
     $("shareDlg").showModal();
   };
+  $("shareDlg").addEventListener("close", () => $("status").before($("pinbox")));
   $("shareBody").onclick = async (ev) => {
     const b = ev.target.closest("[data-copy]"); if (!b) return;
     try { await navigator.clipboard.writeText(b.dataset.copy); toast("Skopiowano link"); } catch (e) { toast("Zaznacz link i skopiuj ręcznie"); }
