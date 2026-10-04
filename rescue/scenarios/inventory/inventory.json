@@ -513,6 +513,77 @@
    "fictional": true
   },
   {
+   "id": "dron-psp-lodz",
+   "kind": "dron",
+   "name": "Dron PSP Łódź z termowizją",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-599",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 241.9,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 213.6,
+    "lastMaintenance": "2026-09-07"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-12",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-14",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-LODZ-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-LODZ-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "senior-demencja-lodz": {
+     "name": "Dron PSP Łódź z termowizją",
+     "readyAt": "15:30",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-LODZ-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-LODZ-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-psp-nowy-targ",
    "kind": "dron",
    "name": "Dron termowizyjny PSP Nowy Targ",
@@ -2044,6 +2115,61 @@
    "fictional": true
   },
   {
+   "id": "ochotnicy-lodz",
+   "kind": "pieszy",
+   "name": "Ochotnicza grupa poszukiwawcza (6 os.)",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OCHOTNICY-478",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-19",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OCHOTNICY-LODZ-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OCHOTNICY-LODZ-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "senior-demencja-lodz": {
+     "name": "Ochotnicza grupa poszukiwawcza (6 os.)",
+     "readyAt": "16:00",
+     "base": "baza wg scenariusza",
+     "operator": null,
+     "crew": [
+      {
+       "name": "OCHOTNICY-LODZ-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OCHOTNICY-LODZ-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "osp-boat",
    "kind": "lodz",
    "name": "Łódź OSP Moryń",
@@ -2256,6 +2382,58 @@
    "fictional": true
   },
   {
+   "id": "pies-pol-lodz",
+   "kind": "pies",
+   "name": "Przewodnik z psem tropiącym (KWP Łódź)",
+   "base": "KWP Łódź",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-170",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-27",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Bor (fikcyjny)",
+    "breed": "owczarek belgijski",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-POL-LODZ-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "senior-demencja-lodz": {
+     "name": "Przewodnik z psem tropiącym (KWP Łódź)",
+     "readyAt": "16:30",
+     "base": "KWP Łódź",
+     "operator": null,
+     "crew": [
+      {
+       "name": "PIES-POL-LODZ-1 (fikcyjny)",
+       "role": "przewodnik psa"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "pol-a",
    "kind": "pieszy",
    "name": "Patrol Policji A (KP Nowa Huta)",
@@ -2413,6 +2591,116 @@
       },
       {
        "name": "POL-KARPACZ-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-lodz-baluty",
+   "kind": "pieszy",
+   "name": "Patrol Policji A (KP Łódź-Bałuty)",
+   "base": "KP Łódź-Bałuty",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-718",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-14",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-LODZ-BALUTY-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-LODZ-BALUTY-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "senior-demencja-lodz": {
+     "name": "Patrol Policji A (KP Łódź-Bałuty)",
+     "readyAt": "14:15",
+     "base": "KP Łódź-Bałuty",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-LODZ-BALUTY-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-LODZ-BALUTY-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-lodz-polesie",
+   "kind": "pieszy",
+   "name": "Patrol Policji B (KP Łódź-Polesie)",
+   "base": "KP Łódź-Polesie",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-656",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-06",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-LODZ-POLESIE-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-LODZ-POLESIE-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "senior-demencja-lodz": {
+     "name": "Patrol Policji B (KP Łódź-Polesie)",
+     "readyAt": "14:30",
+     "base": "KP Łódź-Polesie",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-LODZ-POLESIE-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-LODZ-POLESIE-2 (fikcyjny)",
        "role": "policjant"
       }
      ]
@@ -2751,6 +3039,77 @@
    "fictional": true
   },
   {
+   "id": "psp-lodz-jrg9",
+   "kind": "pieszy",
+   "name": "PSP JRG 9 Łódź - rota (4 os.)",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-220",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-22",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-LODZ-JRG9-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-LODZ-JRG9-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-LODZ-JRG9-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-LODZ-JRG9-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "senior-demencja-lodz": {
+     "name": "PSP JRG 9 Łódź - rota (4 os.)",
+     "readyAt": "15:00",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LODZ-JRG9-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-LODZ-JRG9-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "PSP-LODZ-JRG9-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "PSP-LODZ-JRG9-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "psp-lodz-sanok",
    "kind": "lodz",
    "name": "Łódź PSP JRG Sanok",
@@ -3045,6 +3404,61 @@
       },
       {
        "name": "SM-2 (fikcyjny)",
+       "role": "strażnik miejski"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "sm-lodz-baluty",
+   "kind": "pieszy",
+   "name": "Straż Miejska (2 os.), oddział Bałuty",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "SM-286",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-07",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "SM-LODZ-BALUTY-1 (fikcyjny)",
+     "role": "strażnik miejski"
+    },
+    {
+     "name": "SM-LODZ-BALUTY-2 (fikcyjny)",
+     "role": "strażnik miejski"
+    }
+   ],
+   "byHome": {
+    "senior-demencja-lodz": {
+     "name": "Straż Miejska (2 os.), oddział Bałuty",
+     "readyAt": "14:40",
+     "base": "baza wg scenariusza",
+     "operator": "Straż Miejska",
+     "crew": [
+      {
+       "name": "SM-LODZ-BALUTY-1 (fikcyjny)",
+       "role": "strażnik miejski"
+      },
+      {
+       "name": "SM-LODZ-BALUTY-2 (fikcyjny)",
        "role": "strażnik miejski"
       }
      ]
