@@ -54,7 +54,8 @@ def suite(B):
         for k in range(3):
             st, d, _ = P({"unit": unit_a, "lat": 49.2200 + 0.0005 * k, "lon": 20.0200, "acc": 9, "ts": now - (2 - k) * 20000})
             assert st == 200 and d.get("ok"), f"POST {st} {d}"
-        st, d, _ = P({"unit": unit_b, "lat": 49.2300, "lon": 20.0300, "source": "manual"})
+        iso = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(now / 1000 + 1))
+        st, d, _ = P({"unit": unit_b, "lat": 49.2300, "lon": 20.0300, "source": "manual", "ts": iso, "headingDeg": 135, "by": "3d-fpp"})
         assert st == 200, f"POST b {st} {d}"
         st, d, _ = G()
         assert st == 200, f"GET {st}"

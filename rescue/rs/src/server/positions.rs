@@ -92,8 +92,12 @@ async fn add(q: &Req, sc: &str) -> Resp {
         _ => "gps".to_string(),
     };
     let now = now_ms();
-    // ts from the phone (ms); a clock more than 10 min off is replaced by the server time
-    let ts = o.get("ts").and_then(|v| v.as_i64()).filter(|t| (t - now).abs() < 10 * 60_000).unwrap_or(now);
+    // ts from the phone (ms, or ISO 8601 / RFC 3339); a clock more than 10 min off is replaced by the server time
+    let ts = o
+        .get("ts")
+        .and_then(|v| v.as_i64().or_else(|| v.as_str().and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok()).map(|d| d.timestamp_millis())))
+        .filter(|t| (t - now).abs() < 10 * 60_000)
+        .unwrap_or(now);
     let mut m = POSITIONS.load(sc).await;
     prune(&mut m, now);
     let u = m.entry(unit.clone()).or_insert_with(|| UnitPos { unit: unit.clone(), ..Default::default() });
