@@ -646,11 +646,14 @@ function insetsFor(el) {
   return [Math.max(0, T - f.top), Math.max(0, f.right - (innerWidth - R)), Math.max(0, f.bottom - (innerHeight - B)), Math.max(0, L - f.left)].map(Math.round);
 }
 let insetsKey = "";
+// an open actor drawer (actorlog.js) covers the right edge: the 3D moves its panel aside (the 2D keeps its camera - "Ślad na mapie" pads for it itself)
+const drawerW = () => { const d = $("alDrawer"); return d && d.getAttribute("aria-hidden") !== "true" ? d.offsetWidth + 24 : 0; };
 function pushInsets() {
-  const key = insets().join(",") + store.view;
+  const key = insets().join(",") + store.view + "|" + drawerW();
   if (mapReady) { const [T, R, B, L] = insetsFor($("map")); map.setPadding({ top: T, right: R, bottom: B, left: L }); }
   if (key === insetsKey) return; insetsKey = key;
-  for (const k in FRAMES) postTo(k, { type: "insets", insets: insetsFor(FRAMES[k].el) });
+  const dw = drawerW();
+  for (const k in FRAMES) { const i = insetsFor(FRAMES[k].el); if (k === "3d" && dw) { const f = FRAMES[k].el.getBoundingClientRect(); i[1] = Math.max(i[1], Math.round(f.right - (innerWidth - dw))); } postTo(k, { type: "insets", insets: i }); }
 }
 addEventListener("resize", () => setTimeout(pushInsets, 50));
 function frameURL(k) {
@@ -671,7 +674,7 @@ function postTo(k, msg) { const F = FRAMES[k]; if (F.ready && F.el.contentWindow
 function post3d(msg) { for (const k in FRAMES) postTo(k, msg); }
 function syncFrame(k, why) {
   const F = FRAMES[k];
-  if (F.ready && F.shown !== F.visible()) { F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown }); }   // a hidden view may pause its render loop
+  if (F.ready && F.shown !== F.visible()) { F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown }); if (F.shown && tlDoc() && store.minute != null) { TLP.sent[k] = null; tlPostOne(k, tlDoc(), store.minute, tlFrameAt(tlDoc(), store.minute)); } }   // a hidden view may pause its render loop
   if (!F.visible() && !(F.warm && store.mode === "akcja")) { if (why === "edit" || why === "load" || why === "run") F.dirty = true; return; }   // warm: kept alive while hidden
   if (F.ready && !F.dirty && why !== "load") {
     if (why === "edit" || why === "run") { const u = runURL(); if (u) { F.ready = false; postTo2(F, { type: "run", url: u }); return; } }
@@ -780,7 +783,7 @@ addEventListener("message", (e) => {
   }
   if (m.type === "time" && Number.isFinite(m.minute) && F.ready) setMinute(m.minute, k);
   if (m.type === "top3" && k === "2da") { store.evTop = evOff.size && Array.isArray(m.ids) && m.ids.length ? m.ids.map(String) : null; renderPanels(); tlPostTime(k, true); }   // the 3D labels follow (msg.top) // signal off: the 2D's recomputed ranking
-  if (m.type === "cinema") { document.body.classList.toggle("cinema", !!m.on); pushInsets(); } // 3D Kino: panels step aside, full-frame shots
+  if (m.type === "cinema") { document.body.classList.toggle("cinema", !!m.on); if (m.on) import("./actorlog.js").then((x) => x.closeActor()); pushInsets(); } // 3D Kino: panels step aside, full-frame shots
   if (m.type === "select" && (typeof m.segmentId === "string" || m.segmentId === null)) selectSeg(m.segmentId, k);
   if (m.type === "evidence" && typeof m.id === "string") setEvidence(m.id, !!m.on, k);
   // a view reloading itself reports its boot step before "ready": only user steps after "ready" count
@@ -1377,7 +1380,7 @@ function tlPostTime(from, force) {
   TLP.at = now;
   const T = tlDoc(); if (!T || store.minute == null) return;
   const frame = tlFrameAt(T, store.minute);
-  for (const k in FRAMES) if (k !== from && FRAMES[k].ready) tlPostOne(k, T, store.minute, frame);
+  for (const k in FRAMES) if (k !== from && FRAMES[k].ready && FRAMES[k].visible()) tlPostOne(k, T, store.minute, frame);   // a hidden view catches up when shown (syncFrame)
 }
 // the range becomes a minute axis (or back to steps for a run without timeline)
 function tlSlider() {
@@ -1538,7 +1541,7 @@ subs.push((why) => {
   // "Ślad na mapie": back to Akcja if needed, 2D fits the track; in 3D the view selects the team ({type:"highlight", actor, fly})
   const focusTrack = (a) => { if (store.mode !== "akcja") setMode("akcja"); if (store.view === "3d" || store.view === "split") postTo("3d", { type: "highlight", actor: a, fly: true }); highlight(a); };
   const showActor = (id) => import("./actorlog.js").then((m) => m.openActor(id, { sc: store.backend === "api" ? store.scenario : undefined, at: liveOn() ? undefined : atNow(),
-    onTrack: focusTrack, onClose: () => highlight(null) }));
+    onTrack: focusTrack, onClose: () => { highlight(null); pushInsets(); } })).then(() => pushInsets());
   $("liveFeed") && $("liveFeed").addEventListener("click", (e) => { const b = e.target.closest("[data-actor]"); if (b) { showActor(b.dataset.actor); highlight(b.dataset.actor); } });
   addEventListener("message", (e) => { if (e.origin === location.origin && e.data && (e.data.source === "rescue2d" || e.data.source === "rescue3d") && e.data.type === "actor" && typeof e.data.id === "string") showActor(e.data.id); });
   const qa = new URLSearchParams(location.search).get("actor");
