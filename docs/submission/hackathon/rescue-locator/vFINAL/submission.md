@@ -151,7 +151,7 @@ bash docs/submission/hackathon/rescue-locator/vFINAL/start.sh stop
 ```
 
 - **Wideo (szkic, 2:07, polskie napisy, bez lektora):** `docs/submission/hackathon/rescue-locator/video/draft.mp4`, napisy w `draft.srt`, lista ujęć w `shotlist.md`. Nagrane na produkcji (`7dcb415`). Brakuje lektora i wgrania pliku (**[UZUPEŁNIJ: link]**).
-- **Prezentacja PDF:** **[UZUPEŁNIJ: eksport `docs/submission/hackathon/rescue-locator/vFINAL/deck.html`]**
+- **Prezentacja PDF:** `docs/submission/hackathon/rescue-locator/vFINAL/deck.pdf` (10 slajdów). Po wpisaniu zespołu na slajdach 1 i 10 wyeksportuj ponownie z `docs/submission/hackathon/rescue-locator/vFINAL/deck.html`.
 
 ## 7. Co jest zamockowane
 

@@ -118,7 +118,7 @@ Starszy pan z demencją wychodzi z domu w Nowej Hucie w upale. Córka zgłasza z
 - **Repozytorium:** https://github.com/syzygypl/hackyeah2026
 - **Uruchomienie lokalne:** `bash docs/submission/hackathon/rescue-locator-smartcity/vFINAL/start.sh`
 - **Wideo MP4 (maks. 3 min):** szkic 2:07 jest gotowy (`docs/submission/hackathon/rescue-locator/video/draft.mp4`, `7dcb415`), ale zaczyna się od gór. Wersja z Krakowem na pierwszym planie i lektorem: **[UZUPEŁNIJ: AI Michała]**
-- **Prezentacja PDF:** **[UZUPEŁNIJ: eksport `docs/submission/hackathon/rescue-locator-smartcity/vFINAL/deck.html`]**
+- **Prezentacja PDF:** `docs/submission/hackathon/rescue-locator-smartcity/vFINAL/deck.pdf` (10 slajdów). Po wpisaniu zespołu na slajdach 1 i 10 wyeksportuj ponownie z `docs/submission/hackathon/rescue-locator-smartcity/vFINAL/deck.html`.
 
 ## 7. Co jest zamockowane
 
