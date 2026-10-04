@@ -162,6 +162,7 @@ async function swapBasemap(bb) {
 }
 // style.load fires without a paint (hidden tabs); "load" waits for the first frame
 map.on("style.load", setupLayers); map.on("load", setupLayers); if (map.isStyleLoaded()) setupLayers();
+map.on("resize", () => { if (renderMap.stale) renderMap(); });   // a hidden #map skipped renderMap; setView / setRole resize it when it shows
 function circle(c, rM, n = 48) {
   const k = 111320, ring = [];
   for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; ring.push([c[1] + rM * Math.sin(a) / (k * Math.cos(c[0] * Math.PI / 180)), c[0] + rM * Math.cos(a) / k]); }
@@ -176,6 +177,9 @@ function searchedUpTo() {
 }
 function renderMap() {
   const R = D(), S = curStep(); if (!mapReady || !R || !S) return;
+  // #map is display:none outside Plan (Akcja shows the 2D/3D views): no heat toDataURL + setData per scrub step; drawn on the next resize
+  if (!map.getContainer().getClientRects().length) { renderMap.stale = true; return; }
+  renderMap.stale = false;
   const b = R.bbox, cv = paintGrid(S.poaGrid, R.cols, R.rows);
   map.getSource("heat").updateImage({ url: cv.toDataURL(), coordinates: [[b.west, b.north], [b.east, b.north], [b.east, b.south], [b.west, b.south]] });
   const top = S.segments.slice(0, 3).map((s) => s.id), searched = searchedUpTo();
