@@ -34,7 +34,7 @@ from lib import Server, ensure_binary, free_port  # noqa: E402
 if "--server" in sys.argv:   # test another server binary with the same contract (e.g. rescue/rs, the Rust port)
     lib.BIN = os.path.abspath(sys.argv[sys.argv.index("--server") + 1])
 
-CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+CHROME = lib.CHROME   # env CHROME, macOS Chrome, chromium on PATH or Playwright Chromium (lib.find_chrome)
 EX = os.environ.get("EXERCISE", "cwiczenie-morskie-oko")
 FAILS = []
 
@@ -49,6 +49,7 @@ class Cdp:
     """Minimal Chrome DevTools client: one page, Runtime.evaluate only."""
 
     def __init__(self, port):
+        pages = []
         for _ in range(100):
             try:
                 pages = [t for t in json.load(urllib.request.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=2)) if t["type"] == "page"]
@@ -57,6 +58,8 @@ class Cdp:
             except Exception:
                 pass
             time.sleep(0.2)
+        if not pages:
+            raise RuntimeError(f"no headless browser on DevTools port {port}: {lib.CHROME} did not start (set CHROME=/path/to/chrome)")
         host, rest = pages[0]["webSocketDebuggerUrl"][5:].split("/", 1)
         h, p = host.split(":")
         self.sock = socket.create_connection((h, int(p)))

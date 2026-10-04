@@ -5,14 +5,17 @@
     python3 rescue/integration/test_top3_consistency.py --base http://127.0.0.1:8080 --steps 1,7,8 --sc zawrat
     python3 rescue/integration/test_top3_consistency.py --no-live --view 2d
     python3 rescue/integration/test_top3_consistency.py --steps 8 --evidence-off   # also untick each signal (demo step 2), then restore all
+    python3 rescue/integration/test_top3_consistency.py --server --sc all          # own local server (Swift, or rescue/rs on Linux), every scenario
+    python3 rescue/integration/test_top3_consistency.py --server rescue/rs/target/release/rescue-server --sc zawrat,kajak-pieniny --steps all
 
-Headless Chrome over the DevTools protocol, stdlib only (CHROME env overrides the browser path). Read-only: every non-GET
+Headless Chrome over the DevTools protocol, stdlib only (browser: lib.find_chrome, env CHROME overrides). Read-only: every non-GET
 fetch / XHR / beacon is refused in the page and all its frames, so it is safe against production.
 For each moment it opens /app/?role=operator&mode=akcja&view=<split>&sc=<sc>&time=hist&step=<i> (or time=live), waits until
 the panel, the 2D map (web/, chips .chip.top1-3) and the 3D view (app/3d, labels .lbl3d.top3) have settled, and compares the
 three name lists. Prints a table and exits 1 on any mismatch.
 """
 import argparse
+import atexit
 import base64
 import json
 import os
@@ -24,7 +27,10 @@ import tempfile
 import time
 import urllib.request
 
-CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import lib  # noqa: E402
+
+CHROME = lib.CHROME   # env CHROME / CHROME_PATH, macOS Chrome, chromium on PATH or Playwright Chromium
 
 # refuse writes in every frame (production is shared live data)
 NO_WRITES = r"""(() => {
@@ -47,6 +53,7 @@ PROBE = r"""(() => {
     .sort((a, b) => +a.querySelector('.rank').textContent - +b.querySelector('.rank').textContent)
     .map((r) => { const b = r.querySelector('b').textContent.trim(); const id = r.dataset.seg; return { id, name: b.startsWith(id + ' ') ? b.slice(id.length + 1) : b }; });
   out.panelAt = ($('vsub') || {}).textContent || '';
+  if (!$('frame2d')) out.page = location.href + ' :: ' + (document.body ? document.body.innerText.replace(/\s+/g, ' ').slice(0, 160) : '(no body)');
   try {
     const w = $('frame2d').contentWindow, d = w.document;
     out.ready2d = d.body && d.body.dataset.state === 'ready';
@@ -77,6 +84,8 @@ class Cdp:
             except Exception:
                 pass
             time.sleep(0.2)
+        if not pages:
+            raise RuntimeError(f"no headless browser on DevTools port {port}: {lib.CHROME} did not start (set CHROME=/path/to/chrome)")
         host, rest = pages[0]["webSocketDebuggerUrl"][5:].split("/", 1)
         h, p = host.split(":")
         self.sock = socket.create_connection((h, int(p)))
@@ -153,27 +162,48 @@ def settle(c, need3d, timeout):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", default="https://rescue-locator.vercel.app")
-    ap.add_argument("--sc", default="zawrat")
-    ap.add_argument("--steps", default="1-10", help="1-based Historia steps, e.g. 1-10 or 1,7,8")
+    ap.add_argument("--base", "--url", dest="base", default="https://rescue-locator.vercel.app", help="running server to test")
+    ap.add_argument("--server", nargs="?", const="", default=None, metavar="BIN",
+                    help="start an own rescue-server on a free loopback port instead of --base (BIN, or the default: Swift build, "
+                         "else rescue/rs/target/release/rescue-server, built when missing)")
+    ap.add_argument("--sc", default="zawrat", help="scenario, comma list, or 'all' (every scenario /api/scenarios lists)")
+    ap.add_argument("--steps", default="1-10", help="1-based Historia steps, e.g. 1-10 or 1,7,8, or 'all'; clamped to each scenario's step count")
     ap.add_argument("--no-live", action="store_true")
     ap.add_argument("--view", default="split", choices=["split", "2d", "3d"], help="split = both views visible (default)")
     ap.add_argument("--timeout", type=float, default=150)
     ap.add_argument("--evidence-off", action="store_true", help="per moment also untick each signal checkbox one at a time, then restore all (fails on any non-GET)")
     a = ap.parse_args()
-    steps = []
-    for part in a.steps.split(","):
-        lo, _, hi = part.partition("-")
-        steps += list(range(int(lo), int(hi or lo) + 1))
-    moments = [("hist", s) for s in steps] + ([] if a.no_live else [("live", None)])
     need3d, need2d = a.view in ("split", "3d"), a.view in ("split", "2d")
 
     tmp = tempfile.mkdtemp(prefix="rescue-top3-")
-    port = 9400 + os.getpid() % 500
+    srv = None
+    if a.server is not None:   # own server: loopback, no PIN, local LLM off, live file in tmp
+        if a.server:
+            lib.BIN = os.path.abspath(a.server)
+        lib.ensure_binary()
+        srv = lib.Server(lib.free_port(8840), None, os.path.join(tmp, "live-events.json"), strict=False, llm_off=True,
+                         log=os.path.join(tmp, "server.log"), extra_env={"RESCUE_LIVE_DIR": tmp})
+        srv.start()
+        atexit.register(srv.stop)
+        a.base = srv.base
+        print(f"own rescue-server {lib.BIN} on {srv.base}; log {tmp}/server.log", flush=True)
+    a.base = a.base.rstrip("/")
+    scs = a.sc.split(",")
+    if a.sc == "all":
+        scs = [x["name"] for x in json.load(urllib.request.urlopen(a.base + "/api/scenarios", timeout=60))["scenarios"]]
+    moments = []
+    for sc in scs:
+        n = len(json.load(urllib.request.urlopen(f"{a.base}/api/run/{sc}", timeout=120)).get("steps") or [])
+        steps = []
+        for part in ("1-%d" % n if a.steps == "all" else a.steps).split(","):
+            lo, _, hi = part.partition("-")
+            steps += [x for x in range(int(lo), int(hi or lo) + 1) if not n or x <= n]
+        moments += [(sc, "hist", s) for s in steps] + ([] if a.no_live else [(sc, "live", None)])
+    port = lib.free_port(9400 + os.getpid() % 500)
     chrome = subprocess.Popen([CHROME, "--headless=new", f"--remote-debugging-port={port}", f"--user-data-dir={tmp}/chrome",
                                "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--no-first-run",
                                "--no-default-browser-check", "--window-size=1440,900", "--hide-scrollbars", "about:blank"],
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                              stdout=subprocess.DEVNULL, stderr=open(os.path.join(tmp, "chrome.log"), "w"))
     rows, fails = [], 0
     try:
         c = Cdp(port)
@@ -181,8 +211,8 @@ def main():
         c.call("Page.enable")
         c.call("Emulation.setDeviceMetricsOverride", {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False})
         c.call("Page.addScriptToEvaluateOnNewDocument", {"source": NO_WRITES})
-        for mode, s in moments:
-            q = f"role=operator&mode=akcja&view={a.view}&sc={a.sc}&time={mode}" + (f"&step={s - 1}" if s else "")
+        for sc, mode, s in moments:
+            q = f"role=operator&mode=akcja&view={a.view}&sc={sc}&time={mode}" + (f"&step={s - 1}" if s else "")
             c.call("Page.navigate", {"url": f"{a.base}/app/?{q}"})
             time.sleep(2)
             p, ok = settle(c, need3d, a.timeout)
@@ -192,7 +222,7 @@ def main():
             m3 = need3d and [norm(x) for x in d3] != [norm(x) for x in panel]
             bad = (not ok) or m2 or m3
             fails += bad
-            label = f"Historia krok {s}" if s else "Na żywo"
+            label = (f"{sc}  " if len(scs) > 1 else "") + (f"Historia krok {s}" if s else "Na żywo")
             hints = c.js("[...document.querySelectorAll('#events .evt')].map((x) => x.dataset.hint)") if a.evidence_off else []
             for h in [None] + list(dict.fromkeys(hints or [])) + (["*"] if hints else []):
                 if h == "*":  # the ↺ button
@@ -221,7 +251,7 @@ def main():
                     print(f"   2D    ({p.get('at2d', '?')}): {' / '.join(map(str, d2))}{'   <-- differs' if m2 else ''}")
                 if need3d:
                     print(f"   3D    : {' / '.join(map(str, d3))}{'   <-- differs' if m3 else ''}")
-                for e in ("err2d", "err3d"):
+                for e in ("err2d", "err3d", "page"):
                     if p.get(e):
                         print(f"   {e}: {p[e]}")
                 if writes:
@@ -236,6 +266,8 @@ def main():
             print("\nJS errors:", *sorted(set(c.errors))[:10], sep="\n  ")
     finally:
         chrome.terminate()
+        if srv:
+            srv.stop()
     sys.exit(1 if fails else 0)
 
 

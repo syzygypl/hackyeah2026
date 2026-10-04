@@ -1,6 +1,9 @@
 """Shared helpers for the integration suite and the showcase: start our own rescue-server, talk HTTP. Stdlib only."""
+import glob
 import json
 import os
+import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -11,7 +14,45 @@ import urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESCUE = os.path.dirname(HERE)                       # rescue/
 REPO = os.path.dirname(RESCUE)
-BIN = os.path.join(RESCUE, ".build", "debug", "rescue-server")
+SWIFT_BIN = os.path.join(RESCUE, ".build", "debug", "rescue-server")
+RUST_BIN = os.path.join(RESCUE, "rs", "target", "release", "rescue-server")
+MAC_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+
+def default_binary():
+    """Env RESCUE_SERVER, else the Swift build (macOS, or wherever swift is installed or already built), else the Rust port."""
+    if os.environ.get("RESCUE_SERVER"):
+        return os.path.abspath(os.environ["RESCUE_SERVER"])
+    if os.path.exists(SWIFT_BIN) or shutil.which("swift"):
+        return SWIFT_BIN
+    return RUST_BIN
+
+
+BIN = default_binary()
+
+
+def find_chrome():
+    """Browser for the headless UI tests. Env CHROME (or CHROME_PATH) wins; then macOS Google Chrome (unchanged default);
+    then google-chrome / chromium on PATH; then Playwright's bundled Chromium (~/.cache/ms-playwright, PLAYWRIGHT_BROWSERS_PATH)."""
+    for k in ("CHROME", "CHROME_PATH"):
+        if os.environ.get(k):
+            return os.environ[k]
+    if sys.platform == "darwin" or os.path.exists(MAC_CHROME):
+        return MAC_CHROME
+    for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome"):
+        p = shutil.which(name)
+        if p:
+            return p
+    root = os.environ.get("PLAYWRIGHT_BROWSERS_PATH") or os.path.expanduser("~/.cache/ms-playwright")
+    ver = lambda p: int((re.search(r"-(\d+)/", p) or [0, 0])[1])   # noqa: E731  chromium-1243/... -> 1243
+    for pat in ("chromium-*/chrome-linux*/chrome", "chromium_headless_shell-*/chrome-headless-shell-linux*/chrome-headless-shell"):
+        hits = sorted(glob.glob(os.path.join(root, pat)), key=ver, reverse=True)
+        if hits:
+            return hits[0]
+    return MAC_CHROME   # nothing found: the launch fails and Cdp says to set CHROME
+
+
+CHROME = find_chrome()
 
 
 def free_port(start=8790):
@@ -29,9 +70,18 @@ def free_port(start=8790):
 
 
 def ensure_binary(rebuild=False):
-    if rebuild or not os.path.exists(BIN):
+    """Build BIN when missing (or on rebuild): swift for the Swift server, cargo --release for the Rust port (rescue/rs)."""
+    if not (rebuild or not os.path.exists(BIN)):
+        return BIN
+    if os.path.abspath(BIN) == SWIFT_BIN:
         print("swift build --product rescue-server ...", flush=True)
         subprocess.run(["swift", "build", "--product", "rescue-server"], cwd=RESCUE, check=True)
+    elif os.path.abspath(BIN) == RUST_BIN:
+        cargo = shutil.which("cargo") or os.path.expanduser("~/.cargo/bin/cargo")
+        print(f"{cargo} build --release --bin rescue-server (rescue/rs) ...", flush=True)
+        subprocess.run([cargo, "build", "--release", "--bin", "rescue-server"], cwd=os.path.join(RESCUE, "rs"), check=True)
+    elif not os.path.exists(BIN):
+        raise RuntimeError(f"rescue-server binary not found: {BIN}")
     return BIN
 
 
@@ -51,6 +101,7 @@ class Server:
     def start(self, timeout=30):
         env = dict(os.environ)
         env["RESCUE_LIVE_FILE"] = self.live_file
+        env.setdefault("RESCUE_DIR", RESCUE)   # serve this checkout (same meaning in Swift and Rust)
         env["RESCUE_RATE_PER_MIN"] = env.get("RESCUE_RATE_PER_MIN", "1000")   # strict loopback is rate limited like LAN
         if self.strict:
             env["RESCUE_GUARD_STRICT"] = "1"

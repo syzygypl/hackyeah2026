@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """Rescue Locator: end-to-end check of the pitch path (docs/rescue-locator/demo-runbook.md) against a LOCAL server.
 
-    python3 rescue/integration/test_demo_path.py            # swift build + own rescue-server on 127.0.0.1:8794
+    python3 rescue/integration/test_demo_path.py            # build (swift, or rescue/rs on Linux) + own rescue-server on 127.0.0.1:8794
     python3 rescue/integration/test_demo_path.py --no-build
 
 Never production. Loopback bind, no PIN (loopback is exempt), local LLM off (rules parser, fast), live files in a temp
 dir; any file the server still writes under rescue/out/ is removed at the end. Stdlib only. Exit 1 on any FAIL.
 """
 import os
-import subprocess
 import sys
 import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib import RESCUE, Server, http  # noqa: E402
+from lib import RESCUE, Server, ensure_binary, http  # noqa: E402
 
 PORT = 8794
 RESULTS = []   # (step, status, detail)
@@ -38,7 +37,7 @@ def step(name):
 
 def main():
     if "--no-build" not in sys.argv:
-        subprocess.run(["swift", "build", "--product", "rescue-server"], cwd=RESCUE, check=True)
+        ensure_binary(rebuild=True)   # swift build, or cargo build --release of rescue/rs where swift is missing
     out_dir = os.path.join(RESCUE, "out")
     before = set(os.listdir(out_dir))
     tmp = tempfile.mkdtemp(prefix="rescue-demo-path-")
