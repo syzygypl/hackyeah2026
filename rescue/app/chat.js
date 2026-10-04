@@ -683,9 +683,9 @@ export function mountAppChat() {
   if (anchor && anchor.parentNode) { btn.classList.add("inhdr"); anchor.before(btn); document.body.append(dr); } else document.body.append(btn, dr);
   // every 2D frame the shell creates (its double buffer swaps in a new <iframe>) gets the blob HEAD shim
   const f2 = document.getElementById("frame2d"); if (f2) { tameFrame(f2); new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.tagName === "IFRAME" && !n.__tamed) { n.__tamed = 1; tameFrame(n); } }))).observe(f2.parentNode, { childList: true }); }
-  // no blank 2D after a chat change: a "dirty" 2D frame takes the shell's double-buffered reload (old map stays until the new
-  // one is ready, then a crossfade) instead of {type:"run"}, which makes the view reload itself in place (blank ~1 s)
-  const buffered = (fn) => { const F = A().frames && A().frames["2da"]; if (F && F.ready && F.el.getAttribute("src")) F.dirty = true; return fn(); };
+  // no blank 2D after a chat change: the shell posts {type:"run", url} to its ready 2D view, which updates the run in place
+  // (web/app.js runInPlace, same grid: ~30 ms, camera kept); another grid still reloads (shell double buffer)
+  const buffered = (fn) => fn();
   let simRun = null, restoring = false, blob = null;
   const S = () => st();
   const live = () => S().time === "live" && S().backend === "api" && S().mode !== "edycja";
@@ -749,6 +749,8 @@ export async function mountStandalone() {
   // double buffer: the new run boots in a hidden second frame; the old map stays until it says "ready", then a 200 ms crossfade
   const swapTo = (runUrl) => {
     if (!frame.getAttribute("src")) { frame.src = frameURL(runUrl); return; }
+    // a ready view takes the new run in place (web/app.js runInPlace: no reload, camera kept; it answers "ready" with inplace)
+    if (ready && !next) { window.__chatSwapT = performance.now(); ready = false; frame.contentWindow.postMessage({ source: "rescue-app", type: "run", url: runUrl }, location.origin); return; }
     if (next) next.remove();
     next = document.createElement("iframe"); next.title = frame.title; next.className = "cz-next";
     next.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;opacity:0;pointer-events:none;transition:opacity .2s";
@@ -763,7 +765,7 @@ export async function mountStandalone() {
       ready = true; const p = pending; pending = []; if (selSeg && !p.some((m) => m.type === "select")) p.push({ type: "select", segmentId: selSeg }); p.forEach(post); return;
     }
     if (e.source !== frame.contentWindow) return;
-    if (e.data.type === "ready") { ready = true; const p = pending; pending = []; p.forEach(post); }
+    if (e.data.type === "ready") { if (e.data.inplace) window.__chatSwapMs = Math.round(performance.now() - (window.__chatSwapT || 0)); ready = true; const p = pending; pending = []; if (e.data.inplace && selSeg && !p.some((m) => m.type === "select")) p.push({ type: "select", segmentId: selSeg }); p.forEach(post); }
   });
   // one GET of the run: the embedded 2D view parses the same text (runInline, window.__rescueRunText) instead of a second GET
   const runText = async () => { const r = await fetch(`/api/run/${encodeURIComponent(sc)}`, { cache: "no-cache" }); if (!r.ok) throw new Error(r.status); const text = await r.text(); window.__rescueRunText = { url: new URL(`/api/run/${sc}`, location.href).href, text }; return JSON.parse(text); };

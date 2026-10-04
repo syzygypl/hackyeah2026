@@ -1189,6 +1189,8 @@
       else if (m.type === 'assignments' && Array.isArray(m.steps) && m.steps.length === S.M.R.steps.length && m.steps.every((a) => a === null || Array.isArray(a))) {
         m.steps.forEach((a, i) => { if (a) S.M.R.steps[i].assignments = a; }); render(); toParent({ type: 'assignments', steps: m.steps.length });
       }
+      // a new run on the same grid updates this view in place (no reload, no blank map); anything else reloads as before
+      else if (m.type === 'run' && !m.reload && (typeof m.url === 'string' || (m.run && typeof m.run === 'object' && m.run.schema))) runInPlace(m).then((ok) => { if (!ok) applyParentMessage({ ...m, reload: true }); }, (e) => { ipWhy('failed: ' + (e && e.message || e)); applyParentMessage({ ...m, reload: true }); });
       else if (m.type === 'run' && typeof m.url === 'string') reloadWith({ run: m.url }, ['runInline', 'sc', 'step']);
       else if (m.type === 'run' && m.run && typeof m.run === 'object' && typeof m.run.url === 'string' && !m.run.schema) reloadWith({ run: m.run.url }, ['runInline', 'sc', 'step']);
       else if (m.type === 'run' && m.run && typeof m.run === 'object') {
@@ -1200,6 +1202,49 @@
     } catch (err) { warn('embed message ignored: ' + err.message); }
   }
   window.addEventListener('message', onParentMessage);
+  // in-place run update (shell -> view {type:'run', url|run}): when the new run has the same grid (rows, cols, cellM, bbox), its
+  // model is rebuilt into the SAME object the map view holds, so the MapLibre / Canvas instance, camera, base layer, selection and
+  // switched-off signals stay; then one render(). The url form reads the parent's copy (runInline) when its href matches.
+  // Returns false (the caller reloads as before) for another grid or a run that fails the contract. Posts "ready" with inplace:true,
+  // so the shell's "ready" handling (step, select, evidence, insets, timeline frame) is unchanged.
+  // why the last in-place update fell back to a reload (warn() + DIAG.info.inplaceWhy; the reload keeps it in sessionStorage)
+  function ipWhy(t) { warn('in-place run update: ' + t + ' - reloading'); try { sessionStorage.setItem('rescue2d-inplace-why', t); } catch (e) {} }
+  async function runInPlace(m) {
+    const O = S.M; if (!O || !S.view || document.body.dataset.state !== 'ready') { ipWhy('view not ready'); return false; }
+    const t0 = performance.now();
+    let R = m.run || null;
+    if (!R) {
+      const href = new URL(m.url, location.href).href;
+      const inl = (() => { try { const c = window.parent !== window && window.parent.__rescueRunText; return c && c.url === href ? c.text : null; } catch (e) { return null; } })();
+      R = inl ? JSON.parse(inl) : await fetchJSON(m.url);
+    }
+    if (checkRun(R).length) { ipWhy('run rejected: ' + checkRun(R).join('; ')); return false; }
+    const eq = (a, b) => Math.abs(a - b) < 1e-9;
+    if (R.rows !== O.rows || R.cols !== O.cols || !eq(R.cellM, O.R.cellM) || !['south', 'west', 'north', 'east'].every((k) => eq(R.bbox[k], O.bbox[k]))) { ipWhy('other grid'); return false; }
+    const wasLast = S.step >= O.hints.length - 1;
+    const NM = buildModel(R, O.scen, O.T);   // build first: if it throws, nothing changed and the caller reloads
+    // step count may differ (a chat / live event adds a step): the model, hints and layers are rebuilt whole from the new run
+    for (const k of Object.keys(O)) if (!(k in NM)) delete O[k];   // caches computed on the old model (prog, ...)
+    Object.assign(O, NM);   // same object: the view's closures (setHeat, cells) see the new run
+    S.step = wasLast ? O.hints.length - 1 : Math.min(S.step, O.hints.length - 1);
+    if (S.selected && !O.segs.has(S.selected)) S.selected = null;
+    const ids = new Set(O.hints.map((h) => h.id)); for (const id of [...S.disabled]) if (!ids.has(id)) S.disabled.delete(id);
+    S.tlHeatAt = null; S.tlHeld = null; S.tlHeldOn = false; S.top3Sent = null; S.shellTop = null;   // the shell sends top 3 and the frame with its next "time"
+    const map = S.view.map, empty = { type: 'FeatureCollection', features: [] };
+    for (const id of ['hl-actor', 'focus-flash']) if (map && map.getSource(id)) map.getSource(id).setData(empty);
+    $('#diffwrap').hidden = !(Array.isArray(R.difficulty) && R.difficulty.length === O.N);
+    // a later reload (scenario switch, error) boots from this run, not the old one
+    const u = new URL(location.href);
+    if (m.run) { try { sessionStorage.setItem('rescue2d-run', JSON.stringify(R)); } catch (e) {} u.searchParams.set('runInline', '1'); u.searchParams.delete('run'); CFG.run = 'inline'; }
+    else { u.searchParams.set('run', m.url); u.searchParams.delete('runInline'); CFG.run = m.url; }
+    u.searchParams.delete('step'); history.replaceState(null, '', u.href);
+    render();
+    if (S.tlMf != null) tlDraw(S.tlMf);
+    pollLive(false);   // field reports of the new run
+    S.inplaceMs = Math.round(performance.now() - t0); DIAG.info.inplaceMs = S.inplaceMs;
+    toParent({ type: 'ready', version: EMBED_VERSION, scenario: CFG.sc, steps: O.hints.length, step: S.step, inplace: true });
+    return true;
+  }
   // actor highlight: {type:'highlight', actor|null, sc, at} -> that actor's estimated track (GET /api/tracks/<sc>?at=, never truth),
   // bold over the map; clicking its marker posts {type:'actor', id} back (the shell opens the actor drawer)
   // focusArea (shell -> view): fit the event's area beside the dock and panels (map.setPadding already holds the insets, this adds
@@ -1260,6 +1305,8 @@
     const [T, Rr, Bm, L] = INSETS, st = document.documentElement.style;
     [['t', T], ['r', Rr], ['b', Bm], ['l', L]].forEach(([k, v]) => st.setProperty('--inset-' + k, v + 'px'));
     const map = S.view && S.view.map; if (!map || !S.M) return;
+    // the shell re-sends the same insets after every "ready": refit only when they changed (an in-place run update keeps the camera)
+    const key = INSETS.join(','); if (S.insetsKey === key) return; S.insetsKey = key;
     const { west, south, east, north } = S.M.bbox;
     map.setPadding({ top: T, right: Rr, bottom: Bm, left: L });
     // free area = canvas minus the insets; 0 while the shell hides this frame (Plan, 3D): fitBounds there only warned "Map cannot fit
@@ -1586,7 +1633,7 @@
     const inShell = (() => { try { return !!EMBED && window.parent !== window && /\/app\/(index\.html)?$/.test(window.parent.location.pathname); } catch (e) { return false; } })();
     setInterval(() => pollLive(false), inShell ? 30000 : CFG.livePollMs);
     if (!inShell) { setInterval(pollRun, CFG.runPollMs); pollRun(); }
-    window.__rescue = { S, CFG, DIAG, setStep, compute, stats };
+    window.__rescue = { S, CFG, DIAG, setStep, compute, stats, runInPlace };
     toParent({ type: 'ready', version: EMBED_VERSION, scenario: CFG.sc, steps: M.hints.length, step: S.step });
     (S.pendingMsgs || []).splice(0).forEach(applyParentMessage);
   }
