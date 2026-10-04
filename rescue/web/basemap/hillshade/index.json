@@ -272,6 +272,19 @@
    ]
   ]
  },
+ "psy-wiazowna": {
+  "file": "hillshade/psy-wiazowna.png",
+  "bounds": [
+   [
+    21.282916666666665,
+    52.10444444444445
+   ],
+   [
+    21.442083333333333,
+    52.18972222222222
+   ]
+  ]
+ },
  "rodzina-dziecko-las": {
   "file": "hillshade/rodzina-dziecko-las.png",
   "bounds": [

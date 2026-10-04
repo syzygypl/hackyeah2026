@@ -183,7 +183,7 @@ const SHORT = { zawrat: "Zawrat", "morskie-oko": "Morskie Oko", kasprowy: "Kaspr
   "grzybiarz-puszcza-notecka": "Puszcza Notecka - grzybiarz", "lawina-wolowiec": "Wołowiec - lawina",
   "senior-demencja-lodz": "Łódź - senior z demencją",
   "los-augustow": "Augustów - łoś na DW 664", "pozar-biebrza": "Biebrza - pożar",
-  "paralotniarz-beskidy": "Skrzyczne - paralotniarz" };
+  "paralotniarz-beskidy": "Skrzyczne - paralotniarz", "psy-wiazowna": "Lipowo - dwa psy" };
 const short = (x) => SHORT[x.sc] || (x.place && x.place !== x.sc ? x.place.split(/[,/]/)[0].trim() : x.sc);
 const longText = (x) => [x.title, x.place !== x.sc ? x.place : ""].filter(Boolean).join(" - ");
 // naming (AI Mateusza #2): "województwo → rejon → nazwa", e.g. "małopolskie → Tatry → Zaginiony turysta · Zawrat". Województwo and
@@ -1374,7 +1374,7 @@ window.rescueSim = sim;   // tests
 // scenario's startClock = the occurrence's elapsed minute) on the virtual clock (simNowAt: ?simAt, the Grafik 24/7 cursor).
 // One GeoJSON source (dots + 15-min trails), 1 Hz, from regional zoom (TM_Z) up; the national view stays clean.
 // Only scenarios with track data (rescue/scenarios/tracks/) are asked, so no 404s.
-const TM_SCS = new Set("auto-w-rzece-wizna bieszczady-wetlinska grzybiarz-puszcza-notecka kajak-pieniny karkonosze-sniezka kasprowy krakow-nowa-huta lawina-wolowiec los-augustow mazury-burza-beldany mazury-burza-mikolajki mazury-burza-sniardwy mazury-burza-talty miedzyzdroje morskie-oko morzycko paralotniarz-beskidy pozar-biebrza rodzina-dziecko-las senior-demencja-lodz sniardwy tragedia-w-moryniu zawrat".split(" "));
+const TM_SCS = new Set("auto-w-rzece-wizna bieszczady-wetlinska dywersja-poprad dywersja-poprad-2 grzybiarz-puszcza-notecka kajak-pieniny karkonosze-sniezka kasprowy krakow-nowa-huta lawina-wolowiec los-augustow mazury-burza-beldany mazury-burza-mikolajki mazury-burza-sniardwy mazury-burza-talty miedzyzdroje morskie-oko morzycko paralotniarz-beskidy pozar-biebrza psy-wiazowna rodzina-dziecko-las senior-demencja-lodz sniardwy tragedia-w-moryniu zawrat".split(" "));
 const TM_Z = 8, TM_TRAIL = 15, TM_COL = { pieszy: "#e76f51", pies: "#f4a261", dron: "#4cc9f0", smiglowiec: "#b5179e", lodz: "#2a9d8f", nurkowie: "#3a86ff" };
 const tm = { data: {}, busy: 0, added: false, sig: "" };
 function tmLoad(sc) {

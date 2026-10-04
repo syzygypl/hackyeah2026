@@ -447,6 +447,14 @@ EXAMPLES["grzybiarz-puszcza-notecka"] = [
   "Dron przeleciał nad N12, nic",
   "Mgła w obniżeniach, +3 stopnie",
 ];
+EXAMPLES["psy-wiazowna"] = [
+  "Sąsiad widział białego psa z obrożą nad Świdrem przy Kopkach ok. 21:20, biegł na zachód",
+  "Husky w Dziechcińcu to pies sąsiadów, nie Kora",
+  "Znaleziono czerwoną obrożę z adresówką przy wale nad Świdrem",
+  "Kierowca na S17: pies na poboczu przy moście, 22:30",
+  "Dron przeleciał nad W13, tylko sarny",
+  "Luna jest już w domu, szukamy tylko Kory",
+];
 EXAMPLES["senior-demencja-lodz"] = [
   "Sąsiadka widziała starszego pana w kaszkiecie na przystanku Legionów ok. 11:00",
   "Patrol przeszedł Park na Zdrowiu od Fali do ZOO, nic",

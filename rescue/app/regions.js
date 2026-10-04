@@ -25,6 +25,7 @@ export const REJONY = [
   ["Kraków", 50.06, 19.98, 16, "małopolskie"],
   ["Łódź", 51.76, 19.46, 14, "łódzkie"],
   ["Warszawa", 52.23, 21.01, 18, "mazowieckie"],
+  ["Dolina Świdra", 52.14, 21.36, 9, "mazowieckie"],
 ];
 // voivodeship seats (fallback województwo = nearest seat)
 const SEATS = [
