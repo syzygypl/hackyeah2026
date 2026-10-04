@@ -297,6 +297,10 @@ body.embed #list > h2 #pickBack{margin-left:auto;cursor:pointer;font-size:var(--
 @media (max-width:900px){
   body.pick #map{height:34vh}
   body.pick #list{width:auto}
+  /* QA runda 2 #4: the page scrolls, so Wróć stays on screen - the bar (full page) or the list header (embed) sticks to the top */
+  body.pick,body.pick #list{overflow:visible}   /* html scrolls; an overflow:auto body or list would trap position:sticky */
+  body.pick:not(.embed) #bar{position:sticky;top:0;z-index:20;background:var(--rl-panel-solid)}
+  body.embed #list > h2{position:sticky;top:0;z-index:20;margin:-12px -12px 8px;padding:8px 12px;background:var(--rl-panel-solid);border-radius:var(--rl-radius-l) var(--rl-radius-l) 0 0;border-bottom:1px solid var(--rl-line)}
   .pk{grid-template-columns:96px 40px 1fr auto;min-height:56px}
 }
 @media (max-width:420px){ .pk{grid-template-columns:auto 1fr;grid-template-rows:auto auto} .pk .pkt{justify-self:end} .pk .pkn{grid-column:1/-1} .pk .pkc{display:none} }
@@ -409,3 +413,5 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 /* escalation badge on a sim card (#1, feature C): a note of this incident unacked > 5 min */
 #simCards .card.esc{box-shadow:0 0 0 2px var(--rl-danger)}
 #simCards .escb{float:right;margin:0 0 4px 8px;padding:2px 8px;border-radius:6px;background:var(--rl-danger);color:var(--rl-on-danger);font-size:11px;font-weight:700}
+/* team dots (QA runda 2 #6): above the incident markers (z 1-3), readable outline; clicks go through to the incident */
+.tmk{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px #1b1f24,0 1px 3px rgba(0,0,0,.4);z-index:5;pointer-events:none}

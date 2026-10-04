@@ -514,6 +514,10 @@ function fitAll() {
   const lons = pts.map((p) => p[1]), lats = pts.map((p) => p[0]);
   // narrow: labels sit right of their dot, so keep room on the right or the eastern names (Bieszczady, Kraków) are cut off
   const wide = innerWidth > 900, pad = wide ? { left: 400 + 40 + (PICK ? 40 : 0), right: PICK ? 160 : 300 + 160, top: 100, bottom: 130 } : { left: 24, right: Math.min(150, innerWidth * 0.35), top: 30, bottom: 30 };
+  // wide: the right pad is measured from the Zespoły panel (a 1100 px window cut "Bieszczady / Dolina Sanu", QA runda 2 #9),
+  // ~190 px for the longest label, keeping at least 120 px of map between the panels
+  const ro = !PICK && wide && $("roster").getBoundingClientRect();
+  if (ro && ro.width) pad.right = Math.max(pad.right, Math.min(innerWidth - ro.left + 190, innerWidth - pad.left - 120));
   map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: pad, maxZoom: 9, duration: 0 });
   fitted = pts.length >= incidents.length;
 }
@@ -750,6 +754,14 @@ function markMode(x) {
   const s = tlState(it, tl.cur); return s === "pre" ? "pre" : s === "live" ? "live" : "found";
 }
 const pad2 = (n) => String(n).padStart(2, "0");
+// axis labels that would touch the previous shown one are hidden (narrow track, e.g. 1100 px: QA runda 2 #9); re-run on resize
+function tlThin() {
+  const sp = [...document.querySelectorAll("#tlAxis .trk span")];
+  for (const s of sp) s.style.visibility = "";
+  let r = -1e9;
+  for (const s of sp) { const b = s.getBoundingClientRect(); if (!b.width) return; if (b.left < r + 6) s.style.visibility = "hidden"; else r = b.right; }
+}
+if (window.ResizeObserver && document.getElementById("tlAxis")) new ResizeObserver(() => tlThin()).observe(document.getElementById("tlAxis"));
 function tlFmt(v, axis) {
   if (tl.mode === "rel") { const a = Math.round(Math.abs(v)); return (v < 0 ? "T-" : "T+") + Math.floor(a / 60) + ":" + pad2(a % 60); }
   if (tl.mode === "day" || tl.mode === "sim") { const m = ((Math.floor(v) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
@@ -826,7 +838,7 @@ function tlBuild() {
     + `<span><i class="tlk k-zespol"></i>zespół na miejscu</span><span><i class="tlk k-nic"></i>przeszukano, nic</span><span><i class="tlk k-found"></i>ZNALEZIONO</span>${groups.some((g) => g.h) ? `<span><i class="sw hyp"></i>Doradca: wspólne źródło</span>` : ""}${tl.day ? `<span>Czas rzeczywisty: dzień ${esc(tl.day.label)} (${tl.day.n} akcji), pozostałe ${tl.day.other} w innych dniach</span>` : ""}${tl.mode === "day" ? `<span class="daynote"><b>Dzień w Centrum:</b> ${TL_DAY_NOTE}. Klik otwiera akcję w Historii o jej prawdziwej godzinie.</span>` : ""}`
     + `<span class="keys">Klawisze: ← → krok, Shift = duży krok, spacja = odtwórz, Home / End, Esc = na żywo</span></div>` + rows;
   $("tlMini").innerHTML = `<span class="tln"${tl.mode === "day" ? ` title="Dzień w Centrum: ${TL_DAY_NOTE}"` : ""}>${tl.day ? `Dzień ${esc(tl.day.label)} <b>${tl.day.n}</b>` : `Wszystkie <b>${its.length}</b>`}</span><div class="trk">${mini}</div>`;
-  $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${fmtTick(v)}</span>`).join("")}</div>`;
+  $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${fmtTick(v)}</span>`).join("")}</div>`; tlThin();
   $("tl").querySelectorAll(".tlr").forEach((r) => { r.onmouseenter = () => setHl(r.dataset.sc); r.onmouseleave = () => setHl(null); });
   for (const b of $("tl").querySelectorAll("[data-mode]")) b.classList.toggle("on", b.dataset.mode === tl.mode);
   // element caches for tlApply (every animation frame while playing touches only what changed)
@@ -1349,7 +1361,7 @@ function simTlBuild() {
     + `<span class="daynote"><b>Grafik 24/7:</b> ${esc(sim.lf.SIM_NOTE)} · ${sim.entries.length} zgłoszeń na dobę. Kursor = co trwało o tej godzinie (karty i mapa).</span>`
     + `<span class="keys">Klawisze: ← → krok, Shift = duży krok, spacja = odtwórz, Home / End, Esc = teraz</span></div>` + rows;
   $("tlMini").innerHTML = `<span class="tln" title="${esc(sim.lf.SIM_NOTE)}">Doba <b>${sim.entries.length}</b></span><div class="trk">${sim.entries.map((e) => `<i class="ms" style="left:${pc(toMin(e.start))}"></i>`).join("")}<i class="simnow"></i></div>`;
-  $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${tlFmt(v % 1440 === 0 && v ? 1439.99 : v)}</span>`).join("")}</div>`;
+  $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${tlFmt(v % 1440 === 0 && v ? 1439.99 : v)}</span>`).join("")}</div>`; tlThin();
   $("tl").querySelectorAll(".tlr").forEach((r) => { r.onmouseenter = () => setHl(r.dataset.sc); r.onmouseleave = () => setHl(null); });
   for (const b of $("tl").querySelectorAll("[data-mode]")) b.classList.toggle("on", b.dataset.mode === tl.mode);
   tl.rowEls = []; tl.kEls = []; tl.hEls = []; tl.feed = []; tl.feedKey = null;
@@ -1376,7 +1388,7 @@ window.rescueSim = sim;   // tests
 // Only scenarios with track data (rescue/scenarios/tracks/) are asked, so no 404s.
 const TM_SCS = new Set("auto-w-rzece-wizna bieszczady-wetlinska dywersja-poprad dywersja-poprad-2 grzybiarz-puszcza-notecka kajak-pieniny karkonosze-sniezka kasprowy krakow-nowa-huta lawina-wolowiec los-augustow mazury-burza-beldany mazury-burza-mikolajki mazury-burza-sniardwy mazury-burza-talty miedzyzdroje morskie-oko morzycko paralotniarz-beskidy pozar-biebrza psy-wiazowna rodzina-dziecko-las senior-demencja-lodz sniardwy tragedia-w-moryniu zawrat".split(" "));
 const TM_Z = 8, TM_TRAIL = 15, TM_COL = { pieszy: "#e76f51", pies: "#f4a261", dron: "#4cc9f0", smiglowiec: "#b5179e", lodz: "#2a9d8f", nurkowie: "#3a86ff" };
-const tm = { data: {}, busy: 0, added: false, sig: "" };
+const tm = { data: {}, busy: 0, added: false, sig: "", mk: {} };
 function tmLoad(sc) {
   if (sc in tm.data || tm.busy >= 2) return;
   tm.data[sc] = undefined; tm.busy++;
@@ -1399,9 +1411,7 @@ function tmTick() {
     map.addSource("tm", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
     map.addLayer({ id: "tm-trail", type: "line", source: "tm", minzoom: TM_Z, filter: ["==", ["geometry-type"], "LineString"], layout: { "line-cap": "round", "line-join": "round" },
       paint: { "line-color": ["get", "c"], "line-width": 2, "line-opacity": 0.55 } });
-    map.addLayer({ id: "tm-dot", type: "circle", source: "tm", minzoom: TM_Z, filter: ["==", ["geometry-type"], "Point"],
-      paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], TM_Z, 3.5, 13, 6], "circle-color": ["get", "c"], "circle-stroke-color": "#fff", "circle-stroke-width": 1.2 } });
-  }
+  }   // the dots are HTML markers (.tmk, above the incident markers, QA runda 2 #6); trails stay on the canvas
   const f = [];
   const live = simMarks() ? simView().filter((i) => i.state === "live" && TM_SCS.has(i.sc)) : [];
   for (const i of live) if (!(i.sc in tm.data)) tmLoad(i.sc);   // prefetched at any zoom, so zooming in shows them at once
@@ -1416,9 +1426,30 @@ function tmTick() {
       f.push({ type: "Feature", properties: { c, id: a.id, n: a.name, sc: i.sc }, geometry: { type: "Point", coordinates: pos } });
     }
   }
-  const sig = JSON.stringify(f.map((x) => x.geometry.coordinates.at(-1)));
+  const z = map.getZoom(), sig = JSON.stringify(f.map((x) => x.geometry.coordinates.at(-1))) + (z >= TM_Z) + Math.round(z * 4);
   if (sig === tm.sig) return; tm.sig = sig;
   map.getSource("tm").setData({ type: "FeatureCollection", features: f });
+  // dots: readable (12 px, dark outline) and above the incident dot; a team standing on its incident's point (IPP) is fanned out
+  // around it at 15 px, so neither hides the other
+  const seen = new Set(), fan = {};
+  if (z >= TM_Z) for (const x of f) {
+    if (x.geometry.type !== "Point") continue;
+    const p = x.properties, k = p.sc + ":" + p.id, md = meta[p.sc]; seen.add(k);
+    let m = tm.mk[k];
+    if (!m) {
+      const el = document.createElement("div"); el.className = "tmk"; el.title = p.n || p.id;
+      m = tm.mk[k] = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(x.geometry.coordinates).addTo(map);
+    }
+    m.getElement().style.background = p.c;
+    m.setLngLat(x.geometry.coordinates);
+    let off = [0, 0];
+    if (md && md.ipp) {
+      const a = map.project(x.geometry.coordinates), b = map.project([md.ipp[1], md.ipp[0]]);
+      if (Math.hypot(a.x - b.x, a.y - b.y) < 13) { const n = fan[p.sc] = (fan[p.sc] || 0) + 1, t = -Math.PI / 2 + n * 0.9; off = [b.x + 15 * Math.cos(t) - a.x, b.y + 15 * Math.sin(t) - a.y]; }
+    }
+    m.setOffset(off);
+  }
+  for (const k of Object.keys(tm.mk)) if (!seen.has(k)) { tm.mk[k].remove(); delete tm.mk[k]; }
 }
 setInterval(tmTick, 1000);
 window.rescueTm = tm;   // tests
