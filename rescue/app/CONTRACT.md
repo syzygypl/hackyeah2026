@@ -198,8 +198,12 @@ Every live route takes an optional `sc` (JSON body field `sc`, or `?sc=` in the 
     "top3": [ { "segmentId": "S7", "name": "Kozia Dolinka", "weight": 0.31, "areaPct": 1.4 } ],   // at the live moment, ranked by POA; weight 0..1 is for ordering only, the UI shows rank + areaPct (% of the search area), never the POA %
     "teams": { "assigned": 2, "total": 5 },        // assigned = teams with a segment in this incident; total = teams the planner uses for it
     "found": false,                                // a live report/clue said ZNALEZIONO (the replay's own scripted find does not count)
-    "replayFound": true } ]                        // the scenario file itself ends with a find (replay)
+    "replayFound": true,                           // the scenario file itself ends with a find (replay)
+    "startedAt": "2026-10-03T17:40:00+02:00",      // report = scenario date + startClock, ISO 8601 with the Europe/Warsaw offset (+01:00 / +02:00)
+    "endedAt": "2026-10-03T20:03:00+02:00" } ]     // live find (ended): date + at; else the file's find (provider Found / title ZNALEZIONO...); else null
 ```
+
+`startedAt` / `endedAt` are what Centrum's timeline (`centrum.js` tlItem) derives itself, so it can read them instead: start = the report (`date` + `startClock`; `subject.lastContact` is not the start), end = the live moment `at` when a live ZNALEZIONO ended the incident, else the scenario file's own find event, else `null` (still running / no end in the data). A clock more than 3 h before `startClock` is the next day. Both `null` when the file has no `date` or `startClock`. Placeholders (`pending`) carry them too.
 
 Blind-test scenarios are never listed. Runs are cached per (sc, live version), so polling does not re-run the engine unless something changed; the first call after start computes each scenario once. On the shared deploy each computed summary is also stored as document `incb:<sc>` (keyed by the same inputs + a content hash of the scenario files), so a fresh instance reads it instead of running the engine. `?fast=1` (Centrum): answers within ~1.5 s; an incident whose run has not finished comes as its last known summary with `"stale": true`, or as a placeholder from the scenario file with `"pending": true` and `top3: []` - the run goes on and a later poll has it. Without `fast` the call waits for every run (tests, cron). The server warms every incident and the Zasoby timelines in the background at start on Vercel (`RESCUE_PUBLIC=1`) or with `RESCUE_WARM=1`.
 

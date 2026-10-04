@@ -154,6 +154,59 @@ fn incident_placeholder(sc: &str) -> Obj {
     v.as_object().cloned().unwrap_or_default()
 }
 
+/// "HH:MM" (or "H:MM", anything after ignored) -> minutes of the day
+fn clock_min(c: &str) -> Option<i64> {
+    let (h, rest) = c.split_once(':')?;
+    let m = rest.get(..2)?;
+    if h.is_empty() || h.len() > 2 || !h.bytes().all(|b| b.is_ascii_digit()) || !m.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    Some(h.parse::<i64>().ok()? * 60 + m.parse::<i64>().ok()?)
+}
+
+/// Europe/Warsaw UTC offset in hours for a local wall time: CEST (+2) from the last Sunday of March 02:00 to the last Sunday
+/// of October 03:00, CET (+1) otherwise (EU rule; no tz database in the binary)
+fn warsaw_offset_h(t: &chrono::NaiveDateTime) -> i64 {
+    use chrono::{Datelike, NaiveDate};
+    let last_sun = |month: u32| {
+        let mut d = NaiveDate::from_ymd_opt(t.year(), month, 31).unwrap_or_default();
+        while d.weekday() != chrono::Weekday::Sun {
+            d = d.pred_opt().unwrap_or(d);
+        }
+        d
+    };
+    let start = last_sun(3).and_hms_opt(2, 0, 0).unwrap_or_default();
+    let end = last_sun(10).and_hms_opt(3, 0, 0).unwrap_or_default();
+    if *t >= start && *t < end { 2 } else { 1 }
+}
+fn warsaw_iso(t: &chrono::NaiveDateTime) -> String { format!("{}+0{}:00", t.format("%Y-%m-%dT%H:%M:%S"), warsaw_offset_h(t)) }
+
+/// startedAt / endedAt of one incident, ISO 8601 with the Europe/Warsaw offset, as Centrum's timeline (centrum.js tlItem) derives
+/// them: start = scenario date + startClock (the report); end = the live moment `at` when a live ZNALEZIONO ended it, else the
+/// scenario file's own find (an event with provider "Found" or a title starting "ZNALEZIONO"), else null. A clock more than
+/// 3 h before startClock is the next day. Missing date / startClock -> both null.
+pub fn incident_times(sc: &str, at: &str, ended: bool) -> (Value, Value) {
+    let d = read_obj_cached(&scn_path(sc));
+    let (Some(date), Some(s0)) = (gs(&d, "date").and_then(|x| chrono::NaiveDate::parse_from_str(x, "%Y-%m-%d").ok()), gs(&d, "startClock").and_then(clock_min))
+    else {
+        return (Value::Null, Value::Null);
+    };
+    let t0 = date.and_hms_opt(0, 0, 0).unwrap_or_default() + chrono::Duration::minutes(s0);
+    let off = |c: &str| {
+        clock_min(c).map(|m| {
+            let x = m - s0;
+            if x < -180 { x + 1440 } else { x }
+        })
+    };
+    let found = objs(d.get("events"))
+        .iter()
+        .filter(|e| gs(e, "provider") == Some("Found") || gs(e, "title").unwrap_or("").trim_start().to_uppercase().starts_with("ZNALEZIONO"))
+        .filter_map(|e| gs(e, "at").and_then(off))
+        .min();
+    let end = if ended { off(at).or(found) } else { found };
+    (json!(warsaw_iso(&t0)), or_null(end.map(|m| warsaw_iso(&(t0 + chrono::Duration::minutes(m))))))
+}
+
 /// background warm-up: every incident's base (= its live /api/run) and the timeline engines behind Zasoby, so the first
 /// Centrum / Zasoby visit does not wait for engine runs. Runs at startup (RESCUE_WARM=0 disables), incidents in parallel.
 pub async fn warm_up() {
@@ -252,6 +305,9 @@ pub async fn incidents_data(fast: bool) -> Resp {
         // current vs ended: a live ZNALEZIONO ends the incident; the first time, its teams are released and everyone is told
         let ended = gb(&o, "found") == Some(true);
         o.insert("ended".into(), json!(ended));
+        let (started_at, ended_at) = incident_times(sc, gs(&o, "at").unwrap_or(""), ended);
+        o.insert("startedAt".into(), started_at);
+        o.insert("endedAt".into(), ended_at);
         if ended && ROSTER.mark_ended(sc) {
             let freed = ROSTER.release(sc);
             for id in &freed {

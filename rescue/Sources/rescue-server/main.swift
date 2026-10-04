@@ -679,6 +679,39 @@ func incidentPlaceholder(_ sc: String) -> [String: Any] {
     return ["title": title, "place": parts.count > 1 ? parts.dropFirst().joined(separator: " - ") : sc, "top3": [Any](), "found": false, "replayFound": false,
             "at": d["startClock"] as? String ?? "", "total": ((d["resources"] as? [Any]) ?? []).count, "pending": true]
 }
+/// "HH:MM" (or "H:MM", anything after ignored) -> minutes of the day
+func incidentClockMin(_ c: String) -> Int? {
+    let p = c.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+    guard p.count == 2, (1...2).contains(p[0].count), p[1].count >= 2, let h = Int(p[0]), let m = Int(p[1].prefix(2)),
+          p[0].allSatisfy({ $0.isASCII && $0.isNumber }), p[1].prefix(2).allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+    return h * 60 + m
+}
+/// startedAt / endedAt of one incident, ISO 8601 with the Europe/Warsaw offset, as Centrum's timeline (centrum.js tlItem) derives
+/// them: start = scenario date + startClock (the report); end = the live moment `at` when a live ZNALEZIONO ended it, else the
+/// scenario file's own find (an event with provider "Found" or a title starting "ZNALEZIONO"), else null. A clock more than
+/// 3 h before startClock is the next day. Missing date / startClock -> both null. (Rust: incidents.rs incident_times)
+func incidentTimes(_ sc: String, at: String, ended: Bool) -> (Any, Any) {
+    let d = jsonObject((try? Data(contentsOf: scenariosDir.appendingPathComponent("\(sc).json"))) ?? Data())
+    var cal = Calendar(identifier: .gregorian)
+    let tz = TimeZone(identifier: "Europe/Warsaw") ?? TimeZone(secondsFromGMT: 3600)!
+    cal.timeZone = tz
+    let dp = (d["date"] as? String ?? "").split(separator: "-").compactMap { Int($0) }
+    guard dp.count == 3, let s0 = incidentClockMin(d["startClock"] as? String ?? ""),
+          let day = cal.date(from: DateComponents(year: dp[0], month: dp[1], day: dp[2])) else { return (NSNull(), NSNull()) }
+    // minutes after local midnight of the date, formatted with the Warsaw offset of that instant
+    let wall = { (m: Int) -> String? in
+        guard let t = cal.date(byAdding: .minute, value: s0 + m, to: day) else { return nil }
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = tz; f.dateFormat = "yyyy-MM-dd'T'HH:mm:ssxxx"
+        return f.string(from: t)
+    }
+    let off = { (c: String) -> Int? in incidentClockMin(c).map { $0 - s0 < -180 ? $0 - s0 + 1440 : $0 - s0 } }
+    let found = ((d["events"] as? [[String: Any]]) ?? [])
+        .filter { $0["provider"] as? String == "Found" || ($0["title"] as? String ?? "").trimmingCharacters(in: .whitespaces).uppercased().hasPrefix("ZNALEZIONO") }
+        .compactMap { ($0["at"] as? String).flatMap(off) }.min()
+    let end = ended ? (off(at) ?? found) : found
+    return (wall(0).map { $0 as Any } ?? NSNull(), end.flatMap(wall).map { $0 as Any } ?? NSNull())
+}
 /// collects incident bases as their (unstructured) runs finish; ?fast=1 reads whatever is there at the deadline
 actor BaseBox {
     var m: [Int: Data] = [:], n = 0
@@ -730,6 +763,9 @@ func incidentsData(fast: Bool = false) async -> Data {
         // current vs ended: a live ZNALEZIONO ends the incident; the first time, its teams are released and everyone is told
         let ended = (o["found"] as? Bool) == true
         o["ended"] = ended
+        let (startedAt, endedAt) = incidentTimes(sc, at: o["at"] as? String ?? "", ended: ended)
+        o["startedAt"] = startedAt
+        o["endedAt"] = endedAt
         if ended, await roster.markEnded(sc) {   // once per incident across instances: the ended set is in the roster document (SharedState)
             let freed = await roster.release(sc)
             for id in freed { _ = await studio.assign((try? JSONSerialization.data(withJSONObject: ["resourceId": id])) ?? Data()) }
