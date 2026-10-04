@@ -395,7 +395,7 @@
         e.quantilesKm.forEach((q, j) => {
           f.push(poly(circle(e.point[0], e.point[1], q * 1000, 120), { color: '#ffffff', width: 1.4, opacity: 0.75, dash: 1, fillOpacity: 0 }));
           const lat = e.point[0] + (q * 1000) / 110540;
-          if (lat < M.bbox.north) chips.push({ key: 'ring' + j, at: [e.point[1], lat], cls: 'chip ring', html: `${[25, 50, 75, 95][j] || ''}% osób w ${nf(q, 1)} km${j ? '' : ' (Koester)'}`, title: 'Pierścień Koestera (ISRID, wartości przybliżone): tylu zaginionych tego typu odnajduje się w tej odległości od miejsca zaginięcia' });
+          if (lat < M.bbox.north) chips.push({ key: 'ring' + j, at: [e.point[1], lat], cls: 'chip ring', html: `${[25, 50, 75, 95][j] || ''}% osób w promieniu ${nf(q, 1)} km${j ? '' : ' (Koester)'}`, title: 'Pierścień Koestera (ISRID, wartości przybliżone): tylu zaginionych tego typu odnajduje się w tej odległości od miejsca zaginięcia' });
         });
       }
       if (h.kind === 'route' && e.points) {

@@ -1774,7 +1774,7 @@ function drawSignal(e, isCur) {
       const ring = circleLL(e.point, q * 1000, 160);
       drapeRuns(ring, 0.02, { color: col, width: 1.5, opacity: 0.75 * op, dashed: true, dash: 0.08, gap: 0.05 }, G);
       const at = ring[20];
-      if (isCur && inside(at)) G.add(label(`${[25, 50, 75, 95][j] ?? ''}% osób w ${String(q).replace('.', ',')} km${j ? '' : ' (Koester)'}`, 'ring', v3(at[0], at[1], 0.05)));
+      if (isCur && inside(at)) G.add(label(`${[25, 50, 75, 95][j] ?? ''}% osób w promieniu ${String(q).replace('.', ',')} km${j ? '' : ' (Koester)'}`, 'ring', v3(at[0], at[1], 0.05)));
     });
     return; // the IPP pin marks the centre
   }
