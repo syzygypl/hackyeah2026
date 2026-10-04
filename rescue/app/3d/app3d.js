@@ -2543,13 +2543,15 @@ async function postMove(unit, lat, lon, headingDeg, t) {
     if (!r.ok) moveRefused(r.status);
   } catch (e) { console.warn('3d: position post failed', e); }
 }
-// a refused move is no longer dropped silently: one note in the feed corner (at most every 20 s), saying which key is missing
-let moveRefusedAt = 0;
+// A refused move shows immediately, then at most every 20 s. Keep it outside the feed, which is hidden on phones/in cinema.
+let moveRefusedAt = -Infinity;
 function moveRefused(status) {
   if (performance.now() - moveRefusedAt < 20000) return; moveRefusedAt = performance.now();
   const key = (() => { try { return !!localStorage.getItem('rescue-pin'); } catch (e) { return false; } })();
-  hint(status === 401 ? (key ? 'Ruch nie zapisany: klucz akcji na tym urządzeniu jest nieprawidłowy (pole Klucz u góry).' : 'Ruch nie zapisany: wpisz klucz akcji w polu Klucz u góry albo otwórz link „Udostępnij”.')
-    : status === 403 ? 'Ruch nie zapisany: ten klucz nie pozwala przesuwać zespołów.' : `Ruch nie zapisany: serwer odrzucił (${status}).`);
+  const el = document.createElement('div'); el.className = 'toast move-refused'; el.setAttribute('role', 'alert');
+  el.textContent = status === 401 ? (key ? 'Ruch nie zapisany: klucz akcji na tym urządzeniu jest nieprawidłowy (pole Klucz u góry).' : 'Ruch nie zapisany: wpisz klucz akcji w polu Klucz u góry albo otwórz link „Udostępnij”.')
+    : status === 403 ? 'Ruch nie zapisany: ten klucz nie pozwala przesuwać zespołów.' : `Ruch nie zapisany: serwer odrzucił (${status}).`;
+  document.body.append(el); setTimeout(() => el.remove(), 8000);
 }
 // Click-to-move (top-down / orbit view, live only): with a unit selected, a click on the terrain sends it there - a dashed
 // line and a target ring show the move, the unit glides there in 1.2 s (the same manual override as WASD) and the

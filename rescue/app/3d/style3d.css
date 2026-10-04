@@ -148,6 +148,7 @@ body.searching #ranklist li .act { display: block; }
 #feed { position: fixed; z-index: 6; left: 364px; bottom: 92px; width: 300px; display: flex; flex-direction: column-reverse; gap: 6px; pointer-events: none; }
 .toast { pointer-events: auto; background: var(--paper-solid); border: 1px solid var(--line); border-left: 3px solid #b8860b; border-radius: 8px; padding: 7px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1); animation: in 0.35s ease-out; }
 .toast .t { color: #8a5a00; font: 600 11px ui-monospace, Menlo, monospace; margin-right: 6px; }
+.move-refused { position: fixed; z-index: 30; left: calc(var(--inset-l, 0px) + 12px); bottom: calc(var(--inset-b, 0px) + 12px); width: min(420px, calc(100vw - var(--inset-l, 0px) - var(--inset-r, 0px) - 24px)); box-sizing: border-box; pointer-events: none; }
 @keyframes in { from { opacity: 0; transform: translateY(6px); } }
 
 /* 3D labels: map-style chips */
