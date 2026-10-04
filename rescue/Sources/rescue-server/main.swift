@@ -836,9 +836,11 @@ func advisorData(_ q: Req) async -> Data {
 
 final class ExJob {
     let team: String, seg: String, start: Int, arrive: Int, end: Int, pod: Double, truthPod: Double, poa: Double, cells: [Int]
+    /// the whole segment's POA when the job was given: the engine gets POD = expectedFind / segPoa, not the core's POD
+    let segPoa: Double
     var done = false
-    init(team: String, seg: String, start: Int, arrive: Int, end: Int, pod: Double, truthPod: Double, poa: Double, cells: [Int]) {
-        self.team = team; self.seg = seg; self.start = start; self.arrive = arrive; self.end = end; self.pod = pod; self.truthPod = truthPod; self.poa = poa; self.cells = cells
+    init(team: String, seg: String, start: Int, arrive: Int, end: Int, pod: Double, truthPod: Double, poa: Double, segPoa: Double? = nil, cells: [Int]) {
+        self.team = team; self.seg = seg; self.start = start; self.arrive = arrive; self.end = end; self.pod = pod; self.truthPod = truthPod; self.poa = poa; self.segPoa = segPoa ?? poa; self.cells = cells
     }
 }
 final class ExSession {
@@ -884,7 +886,7 @@ final class ExSession {
     /// everything that changes during play, for the shared store (Vercel: the next request may land on another instance)
     func dump() -> Data {
         let j: [[String: Any]] = jobs.map { ["team": $0.team, "seg": $0.seg, "start": $0.start, "arrive": $0.arrive, "end": $0.end, "pod": $0.pod,
-                                            "truthPod": $0.truthPod, "poa": $0.poa, "cells": $0.cells, "done": $0.done] }
+                                            "truthPod": $0.truthPod, "poa": $0.poa, "segPoa": $0.segPoa, "cells": $0.cells, "done": $0.done] }
         let o: [String: Any] = ["sid": sid, "id": id, "events": events, "future": future, "minute": minute, "jobs": j, "decisions": decisions, "feed": feed,
                                 "found": found, "foundMinute": foundMinute ?? NSNull(), "foundBy": foundBy ?? NSNull(), "cells": Array(cells), "nCells": nCells,
                                 "coverage": coverage, "centroid": centroid, "createdAt": createdAt, "writes": writes]
@@ -900,7 +902,7 @@ final class ExSession {
         jobs = ((o["jobs"] as? [[String: Any]]) ?? []).map { j in
             let x = ExJob(team: j["team"] as? String ?? "", seg: j["seg"] as? String ?? "", start: j["start"] as? Int ?? 0, arrive: j["arrive"] as? Int ?? 0,
                           end: j["end"] as? Int ?? 0, pod: j["pod"] as? Double ?? 0, truthPod: j["truthPod"] as? Double ?? 0, poa: j["poa"] as? Double ?? 0,
-                          cells: j["cells"] as? [Int] ?? [])
+                          segPoa: j["segPoa"] as? Double, cells: j["cells"] as? [Int] ?? [])
             x.done = j["done"] as? Bool ?? false
             return x
         }
@@ -988,7 +990,8 @@ actor Exercises {
                   let o = ((d["teams"] as? [[String: Any]])?.first { $0["id"] as? String == team }?["options"] as? [[String: Any]])?.first(where: { $0["segmentId"] as? String == seg }) else { continue }
             let since = exRel(p["since"] as? String ?? "", s.startHM), until = exRel(p["until"] as? String ?? "", s.startHM)
             s.jobs.append(ExJob(team: team, seg: seg, start: since, arrive: min(until, since + 15), end: until, pod: o["pod"] as? Double ?? 0.5,
-                                truthPod: o["truthPod"] as? Double ?? 0, poa: o["poa"] as? Double ?? 0, cells: o["cells"] as? [Int] ?? []))
+                                truthPod: o["truthPod"] as? Double ?? 0, poa: o["poa"] as? Double ?? 0,
+                                segPoa: ((d["segments"] as? [[String: Any]])?.first { $0["id"] as? String == seg }?["poa"] as? Double) ?? 0, cells: o["cells"] as? [Int] ?? []))
             s.note(since, "dispatch", "\(team) -> \(seg) (przed przejęciem, wróci ok. \(s.clock(until)))", team: team, seg: seg)
         }
         s.probeCache = nil
@@ -1029,7 +1032,7 @@ actor Exercises {
         // re-tasking a team cancels its unfinished job
         s.jobs.removeAll { $0.team == team && !$0.done && $0.end > s.minute }
         s.jobs.append(ExJob(team: team, seg: seg, start: s.minute, arrive: s.minute + Int(tr.rounded()), end: s.minute + max(1, Int((tr + sw).rounded())),
-                            pod: o["pod"] as? Double ?? 0, truthPod: o["truthPod"] as? Double ?? 0, poa: o["poa"] as? Double ?? 0, cells: o["cells"] as? [Int] ?? []))
+                            pod: o["pod"] as? Double ?? 0, truthPod: o["truthPod"] as? Double ?? 0, poa: o["poa"] as? Double ?? 0, segPoa: weight, cells: o["cells"] as? [Int] ?? []))
         s.probeCache = nil
         let dec: [String: Any] = ["t": s.clock(s.minute), "minute": s.minute, "action": "dispatch", "team": team, "segment": seg, "segmentName": sg["name"] ?? seg,
                                   "rankAtDecision": rank, "weightAtDecision": weight, "enginePlanned": planned ?? NSNull(), "safety": safety,
@@ -1063,9 +1066,11 @@ actor Exercises {
                 s.minute = j.end
                 break
             }
+            // only the core was searched: the segment's POD is the expected find over the whole segment's POA
+            let segPod = j.segPoa > j.poa && j.segPoa > 0 ? min(1, max(0, j.poa * j.pod / j.segPoa)) : j.pod
             s.events.append(["provider": "SegmentSearched", "at": s.clock(j.end), "title": "\(j.team): \(j.seg) przeszukany, nic",
-                             "detail": "Meldunek zespołu (ćwiczenie).", "segments": [j.seg], "pod": (j.pod * 100).rounded() / 100])
-            s.note(j.end, "searched", "\(j.team): \(j.seg) przeszukany, nic (skuteczność \(Int((j.pod * 100).rounded()))%)", team: j.team, seg: j.seg)
+                             "detail": "Meldunek zespołu (ćwiczenie).", "segments": [j.seg], "pod": (segPod * 100).rounded() / 100])
+            s.note(j.end, "searched", "\(j.team): \(j.seg) przeszukany, nic (skuteczność \(Int((j.pod * 100).rounded()))% w przeszukanej części, \(Int((segPod * 100).rounded()))% całego sektora)", team: j.team, seg: j.seg)
         }
         if !s.found { s.minute = target }
         s.probeCache = nil

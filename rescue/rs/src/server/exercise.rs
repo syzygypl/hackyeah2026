@@ -20,6 +20,8 @@ pub struct ExJob {
     pub pod: f64,
     pub truth_pod: f64,
     pub poa: f64,
+    /// the whole segment's POA when the job was given: the engine gets POD = expectedFind / segPoa, not the core's POD
+    pub seg_poa: f64,
     pub cells: Vec<i64>,
     pub done: bool,
 }
@@ -152,7 +154,7 @@ impl ExSession {
             .iter()
             .map(|j| {
                 json!({"team": j.team, "seg": j.seg, "start": j.start, "arrive": j.arrive, "end": j.end, "pod": j.pod,
-                    "truthPod": j.truth_pod, "poa": j.poa, "cells": j.cells, "done": j.done})
+                    "truthPod": j.truth_pod, "poa": j.poa, "segPoa": j.seg_poa, "cells": j.cells, "done": j.done})
             })
             .collect();
         let centroid: Map<String, Value> = self.centroid.iter().map(|(k, v)| (k.clone(), json!(v))).collect();
@@ -195,6 +197,7 @@ impl ExSession {
                 pod: gf(j, "pod").unwrap_or(0.0),
                 truth_pod: gf(j, "truthPod").unwrap_or(0.0),
                 poa: gf(j, "poa").unwrap_or(0.0),
+                seg_poa: gf(j, "segPoa").or_else(|| gf(j, "poa")).unwrap_or(0.0),
                 cells: ints(j.get("cells")),
                 done: gb(j, "done").unwrap_or(false),
             })
@@ -298,6 +301,7 @@ impl ExSession {
             pod: gf(o, "pod").unwrap_or(0.0),
             truth_pod: gf(o, "truthPod").unwrap_or(0.0),
             poa: gf(o, "poa").unwrap_or(0.0),
+            seg_poa: weight,
             cells: ints(o.get("cells")),
             done: false,
         });
@@ -358,13 +362,16 @@ impl ExSession {
                 self.minute = j.end;
                 break;
             }
+            // only the core was searched: the segment's POD is the expected find over the whole segment's POA
+            let seg_pod = if j.seg_poa > j.poa && j.seg_poa > 0.0 { (j.poa * j.pod / j.seg_poa).clamp(0.0, 1.0) } else { j.pod };
             let e = json!({"provider": "SegmentSearched", "at": self.clock(j.end), "title": format!("{}: {} przeszukany, nic", j.team, j.seg),
-                "detail": "Meldunek zespołu (ćwiczenie).", "segments": [j.seg], "pod": (j.pod * 100.0).round() / 100.0});
+                "detail": "Meldunek zespołu (ćwiczenie).", "segments": [j.seg], "pod": (seg_pod * 100.0).round() / 100.0});
             self.events.push(e.as_object().cloned().unwrap_or_default());
             self.note(
                 j.end,
                 "searched",
-                &format!("{}: {} przeszukany, nic (skuteczność {}%)", j.team, j.seg, (j.pod * 100.0).round() as i64),
+                &format!("{}: {} przeszukany, nic (skuteczność {}% w przeszukanej części, {}% całego sektora)", j.team, j.seg,
+                    (j.pod * 100.0).round() as i64, (seg_pod * 100.0).round() as i64),
                 Some(&j.team),
                 Some(&j.seg),
             );
@@ -629,6 +636,7 @@ impl Exercises {
                 pod: gf(&o, "pod").unwrap_or(0.5),
                 truth_pod: gf(&o, "truthPod").unwrap_or(0.0),
                 poa: gf(&o, "poa").unwrap_or(0.0),
+                seg_poa: objs(d.get("segments")).iter().find(|g| gs(g, "id") == Some(seg)).and_then(|g| gf(g, "poa")).unwrap_or(0.0),
                 cells: ints(o.get("cells")),
                 done: false,
             });
