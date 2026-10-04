@@ -3195,6 +3195,340 @@
    "fictional": true
   },
   {
+   "id": "topr-dron-recco",
+   "kind": "dron",
+   "name": "Dron TOPR (termowizja + detektor RECCO)",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "TOPR-612",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 144.5,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 107.0,
+    "lastMaintenance": "2026-09-23"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-24",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-09",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "TOPR-DRON-RECCO-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "TOPR-DRON-RECCO-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "lawina-wolowiec": {
+     "name": "Dron TOPR (termowizja + detektor RECCO)",
+     "readyAt": "12:20",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "TOPR-DRON-RECCO-1 (fikcyjny)",
+       "role": "operator drona (TOPR)"
+      },
+      {
+       "name": "TOPR-DRON-RECCO-2 (fikcyjny)",
+       "role": "obserwator (TOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "topr-lawinowa",
+   "kind": "pieszy",
+   "name": "Grupa lawinowa TOPR (6 os., sondy, łopaty), desant ze śmigłowca",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "TOPR-666",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-06",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "TOPR-LAWINOWA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "TOPR-LAWINOWA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "TOPR-LAWINOWA-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "TOPR-LAWINOWA-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "lawina-wolowiec": {
+     "name": "Grupa lawinowa TOPR (6 os., sondy, łopaty), desant ze śmigłowca",
+     "readyAt": "12:22",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "TOPR-LAWINOWA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "TOPR-LAWINOWA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-LAWINOWA-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-LAWINOWA-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "topr-pies-lawinowy",
+   "kind": "pies",
+   "name": "Zespół TOPR z psem lawinowym",
+   "base": "baza wg scenariusza",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "TOPR-477",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-14",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Bor (fikcyjny)",
+    "breed": "border collie",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "TOPR-PIES-LAWINOWY-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "lawina-wolowiec": {
+     "name": "Zespół TOPR z psem lawinowym",
+     "readyAt": "12:30",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "TOPR-PIES-LAWINOWY-1 (fikcyjny)",
+       "role": "przewodnik psa (TOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "topr-polana",
+   "kind": "pieszy",
+   "name": "Patrol TOPR (dyżur na Polanie Chochołowskiej, 3 os.)",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "TOPR-734",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-13",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "TOPR-POLANA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "TOPR-POLANA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "TOPR-POLANA-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "TOPR-POLANA-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "lawina-wolowiec": {
+     "name": "Patrol TOPR (dyżur na Polanie Chochołowskiej, 3 os.)",
+     "readyAt": "12:05",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "TOPR-POLANA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "TOPR-POLANA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-POLANA-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "TOPR-POLANA-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "topr-sokol",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec TOPR Sokół z detektorem RECCO",
+   "base": "baza wg scenariusza",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "TOPR-967",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 2641.3,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 2578.6,
+    "lastMaintenance": "2026-09-09"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-14",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "TOPR-SOKOL-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "TOPR-SOKOL-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "TOPR-SOKOL-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "lawina-wolowiec": {
+     "name": "Śmigłowiec TOPR Sokół z detektorem RECCO",
+     "readyAt": "12:02",
+     "base": "baza wg scenariusza",
+     "operator": "TOPR",
+     "crew": [
+      {
+       "name": "TOPR-SOKOL-1 (fikcyjny)",
+       "role": "pilot dowódca (TOPR)"
+      },
+      {
+       "name": "TOPR-SOKOL-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (TOPR)"
+      },
+      {
+       "name": "TOPR-SOKOL-3 (fikcyjny)",
+       "role": "ratownik (TOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "wopr-boat",
    "kind": "lodz",
    "name": "Łódź ratownicza WOPR (przystań morska)",

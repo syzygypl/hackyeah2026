@@ -1,0 +1,580 @@
+{
+  "incident": "Lawina pod Wołowcem: skiturowiec porwany przez lawinę w Dolinie Wyżniej Chochołowskiej (scenariusz fikcyjny)",
+  "date": "2026-03-07",
+  "startClock": "11:55",
+  "subject": {
+    "name": "Kamil N. (osoba fikcyjna)",
+    "age": 33,
+    "category": "ski-tourer",
+    "note": "Dwoje skiturowców zjeżdżało poza szlakiem północno-wschodnim stokiem Wołowca do Doliny Wyżniej Chochołowskiej. O 11:40 spod nawisu na grani zeszła lawina deskowa świeżego śniegu. Partnerka, Ola P. (osoba fikcyjna), była na skraju lawiny, częściowo zasypana, sama się odkopała. Kamil zniknął w żlebie, prawdopodobnie zasypany w lawinisku lub zniesiony niżej. Szukała go 10 minut detektorem lawinowym: brak sygnału (detektor Kamila mógł być wyłączony). O 11:55 dzwoni do TOPR (985).",
+    "lastContact": "11:40"
+  },
+  "bbox": {
+    "south": 49.191,
+    "west": 19.732,
+    "north": 49.245,
+    "east": 19.8145
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "IPP: górna część żlebu pod granią Wołowca (ostatni kontakt wzrokowy partnerki, 11:40)",
+    "at": [
+      49.21,
+      19.767
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "L1",
+      "name": "Strefa oderwania lawiny pod nawisem Wołowca",
+      "seed": [
+        49.2095,
+        19.766
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "Górna część toru lawiny (żleb)",
+      "seed": [
+        49.2108,
+        19.768
+      ]
+    },
+    {
+      "id": "L3",
+      "name": "Środkowa część lawiniska",
+      "seed": [
+        49.2122,
+        19.7697
+      ]
+    },
+    {
+      "id": "L4",
+      "name": "Czoło lawiniska (strefa depozycji)",
+      "seed": [
+        49.2136,
+        19.7722
+      ]
+    },
+    {
+      "id": "L5",
+      "name": "Dno Doliny Wyżniej Chochołowskiej przy szlaku",
+      "seed": [
+        49.2155,
+        19.7745
+      ]
+    },
+    {
+      "id": "L6",
+      "name": "Grań Rakoń - Wołowiec",
+      "seed": [
+        49.212,
+        19.7605
+      ]
+    },
+    {
+      "id": "L7",
+      "name": "Wołowiec (wierzchołek)",
+      "seed": [
+        49.20757,
+        19.76313
+      ]
+    },
+    {
+      "id": "L8",
+      "name": "Stoki Łopaty i Dziurawej Przełęczy",
+      "seed": [
+        49.206,
+        19.774
+      ]
+    },
+    {
+      "id": "L9",
+      "name": "Źródła Wyżniego Chochołowskiego Potoku",
+      "seed": [
+        49.2089,
+        19.7777
+      ]
+    },
+    {
+      "id": "L10",
+      "name": "Zielony szlak w Dolinie Wyżniej Chochołowskiej",
+      "seed": [
+        49.22,
+        19.7775
+      ]
+    },
+    {
+      "id": "L11",
+      "name": "Rakoń i Zawracie",
+      "seed": [
+        49.21596,
+        19.75846
+      ]
+    },
+    {
+      "id": "L12",
+      "name": "Grześ i Łuczniańska Przełęcz",
+      "seed": [
+        49.235,
+        19.767
+      ]
+    },
+    {
+      "id": "L13",
+      "name": "Polana Chochołowska (schronisko PTTK)",
+      "seed": [
+        49.23637,
+        19.7878
+      ]
+    },
+    {
+      "id": "L14",
+      "name": "Zielony szlak - dolny odcinek",
+      "seed": [
+        49.229,
+        19.784
+      ]
+    },
+    {
+      "id": "L15",
+      "name": "Czerwony Wierch i Kopa",
+      "seed": [
+        49.2135,
+        19.7816
+      ]
+    },
+    {
+      "id": "L16",
+      "name": "Jarząbczy Wierch",
+      "seed": [
+        49.19747,
+        19.7951
+      ]
+    },
+    {
+      "id": "L17",
+      "name": "Dolina Jamnicka (strona słowacka)",
+      "seed": [
+        49.199,
+        19.765
+      ]
+    },
+    {
+      "id": "L18",
+      "name": "Trzydniowiański Wierch",
+      "seed": [
+        49.2191,
+        19.8037
+      ]
+    },
+    {
+      "id": "L19",
+      "name": "Bobrowiecka Przełęcz",
+      "seed": [
+        49.24215,
+        19.77622
+      ]
+    },
+    {
+      "id": "L20",
+      "name": "Dolina Łataná (strona słowacka)",
+      "seed": [
+        49.2137,
+        19.7474
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): czoło lawiniska",
+    "at": [
+      49.21345,
+      19.7718
+    ]
+  },
+  "resources": [
+    {
+      "id": "topr-polana",
+      "name": "Patrol TOPR (dyżur na Polanie Chochołowskiej, 3 os.)",
+      "type": "ground",
+      "base": [
+        49.23637,
+        19.7878
+      ],
+      "readyAt": "12:05"
+    },
+    {
+      "id": "topr-sokol",
+      "name": "Śmigłowiec TOPR Sokół z detektorem RECCO",
+      "type": "heli",
+      "base": [
+        49.293,
+        19.964
+      ],
+      "readyAt": "12:02"
+    },
+    {
+      "id": "topr-lawinowa",
+      "name": "Grupa lawinowa TOPR (6 os., sondy, łopaty), desant ze śmigłowca",
+      "type": "ground",
+      "base": [
+        49.2152,
+        19.7733
+      ],
+      "readyAt": "12:22"
+    },
+    {
+      "id": "topr-pies-lawinowy",
+      "name": "Zespół TOPR z psem lawinowym",
+      "type": "dog",
+      "base": [
+        49.2152,
+        19.7733
+      ],
+      "readyAt": "12:30"
+    },
+    {
+      "id": "topr-dron-recco",
+      "name": "Dron TOPR (termowizja + detektor RECCO)",
+      "type": "drone",
+      "base": [
+        49.23637,
+        19.7878
+      ],
+      "readyAt": "12:20"
+    }
+  ],
+  "props": [
+    {
+      "kind": "avalanche",
+      "at": [
+        49.2095,
+        19.766
+      ],
+      "heading": 45,
+      "size": 690,
+      "from": "11:40",
+      "label": "Lawina deskowa spod nawisu (11:40)"
+    },
+    {
+      "kind": "skis",
+      "at": [
+        49.2112,
+        19.769
+      ],
+      "heading": 40,
+      "from": "11:40",
+      "label": "Sprzęt partnerki (odkopała się sama)"
+    },
+    {
+      "kind": "skis",
+      "at": [
+        49.2127,
+        19.7701
+      ],
+      "heading": 120,
+      "from": "12:26",
+      "label": "Narta Kamila (12:26)"
+    }
+  ],
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "11:55",
+      "title": "Teren: szlaki, potoki, żleby; lawina schodzi żlebem na dno doliny",
+      "detail": "Zasypani w lawinie najczęściej leżą w strefie depozycji: w czole lawiniska, w zagłębieniach terenu i przy przeszkodach.",
+      "factor": 1
+    },
+    {
+      "provider": "Terrain",
+      "at": "11:55",
+      "title": "Teren: koszt (ściany i grań poza torem lawiny)",
+      "detail": "Strome ściany poza torem lawiny mało prawdopodobne jako miejsce zasypania.",
+      "factor": 0
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "11:55",
+      "title": "Trudność terenu: szlak / stok / żleb / zagrożenie lawinowe",
+      "detail": "Ratownicy: w torze lawiny ryzyko kolejnego obrywu z nawisu, prędkość i POD zależne od klasy terenu."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "11:55",
+      "title": "Warunki: po opadzie śniegu, wiatr 9 m/s z zachodu, -7°C, widzialność 3 km",
+      "detail": "Przez dwa dni 40 cm świeżego śniegu, wiatr nawiewa śnieg na stoki północno-wschodnie i buduje nawisy. TOPR: 3 stopień zagrożenia lawinowego.",
+      "visibilityM": 3000,
+      "windMs": 9,
+      "tempC": -7,
+      "precip": "none",
+      "dark": false,
+      "ice": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "11:55",
+      "title": "Koester: skiturowiec, teren górski",
+      "detail": "Pierścienie przybliżone (kategoria narciarz skiturowy): 25% 1.5 km, 50% 4.0, 75% 7.5, 95% 15.0. Dla zasypanego w lawinie słabe: tor lawiny jest ważniejszy.",
+      "point": [
+        49.21,
+        19.767
+      ],
+      "quantilesKm": [
+        1.5,
+        4.0,
+        7.5,
+        15.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "11:56",
+      "title": "Partnerka (świadek): widziała go ostatni raz w górnej części żlebu o 11:40",
+      "detail": "Ola P.: 'jechał 30 m nade mną, lawina zeszła spod nawisu i porwała go w dół żlebu'. Pozycja z AML jej telefonu, ok. 60 m od miejsca, gdzie go widziała.",
+      "point": [
+        49.21,
+        19.767
+      ],
+      "radiusM": 150,
+      "seenAt": "11:40",
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "TripPlan",
+      "at": "11:58",
+      "title": "Plan od partnerki: Rakoń, Wołowiec, zjazd poza szlakiem do Doliny Wyżniej Chochołowskiej",
+      "detail": "Podejście zielonym szlakiem z Polany Chochołowskiej na Rakoń, granią na Wołowiec, zjazd żlebem na dno doliny i szlakiem do schroniska.",
+      "points": [
+        [
+          49.23585,
+          19.78963
+        ],
+        [
+          49.2342,
+          19.78756
+        ],
+        [
+          49.23356,
+          19.78597
+        ],
+        [
+          49.23252,
+          19.78503
+        ],
+        [
+          49.23123,
+          19.78441
+        ],
+        [
+          49.22782,
+          19.78414
+        ],
+        [
+          49.22701,
+          19.78369
+        ],
+        [
+          49.22595,
+          19.78366
+        ],
+        [
+          49.22556,
+          19.78397
+        ],
+        [
+          49.22536,
+          19.78387
+        ],
+        [
+          49.22506,
+          19.78261
+        ],
+        [
+          49.22452,
+          19.7832
+        ],
+        [
+          49.2229,
+          19.78284
+        ],
+        [
+          49.21927,
+          19.77653
+        ],
+        [
+          49.21794,
+          19.7752
+        ],
+        [
+          49.21675,
+          19.7747
+        ],
+        [
+          49.21537,
+          19.77328
+        ],
+        [
+          49.21508,
+          19.77106
+        ],
+        [
+          49.21469,
+          19.76991
+        ],
+        [
+          49.21485,
+          19.76919
+        ],
+        [
+          49.2153,
+          19.76858
+        ],
+        [
+          49.21511,
+          19.76823
+        ],
+        [
+          49.2152,
+          19.76786
+        ],
+        [
+          49.21378,
+          19.76508
+        ],
+        [
+          49.21247,
+          19.7613
+        ],
+        [
+          49.21183,
+          19.76107
+        ],
+        [
+          49.2113,
+          19.7613
+        ],
+        [
+          49.21121,
+          19.7608
+        ],
+        [
+          49.21172,
+          19.75959
+        ],
+        [
+          49.21599,
+          19.75842
+        ],
+        [
+          49.212,
+          19.7605
+        ],
+        [
+          49.20757,
+          19.76313
+        ],
+        [
+          49.2095,
+          19.766
+        ],
+        [
+          49.2112,
+          19.769
+        ],
+        [
+          49.2135,
+          19.7718
+        ],
+        [
+          49.2152,
+          19.7733
+        ]
+      ],
+      "radiusM": 250
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "12:08",
+      "title": "CPR 112: telefon poszukiwanego zalogowany, sektor BTS z Doliny Chochołowskiej",
+      "detail": "Telefon Kamila nie odbiera, ale jest w sieci (zasypany telefon zwykle nadal się loguje). Lokalizacja bardzo zgrubna, promień 1.5 km.",
+      "point": [
+        49.214,
+        19.774
+      ],
+      "radiusM": 1500
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "12:10",
+      "title": "Partnerka: przeszukanie detektorem lawinowym górnej części lawiniska, brak sygnału",
+      "detail": "Ola P. przeszła górny tor lawiny z detektorem i sondą przez 10 minut. Detektor Kamila prawdopodobnie wyłączony, więc POD niski: 30%.",
+      "segments": [
+        "L1",
+        "L2"
+      ],
+      "pod": 0.3
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "12:18",
+      "title": "Śmigłowiec TOPR: przelot z detektorem RECCO nad górną częścią lawiniska, brak sygnału",
+      "detail": "Sokół przeleciał nisko nad torem lawiny z detektorem RECCO SAR. Brak odpowiedzi z reflektora (może nie mieć reflektora w odzieży). POD 50%.",
+      "segments": [
+        "L2",
+        "L3"
+      ],
+      "pod": 0.5
+    },
+    {
+      "provider": "Clue",
+      "at": "12:26",
+      "title": "Ślad: narta Kamila na powierzchni lawiniska",
+      "detail": "Grupa lawinowa po desancie: narta wystaje ze śniegu w środkowej części lawiniska, poniżej miejsca, gdzie widziano go ostatni raz. Zasypani leżą zwykle niżej na linii spływu.",
+      "point": [
+        49.2127,
+        19.7701
+      ],
+      "radiusM": 150,
+      "clueKind": "trace"
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "12:35",
+      "title": "Dron (termowizja + RECCO): dno doliny i boczny żleb, nic",
+      "detail": "Sprawdzenie, czy lawina nie zniosła go dalej na dno doliny albo do bocznego żlebu. Termowizja nie widzi pod śniegiem, RECCO bez sygnału. POD 60%.",
+      "segments": [
+        "L5",
+        "L9"
+      ],
+      "pod": 0.6
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "12:44",
+      "title": "Grupa lawinowa: sondowanie środkowej części lawiniska pod nartą, nic",
+      "detail": "Linia sondowania co 70 cm w rejonie narty. Lawinisko twarde, głębokie do 2 m. POD 50%.",
+      "segments": [
+        "L3"
+      ],
+      "pod": 0.5
+    },
+    {
+      "provider": "Found",
+      "at": "12:52",
+      "point": [
+        49.21345,
+        19.7718
+      ],
+      "radiusM": 20,
+      "title": "ZNALEZIONO: pies lawinowy TOPR zaznaczył w czole lawiniska, sonda trafiła na 1,3 m",
+      "detail": "Zasypany w czole lawiny, ok. 120 m poniżej narty. Odkopany po 10 minutach, oddycha (kieszeń powietrzna przy twarzy), hipotermia, uraz nogi. Przekazany do śmigłowca TOPR. Meldunek radiowy, nie GPS."
+    }
+  ]
+}
