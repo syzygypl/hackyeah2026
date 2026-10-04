@@ -129,7 +129,7 @@ Real Chrome (headless, CDP, touch, 2x) at 390x844 and 360x740, production read-o
 
 ### Fixes
 
-- **Commander view (`f7c7911`, `c0ccd7a`)**: new `rescue/app/mobile.css` + `mobile.js`, two lines in `app/index.html`, only under 600 px and
+- **Commander view (`f7c7911`, `0554928`)**: new `rescue/app/mobile.css` + `mobile.js`, two lines in `app/index.html`, only under 600 px and
   never for the rescuer. Header in two slim rows: Na żywo/Historia, Czat, Menu, then the LIVE badge and the incident name. Menu: scenario,
   2D/3D, key, Nowa akcja, Centrum, Zasoby, Udostępnij, Instrukcja, Rola; Plan, Teren, Monitoring, Walidacja and the 2D+3D split are desktop
   only (a phone is kept on Akcja). The 2D map is full-bleed. The bottom sheet has 3 states: a 60 px bar (the #1 sector and an "N
@@ -141,7 +141,7 @@ Real Chrome (headless, CDP, touch, 2x) at 390x844 and 360x740, production read-o
   under the header on phones; the tourist landing's first card reads "Zadzwoń 112"; a white focus ring on the red blocks (rodzina, landing).
   Checked: above the fold at 360/390, `tel:` for 112, 985, 601 100 300 and 601 100 100, nothing covers them, Tab reaches them.
   Shots: `mobile-after-start-360.jpg`, `mobile-after-rodzina-360.jpg`, `mobile-after-landing-turysci-360.jpg`.
-- **Map legend on phones (`c0ccd7a`)**: `web/style.css`, only when the frame itself is 520 px or narrower (porównanie's desktop frames are
+- **Map legend on phones (`0554928`)**: `web/style.css`, only when the frame itself is 520 px or narrower (porównanie's desktop frames are
   588): a strip in the bottom-left corner, one ramp, "niska / średnia / wysoka", 11 px, semi-transparent, an (i) mark; the layer panel and
   the timeline key are hidden. A tap on the strip shows the full legend and panels for 3 s or until a tap elsewhere (toggle injected by
   `app/mobile.js` and `app/porownanie.js`). The desktop hover legend (another agent) lives at 601 px and up. Shots: `legend-after-czat-360.jpg`,
