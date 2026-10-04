@@ -225,7 +225,13 @@ pub async fn route(q: &Req) -> Resp {
                     return json_err(400, "bad scenario name");
                 }
                 let frame_min = q.q("frameMin").and_then(|f| f.parse::<i64>().ok()).unwrap_or(5).clamp(1, 60);
-                return match run_scenario(name, q.q("live") != Some("0"), q.q("features"), frame_min, q.q("frames") != Some("0")).await {
+                let (live, frames) = (q.q("live") != Some("0"), q.q("frames") != Some("0"));
+                // revalidation: the ETag comes from the inputs (run key), so an unchanged run is a 304 without running the engine
+                let key = run_key(name, live, q.q("features"), frame_min, frames).await;
+                if let Some(r) = not_modified_by_key(q, &key) {
+                    return r;
+                }
+                return match run_scenario_keyed(key, name, live, q.q("features"), frame_min, frames).await {
                     Some(d) => ok_json(d),
                     None => json_err(404, &format!("no scenario {name}")),
                 };
@@ -432,6 +438,7 @@ async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -
     let head = method == "HEAD";
     let inm = headers.get("if-none-match").cloned();
     let accept_enc = headers.get("accept-encoding").cloned();
+    let recorded = path.starts_with("/api/run/") && query.get("live").map(|v| v.as_str()) == Some("0");
     let q = Req { method: if head { "GET".into() } else { method.clone() }, path, query, headers, body, peer };
     let t0 = Instant::now();
     let (m, p) = (method.clone(), q.path.clone());
@@ -449,16 +456,24 @@ async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -
         println!("{m} {p} {code} {} ms", t0.elapsed().as_millis());
     }
     // ETag on GET 200 answers (bodies unchanged, byte-identical): a page change re-fetching the same run gets an empty 304
-    // instead of up to 2.6 MB. Cache-Control no-cache (revalidate every time) instead of Swift's no-store.
+    // instead of up to 2.6 MB. Cache-Control no-cache (revalidate every time) instead of Swift's no-store; recorded runs
+    // (live=0) are cacheable for a few seconds and at the CDN (cache_headers).
+    let not_modified = |tag: &str| {
+        let mut r = Response::new(Body::empty());
+        *r.status_mut() = StatusCode::NOT_MODIFIED;
+        r.headers_mut().insert("etag", HeaderValue::from_str(tag).unwrap_or(HeaderValue::from_static("\"\"")));
+        cache_headers(&mut r, recorded);
+        r.headers_mut().insert("access-control-allow-origin", HeaderValue::from_static("*"));
+        r
+    };
+    // 304 decided from the inputs before any engine work (not_modified_by_key): If-None-Match is the ETag
+    if (m == "GET" || m == "HEAD") && out.status == 304 {
+        return not_modified(inm.as_deref().unwrap_or(""));
+    }
     if (m == "GET" || m == "HEAD") && out.status == 200 && out.location.is_none() && !out.body.is_empty() {
         let tag = etag(&out.body);
         if inm.as_deref() == Some(tag.as_str()) {
-            let mut r = Response::new(Body::empty());
-            *r.status_mut() = StatusCode::NOT_MODIFIED;
-            r.headers_mut().insert("etag", HeaderValue::from_str(&tag).unwrap());
-            r.headers_mut().insert("cache-control", HeaderValue::from_static("no-cache"));
-            r.headers_mut().insert("access-control-allow-origin", HeaderValue::from_static("*"));
-            return r;
+            return not_modified(&tag);
         }
         // big JSON / text answers: gzip once per body (keyed by its ETag) instead of on every request in the compression
         // layer; the layer leaves a response that already has Content-Encoding alone. Same bytes after decompression.
@@ -470,7 +485,7 @@ async fn serve_inner(ConnectInfo(addr): ConnectInfo<SocketAddr>, req: Request) -
         let gzipped = gz.is_some();
         let mut r = to_http(if let Some(g) = gz { Resp { body: g, ..out } } else { out }, head);
         r.headers_mut().insert("etag", HeaderValue::from_str(&tag).unwrap());
-        r.headers_mut().insert("cache-control", HeaderValue::from_static("no-cache"));
+        cache_headers(&mut r, recorded);
         if gzipped {
             r.headers_mut().insert("content-encoding", HeaderValue::from_static("gzip"));
             r.headers_mut().insert("vary", HeaderValue::from_static("accept-encoding"));
@@ -486,6 +501,43 @@ pub fn etag(body: &[u8]) -> String {
     let mut hs = std::collections::hash_map::DefaultHasher::new();
     body.hash(&mut hs);
     format!("\"{:016x}{:x}\"", hs.finish(), body.len())
+}
+/// cache key (RUN_CACHE run key, `frame|<key>|<t>`) -> ETag of the body it produced. The key holds every input of the body
+/// (that is what the caches already rely on), so a request whose key is here and whose If-None-Match is that ETag gets a
+/// 304 without computing or reading the body. Filled when a body is served and from the bake at startup.
+static ETAG_MEMO: once_cell::sync::Lazy<parking_lot::Mutex<HashMap<String, String>>> =
+    once_cell::sync::Lazy::new(|| parking_lot::Mutex::new(HashMap::new()));
+pub fn etag_memo_put(key: &str, tag: String) {
+    let mut m = ETAG_MEMO.lock();
+    if m.len() >= 8192 {
+        m.clear();
+    }
+    m.insert(key.to_string(), tag);
+}
+/// remember the ETag of a body served for `key` (hashed once per key)
+pub fn etag_memo_fill(key: &str, body: &[u8]) {
+    if !ETAG_MEMO.lock().contains_key(key) {
+        etag_memo_put(key, etag(body));
+    }
+}
+/// 304 marker (empty body) when the request's If-None-Match is the remembered ETag of `key`; serve_inner adds the headers
+pub fn not_modified_by_key(q: &Req, key: &str) -> Option<Resp> {
+    let inm = q.h("if-none-match")?;
+    (ETAG_MEMO.lock().get(key).map(|t| t.as_str()) == Some(inm)).then(|| response(304, JSON, Bytes::new()))
+}
+/// recorded runs and frames (GET /api/run/<sc>?live=0, also with &t=) change only with a scenario file, a Studio save or a
+/// roster move on a touched incident: browsers may reuse them for 10 s and the Vercel CDN serves them at the edge, fresh for
+/// 10 s and then stale while it revalidates in the background, so a warm load never waits for the container
+const REC_BROWSER_CC: &str = "public, max-age=10, stale-while-revalidate=60";
+const REC_CDN_CC: &str = "max-age=10, stale-while-revalidate=86400";
+fn cache_headers(r: &mut Response<Body>, recorded: bool) {
+    let h = r.headers_mut();
+    if recorded {
+        h.insert("cache-control", HeaderValue::from_static(REC_BROWSER_CC));
+        h.insert("vercel-cdn-cache-control", HeaderValue::from_static(REC_CDN_CC));
+    } else {
+        h.insert("cache-control", HeaderValue::from_static("no-cache"));
+    }
 }
 pub fn gz_put(tag: String, g: Bytes) {
     let mut c = GZ.lock();

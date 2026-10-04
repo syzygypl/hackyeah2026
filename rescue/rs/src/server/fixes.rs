@@ -297,8 +297,19 @@ pub async fn timeline_route(q: &Req) -> Option<Resp> {
             if !valid_name(name) {
                 return Some(json_err(400, "bad scenario name"));
             }
-            return Some(match TIMELINE_CACHE.frame(name, q.q("live") != Some("0"), q.q("features"), t).await {
-                Some(d) => ok_json(d),
+            let live = q.q("live") != Some("0");
+            // recorded frames (live=0): ETag by inputs, so a revalidated &t= prefetch is a 304 without building the timeline
+            let mk = if live { None } else { Some(format!("frame|{}|{t}", TIMELINE_CACHE.key(name, live, q.q("features")).await)) };
+            if let Some(r) = mk.as_deref().and_then(|k| super::http::not_modified_by_key(q, k)) {
+                return Some(r);
+            }
+            return Some(match TIMELINE_CACHE.frame(name, live, q.q("features"), t).await {
+                Some(d) => {
+                    if let Some(k) = &mk {
+                        super::http::etag_memo_fill(k, &d);
+                    }
+                    ok_json(d)
+                }
                 None => json_err(404, &format!("no timeline for {name} at {t}")),
             });
         }

@@ -289,6 +289,18 @@ pub async fn run_key(name: &str, live: bool, features: Option<&str>, frame_min: 
 /// frameMin / frames: timeline mode (`?frameMin=`, `?frames=0`), ignored without tracks.
 pub async fn run_scenario(name: &str, live: bool, features: Option<&str>, frame_min: i64, frames: bool) -> Option<Bytes> {
     let key = run_key(name, live, features, frame_min, frames).await;
+    run_scenario_keyed(key, name, live, features, frame_min, frames).await
+}
+
+/// run_scenario with its RUN_CACHE key already computed (GET /api/run/<sc> looks the key's ETag up first, see
+/// http::etag_memo); every body it returns leaves its ETag in the memo under that key
+pub async fn run_scenario_keyed(key: String, name: &str, live: bool, features: Option<&str>, frame_min: i64, frames: bool) -> Option<Bytes> {
+    let b = run_scenario_body(key.clone(), name, live, features, frame_min, frames).await?;
+    super::http::etag_memo_fill(&key, &b);
+    Some(b)
+}
+
+async fn run_scenario_body(key: String, name: &str, live: bool, features: Option<&str>, frame_min: i64, frames: bool) -> Option<Bytes> {
     if let Some(b) = super::bake::baked(&key) {
         return Some(b);
     }

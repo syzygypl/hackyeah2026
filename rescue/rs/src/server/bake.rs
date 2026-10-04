@@ -117,10 +117,13 @@ pub fn load(path: &str) {
         let stamps = checked.entry(sc.to_string()).or_insert_with(|| (content_hash(sc) == hash).then(|| file_stamps(sc)));
         match stamps {
             Some(st) => {
+                // ETag by key too: a cold instance answers a revalidated run with 304 without touching the body
+                let (tag, key) = (super::http::etag(&body), kt.replace('\x01', st));
+                super::http::etag_memo_put(&key, tag.clone());
                 if !gz.is_empty() {
-                    super::http::gz_put(super::http::etag(&body), gz);
+                    super::http::gz_put(tag, gz);
                 }
-                m.insert(kt.replace('\x01', st), body);
+                m.insert(key, body);
                 ok += 1;
             }
             None => stale += 1,
