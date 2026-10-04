@@ -17,7 +17,7 @@ import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / p
 import { createTimeline3D } from './timeline3d.js';
 import { createCoverage3D } from './coverage3d.js';
 import { createWalk3D } from './walk3d.js';
-import { createMachine } from './machines3d.js'; // helicopter / drone / boat models for units   // free walk (Spacer): first person from a clicked spot
+import { createMachine, createVehicle, vehicleKind, operatorPaint } from './machines3d.js'; // unit models: aircraft, boats, ground vehicles   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
 // load in slices: the build hands the main thread back between stages (in /app the iframe shares it with the shell);
@@ -1298,6 +1298,34 @@ const traffic = (() => {
   }
   return { tick, cars, group: g, set: (v) => { on = v; g.visible = v; } };
 })();
+// ---------- unit vehicles: ground units' cars parked at their base (machines3d.vehicleKind / createVehicle) ----------
+// A ground resource of the scenario (police patrol, city guard, PSP / OSP crew, GOPR / TOPR patrol) gets its vehicle
+// at its base, on the nearest road open to traffic (data/<sc>-traffic.json) within 300 m (its road access: a beach or
+// village station sits off the street), along the road, on the right shoulder; units sharing a base park one behind
+// the other. A base at a mountain hut or station without a road nearby gets none; so does a base outside the cut.
+// Blue lights flash while the unit has an assignment in the shown step (drawTeams -> setActive). Drawn 2.5x like the
+// other unit markers.
+const unitCars = (() => {
+  if (!TRAF?.r?.length) return null;
+  const roads = TRAF.r.map(([, l]) => { const d = dec(l), xz = []; for (let i = 0; i < d.length; i += 2) xz.push(toX(d[i + 1]), toZ(d[i])); return xz; });
+  const list = [];
+  for (const r of resources.values()) {
+    const vk = r.type === 'ground' && r.base && inside(r.base) ? vehicleKind(r.name) : null; if (!vk) continue;
+    const bx = toX(r.base[1]), bz = toZ(r.base[0]); let best = null, bd = 0.3;
+    for (const xz of roads) for (let i = 0; i + 3 < xz.length; i += 2) {
+      const ax = xz[i], az = xz[i + 1], dx = xz[i + 2] - ax, dz = xz[i + 3] - az, L2 = dx * dx + dz * dz || 1e-12;
+      const u = clamp(((bx - ax) * dx + (bz - az) * dz) / L2, 0, 1), px = ax + u * dx, pz = az + u * dz, d = Math.hypot(bx - px, bz - pz);
+      if (d < bd) { bd = d; const l = Math.sqrt(L2); best = { x: px, z: pz, dx: dx / l, dz: dz / l }; }
+    }
+    if (!best) continue;
+    const S = 2.5, k = list.filter((c) => Math.hypot(c.at.x - best.x, c.at.z - best.z) < 0.02).length, back = k * 0.0075 * S; // queue behind a car already there
+    const v = createVehicle(THREE, vk), x = best.x - best.dz * 0.004 * S - best.dx * back, z = best.z + best.dx * 0.004 * S - best.dz * back; // right shoulder
+    v.obj.scale.setScalar(S); v.obj.position.set(x, meshHeightAt(toLat(z), toLon(x)), z); v.setHeading(best.dx, best.dz);
+    v.obj.name = 'unitCar'; scene.add(v.obj); list.push({ id: r.id, v, at: best });
+  }
+  if (!list.length) return null;
+  return { list, setActive: (ids) => list.forEach((c) => c.v.setActive(ids.has(c.id))), tick: (dt) => list.forEach((c) => c.v.tick(dt)) };
+})();
 await yieldMain();
 // ---------- water reflection: the mountains mirrored in the lakes and the sea (fx3d.waterReflect) ----------
 // One planar mirror at a time: the water body nearest the orbit target that is on screen sets the plane y. The terrain
@@ -1733,6 +1761,7 @@ function setStep(i, animate = true, fromTime = false) {
 }
 function drawTeams(s) {
   disposeGroup(dyn.teams); movers.length = 0;
+  unitCars?.setActive(new Set((s.assignments || []).map((a) => a.resourceId))); // deployed units: blue lights on
   if (R.timeline?.actors?.length) return; // timeline tracks replace decorative assignment loops
   // history: every patrol so far, as a faint trail from its base to the searched segment
   for (const e of EVENTS) {
@@ -1755,7 +1784,7 @@ function drawTeams(s) {
     const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + (type === 'heli' || type === 'drone' ? 0.45 : 0.22) + Math.min(p0.distanceTo(p2), 6) * 0.12;
     const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2), pts = curve.getPoints(64);
     const line = makeLine(pts, { color: col, width: 1.8, opacity: 0.9, dashed: true, dash: 0.05, gap: 0.04 });
-    const mach = createMachine(THREE, type, col); // helicopter, drone, boat fly / sail the arc as a model; teams stay a ball
+    const mach = createMachine(THREE, type, operatorPaint(res.name) || col); // helicopter, drone, boat fly / sail the arc as a model (operator livery); teams stay a ball
     const dot = mach ? mach.obj : new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: col }));
     if (!mach) { dot.scale.setScalar(0.014); dot.userData.glow = ['#' + new THREE.Color(col).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(), 100]; }
     dyn.teams.add(line, dot, label(`${esc(res.name.split(' (')[0])} · ${Math.round(a.etaMin)} min`, 'team', p1.clone()));
@@ -2473,6 +2502,7 @@ function frame() {
   forestLod?.(); // trees: near / far LOD split, re-done only after the camera moved far
   nearGrass?.(dt); // near grass: fade with the zoom, re-placed in slices when the target moved far
   traffic?.tick(dt); // cars along the roads
+  unitCars?.tick(dt); // blue lights of deployed units' vehicles
   if (precip.visible) {
     const u = precipMat.uniforms; u.uCenter.value.copy(controls.target);
     u.uBox.value = clamp(camera.position.distanceTo(controls.target) * 0.9, 0.8, 8);

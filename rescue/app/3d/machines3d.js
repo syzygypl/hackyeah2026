@@ -87,3 +87,70 @@ export function createMachine(THREE, kind, color) {
     place(p) { obj.position.copy(p); obj.position.y += base.y; },
   };
 }
+
+// operator livery for a helicopter or boat from the unit's name (null: keep the legend colour of its kind)
+export function operatorPaint(name = '') {
+  if (/Policj/i.test(name)) return '#1d3b6e';
+  if (/SAR|Marynark/i.test(name)) return '#e8641b';
+  if (/LPR|TOPR|GOPR/.test(name)) return '#c8102e';
+  if (/WOPR/.test(name)) return '#e2231a';
+  if (/PSP|OSP|JRG/.test(name)) return '#c4161c';
+  return null;
+}
+
+// Ground units' vehicles, parked at the unit's base (app3d places them on the nearest public road): police car,
+// city guard car, fire engine (PSP / OSP), mountain rescue off-roader (GOPR / TOPR). Units with another name (or none
+// of these services) get no vehicle. Blue lights flash while the unit is deployed (setActive).
+export function vehicleKind(name = '') {
+  if (/Straż Miejska/i.test(name)) return 'guard';
+  if (/Policj/i.test(name)) return 'police';
+  if (/PSP|OSP|JRG|Straż Pożarna/i.test(name)) return 'fire';
+  if (/GOPR|TOPR/.test(name)) return 'mountain';
+  return null;
+}
+
+let V = null;
+function sharedV(THREE) {
+  if (V) return V;
+  const box = (x, y, z, ty = 0, tx = 0) => new THREE.BoxGeometry(x, y, z).translate(tx, ty, 0);
+  const mat = (c, r = 0.45) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: 0.2 });
+  V = {
+    // real size in km (a car 4.6 m, a fire engine 8 m); the caller scales the group like the other markers
+    carBody: box(0.0046, 0.0008, 0.0018, 0.0006), carCab: box(0.0026, 0.0006, 0.0016, 0.0013, -0.0003),
+    suvBody: box(0.0047, 0.001, 0.0019, 0.0007), suvCab: box(0.0029, 0.00075, 0.0017, 0.00155, -0.0004),
+    truckCab: box(0.0022, 0.0017, 0.0024, 0.0013, 0.0029), truckBody: box(0.0056, 0.0021, 0.0024, 0.00145, -0.0011),
+    wheel: new THREE.CylinderGeometry(0.00034, 0.00034, 0.0019, 10).rotateX(Math.PI / 2),
+    bar: box(0.0005, 0.00016, 0.00045),
+    tyre: mat(0x1d1f22, 0.8), white: mat(0xf2f2ef), glass: mat(0x2a3440, 0.2),
+    police: mat(0x2b4fa3), guard: mat(0xe6e9e4), fire: mat(0xc4161c), mountain: mat(0xb3121b),
+    blueOn: new THREE.MeshBasicMaterial({ color: 0x3d7bff, toneMapped: false }), blueOff: mat(0x1e2b4a, 0.3),
+  };
+  return V;
+}
+
+export function createVehicle(THREE, kind) {
+  const g = sharedV(THREE), obj = new THREE.Group(), add = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); obj.add(o); return o; };
+  obj.rotation.order = 'YXZ';
+  let barY, barX = 0, len;
+  if (kind === 'fire') {
+    add(g.truckCab, g.fire); add(g.truckBody, g.fire); barY = 0.00225; barX = 0.0029; len = 0.0039;
+  } else if (kind === 'mountain') {
+    add(g.suvBody, g.mountain); add(g.suvCab, g.white); barY = 0.002; barX = -0.0004; len = 0.0021;
+  } else {
+    add(g.carBody, g[kind] || g.police); add(g.carCab, kind === 'guard' ? g.glass : g.white); barY = 0.00168; barX = -0.0003; len = 0.0021;
+  }
+  for (const x of [len * 0.6, -len * 0.6]) for (const z of [0.0008, -0.0008]) add(g.wheel, g.tyre, x + (kind === 'fire' ? 0.0006 : 0), 0.00034, z);
+  const lamps = [add(g.bar, g.blueOff, barX, barY, 0.0003), add(g.bar, g.blueOff, barX, barY, -0.0003)];
+  lamps.forEach((l) => { l.userData.glow = null; });
+  let t = Math.random(), on = false;
+  return {
+    obj,
+    setActive(v) { on = v; if (!v) lamps.forEach((l) => { l.material = g.blueOff; l.userData.glow = null; }); },
+    tick(dt) {
+      if (!on) return;
+      t += dt; const ph = Math.floor(t * 6) % 2; // alternating blue flashes, 3 per second each
+      lamps.forEach((l, i) => { const lit = (i === ph); l.material = lit ? g.blueOn : g.blueOff; l.userData.glow = lit ? ['#3d7bff', 55] : null; });
+    },
+    setHeading(dx, dz) { if (Math.hypot(dx, dz) > 1e-9) obj.rotation.y = Math.atan2(-dz, dx); },
+  };
+}

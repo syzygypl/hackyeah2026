@@ -1,6 +1,6 @@
 // Display only: consume the engine's minute samples, never simulator truth or inferred coverage.
 import { createFov3D } from './fov3d.js';
-import { createMachine } from './machines3d.js';
+import { createMachine, operatorPaint } from './machines3d.js';
 export function sampleAt(path, minute) {
   if (!path?.length || minute < path[0][2]) return null;
   let lo = 0, hi = path.length - 1;
@@ -46,7 +46,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     tag.element.onpointerdown = (e) => { labelDown = { id: a.id, x: e.clientX, y: e.clientY }; };
     tag.element.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectActor(a.id); } };
     // helicopter, drone, boat: a model instead of the ball; the ball stays as the (invisible) click target
-    const machine = createMachine(THREE, a.kind, colors[a.kind] || '#555');
+    const machine = createMachine(THREE, a.kind, operatorPaint(a.name) || colors[a.kind] || '#555'); // operator livery when the name says it
     if (machine) { g.add(machine.obj); dot.material.visible = false; }
     g.add(dot, tag); group.add(g);
     return { ...a, g, tag, dot, machine, color: colors[a.kind] || '#555' };
