@@ -349,7 +349,7 @@ impl ExSession {
             self.jobs[n].done = true;
             let j = self.jobs[n].clone();
             self.cells.extend(j.cells.iter().copied());
-            self.coverage += j.poa * j.pod;
+            self.coverage = 1.0 - (1.0 - self.coverage) * (1.0 - j.poa * j.pod); // j.poa is conditional (after earlier searches): combine, never sum
             if j.truth_pod > 0.0 && ex_roll(&format!("{}|{}|{}|{}", self.id, j.team, j.seg, j.start)) < j.truth_pod {
                 self.found = true;
                 self.found_minute = Some(j.end);

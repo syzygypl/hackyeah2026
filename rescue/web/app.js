@@ -1026,7 +1026,8 @@
       const h = M.hints[k];
       if (h.kind === 'searched' && h.segIds.length) {
         const prev = new Map(R.steps[Math.max(0, k - 1)].segments.map((x) => [x.id, x.poa]));
-        for (const id of h.segIds) { pos += (prev.get(id) || 0) * (h.pod != null ? h.pod : 0.7); seen.add(id); }
+        let inc = 0; for (const id of h.segIds) { inc += (prev.get(id) || 0) * (h.pod != null ? h.pod : 0.7); seen.add(id); }
+        pos = 1 - (1 - pos) * (1 - inc); // prev POA is already conditional on earlier empty searches: combine, never sum
       }
       return { k, min: m - t0, lead: Math.max(...st.segments.map((x) => x.poa)), pos: Math.min(pos, 1), searched: seen.size,
         area: [...seen].reduce((a, id) => a + (area.get(id) || 0), 0) / 100, found: isFoundHint(h) };
@@ -1047,7 +1048,7 @@
         ${series.map(([f, c]) => line(f, c, P.length - 1, 1.2, 0.25)).join('')}${series.map(([f, c]) => line(f, c, i, 2.2, 1)).join('')}
         <line x1="${X(cur.min)}" x2="${X(cur.min)}" y1="4" y2="${H - 6}" style="stroke:var(--ink-2)" stroke-dasharray="2 2" opacity="0.6"/>${dots}
       </svg>
-      <div class="pg-leg"><i style="background:var(--bad)"></i>lider mapy <i style="background:var(--accent)"></i>szansa znalezienia (Σ POA×POD) <i style="background:var(--mute)"></i>przeszukany obszar</div>`;
+      <div class="pg-leg"><i style="background:var(--bad)"></i>lider mapy <i style="background:var(--accent)"></i>szansa znalezienia w obszarze (1 - Π(1 - POA×POD)) <i style="background:var(--mute)"></i>przeszukany obszar</div>`;
   }
 
   function renderValue() {

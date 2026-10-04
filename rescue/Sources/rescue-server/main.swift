@@ -1056,7 +1056,7 @@ actor Exercises {
             let j = nextJob!
             j.done = true
             s.cells.formUnion(j.cells)
-            s.coverage += j.poa * j.pod
+            s.coverage = 1 - (1 - s.coverage) * (1 - j.poa * j.pod)   // j.poa is conditional (after earlier searches): combine, never sum
             if j.truthPod > 0 && exRoll("\(s.id)|\(j.team)|\(j.seg)|\(j.start)") < j.truthPod {
                 s.found = true; s.foundMinute = j.end; s.foundBy = j.team
                 s.note(j.end, "found", "ZNALEZIONO: \(j.team) w \(j.seg)", team: j.team, seg: j.seg)
