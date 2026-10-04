@@ -528,6 +528,8 @@ header .livehead{overflow:hidden}
    and the task without the box popping up on every load */
 body.role-ratownik:not(.pin-asked) header #pinbox{display:none!important}
 body.role-ratownik header #pinbox input{min-height:44px;font-size:16px}
+/* GET /api/key (app.js keyProbe): the box shows which key this device holds - green operator, sand rescuer, red wrong (its title has the words) */
+body.key-operator #pin{box-shadow:inset 0 -2px 0 var(--rl-ok)}body.key-field #pin{box-shadow:inset 0 -2px 0 var(--rl-warn)}body.key-wrong #pin{box-shadow:inset 0 0 0 2px var(--rl-danger)}
 #firstRunOk,#roleBtn{min-height:44px}
 /* QA (AI Michała, Walidacja at 1920 px): outside Akcja/Plan the bar is a plain top row - room for the NA ŻYWO / HISTORIA tab above it
    (the tab names the mode, so the bar's own badge goes), and a full bar wraps instead of pushing Rola off the right edge */

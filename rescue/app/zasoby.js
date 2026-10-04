@@ -9,10 +9,11 @@ function toast(t, ms = 3000) { const el = $("toast"); el.textContent = t; el.sty
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}
 if (!LOOPBACK) { $("pinbox").hidden = false; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} }; }
+addEventListener("storage", (e) => { if (e.key === "rescue-pin" || e.key === null) { PIN = ((e.key ? e.newValue : null) || "").replace(/^"(.*)"$/, "$1").trim(); if (!LOOPBACK) $("pin").value = PIN; } });   // a key typed in /app or another tab
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
   const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
-  if (!r.ok) { const e = new Error(r.status === 401 ? "Podaj klucz akcji (operator)." : "HTTP " + r.status); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(r.status === 401 ? (PIN ? "Klucz akcji jest nieprawidłowy: wpisz klucz kierownika akcji w polu Klucz." : "Podaj klucz akcji (pole Klucz u góry).") : r.status === 403 ? "To klucz ratownika: ta zmiana wymaga klucza kierownika akcji (pole Klucz u góry)." : "HTTP " + r.status); e.status = r.status; throw e; }
   return r.json();
 }
 const Q = new URLSearchParams(location.search);

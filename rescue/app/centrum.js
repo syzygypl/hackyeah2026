@@ -34,10 +34,11 @@ const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.ho
 { const k = new URLSearchParams(location.search).get("key"); if (k) { try { localStorage.setItem("rescue-pin", k.trim()); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("key"); history.replaceState(null, "", u); } }   // join link, as in app.js
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}
 if (!LOOPBACK) { $("pinbox").hidden = false; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} tick(); }; }
+addEventListener("storage", (e) => { if (e.key === "rescue-pin" || e.key === null) { PIN = ((e.key ? e.newValue : null) || "").replace(/^"(.*)"$/, "$1").trim(); if (!LOOPBACK) $("pin").value = PIN; } });   // a key typed in /app or another tab
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
   const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
-  if (!r.ok) { const e = new Error(r.status === 401 ? "Podaj PIN akcji." : "HTTP " + r.status); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(r.status === 401 ? (PIN ? "Klucz akcji jest nieprawidłowy: wpisz klucz kierownika akcji w polu Klucz." : "Podaj klucz akcji (pole Klucz u góry).") : r.status === 403 ? "To klucz ratownika: ta zmiana wymaga klucza kierownika akcji (pole Klucz u góry)." : "HTTP " + r.status); e.status = r.status; throw e; }
   return r.json();
 }
 
@@ -1116,7 +1117,7 @@ async function tick() {
     Promise.all(fresh.map((x) => loadMeta(x.sc))).then(render);
   } catch (e) {
     console.warn(e);
-    toast(e.status === 401 ? "Podaj PIN akcji (pole PIN u góry)." : "Brak połączenia z serwerem akcji - ponawiam co 5 s.");
+    toast(e.status === 401 || e.status === 403 ? e.message : "Brak połączenia z serwerem akcji - ponawiam co 5 s.");
   }
   busy = false;
 }
