@@ -34,3 +34,8 @@ RESCUE_SERVER=rescue/rs/target/release/rescue-server python3 rescue/integration/
 ```
 
 On macOS nothing changes: Google Chrome from /Applications and the Swift build stay the defaults.
+
+Software WebGL (SwiftShader) is slow and memory hungry: one split-view moment takes 30-60 s, and parallel runs or stray
+browsers left by earlier runs starve each other. Run one top 3 test at a time. A moment that does not settle prints
+`why:` (which part never filled in, or how often the reading changed); a browser that dies mid-run (EOF on the DevTools
+socket) is recorded as FAIL and restarted, and its stderr is in `chrome.log` in the run's temp dir.

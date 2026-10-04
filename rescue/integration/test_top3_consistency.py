@@ -145,19 +145,26 @@ def norm(s):
 
 
 def settle(c, need3d, timeout):
-    """Probe until the panel, 2D (and 3D) all show 3 labels and the reading is unchanged for 3 s."""
-    t0, last, same_since = time.time(), None, None
+    """Probe until the panel, 2D (and 3D) all show 3 labels and the reading is unchanged for 3 s.
+    Not settled: p["why"] says which part never filled in, or how often the reading changed."""
+    t0, last, same_since, missing, changes = time.time(), None, None, {}, 0
     while time.time() - t0 < timeout:
         p = c.js(PROBE) or {}
-        full = len(p.get("panel") or []) == 3 and all(p.get("d2") or [None]) and (not need3d or all(p.get("d3") or [None]))
+        parts = {"panel": len(p.get("panel") or []) == 3, "2D": all(p.get("d2") or [None]), "3D": not need3d or all(p.get("d3") or [None])}
+        for k, v in parts.items():
+            missing[k] = missing.get(k, 0) + (not v)
+        full = all(parts.values())
         key = json.dumps([p.get("panel"), p.get("d2"), p.get("d3")])
         if full and key == last:
             if time.time() - same_since >= 3:
                 return p, True
         else:
+            changes += full and last is not None and key != last
             last, same_since = key, time.time()
         time.sleep(0.5)
-    return c.js(PROBE) or {}, False
+    p = c.js(PROBE) or {}
+    p["why"] = f"after {timeout:.0f} s: incomplete probes {missing}, full reading changed {changes}x"
+    return p, False
 
 
 def main():
@@ -199,63 +206,95 @@ def main():
             lo, _, hi = part.partition("-")
             steps += [x for x in range(int(lo), int(hi or lo) + 1) if not n or x <= n]
         moments += [(sc, "hist", s) for s in steps] + ([] if a.no_live else [(sc, "live", None)])
-    port = lib.free_port(9400 + os.getpid() % 500)
-    chrome = subprocess.Popen([CHROME, "--headless=new", f"--remote-debugging-port={port}", f"--user-data-dir={tmp}/chrome",
-                               "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--no-first-run",
-                               "--no-default-browser-check", "--window-size=1440,900", "--hide-scrollbars", "about:blank"],
-                              stdout=subprocess.DEVNULL, stderr=open(os.path.join(tmp, "chrome.log"), "w"))
-    rows, fails = [], 0
-    try:
+    browser = {}
+
+    def start_browser():   # (re)start headless Chrome; a dead browser (EOF on the DevTools socket) is restarted per moment
+        if browser.get("proc"):
+            browser["proc"].kill()
+            browser["proc"].wait(10)
+        # port 0: Chrome picks a free port and writes it to DevToolsActivePort (a probed "free" port races with parallel runs,
+        # and a Chrome that cannot bind 127.0.0.1 falls back to [::1] while we would talk to another run's browser)
+        active = os.path.join(tmp, "chrome", "DevToolsActivePort")
+        if os.path.exists(active):
+            os.remove(active)
+        browser["proc"] = subprocess.Popen([CHROME, "--headless=new", "--remote-debugging-port=0", f"--user-data-dir={tmp}/chrome",
+                                            "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--no-first-run",
+                                            "--no-default-browser-check", "--window-size=1440,900", "--hide-scrollbars", "about:blank"],
+                                           stdout=subprocess.DEVNULL, stderr=open(os.path.join(tmp, "chrome.log"), "a"))
+        port = None
+        for _ in range(150):
+            try:
+                port = int(open(active).read().split()[0])
+                break
+            except (OSError, ValueError, IndexError):
+                time.sleep(0.2)
+        if not port:
+            raise RuntimeError(f"{CHROME} did not start (no {active}); set CHROME=/path/to/chrome, see {tmp}/chrome.log")
         c = Cdp(port)
         c.call("Runtime.enable")
         c.call("Page.enable")
         c.call("Emulation.setDeviceMetricsOverride", {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False})
         c.call("Page.addScriptToEvaluateOnNewDocument", {"source": NO_WRITES})
+        return c
+
+    rows, fails = [], 0
+    try:
+        c = start_browser()
         for sc, mode, s in moments:
-            q = f"role=operator&mode=akcja&view={a.view}&sc={sc}&time={mode}" + (f"&step={s - 1}" if s else "")
-            c.call("Page.navigate", {"url": f"{a.base}/app/?{q}"})
-            time.sleep(2)
-            p, ok = settle(c, need3d, a.timeout)
-            panel = [x["name"] for x in p.get("panel") or []]
-            d2, d3 = p.get("d2") or [None] * 3, p.get("d3") or [None] * 3
-            m2 = need2d and [norm(x) for x in d2] != [norm(x) for x in panel]
-            m3 = need3d and [norm(x) for x in d3] != [norm(x) for x in panel]
-            bad = (not ok) or m2 or m3
-            fails += bad
-            label = (f"{sc}  " if len(scs) > 1 else "") + (f"Historia krok {s}" if s else "Na żywo")
-            hints = c.js("[...document.querySelectorAll('#events .evt')].map((x) => x.dataset.hint)") if a.evidence_off else []
-            for h in [None] + list(dict.fromkeys(hints or [])) + (["*"] if hints else []):
-                if h == "*":  # the ↺ button
-                    c.js("document.getElementById('evReset').click()")
-                elif h:  # untick this signal only (the previous one is restored first, like a user would)
-                    c.js("document.getElementById('evReset').hidden || document.getElementById('evReset').click()")
-                    c.js(f"(() => {{ const x = document.querySelector('#events .evt[data-hint=\"{h}\"]'); if (x && x.checked) x.click(); }})()")
-                if h:
-                    time.sleep(1)
-                    p, ok = settle(c, need3d, a.timeout)
-                    panel = [x["name"] for x in p.get("panel") or []]
-                    d2, d3 = p.get("d2") or [None] * 3, p.get("d3") or [None] * 3
-                    m2 = need2d and [norm(x) for x in d2] != [norm(x) for x in panel]
-                    m3 = need3d and [norm(x) for x in d3] != [norm(x) for x in panel]
-                    bad = (not ok) or m2 or m3
-                    fails += bad
-                writes = c.js("window.__blockedWrites || []") or []
-                if writes:
-                    bad, fails = True, fails + 1
-                lab = label + ("" if not h else "  wszystkie sygnały" if h == "*" else f"  bez {h}")
-                rows.append((lab, ok and not writes, panel, d2, d3, m2, m3, p))
-                ids = " / ".join(f"{x['id']}" for x in p.get("panel") or [])
-                print(f"\n[{'FAIL' if bad else 'PASS'}] {lab}   ({'settled' if ok else 'NOT SETTLED'})", flush=True)
-                print(f"   panel ({p.get('panelAt', '').strip()}): {' / '.join(panel)}   [{ids}]")
-                if need2d:
-                    print(f"   2D    ({p.get('at2d', '?')}): {' / '.join(map(str, d2))}{'   <-- differs' if m2 else ''}")
-                if need3d:
-                    print(f"   3D    : {' / '.join(map(str, d3))}{'   <-- differs' if m3 else ''}")
-                for e in ("err2d", "err3d", "page"):
-                    if p.get(e):
-                        print(f"   {e}: {p[e]}")
-                if writes:
-                    print(f"   non-GET attempted (blocked by test): {writes}")
+            if srv and srv.proc.poll() is not None:   # own server gone (killed from outside): say so and start it again
+                print(f"\n!! own rescue-server exited with {srv.proc.returncode}; restarting it on {srv.base}", flush=True)
+                srv.start()
+            try:
+                q = f"role=operator&mode=akcja&view={a.view}&sc={sc}&time={mode}" + (f"&step={s - 1}" if s else "")
+                c.call("Page.navigate", {"url": f"{a.base}/app/?{q}"})
+                time.sleep(2)
+                p, ok = settle(c, need3d, a.timeout)
+                panel = [x["name"] for x in p.get("panel") or []]
+                d2, d3 = p.get("d2") or [None] * 3, p.get("d3") or [None] * 3
+                m2 = need2d and [norm(x) for x in d2] != [norm(x) for x in panel]
+                m3 = need3d and [norm(x) for x in d3] != [norm(x) for x in panel]
+                bad = (not ok) or m2 or m3
+                fails += bad
+                label = (f"{sc}  " if len(scs) > 1 else "") + (f"Historia krok {s}" if s else "Na żywo")
+                hints = c.js("[...document.querySelectorAll('#events .evt')].map((x) => x.dataset.hint)") if a.evidence_off else []
+                for h in [None] + list(dict.fromkeys(hints or [])) + (["*"] if hints else []):
+                    if h == "*":  # the ↺ button
+                        c.js("document.getElementById('evReset').click()")
+                    elif h:  # untick this signal only (the previous one is restored first, like a user would)
+                        c.js("document.getElementById('evReset').hidden || document.getElementById('evReset').click()")
+                        c.js(f"(() => {{ const x = document.querySelector('#events .evt[data-hint=\"{h}\"]'); if (x && x.checked) x.click(); }})()")
+                    if h:
+                        time.sleep(1)
+                        p, ok = settle(c, need3d, a.timeout)
+                        panel = [x["name"] for x in p.get("panel") or []]
+                        d2, d3 = p.get("d2") or [None] * 3, p.get("d3") or [None] * 3
+                        m2 = need2d and [norm(x) for x in d2] != [norm(x) for x in panel]
+                        m3 = need3d and [norm(x) for x in d3] != [norm(x) for x in panel]
+                        bad = (not ok) or m2 or m3
+                        fails += bad
+                    writes = c.js("window.__blockedWrites || []") or []
+                    if writes:
+                        bad, fails = True, fails + 1
+                    lab = label + ("" if not h else "  wszystkie sygnały" if h == "*" else f"  bez {h}")
+                    rows.append((lab, ok and not writes, panel, d2, d3, m2, m3, p))
+                    ids = " / ".join(f"{x['id']}" for x in p.get("panel") or [])
+                    print(f"\n[{'FAIL' if bad else 'PASS'}] {lab}   ({'settled' if ok else 'NOT SETTLED'})", flush=True)
+                    print(f"   panel ({p.get('panelAt', '').strip()}): {' / '.join(panel)}   [{ids}]")
+                    if need2d:
+                        print(f"   2D    ({p.get('at2d', '?')}): {' / '.join(map(str, d2))}{'   <-- differs' if m2 else ''}")
+                    if need3d:
+                        print(f"   3D    : {' / '.join(map(str, d3))}{'   <-- differs' if m3 else ''}")
+                    for e in ("err2d", "err3d", "page", "why"):
+                        if p.get(e):
+                            print(f"   {e}: {p[e]}")
+                    if writes:
+                        print(f"   non-GET attempted (blocked by test): {writes}")
+            except (EOFError, OSError) as e:   # browser or renderer died (memory pressure, GPU process): record, restart, go on
+                lab = (f"{sc}  " if len(scs) > 1 else "") + (f"Historia krok {s}" if s else "Na żywo")
+                fails += 1
+                rows.append((lab, False, [], [None] * 3, [None] * 3, False, False, {}))
+                print(f"\n[FAIL] {lab}   (browser died: {type(e).__name__} {e}; see {tmp}/chrome.log, restarting it)", flush=True)
+                c = start_browser()
         print("\n=== summary ===")
         w = max(len(r[0]) for r in rows)
         for label, ok, panel, d2, d3, m2, m3, _ in rows:
@@ -265,7 +304,8 @@ def main():
         if c.errors:
             print("\nJS errors:", *sorted(set(c.errors))[:10], sep="\n  ")
     finally:
-        chrome.terminate()
+        if browser.get("proc"):
+            browser["proc"].terminate()
         if srv:
             srv.stop()
     sys.exit(1 if fails else 0)
