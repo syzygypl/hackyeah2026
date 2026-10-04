@@ -1617,6 +1617,10 @@
     }
     if (!useML) flashNote(CFG.renderer === 'canvas' ? 'Widok zastępczy (Canvas), wymuszony parametrem' : window.__mlFailed || !window.maplibregl ? 'MapLibre niedostępny - widok zastępczy (Canvas)' : 'Brak WebGL - widok zastępczy (Canvas)', true);
     await S.view.ready;
+    // live team positions (livepos.js, GET /api/positions/<sc>): its own file, reads the map and the current run through this hook
+    window.__rescue2d = { map: S.view.map || null, sc: () => (S.M && S.M.R && S.M.R.scenario) || CFG.sc, hist: () => /[?&]live=0/.test(CFG.run || ''),
+      units: () => { const st = S.M && S.M.R && S.M.R.steps; return (st && st.length && st[st.length - 1].resources) || []; } };
+    if (S.view.map && !document.getElementById('livepos-js')) { const s = document.createElement('script'); s.id = 'livepos-js'; s.src = 'livepos.js'; document.body.appendChild(s); }
     applyInsets();
     S.view.setBaseFC(baseFeatures(M));
     setBase(S.base);
