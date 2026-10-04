@@ -17,7 +17,11 @@ const hasKey = () => LOOPBACK || !!pin();
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && pin()) h["X-Rescue-Pin"] = pin();
   const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
-  if (r.status === 401) { const e = new Error("Do zmian na żywo potrzebny jest klucz akcji (link „Udostępnij” od kierownika akcji)."); e.code = 401; throw e; }
+  // 401 = no key or a wrong one, 403 = a rescuer (field) key where the operator key is needed; both offer "Pokaż jako symulację"
+  if (r.status === 401 || r.status === 403) {
+    const e = new Error(r.status === 403 ? "Ten klucz to klucz ratownika (meldunki i ślady). Ta zmiana wymaga klucza kierownika akcji."
+      : pin() ? "Klucz akcji na tym urządzeniu jest nieprawidłowy. Wpisz klucz kierownika akcji w polu Klucz albo otwórz link „Udostępnij”."
+      : "Do zmian na żywo potrzebny jest klucz akcji (link „Udostępnij” od kierownika akcji)."); e.code = 401; throw e; }
   if (!r.ok) throw new Error("Serwer odrzucił żądanie (" + r.status + ").");
   return r.json();
 }

@@ -58,6 +58,8 @@
   const FIELD_LOOPBACK = !FIELD || ['127.0.0.1', 'localhost', '[::1]', '::1'].includes(FIELD.hostname);
   let PIN = '';
   try { PIN = (localStorage.getItem('rescue-pin') || '').replace(/^"(.*)"$/, '$1'); } catch (e) { /* storage blocked */ }   // web/patrol stores it JSON-quoted
+  // a key typed into the /app shell's Klucz box (same origin, another document) reaches this frame without a reload
+  window.addEventListener('storage', (e) => { if (e.key === 'rescue-pin') PIN = (e.newValue || '').replace(/^"(.*)"$/, '$1'); });
   const toField = (url) => { try { return !!FIELD && new URL(url, location.href).origin === FIELD.origin; } catch (e) { return false; } };
   // the run (/api/run/<sc>) on a LAN server needs the PIN too: send it to the field server and to our own origin
   const runPin = (url) => { try { return PIN && (toField(url) || new URL(url, location.href).origin === location.origin) ? { 'X-Rescue-Pin': PIN } : {}; } catch (e) { return {}; } };

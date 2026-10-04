@@ -2530,17 +2530,26 @@ if (FPP_BC && FPPWIN) FPP_BC.onmessage = (e) => {
 };
 // WASD in FPP (timeline3d): the moved unit's position goes to the server, so 2D, the timeline and Zasoby see it.
 // POST /api/positions/<sc> (manual positions) when the server has it, else the live GPS fix route POST /api/fix;
-// same auth as every write (X-Rescue-Pin). Throttled by timeline3d (~1/s or every 10 m); a failed post is dropped.
+// same auth as every write (X-Rescue-Pin). Throttled by timeline3d (~1/s or every 10 m); a refused post shows a note (moveRefused).
 let POS_API = true;
 async function postMove(unit, lat, lon, headingDeg, t) {
   const H = { 'Content-Type': 'application/json', ...runPin('/api/fix') }, la = +lat.toFixed(6), lo = +lon.toFixed(6);
   try {
     if (POS_API) {
       const r = await fetch(`/api/positions/${encodeURIComponent(SC)}`, { method: 'POST', headers: H, body: JSON.stringify({ unit, lat: la, lon: lo, ts: new Date().toISOString(), t, headingDeg: Math.round(headingDeg), source: 'manual', by: '3d-fpp' }) });
-      if (r.ok) return; if (r.status === 404 || r.status === 405) POS_API = false; else return;
+      if (r.ok) return; if (r.status === 404 || r.status === 405) POS_API = false; else return moveRefused(r.status);
     }
-    await fetch('/api/fix', { method: 'POST', headers: H, body: JSON.stringify({ sc: SC, actor: unit, t, lat: la, lon: lo, accM: 5, src: 'est' }) }); // an older server: a live fix (gps / report / est)
+    const r = await fetch('/api/fix', { method: 'POST', headers: H, body: JSON.stringify({ sc: SC, actor: unit, t, lat: la, lon: lo, accM: 5, src: 'est' }) }); // an older server: a live fix (gps / report / est)
+    if (!r.ok) moveRefused(r.status);
   } catch (e) { console.warn('3d: position post failed', e); }
+}
+// a refused move is no longer dropped silently: one note in the feed corner (at most every 20 s), saying which key is missing
+let moveRefusedAt = 0;
+function moveRefused(status) {
+  if (performance.now() - moveRefusedAt < 20000) return; moveRefusedAt = performance.now();
+  const key = (() => { try { return !!localStorage.getItem('rescue-pin'); } catch (e) { return false; } })();
+  hint(status === 401 ? (key ? 'Ruch nie zapisany: klucz akcji na tym urządzeniu jest nieprawidłowy (pole Klucz u góry).' : 'Ruch nie zapisany: wpisz klucz akcji w polu Klucz u góry albo otwórz link „Udostępnij”.')
+    : status === 403 ? 'Ruch nie zapisany: ten klucz nie pozwala przesuwać zespołów.' : `Ruch nie zapisany: serwer odrzucił (${status}).`);
 }
 // Click-to-move (top-down / orbit view, live only): with a unit selected, a click on the terrain sends it there - a dashed
 // line and a target ring show the move, the unit glides there in 1.2 s (the same manual override as WASD) and the
