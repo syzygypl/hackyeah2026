@@ -1913,6 +1913,13 @@ if (EMB === 'scene') {
   import('../dock.js').then((m) => {
     const f = m.foldPanel(ctl, { title: 'Sterowanie 3D', key: 'rl3dCtlPin', sum: ctlMode });
     if (f) { setInterval(f.sync, 500); ctl.addEventListener('click', () => setTimeout(f.sync, 0)); }
+    else { // phone: foldPanel stays off at <= 600 px (dock.js), so the box gets its own strip, folded at start - it would cover half the view
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'ctl-mfold'; b.setAttribute('aria-expanded', 'false');
+      b.innerHTML = '<span>Sterowanie 3D</span><span class="ctl-mfold-sum"></span>'; ctl.prepend(b); ctl.classList.add('mfolded');
+      const sum = b.querySelector('.ctl-mfold-sum'), syncM = () => { sum.textContent = ctlMode(); };
+      b.addEventListener('click', (e) => { e.stopPropagation(); const open = ctl.classList.toggle('mfolded') === false; b.setAttribute('aria-expanded', String(open)); });
+      syncM(); setInterval(syncM, 1000);
+    }
     m.foldPanel($('sceneLegend'), { title: 'Legenda', key: 'rl3dLegPin', sum: (el) => (el.querySelector('.lg-title')?.firstChild?.textContent || '').replace(/\s*\(silnik\)\s*$/, '').trim() });
   }).catch(() => {});
 }

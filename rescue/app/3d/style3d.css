@@ -397,3 +397,7 @@ body.embed-fpp > #timeline3dCtl { top: 12px; left: 12px; right: auto; width: 230
 body.embed-fpp #timeline3dCtl > button, body.embed-fpp #timeline3dCtl .tl3d-key, body.embed-fpp #timeline3dCtl label { display: none; }
 body.embed-scene.ov-tight #sceneLegend.fold { display: flex; flex-direction: column; }
 body.embed-scene.ov-tight #sceneLegend.fold > .fold-head { order: 99; }
+/* phone: the control box's own fold strip (foldPanel is off at <= 600 px), folded = only the strip */
+#sceneCtl .ctl-mfold { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+#sceneCtl .ctl-mfold-sum { font-weight: 400; opacity: 0.75; }
+#sceneCtl.mfolded > :not(.ctl-mfold) { display: none !important; }
