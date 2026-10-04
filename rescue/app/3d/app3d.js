@@ -16,7 +16,8 @@ import { colorFor, gradientCSS, STOPS } from '../scale.js'; // shared heat scale
 import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / pixel shader effects
 import { createTimeline3D } from './timeline3d.js';
 import { createCoverage3D } from './coverage3d.js';
-import { createWalk3D } from './walk3d.js';   // free walk (Spacer): first person from a clicked spot
+import { createWalk3D } from './walk3d.js';
+import { createMachine } from './machines3d.js'; // helicopter / drone / boat models for units   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
 // load in slices: the build hands the main thread back between stages (in /app the iframe shares it with the shell);
@@ -1751,10 +1752,11 @@ function drawTeams(s) {
     const p1 = p0.clone().lerp(p2, 0.5); p1.y = Math.max(p0.y, p2.y) + (type === 'heli' || type === 'drone' ? 0.45 : 0.22) + Math.min(p0.distanceTo(p2), 6) * 0.12;
     const curve = new THREE.QuadraticBezierCurve3(p0, p1, p2), pts = curve.getPoints(64);
     const line = makeLine(pts, { color: col, width: 1.8, opacity: 0.9, dashed: true, dash: 0.05, gap: 0.04 });
-    const dot = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: col })); dot.scale.setScalar(0.014);
-    dot.userData.glow = ['#' + new THREE.Color(col).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(), 100];
+    const mach = createMachine(THREE, type, col); // helicopter, drone, boat fly / sail the arc as a model; teams stay a ball
+    const dot = mach ? mach.obj : new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: col }));
+    if (!mach) { dot.scale.setScalar(0.014); dot.userData.glow = ['#' + new THREE.Color(col).lerp(new THREE.Color('#ffffff'), 0.45).getHexString(), 100]; }
     dyn.teams.add(line, dot, label(`${esc(res.name.split(' (')[0])} · ${Math.round(a.etaMin)} min`, 'team', p1.clone()));
-    movers.push({ curve, dot, mat: line.material, t: Math.random() });
+    movers.push({ curve, dot, mach, mat: line.material, t: Math.random() });
   }
 }
 
@@ -2458,7 +2460,11 @@ function frame() {
   for (let i = movers.length - 1; i >= 0; i--) {
     const m = movers[i];
     if (m.once) { oneShot = true; m.t += dt / 1.1; m.dot.position.copy(m.curve.getPoint(Math.min(1, m.t))); if (m.t >= 1) { movers.splice(i, 1); m.done(); } }
-    else { m.t = (m.t + dt * 0.15) % 1; m.dot.position.copy(m.curve.getPoint(m.t)); m.mat.dashOffset -= dt * 0.08; }
+    else {
+      m.t = (m.t + dt * 0.15) % 1; m.mat.dashOffset -= dt * 0.08;
+      if (m.mach) { m.mach.place(m.curve.getPoint(m.t)); const d = m.curve.getTangent(m.t); m.mach.setHeading(d.x, d.z); m.mach.tick(dt); }
+      else m.dot.position.copy(m.curve.getPoint(m.t));
+    }
   }
   for (const m of flowMats) m.dashOffset -= dt * 0.05; // streams run downstream
   forestLod?.(); // trees: near / far LOD split, re-done only after the camera moved far

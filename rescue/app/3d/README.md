@@ -16,6 +16,7 @@ python3 -m http.server 8000
 - **Source signals:** every scenario event pinned where it happened (the list itself is in the shell). On the map: Koester rings, trip route, car corridor, BTS circle, witness, patrol pins, find.
 - **Weather:** fog and dusk follow the step's `weather` (button "Pogoda" turns it off).
 - **Teams:** `steps[].assignments` as arcs from each resource's base to its segment.
+- **Rescue machines:** units of kind helicopter, drone and boat (timeline actors `smiglowiec` / `dron` / `lodz`, team arcs `heli` / `drone`) are drawn as low-poly models (`machines3d.js`): spinning main and tail rotors or four props, a blinking red anti-collision beacon (with its night halo), the nose along the engine's track, a boat rocking on the water. Position and kind come from the engine only; the old ball stays as the invisible click target. Foot teams, dogs, divers and the missing person keep their markers.
 - **Traffic:** decorative cars on the OSM roads from `data/<sc>-osm3d.json` (major 50 km/h, minor 30, service 20; at most 1500 per cut), right-hand lanes, turning into connected ways at junctions. Drawn 1.5x and up to 4x in the overview so they read next to the stylised trees; head and tail lights glow at dusk and night. Button "Ruch" (checkbox "ruch") or `?traffic=0` turns them off. About 0.4 ms CPU per frame for 1500 cars, no measurable GPU cost.
 
 ## Minute timeline and FPP

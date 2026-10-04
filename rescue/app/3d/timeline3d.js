@@ -1,5 +1,6 @@
 // Display only: consume the engine's minute samples, never simulator truth or inferred coverage.
 import { createFov3D } from './fov3d.js';
+import { createMachine } from './machines3d.js';
 export function sampleAt(path, minute) {
   if (!path?.length || minute < path[0][2]) return null;
   let lo = 0, hi = path.length - 1;
@@ -44,8 +45,11 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     tag.element.style.pointerEvents = 'auto'; tag.element.style.cursor = 'pointer';
     tag.element.onpointerdown = (e) => { labelDown = { id: a.id, x: e.clientX, y: e.clientY }; };
     tag.element.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectActor(a.id); } };
+    // helicopter, drone, boat: a model instead of the ball; the ball stays as the (invisible) click target
+    const machine = createMachine(THREE, a.kind, colors[a.kind] || '#555');
+    if (machine) { g.add(machine.obj); dot.material.visible = false; }
     g.add(dot, tag); group.add(g);
-    return { ...a, g, tag, dot, color: colors[a.kind] || '#555' };
+    return { ...a, g, tag, dot, machine, color: colors[a.kind] || '#555' };
   });
   const fovOn = new URLSearchParams(location.search).get('fov3d') === '1';
   const fields = createFov3D({ THREE, scene, actors, eyeAt, wake, initiallyEnabled: fovOn });
@@ -178,9 +182,17 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     for (const a of actors) {
       const p = sampleAt(a.path, shown); a.g.visible = !!p;
       a.dot.visible = a.tag.visible = fpp !== a.id;
+      if (a.machine) a.machine.obj.visible = fpp !== a.id;
       if (!p) continue;
       const air = a.kind === 'dron' || a.kind === 'smiglowiec';
-      a.g.position.copy(air ? eyeAt(p.lat, p.lon, a.fov?.observerHeightM || 80) : v3(p.lat, p.lon, 0.023));
+      a.g.position.copy(air ? eyeAt(p.lat, p.lon, a.fov?.observerHeightM || 80) : v3(p.lat, p.lon, a.machine ? 0.011 : 0.023)); // a boat rides on the water: the sea mesh is lifted 3 m and its waves add up to ~9 m (exaggerated)
+      if (a.machine) { // nose along the engine's track: towards the sample half a minute ahead (or from the one behind)
+        const q = sampleAt(a.path, shown + 0.5), b = sampleAt(a.path, shown - 0.5);
+        const [p0, p1] = q && (q.lat !== p.lat || q.lon !== p.lon) ? [p, q] : b ? [b, p] : [p, p];
+        const d0 = v3(p0.lat, p0.lon, 0), d1 = v3(p1.lat, p1.lon, 0);
+        a.machine.setHeading(d1.x - d0.x, d1.z - d0.z, d0.distanceTo(d1) > 1e-5);
+        a.machine.tick(dt);
+      }
       const short = (a.name || a.id).split(' (')[0].replace(/^Patrol /, '').replace('Zespół z psem', 'Pies').replace('Dron termowizyjny', 'Dron').replace('Śmigłowiec ', '');
       const text = esc(short);
       if (a.tag.element.innerHTML !== text) a.tag.element.innerHTML = text;
