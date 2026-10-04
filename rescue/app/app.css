@@ -551,3 +551,11 @@ body.float header:has(#firstRun:not([hidden])){z-index:13}
 }
 /* phone menu (mobile.css): "Zmień scenariusz" as a full-width row like the other menu items */
 @media (max-width:600px){ body.m-menu:not(.role-ratownik) header>.scenlbl #scenPick{flex:1 1 100%;min-height:48px;font-size:16px;text-align:left;border-radius:10px;padding:0 14px} }
+/* "Zmień scenariusz" in place: the Centrum pick iframe (pick=1&embed=1) over the whole app, kept in the DOM between uses */
+#pickLayer{position:fixed;inset:0;z-index:900;background:color-mix(in srgb,var(--rl-bg) 97%,transparent);display:flex}
+#pickLayer[hidden]{display:none}
+#pickLayer iframe{flex:1;width:100%;height:100%;border:0;background:transparent}
+body.picking{overflow:hidden}
+#pickLayer .pickslow{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid var(--rl-line);border-radius:10px;padding:10px 14px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
+#pickLayer .pickslow[hidden]{display:none}
+#pickLayer .pickslow button{margin-left:8px}

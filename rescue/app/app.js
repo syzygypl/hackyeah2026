@@ -690,6 +690,13 @@ function frameURLBase(k, i, sc, ru, po) {
   if (store.backend === "api") return `../web/index.html?embed=scene&sc=${sc}&parentOrigin=${po}&run=${encodeURIComponent(ru)}&scenario=${encodeURIComponent("/scenarios/" + store.scenario + ".json")}&step=${i}`;
   return `../web/index.html?embed=scene&parentOrigin=${po}&sc=${sc}&step=${i}`;
 }
+// a loaded frame is never re-pointed (iframe.src = ... adds an entry to the tab's joint session history, so browser Back would
+// undo a frame reload instead of the scenario switch): a fresh element takes its place, whose first load adds no entry
+function frameGo(F, u) {
+  if (!F.el.getAttribute("src")) { F.el.src = u; return; }
+  const n = F.el.cloneNode(false); n.src = u; F.el.replaceWith(n); F.el = n;
+  if (afterUse.hook) afterUse.hook(n.contentWindow);
+}
 function postTo(k, msg) { const F = FRAMES[k]; if (F.ready && F.el.contentWindow) F.el.contentWindow.postMessage({ source: "rescue-app", ...msg }, location.origin); }
 function post3d(msg) { for (const k in FRAMES) postTo(k, msg); }
 function syncFrame(k, why) {
@@ -707,14 +714,15 @@ function syncFrame(k, why) {
   if (!F.visible() && F.src) {   // a hidden warm view reloads in the background once the page idles (3D boot yields, 90c2681), so the next switch is instant
     F.dirty = true; clearTimeout(F.rw);
     const t0 = Date.now();   // and only after a buffered 2D swap is done: both booting at once took the new 2D 2 s -> 16 s (chat.js measure)
-    F.rw = setTimeout(function go() { (window.requestIdleCallback || ((f) => f()))(() => { if (F.visible() || !F.dirty || store.mode !== "akcja") return; if (k !== "2da" && FRAMES["2da"].next && Date.now() - t0 < 20000) { F.rw = setTimeout(go, 700); return; } const v = frameURL(k); F.src = v; F.ready = false; F.el.src = v; F.dirty = false; }, { timeout: 4000 }); }, 1500);
+    F.rw = setTimeout(function go() { (window.requestIdleCallback || ((f) => f()))(() => { if (F.visible() || !F.dirty || store.mode !== "akcja") return; if (k !== "2da" && FRAMES["2da"].next && Date.now() - t0 < 20000) { F.rw = setTimeout(go, 700); return; } const v = frameURL(k); F.src = v; F.ready = false; frameGo(F, v); F.dirty = false; }, { timeout: 4000 }); }, 1500);
     return;
   }
   clearTimeout(F.h);
   F.h = setTimeout(() => {
     F.src = u; F.ready = false; F.dirty = false;
-    if (k !== "2da" || !F.el.getAttribute("src") || !F.visible()) { F.el.src = u; return; }
-    // double buffer (2D): the old map stays on screen until the new view says "ready", then a 200 ms crossfade - no blank 2D
+    // double buffer: 2D always, 3D on a scenario switch ("load": the new terrain boots ~10 s) - the old view stays on screen until
+    // the new one says "ready", then a 200 ms crossfade, so a switch never shows a blank 2D or 3D
+    if (!(k === "2da" || (k === "3d" && why === "load")) || !F.el.getAttribute("src") || !F.visible()) { frameGo(F, u); return; }
     if (F.next) F.next.remove();
     const runOf = (x) => new URL(x, location.href).searchParams.get("run"), T = window.__rescueRunText;
     if (F.spare && F.spareReady && runOf(F.spare.src) === runOf(u) && T && T.text === F.spareText) {   // the spare already shows this run (warmRun)
@@ -1214,18 +1222,74 @@ subs.push((why) => {
   if (store.role === "ratownik" && why !== "select") renderRescuer();
 });
 $("scen").onchange = () => loadScenario($("scen").value).catch((e) => toast(plErr(e), 5000));
-// "Zmień scenariusz": the Centrum map of Poland in pick mode (centrum.html?pick=1&return=<this view>) comes back here with ?sc=<chosen>;
-// mode / view / role / time travel in the return URL. The hidden #scen select stays the scenario state the rest of the shell reads.
-$("scenPick").onclick = () => {
+// "Zmień scenariusz" in place (CONTRACT "Centrum pick mode, embedded"): ONE Centrum iframe (pick=1&embed=1) in an overlay, created
+// on first use and kept (hidden on close, so the next open is instant). rl-pick -> switch the scenario in place (no page load),
+// history.pushState so browser Back / Forward walk the scenarios. The full-page pick (centrum.html?pick=1&return=) stays the fallback
+// offered (a link in the overlay) when the iframe does not say rl-pick-ready within 10 s. The hidden #scen select stays the scenario state the rest of the shell reads.
+function pickFullPage() {
   const u = new URL(location.href), q = u.searchParams, sc = $("scen").value;
   if (sc) q.set("sc", sc);
   for (const [k, v] of [["mode", store.mode], ["view", store.view], ["role", store.role], ["time", store.time]]) if (v) q.set(k, v);
   q.delete("key"); q.delete("step");
   location.href = "centrum.html?pick=1&return=" + encodeURIComponent(u.pathname + u.search + u.hash);
-};
+}
+const PICK = { el: null, fr: null, ready: false, open: false, wait: 0 };
+const pickPost = (m) => { try { PICK.fr.contentWindow.postMessage(m, location.origin); } catch (e) {} };
+function pickOpen() {
+  if (!PICK.el) {
+    const el = PICK.el = document.createElement("div"); el.id = "pickLayer"; el.hidden = true;
+    el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Wybierz scenariusz");
+    const fr = PICK.fr = document.createElement("iframe"); fr.title = "Wybór scenariusza: mapa Polski i lista akcji";
+    fr.src = "centrum.html?pick=1&embed=1&sc=" + encodeURIComponent(store.scenario || "");
+    const slow = document.createElement("div"); slow.className = "pickslow"; slow.hidden = true;
+    slow.innerHTML = 'Wybór scenariusza wczytuje się wolno. <button type="button">Otwórz pełną stronę wyboru</button>';
+    slow.querySelector("button").onclick = pickFullPage;
+    el.append(fr, slow); document.body.appendChild(el);
+    PICK.wait = setTimeout(() => { if (!PICK.ready) slow.hidden = false; }, 10000);   // no rl-pick-ready yet: offer the old full-page pick (never navigate on our own)
+  }
+  PICK.open = true; PICK.el.hidden = false; document.body.classList.add("picking");
+  if (PICK.ready) pickPost({ type: "rl-pick-show", sc: store.scenario });
+  PICK.fr.focus();
+}
+function pickClose(tellFrame) {
+  if (!PICK.el || !PICK.open) return;
+  PICK.open = false; PICK.el.hidden = true; document.body.classList.remove("picking");
+  if (tellFrame) pickPost({ type: "rl-pick-hide" });
+  $("scenPick").focus();
+}
+addEventListener("message", (e) => {
+  if (!PICK.fr || e.source !== PICK.fr.contentWindow || e.origin !== location.origin || !e.data || typeof e.data !== "object") return;
+  const d = e.data;
+  if (d.type === "rl-pick-ready") { PICK.ready = true; clearTimeout(PICK.wait); PICK.el.querySelector(".pickslow").hidden = true; if (PICK.open) pickPost({ type: "rl-pick-show", sc: store.scenario }); }
+  else if (d.type === "rl-pick" && typeof d.sc === "string") { pickClose(false); switchScenario(d.sc); }
+  else if (d.type === "rl-pick-cancel") pickClose(false);
+});
+addEventListener("keydown", (e) => { if (e.key === "Escape" && PICK.open) { e.preventDefault(); pickClose(true); } });
+$("scenPick").onclick = () => pickOpen();
+// a scenario switch in place: the URL follows (pushState: Back returns to the previous scenario), the run, panels and views reload
+// their data only; what belonged to the old incident (selection, playback, the hidden 2D spare of the other time mode) is dropped
+async function switchScenario(sc, push = true) {
+  if (!store.scenList.some((s) => s.id === sc && !s.disabled)) { toast("Nieznany scenariusz: " + sc, 4000); return; }
+  if (push) {
+    const u = new URL(location.href), q = u.searchParams;
+    q.set("sc", sc); q.delete("step"); q.delete("t"); q.delete("key");
+    for (const [k, v] of [["mode", store.mode], ["view", store.view], ["role", store.role], ["time", store.time]]) if (v) q.set(k, v);
+    if (sc !== store.scenario) history.pushState({ sc }, "", u);
+  }
+  if (sc === store.scenario) return;
+  stopPlay();
+  Object.assign(store, { selSeg: null, selEv: null });
+  const sp = FRAMES["2da"]; if (sp.spare) { sp.spare.remove(); sp.spare = null; sp.spareReady = null; }
+  try { await loadScenario(sc); } catch (e) { toast(plErr(e), 5000); }
+}
+addEventListener("popstate", (e) => {
+  const sc = (e.state && e.state.sc) || new URLSearchParams(location.search).get("sc") || (store.hasApi ? "zawrat" : null);
+  if (PICK.open) pickClose(true);
+  if (sc && sc !== store.scenario) switchScenario(sc, false);
+});
 
 window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, setMode, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
-Object.assign(window.rescueApp, { setTime, loadScenario });   // intro.js (guided tour) drives the shell through these
+Object.assign(window.rescueApp, { setTime, loadScenario, switchScenario, pickOpen });   // intro.js (guided tour) drives the shell through these
 Object.assign(window.rescueApp, { applyRun, onStore: (f) => subs.push(f) });   // chat.js (Czat): Historia what-if run + refresh hook
 async function boot() {
   try {
@@ -1238,6 +1302,7 @@ async function boot() {
     if (want && store.scenList.some((s) => s.id === want)) $("scen").value = want;
     window.__boot?.step("Silnik - mapa prawdopodobieństwa…");   // boot loader (index.html): what is loading now
     await loadScenario($("scen").value);
+    try { history.replaceState({ ...(history.state || {}), sc: store.scenario }, ""); } catch (e) {}   // Back to the first scenario finds its sc
     setMode(m, q.get("view"));
     if (q.get("step") != null && Number.isFinite(+q.get("step"))) setStep(+q.get("step") + 1); // ?step= is 0-based, like the views
     if (q.get("t") && tlDoc()) { const tm = tlMinOfClock(tlDoc(), q.get("t")); if (tm != null) setMinute(tm); }   // ?t=HH:MM (Centrum timeline, AI Mateusza #1): Historia at that clock
