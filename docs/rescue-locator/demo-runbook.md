@@ -57,6 +57,25 @@ ipconfig getifaddr en0                                       # IP laptopa; telef
 ```
 `swift build` zrób przed pokazem (kilka minut). Lokalnie meldunki czyta Ollama, jeśli działa, inaczej reguły. Nigdy nie wystawiaj serwera na Wi-Fi hali; po pokazie Ctrl-C.
 
+**Plan B na serwerze z produkcji (Rust w Dockerze) - zalecany.** To ta sama binarka co na Vercelu, więc działa wszystko, czego Swift nie ma: wspólne potwierdzenia w dzwonku (`/api/notifications`), grafik 24/7 (`/api/schedule`), pozycje i ruch zespołów (`/api/positions`). Sprawdzone 2026-10-05 ~01:45 na `de87c8e` (AI Mateusza #1): 2D, Na żywo, Plan (przeciągnij Świadka -> Dodaj -> "Dodano"), potwierdzenie w dzwonku zapisane na serwerze, bez błędów JS.
+```sh
+# raz przed pokazem: Docker Desktop włączony, build ~2-3 min, obraz ~400 MB
+cd rescue && docker build -f Dockerfile.vercel -t rescue-rs:local .
+# start - TYLKO na naszym hotspocie; klucz akcji z .env (export RESCUE_PIN=...), nigdy z repo
+IP=$(ipconfig getifaddr en0)
+docker run -d --name rescue-fallback -p $IP:8780:80 -e RESCUE_DIR=/rescue -e RESCUE_PIN="$RESCUE_PIN" \
+  -v "$PWD":/rescue:ro rescue-rs:local /app/rescue-server 80 --host 0.0.0.0
+echo "operator: http://$IP:8780/app/?sc=zawrat&key=<klucz>  telefon: http://$IP:8780/app/?role=ratownik&sc=zawrat&key=<klucz>"
+docker rm -f rescue-fallback   # po pokazie
+```
+Otwieraj przez **IP laptopa, nie 127.0.0.1**: na 127.0.0.1 aplikacja uważa się za loopback i nie wysyła klucza, a serwer w kontenerze widzi ruch z sieci Dockera - każdy zapis (Plan, potwierdzenia, meldunki) dostaje 401. Klucz wystarczy raz w linku `?key=` (zostaje w przeglądarce).
+Lista kontrolna (2 min, przed pokazem):
+1. `curl -s http://$IP:8780/api/schedule | head -c 80` zwraca JSON z `"schema"`.
+2. `/app/?sc=zawrat` - mapa 2D, w doku "stan na HH:MM".
+3. Plan: przeciągnij Świadka na mapę -> Dodaj -> toast "Dodano".
+4. Centrum `?sim=1` - Potwierdź w dzwonku; w drugiej przeglądarce to zgłoszenie jest już potwierdzone.
+5. Telefon na hotspocie: widok ratownika -> Udostępnij pozycję -> kropka zespołu u operatora w Na żywo.
+
 ## 2. Pokaz 3 min
 
 Kryteria (DEFENCE): **I** innowacja 30%, **K** związek z kategorią 20%, **U** użyteczność 20%, **D** design 20%, **C** kompletność 10%.
@@ -88,7 +107,7 @@ Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kol
 | Problem | Ratunek w jednej linii |
 |---|---|
 | Pierwsza mapa ładuje się ok. 4-8 s, Centrum zwykle < 2 s | Karty otwarte i rozgrzane w T-30; nigdy nie otwieraj nowej karty na scenie. |
-| Brak Wi-Fi / Vercel nie odpowiada | Laptop i telefony na hotspot; dalej źle: lokalny `swift run rescue-server` (wyżej), a jak i to nie - nagranie wideo. |
+| Brak Wi-Fi / Vercel nie odpowiada | Laptop i telefony na hotspot; dalej źle: lokalny Rust w Dockerze (Plan B wyżej, otwieraj przez IP laptopa), awaryjnie `swift run rescue-server`, a jak i to nie - nagranie wideo. |
 | "Zmiany wymagają klucza akcji" / 401 | Na laptopie wpisz klucz w pole Klucz (odłącz projektor); telefon: zeskanuj ponownie QR Ratownik. |
 | Cudze dane: obce ślady, zakończone akcje, inne przydziały | **Udostępnij -> Wyczyść akcję**, potem przydział TOPR A -> S7; "Test nocny" na liście ignoruj (znany problem #1). |
 | Telefon bez GPS / w hali brak fixa | https://rescue-locator.vercel.app/web/patrol/?sc=zawrat&run=/api/run/zawrat&team=topr-a&me=49.216,20.018 (`?me=lat,lon` udaje pozycję; klucz już jest w telefonie z QR). |
