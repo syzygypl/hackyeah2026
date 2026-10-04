@@ -1,0 +1,531 @@
+{
+ "incident": "Zaginiony grzybiarz - Puszcza Notecka, wydmy między Smolarnią a Szostakami (scenariusz fikcyjny)",
+ "date": "2026-09-26",
+ "startClock": "19:25",
+ "subject": {
+  "name": "Henryk P., 74 lata (osoba fikcyjna)",
+  "age": 74,
+  "category": "gatherer",
+  "note": "Emeryt z Sierakowa, od lat zbiera podgrzybki w Puszczy Noteckiej. O 13:40 zostawił auto na leśnym parkingu przy Trakcie Wieleńskim. O 18:40 ostatni telefon do żony: 'wszędzie te same sosny i górki, telefon mi pada, idę pod słońce do asfaltu'. Od 18:52 telefon nie odpowiada (bateria). Zielona kurtka, wiklinowy koszyk, bez latarki. Leczy się na serce. Żona dzwoni na 112 o 19:25. Kategoria ISRID: grzybiarz (gatherer): chodzi zygzakiem z głową w dół i gubi kierunek, a w płaskim lesie bez cieków nie ma się czego trzymać.",
+  "lastContact": "18:40"
+ },
+ "bbox": {
+  "south": 52.705,
+  "west": 16.04,
+  "north": 52.747,
+  "east": 16.12
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: auto na leśnym parkingu przy Trakcie Wieleńskim (ostatnie pewne miejsce, 13:40)",
+  "at": [
+   52.72796,
+   16.11281
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "N1",
+   "name": "Droga Szostacka - zach.",
+   "seed": [
+    52.74175,
+    16.048
+   ]
+  },
+  {
+   "id": "N2",
+   "name": "Droga Szostacka - wsch.",
+   "seed": [
+    52.74175,
+    16.064
+   ]
+  },
+  {
+   "id": "N3",
+   "name": "Kobusz - zach.",
+   "seed": [
+    52.74175,
+    16.08
+   ]
+  },
+  {
+   "id": "N4",
+   "name": "Kobusz - wsch.",
+   "seed": [
+    52.74175,
+    16.096
+   ]
+  },
+  {
+   "id": "N5",
+   "name": "Smolarnia - płn.",
+   "seed": [
+    52.74175,
+    16.112
+   ]
+  },
+  {
+   "id": "N6",
+   "name": "Szostaki - płn.",
+   "seed": [
+    52.73125,
+    16.048
+   ]
+  },
+  {
+   "id": "N7",
+   "name": "Arsenowo - płn.",
+   "seed": [
+    52.73125,
+    16.064
+   ]
+  },
+  {
+   "id": "N8",
+   "name": "Kazimierz",
+   "seed": [
+    52.73125,
+    16.08
+   ]
+  },
+  {
+   "id": "N9",
+   "name": "Smolarnia - płd.",
+   "seed": [
+    52.73125,
+    16.096
+   ]
+  },
+  {
+   "id": "N10",
+   "name": "Parking przy Trakcie Wieleńskim",
+   "seed": [
+    52.73125,
+    16.112
+   ]
+  },
+  {
+   "id": "N11",
+   "name": "Szostaki - płd.",
+   "seed": [
+    52.72075,
+    16.048
+   ]
+  },
+  {
+   "id": "N12",
+   "name": "Arsenowo - płd.",
+   "seed": [
+    52.72075,
+    16.064
+   ]
+  },
+  {
+   "id": "N13",
+   "name": "Łysa Góra - zach.",
+   "seed": [
+    52.72075,
+    16.08
+   ]
+  },
+  {
+   "id": "N14",
+   "name": "Łysa Góra - wsch.",
+   "seed": [
+    52.72075,
+    16.096
+   ]
+  },
+  {
+   "id": "N15",
+   "name": "Bartek - płn.",
+   "seed": [
+    52.72075,
+    16.112
+   ]
+  },
+  {
+   "id": "N16",
+   "name": "Droga Szostacka - płd.",
+   "seed": [
+    52.71025,
+    16.048
+   ]
+  },
+  {
+   "id": "N17",
+   "name": "Stary Tartak",
+   "seed": [
+    52.71025,
+    16.064
+   ]
+  },
+  {
+   "id": "N18",
+   "name": "Francuskie Góry",
+   "seed": [
+    52.71025,
+    16.08
+   ]
+  },
+  {
+   "id": "N19",
+   "name": "Trakt Wieleński",
+   "seed": [
+    52.71025,
+    16.096
+   ]
+  },
+  {
+   "id": "N20",
+   "name": "Bartek - płd.",
+   "seed": [
+    52.71025,
+    16.112
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "pol-sierakow",
+   "name": "Patrol Policji (KPP Międzychód, posterunek Sieraków)",
+   "type": "ground",
+   "base": [
+    52.6514,
+    16.0808
+   ],
+   "readyAt": "19:50"
+  },
+  {
+   "id": "osp-sierakow",
+   "name": "OSP Sieraków - zastęp",
+   "type": "ground",
+   "base": [
+    52.6514,
+    16.0808
+   ],
+   "readyAt": "20:05"
+  },
+  {
+   "id": "straz-lesna",
+   "name": "Straż Leśna Nadleśnictwa Sieraków (zna linie oddziałowe)",
+   "type": "ground",
+   "base": [
+    52.6567,
+    16.07
+   ],
+   "readyAt": "20:15"
+  },
+  {
+   "id": "psp-miedzychod",
+   "name": "PSP JRG Międzychód - zastęp",
+   "type": "ground",
+   "base": [
+    52.599,
+    15.893
+   ],
+   "readyAt": "20:25"
+  },
+  {
+   "id": "dron-psp",
+   "name": "Dron termowizyjny PSP Międzychód",
+   "type": "drone",
+   "base": [
+    52.599,
+    15.893
+   ],
+   "readyAt": "20:45"
+  },
+  {
+   "id": "pies-osp",
+   "name": "Grupa poszukiwawcza OSP z psami terenowymi (Wronki)",
+   "type": "dog",
+   "base": [
+    52.71,
+    16.38
+   ],
+   "readyAt": "21:20"
+  },
+  {
+   "id": "pies-policja",
+   "name": "Przewodnik z psem tropiącym Policji (KPP Szamotuły)",
+   "type": "dog",
+   "base": [
+    52.611,
+    16.579
+   ],
+   "readyAt": "21:00"
+  }
+ ],
+ "volunteers": [
+  {
+   "id": "rodzina-syn",
+   "name": "Rodzina: syn i sąsiad (GPS telefonu)",
+   "from": "19:35",
+   "to": "20:20",
+   "route": [
+    [
+     52.72796,
+     16.11281
+    ],
+    [
+     52.72674,
+     16.11403
+    ],
+    [
+     52.72311,
+     16.11422
+    ],
+    [
+     52.72021,
+     16.11234
+    ],
+    [
+     52.7163,
+     16.10907
+    ],
+    [
+     52.72021,
+     16.11234
+    ],
+    [
+     52.72311,
+     16.11422
+    ],
+    [
+     52.72796,
+     16.11281
+    ],
+    [
+     52.73009,
+     16.11393
+    ],
+    [
+     52.73207,
+     16.11546
+    ],
+    [
+     52.73436,
+     16.11941
+    ],
+    [
+     52.73207,
+     16.11546
+    ],
+    [
+     52.72796,
+     16.11281
+    ]
+   ]
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): obniżenie między wydmami, ok. 250 m na wschód od Drogi Szostackiej",
+  "at": [
+   52.7205,
+   16.0632
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "19:25",
+   "title": "Teren: bór sosnowy na wydmach, bez cieków i jezior",
+   "detail": "OSM i DEM. Wydmy do kilkunastu metrów, wszędzie ten sam las i linie oddziałowe. Grzybiarze w płaskim lesie często wychodzą na drogi leśne i szlaki.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "19:25",
+   "title": "Koester: grzybiarz (gatherer), las nizinny",
+   "detail": "Pierścienie przybliżone (nie tabele ISRID): 25% 0.9 km, 50% 1.6 km, 75% 2.8 km, 95% 6.0 km od auta.",
+   "point": [
+    52.72796,
+    16.11281
+   ],
+   "quantilesKm": [
+    0.9,
+    1.6,
+    2.8,
+    6.0
+   ]
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "19:25",
+   "title": "Trudność terenu: wydmy i młodniki",
+   "detail": "Klasy terenu z nachylenia DEM: stoki wydm do 18 stopni, reszta płaska."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "19:25",
+   "title": "Warunki: pogodnie, +9°C, wiatr 2 m/s, zmierzch",
+   "detail": "Zachód słońca 18:43, noc od ok. 19:25. W nocy do +2°C, mgła w obniżeniach między wydmami.",
+   "visibilityM": 3000,
+   "windMs": 2,
+   "tempC": 9,
+   "precip": "none",
+   "dark": true,
+   "ice": false
+  },
+  {
+   "provider": "TripPlan",
+   "at": "19:30",
+   "title": "Żona: zawsze chodzi na Łysą Górę i Kazimierz i wraca do auta",
+   "detail": "\"Od parkingu idzie liniami na zachód, przez Łysą Górę na Kazimierz, tam są podgrzybki, i wraca tą samą drogą. O 18:40 mówił, że idzie pod słońce do asfaltu.\"",
+   "points": [
+    [
+     52.72796,
+     16.11281
+    ],
+    [
+     52.7272,
+     16.102
+    ],
+    [
+     52.726,
+     16.09
+    ],
+    [
+     52.72358,
+     16.07814
+    ],
+    [
+     52.72625,
+     16.07676
+    ]
+   ],
+   "radiusM": 400
+  },
+  {
+   "provider": "Clue",
+   "at": "19:40",
+   "title": "Żona (meldunek): o 18:40 szedł 'pod słońce' - czyli na zachód",
+   "detail": "Meldunek: Rodzina - żona, rozmowa o 18:40: słońce zachodziło mu w oczy, szukał asfaltu. Najbliższy asfalt na zachodzie to droga do Kwiejc, ponad 5 km. Kierunek z rozmowy, bez GPS.",
+   "point": [
+    52.724,
+    16.074
+   ],
+   "radiusM": 1500,
+   "seenAt": "18:40"
+  },
+  {
+   "provider": "TrailheadCar",
+   "at": "19:55",
+   "title": "Policja: auto nadal na leśnym parkingu przy Trakcie Wieleńskim",
+   "detail": "Nie wrócił do auta: najbliższe otoczenie parkingu i trakt mniej prawdopodobne.",
+   "point": [
+    52.72796,
+    16.11281
+   ],
+   "points": [
+    [
+     52.72796,
+     16.11281
+    ],
+    [
+     52.72674,
+     16.11403
+    ],
+    [
+     52.73009,
+     16.11393
+    ]
+   ],
+   "radiusM": 250,
+   "factor": 0.4
+  },
+  {
+   "provider": "Cell112Fix",
+   "at": "20:00",
+   "title": "CPR Poznań: ostatnie logowanie telefonu o 18:51, BTS Sieraków-Bucharzewo",
+   "detail": "Sektor anteny skierowany na północny zachód, w las. Promień błędu ok. 1,5 km. Ostatni kontakt sieci przed rozładowaniem.",
+   "point": [
+    52.724,
+    16.075
+   ],
+   "radiusM": 1500
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "20:20",
+   "title": "Rodzina: syn i sąsiad - Trakt Wieleński w obie strony od parkingu, nic",
+   "detail": "Jeździli i wołali wzdłuż traktu przez 45 minut, z klaksonem. Bez wchodzenia w las. Niski POD.",
+   "segments": [
+    "N10",
+    "N15"
+   ],
+   "pod": 0.25
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "21:05",
+   "title": "Straż Leśna i OSP Sieraków: Łysa Góra i linie na wschód od niej, nic",
+   "detail": "Przejście liniami oddziałowymi z latarkami i wołaniem. Gęste młodniki zostały między liniami.",
+   "segments": [
+    "N9"
+   ],
+   "pod": 0.4
+  },
+  {
+   "provider": "DronePassEmpty",
+   "at": "21:15",
+   "title": "Dron PSP: zręby i uprawy przy Smolarni, nic",
+   "detail": "Termowizja dobrze widzi na otwartych zrębach. Dwa sygnały to sarny. Pod koronami sosen słabo. POD 50%.",
+   "segments": [
+    "N5"
+   ],
+   "pod": 0.5
+  },
+  {
+   "provider": "Clue",
+   "at": "21:40",
+   "title": "OSP Sieraków: wiklinowy koszyk z podgrzybkami na dojeździe pożarowym pod Łysą Górą",
+   "detail": "Żona potwierdza przez telefon: jego koszyk. Leżał na linii, jakby go odstawił, żeby mieć wolne ręce.",
+   "point": [
+    52.7225,
+    16.0745
+   ],
+   "radiusM": 300
+  },
+  {
+   "provider": "Clue",
+   "at": "22:15",
+   "title": "Pies Policji podjął trop od koszyka na zachód, w stronę Drogi Szostackiej",
+   "detail": "Przewodnik: pies prowadzi pewnie przez wydmy, ok. 700 m, potem traci trop w mgle w obniżeniu.",
+   "point": [
+    52.7214,
+    16.0675
+   ],
+   "radiusM": 300
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "22:30",
+   "title": "Noc: +3°C, mgła w obniżeniach",
+   "detail": "74 lata, choroba serca, bez czapki: ryzyko wychłodzenia rośnie z każdą godziną.",
+   "dark": true,
+   "tempC": 3,
+   "visibilityM": 200
+  },
+  {
+   "provider": "Clue",
+   "at": "23:05",
+   "title": "ZNALEZIONO: grupa OSP z psami - pan Henryk w obniżeniu między wydmami",
+   "detail": "Pies terenowy oszczekał go ok. 250 m na wschód od Drogi Szostackiej. Siedział oparty o sosnę, wychłodzony, przytomny, mówił, że szedł do świateł samochodów. Przekazany ZRM. Meldunek radiowy grupy, nie GPS.",
+   "point": [
+    52.7205,
+    16.0632
+   ],
+   "radiusM": 30,
+   "found": true
+  }
+ ]
+}
