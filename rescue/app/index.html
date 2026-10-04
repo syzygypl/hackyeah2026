@@ -17,6 +17,7 @@ window.__preRun={u:u,p:fetch(u,{headers:h,cache:"no-cache"}).then(function(r){re
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="intro.css">
 <link rel="stylesheet" href="chat.css">
+<link rel="stylesheet" href="mobile.css">
 </head>
 <body class="mode-akcja view-2d">
 <script>/* first paint already in the right role (app.js setRole runs only after the run loads) */try{var r=new URLSearchParams(location.search).get("role")||localStorage.getItem("rescue-app-role");if(r==="ratownik"||r==="operator")document.body.classList.add("role-"+r)}catch(e){}</script>
@@ -124,6 +125,7 @@ window.__preRun={u:u,p:fetch(u,{headers:h,cache:"no-cache"}).then(function(r){re
 <script type="module" src="app.js"></script>
 <script type="module" src="intro.js"></script>
 <script type="module">import { mountAppChat } from "./chat.js"; mountAppChat();</script>
+<script src="mobile.js" defer></script>
 <script src="../web/version.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,117 @@
+/* Phone layout for the incident commander (/app, role operator) - AI Mateusza #2, 2026-10-04.
+   Only under 600 px and never for the rescuer phone (role-ratownik has its own screen). Desktop and tablets are untouched.
+   One screen: a simple header (incident, Na żywo / Historia, Czat, Menu), the 2D map full-bleed, a bottom sheet with the top 3
+   sectors, Wyślij zespół and the 3 latest events. 3D, scenario, key, Centrum, Zasoby, Udostępnij, Instrukcja and Rola live in
+   Menu; Plan, Teren, Monitoring, Walidacja and the 2D + 3D split are desktop only. mobile.js adds the Menu and sheet buttons. */
+@media (max-width:600px){
+  body:not(.role-ratownik){--m-hdr:86px;--m-sheet:44dvh;--m-dock:0px;overflow:hidden}
+  body:not(.role-ratownik).time-hist{--m-dock:58px}
+  body:not(.role-ratownik).m-sheet-open{--m-sheet:78dvh}
+  body:not(.role-ratownik)::before,body:not(.role-ratownik)::after{display:none!important}
+  body:not(.role-ratownik) #app{display:block;height:100dvh;overflow:hidden}
+  body:not(.role-ratownik) #left,body:not(.role-ratownik) #firstRun,body:not(.role-ratownik) #modes,body:not(.role-ratownik) #more{display:none!important}
+
+  /* header: row 1 = logo, Na żywo / Historia, Czat, Menu; row 2 = LIVE badge + incident name */
+  body:not(.role-ratownik) header{position:fixed!important;top:0;left:0;right:0;z-index:30!important;height:var(--m-hdr);margin:0;padding:6px 10px!important;
+    display:flex;flex-wrap:wrap;align-items:center;align-content:flex-start;gap:4px 8px!important;border:0;border-radius:0;border-bottom:1px solid var(--rl-line);
+    background:var(--rl-panel-solid,var(--rl-panel));box-shadow:none;transform:none!important;opacity:1!important}
+  body:not(.role-ratownik) header>*{display:none!important}
+  body:not(.role-ratownik) header>h1{display:flex!important;order:1;font-size:0;margin:0;flex:none;align-items:center}
+  body:not(.role-ratownik) header>h1 .logo{width:32px;height:24px}
+  body:not(.role-ratownik) header>#tmode{display:inline-flex!important;order:2;flex:1 1 auto;min-width:0;height:44px}
+  body:not(.role-ratownik) header>#tmode button{flex:1;min-height:44px;font-size:15px;padding:0 6px}
+  body:not(.role-ratownik) header>#chBtn{display:inline-flex!important;order:3;min-width:44px;min-height:44px;flex:none}
+  body:not(.role-ratownik) header>#mMenuBtn{display:inline-flex!important;order:4;flex:none;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;padding:0 12px;font-size:15px;font-weight:600;border-radius:10px}
+  body:not(.role-ratownik) header>#liveHead{display:flex!important;order:5;flex:1 1 100%;min-width:0;gap:8px;height:26px;overflow:hidden}
+  body:not(.role-ratownik) header #liveHead b{display:block!important;font-size:16px;max-width:none;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body:not(.role-ratownik) header .lbadge{font-size:11px;padding:4px 9px}
+  body:not(.role-ratownik) header .lbadge:empty{display:none}
+
+  /* Menu (body.m-menu): the header grows into a full-height list of the desktop-only bar items */
+  body.m-menu:not(.role-ratownik) header{height:auto;max-height:100dvh;overflow:auto;padding-bottom:14px!important;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  body.m-menu:not(.role-ratownik) header>.scenlbl,
+  body.m-menu:not(.role-ratownik) header>#views,
+  body.m-menu:not(.role-ratownik) header>#pinbox:not([style*="none"]),
+  body.m-menu:not(.role-ratownik) header>#newActionBtn,
+  body.m-menu:not(.role-ratownik) header>#centrumLink,
+  body.m-menu:not(.role-ratownik) header>#zasobyLink,
+  body.m-menu:not(.role-ratownik) header>#shareBtn,
+  body.m-menu:not(.role-ratownik) header>#helpBtn,
+  body.m-menu:not(.role-ratownik) header>#roleBtn{display:flex!important;order:10;flex:1 1 100%;align-items:center;min-height:48px;font-size:16px;text-align:left;justify-content:flex-start;padding:0 14px;border-radius:10px}
+  body.m-menu:not(.role-ratownik) header>#mMenuHead{display:block!important;order:6;flex:1 1 100%;margin:8px 2px 0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--rl-mute)}
+  body.m-menu:not(.role-ratownik) header>.scenlbl{padding:0!important;border:0}
+  body.m-menu:not(.role-ratownik) header>.scenlbl span{display:none}
+  body.m-menu:not(.role-ratownik) header>.scenlbl select{flex:1 1 0;width:0;min-width:0;max-width:none!important;min-height:48px;font-size:16px;border-radius:10px;padding:0 10px}
+  body.m-menu:not(.role-ratownik) header>#pinbox{gap:10px;font-size:16px;border:1px solid var(--rl-line)}
+  body.m-menu:not(.role-ratownik) header>#pinbox input{flex:1;width:auto;min-height:40px;font-size:16px}
+  body.m-menu:not(.role-ratownik) header>#centrumLink,body.m-menu:not(.role-ratownik) header>#zasobyLink{font-size:16px;border:1px solid var(--rl-line)}
+  body.m-menu:not(.role-ratownik) header>#centrumLink::after,body.m-menu:not(.role-ratownik) header>#newActionBtn::after{content:none}
+  body.m-menu:not(.role-ratownik) header>#helpBtn::after{content:"\00a0Instrukcja"}
+  body.m-menu:not(.role-ratownik) header>#roleBtn::before{content:"Zmień rolę:\00a0";font-weight:400}
+  body.m-menu:not(.role-ratownik) header>#roleBtn{max-width:none}
+  /* the 2D / 3D switch (moved into the header by mobile.js): two big tabs, no 2D + 3D split on a phone */
+  body:not(.role-ratownik) #views{display:none!important}
+  body.m-menu:not(.role-ratownik) header>#views{position:static!important;transform:none!important;padding:0!important;gap:0;overflow:hidden;border:1px solid var(--rl-line)}
+  body.m-menu:not(.role-ratownik) header>#views button{flex:1;min-height:46px;font-size:16px}
+  body:not(.role-ratownik) #views button[data-view="split"]{display:none}
+
+  /* map full-bleed between the header and the sheet (Historia: and the slider) */
+  body:not(.role-ratownik) #center{position:fixed!important;top:var(--m-hdr);left:0;right:0;bottom:calc(var(--m-sheet) + var(--m-dock));inset:var(--m-hdr) 0 calc(var(--m-sheet) + var(--m-dock)) 0;min-height:0!important;z-index:0;transition:bottom .2s ease}
+  body:not(.role-ratownik).view-split #center{flex-direction:row}
+
+  /* bottom sheet: top 3 sectors, next step, the 3 latest events */
+  body:not(.role-ratownik) #right{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;height:var(--m-sheet)!important;max-height:none!important;
+    z-index:15;display:flex!important;flex-direction:column;overflow:auto;overscroll-behavior:contain;padding:0 14px 16px!important;margin:0;transform:none!important;opacity:1!important;
+    border:0;border-top:1px solid var(--rl-line);border-radius:16px 16px 0 0;background:var(--rl-panel-solid,var(--rl-panel));box-shadow:0 -6px 20px rgba(0,0,0,.14);transition:height .2s ease}
+  body:not(.role-ratownik) #right>*{order:5}
+  body:not(.role-ratownik) #right>#mSheetBtn{order:0;position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:center;gap:8px;flex:none;width:calc(100% + 28px);margin:0 -14px;min-height:44px;border:0;border-radius:16px 16px 0 0;background:var(--rl-panel-solid,var(--rl-panel));font-size:14px;color:var(--rl-mute)}
+  body:not(.role-ratownik) #right>#mSheetBtn::before{content:"";width:40px;height:5px;border-radius:3px;background:var(--rl-line-strong,#bbb);position:absolute;top:6px;left:50%;transform:translateX(-50%)}
+  body:not(.role-ratownik) #right>#mSheetBtn span{margin-top:8px}
+  body:not(.role-ratownik) #right>h2:first-of-type{order:1;margin:2px 0 6px}
+  body:not(.role-ratownik) #right>#segs{order:2}
+  body:not(.role-ratownik) #right>#liveBox{order:3}
+  body:not(.role-ratownik) #right>.hero,body:not(.role-ratownik) #right>#assets,body:not(.role-ratownik) #right>#moreInfo{display:none!important}
+  body:not(.role-ratownik):not(.m-sheet-open) #right>#alerts{display:none}
+  /* a sector = one row: rank, name, % obszaru */
+  body:not(.role-ratownik) #segs .seg{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 12px!important;margin-bottom:6px;border-radius:10px}
+  body:not(.role-ratownik) #segs .seg .rank{position:static;flex:none;width:28px;height:28px;line-height:25px}
+  body:not(.role-ratownik) #segs .seg>b{flex:1;min-width:0;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body:not(.role-ratownik) #segs .seg .p{flex:none;margin:0;font-size:15px}
+  body:not(.role-ratownik) #segs .seg .p .mute{font-size:14px!important}
+  body:not(.role-ratownik) #segs .seg .segbar,body:not(.role-ratownik) #segs .seg .segteam,body:not(.role-ratownik) #segs .seg .cw{display:none}
+  body:not(.role-ratownik) #segs .seg:nth-child(n+4){display:none}
+  /* next step: Wyślij zespół first and big, then the events */
+  body:not(.role-ratownik) #liveBox{margin-top:4px;padding:0}
+  body:not(.role-ratownik) #liveBox>.row:first-child{flex-wrap:wrap;gap:8px}
+  body:not(.role-ratownik) #liveBox>.row:first-child>h2{order:-2;flex:1 1 100%;margin:8px 0 0}
+  body:not(.role-ratownik) #rl-version{display:none!important}
+  body:not(.role-ratownik) #liveBox>.row:first-child>span[style*="flex:1"]{display:none}
+  body:not(.role-ratownik) #liveSend{order:-1;flex:1 1 60%;min-height:52px!important;font-size:17px;font-weight:700;background:var(--rl-accent);color:var(--rl-on-accent);border-color:var(--rl-accent);border-radius:12px}
+  body:not(.role-ratownik) #liveClue{flex:1 1 30%;min-height:52px!important;font-size:16px;border-radius:12px}
+  body:not(.role-ratownik) #liveBox button,body:not(.role-ratownik) #liveBox select{min-height:44px;font-size:16px}
+  body:not(.role-ratownik) #liveBox .ackrow{margin-top:6px}
+  body:not(.role-ratownik) #liveDispatch{flex-wrap:wrap;margin-top:8px}
+  body:not(.role-ratownik) #liveDispatch select{flex:1 1 40%}
+  body:not(.role-ratownik) #liveFeed{max-height:none;overflow:visible}
+  body:not(.role-ratownik) #liveFeed .lfi{font-size:15px;padding:8px 6px;line-height:1.35}
+  body:not(.role-ratownik) #liveFeed .lfi.unack{border-left:4px solid var(--rl-danger);background:color-mix(in srgb,var(--rl-danger) 9%,transparent);border-radius:0 8px 8px 0;padding-left:10px}
+  body:not(.role-ratownik) #liveFeed .ack1{min-width:44px;min-height:40px;margin-left:4px}
+  body:not(.role-ratownik):not(.m-sheet-open) #liveFeed .lfi:nth-child(n+4){display:none}
+
+  /* dock: Na żywo none; Historia = play, clock and the slider only */
+  body:not(.role-ratownik) #bottom{position:fixed!important;left:0!important;right:0!important;bottom:var(--m-sheet)!important;top:auto!important;height:var(--m-dock)!important;z-index:14;padding:0 10px!important;margin:0;
+    border:0;border-top:1px solid var(--rl-line);border-radius:0;background:var(--rl-panel-solid,var(--rl-panel));box-shadow:none;overflow:hidden;transform:none!important;opacity:1!important;transition:bottom .2s ease}
+  body:not(.role-ratownik):not(.time-hist) #bottom{display:none!important}
+  body:not(.role-ratownik) #bottom>.row{flex-wrap:nowrap!important;align-items:center;gap:10px;height:100%;min-height:0;padding:0!important}
+  body:not(.role-ratownik) #bottom>.row>*{display:none!important}
+  body:not(.role-ratownik) #bottom #play{display:inline-flex!important;order:0;width:44px;height:44px;flex:none;align-items:center;justify-content:center;align-self:center;box-shadow:none}
+  body:not(.role-ratownik) #bottom .tl{display:flex!important;order:2;flex:1 1 auto;min-width:0;height:44px}
+  body:not(.role-ratownik) #bottom #slider{min-height:44px}
+  body:not(.role-ratownik) #bottom #events{display:none!important}
+  /* other agents' desktop hover states (dock / rail peek) never apply on a phone */
+  body:not(.role-ratownik) #right.peek,body:not(.role-ratownik) #right.hold,body:not(.role-ratownik) #bottom.peek,body:not(.role-ratownik) #bottom.hold{transform:none!important;opacity:1!important}
+
+  /* the chat drawer on a phone: full screen, 16 px input (no iOS zoom) */
+  #chDrawer{top:0;right:0;bottom:0;left:0;width:auto;border-radius:0}
+  #chDrawer textarea,#chDrawer input,#chDrawer select{font-size:16px}
+}
