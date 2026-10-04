@@ -849,6 +849,7 @@ function showFirstRun(role) {
 // Akcja: the event cards hide behind "Sygnały" so the dock is one line; Plan always shows them
 $("sigBtn").onclick = () => { const on = document.body.classList.toggle("signals"); $("sigBtn").setAttribute("aria-pressed", on); setTimeout(pushInsets, 50); };
 hoverHold($("bottom"));   // hover: the cards open above the dock and stay 3 s after leaving (dock.css #bottom.peek, no inset change)
+hoverHold($("right")); $("right").tabIndex = 0;   // Akcja: the right panel shows Top 3, hover / Tab unfolds the rest for 3 s (app.css #right.peek, no inset change)
 function setRescuerFrame() { const t = myTeam(); setFrame("frameRescuer", patrolURL(t)); }
 $("roleBtn").onclick = () => { $("rolePick").hidden = false; };
 $("rolePick").onclick = (e) => { const b = e.target.closest("[data-role]"); if (b) setRole(b.dataset.role); };
@@ -1119,6 +1120,7 @@ function renderLiveFeed() {
   el.innerHTML = live.events.slice(-8).reverse().map((e) => { const g = liveEvTarget(e); return `<div class="lfi ${!e.acked && e.by !== "operator" ? "unack" : ""}"${g.step ? ` data-step="${g.step}"` : g.min != null ? ` data-min="${g.min}"` : ""} title="Pokaż ten moment w Historii"><span class="lft">${esc(hhmm(e.t))}</span> <b${e.team ? ` data-actor="${esc(e.team)}" title="Dziennik: ${esc(e.team)}"` : ""}>${esc(e.by === "operator" ? "Operator" : e.team || "Ratownik")}</b> <span class="mute">${esc(K[e.kind] || e.kind)}</span> ${esc(e.title)}${!e.acked && e.by !== "operator" ? ` <button class="ack1" data-seq="${e.seq}" title="Potwierdź tę wiadomość">✓</button>` : e.acked ? ` <span class="ackd" title="Potwierdzone">✓</span>` : ""}</div>`; }).join("")
     || `<div class="help">Brak zdarzeń na żywo. Dodaj ślad albo wyślij zespół - mapa przeliczy się od razu.</div>`;
   if ($("ackCount")) $("ackCount").textContent = unacked.length ? `Niepotwierdzone: ${unacked.length}` : "Wszystko potwierdzone";
+  $("liveBox").classList.toggle("has-unack", unacked.length > 0);   // the collapsed right panel keeps this row (app.css #right:not(.peek))
   if ($("liveAckAll")) $("liveAckAll").disabled = !unacked.length || !liveNow();
   el.querySelectorAll(".ack1").forEach((b) => { b.disabled = !liveNow(); b.onclick = () => ackEvents(+b.dataset.seq); });
 }

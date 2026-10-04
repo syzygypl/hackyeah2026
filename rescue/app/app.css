@@ -180,7 +180,17 @@ h2{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--rl-mute);margi
   body.float header,body.float #left,body.float #right,body.float #bottom{box-shadow:var(--rl-shadow)}
   body.float.mode-akcja #left{display:none}
   body.float:not(.signals):not(.mode-edycja) #events{display:none}
+  /* hover-hold right panel (hoverHold in dock.js, #right.peek): in Akcja the rail is collapsed to Top 3 (+ alerts and the
+     "Niepotwierdzone: N" row when there are any); hover / focus / tap unfolds Zasoby, Na żywo and the details over the map for
+     3 s after leaving. The top and left edge stay put, so the insets and the map never move. */
+  body.float.mode-akcja #right:not(.peek){bottom:auto;max-height:calc(100vh - var(--float-gap) * 4 - max(var(--bar-h), var(--hdr-h, 0px)) - var(--dock-h))}
+  body.float.mode-akcja #right:not(.peek) :is(#assets,#moreInfo),body.float.mode-akcja #right:not(.peek) #liveBox:not(.has-unack),body.float.mode-akcja #right:not(.peek) #liveBox>:not(.ackrow){display:none}
+  body.float.mode-akcja #right:not(.peek) #liveBox{border-top:0;margin-top:4px}
+  body.float.mode-akcja #right:not(.peek) #ackCount{color:var(--rl-danger);font-weight:700}
+  body.float.mode-akcja #right.peek :is(#assets,#liveBox,#moreInfo){animation:rl-unfold .18s ease both}
 }
+@keyframes rl-unfold{from{opacity:0;transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){body.float #right.peek :is(#assets,#liveBox,#moreInfo){animation:none}}
 /* header = app bar */
 header{gap:12px;padding:6px 8px 6px 14px;min-height:56px;background:var(--rl-panel);border-bottom:1px solid var(--rl-line)}
 header h1{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;letter-spacing:.01em;white-space:nowrap;margin:0 4px 0 0}
