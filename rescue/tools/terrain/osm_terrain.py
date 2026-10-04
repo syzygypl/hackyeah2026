@@ -646,7 +646,7 @@ def build(raw, b, dem=None, cell_m=100):
 
 def strip_private(terrain, stats=None):
     """Contract shape (drop the _debug keys) + optional fields: slopeDeg/slopeGrid, waterMask, lakePolygons,
-    coastlines, shore. Optional fields are only written when they have content."""
+    coastlines, shore. A generated waterMask is retained even when every coarse cell is dry."""
     out = {k: [{kk: vv for kk, vv in f.items() if not kk.startswith("_")} for f in v]
            for k, v in terrain.items() if not k.startswith("_")}
     stats = stats or {}
@@ -655,7 +655,7 @@ def strip_private(terrain, stats=None):
         out["slopeDeg"] = g["values"]  # rows*cols floats, row-major, row 0 = NORTH, col 0 = WEST (same grid as run.json)
         out["slopeGrid"] = {"rows": g["rows"], "cols": g["cols"], "cellM": stats.get("cellM", 100),
                             "stat": "mean slope of the 30 m DEM pixels in the cell, degrees (0 over water)"}
-    if stats.get("waterMask") and any(stats["waterMask"]["values"]):
+    if stats.get("waterMask"):
         out["waterMask"] = stats["waterMask"]["values"]  # rows*cols 0/1, same grid as slopeDeg
     polys = [{"name": f["name"], "kind": f["_kind"], "outer": f["_outer"], "inner": f["_inner"]} for f in terrain["lakes"]]
     if polys:
