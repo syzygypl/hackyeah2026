@@ -189,8 +189,9 @@ function elevM(lat, lon) {
   const z = DEM.z;
   return (z[r0][c0] * (1 - fc) + z[r0][c1] * fc) * (1 - fr) + (z[r1][c0] * (1 - fc) + z[r1][c1] * fc) * fr;
 }
-// water outside the Tatras: the scenario terrain's waterMask (grid over the scenario bbox: sea, lakes) plus sea-level DEM
-// pixels in regions; the Tatra cuts keep their lake circles only. LOW = a lowland region (no Tatra vegetation belts).
+// water: the scenario terrain's waterMask (grid over the scenario bbox: sea, lakes) plus sea-level DEM pixels in regions;
+// with data/<sc>-water3d.json every cut (Tatras too) gets OSM lake polygons and river ribbons; lake circles only without
+// it. LOW = a lowland region (no Tatra vegetation belts).
 const LOW = !!SCENS[SC].region && zMax < 600; // coast, lakes, city; mountain regions (Karkonosze, Bieszczady) keep the vegetation belts
 const WM = TER?.waterMask && TER.slopeGrid && SCN?.bbox ? { m: TER.waterMask, rows: TER.slopeGrid.rows, cols: TER.slopeGrid.cols, b: SCN.bbox } : null;
 // the coarse test only feeds the sea part of the high-res mask (water3d.js), which then answers isWater
@@ -202,7 +203,9 @@ function waterCoarse(la, lo) {
   return LOW && elevM(la, lo) <= 0.3;
 }
 const hAt = (lat, lon) => ((elevM(lat, lon) - zMin) * EX) / 1000;
-const WR = WM || LOW ? waterRaster({ latN, latS, lonW, lonE, WKM, HKM, W3D, TER, wm: WM, coarse: waterCoarse,
+// mountain cuts with water data (Tatras: Morskie Oko, Czarny Staw...) take the same path: lake polygons and stream ribbons;
+// the DEM is flat over the lakes (Copernicus), so the terrain-following water surface lies flat there
+const WR = WM || LOW || W3D ? waterRaster({ latN, latS, lonW, lonE, WKM, HKM, W3D, TER, wm: WM, coarse: waterCoarse,
   coarseRad: Math.max(2, Math.round((WM ? Math.max((512 / WM.cols) * ((WM.b.east - WM.b.west) / (lonE - lonW)), 1) : 2) * 0.6)) }) : null;
 function isWater(la, lo) { return WR ? WR.at(la, lo) : waterCoarse(la, lo); }
 
@@ -820,7 +823,7 @@ for (const s of TER?.streams || []) {
 const waterMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
 applyFx(waterMat, [FX.lakeWaves(heatU), FX.waterReflect(heatU, 'waves')]); // fx3d: waves, foam, depth tint, sun glitter, mirrored mountains
 const lakeGeo = new THREE.RingGeometry(0.0001, 1, 96, 24).rotateX(-Math.PI / 2);
-for (const l of seaMesh ? [] : TER?.lakes || []) { // regions: lakes come with the sea surface above
+for (const l of seaMesh ? [] : TER?.lakes || []) { // lakes come with the water surfaces above; circles only without water data
   const m = new THREE.Mesh(lakeGeo, waterMat), r = l.radiusM / 1000;
   m.scale.set(r, 1, r); m.position.copy(v3(l.center[0], l.center[1], 0.005)); statics.add(m);
   WATER.push({ x: m.position.x, z: m.position.z, r, y: m.position.y, sea: false });
