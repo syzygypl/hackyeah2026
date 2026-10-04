@@ -14,7 +14,7 @@ Fixed right away: #3 and #8 (7ec0f2a). The rest goes to the owners.
 | 7 | minor | Centrum ?simAt=15:40 | /api/run/dywersja-poprad{,-2}?t=07:10 -> 404 (clock past the scenario end); same for zapora-tlo-tarnica at simAt=03:00 | #2 (centrum.js simFetch for ended) | open |
 | 8 | minor | Centrum Doradca | "2 akcji" -> "2 akcje" | #1 (centrum.js) | fixed 7ec0f2a |
 | 9 | minor | Centrum ?simAt= | Header clock shows wall time while the timeline says the sim time; a card click opens /app without simAt | #2 (centrum.js) | open |
-| 10 | minor (Polish) | start, odprawa, scenario data | "32 scenariuszy" -> "32 scenariusze"; "5.5 h" -> "5,5 h"; "km 36.2" -> "36,2"; odprawa dropdown shows raw ids | owners of start.js / odprawa.js / scenarios | open |
+| 10 | minor (Polish) | start, odprawa, scenario data | "32 scenariuszy" -> "32 scenariusze"; "5.5 h" -> "5,5 h"; "km 36.2" -> "36,2"; odprawa dropdown shows raw ids | #1 (start.js, odprawa.js, app.js); "km 36.2" in scenario data open | fixed (this commit) |
 | 11 | minor | Label collisions | Zawrat 2D "#1 Żleb pod Zawratem" under "Śmigłowiec TOPR"; Porównanie "#2 Szlak niebieski" under S4; Centrum "Linia kolejowa nr 96" over Huzele (cut on phone); 2D legend covers S18 | web 2D labels | open |
 | 12 | minor (data) | 3D water | app/3d/data/<sc>-water3d.json 404 for zawrat, morskie-oko, kasprowy, senior-demencja-lodz, paralotniarz-beskidy, tragedia-w-moryniu, zapora-* | AI Andrzeja (make_water3d.py) | open |
 | 13 | minor | Swift server only | No /api/positions, /api/schedule, /api/notifications in Swift: 404 every 5 s locally (fallbacks work; Rust deploy fine) | AI Andrzeja (Swift parity, optional) | open |

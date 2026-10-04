@@ -316,7 +316,7 @@ function renderAssess() {
   const top = S.segments[0], W = S.weather || {}, grounded = (S.resources || []).filter((r) => !r.available);
   const lines = [];
   lines.push(`Najwyżej w rankingu: <b>${esc(top.id)} ${esc(top.name)}</b> (${(+top.areaPct).toFixed(1).replace(".", ",")}% obszaru).`);
-  if (W.survival) lines.push(`Hipotermia: ${esc(W.survival.level || "")} - ${esc(W.survival.hoursOut)} h od ostatniego kontaktu.`);
+  if (W.survival) lines.push(`Hipotermia: ${esc(W.survival.level || "")} - ${esc(String(W.survival.hoursOut).replace(".", ","))} h od ostatniego kontaktu.`);
   if (W.visibilityM != null && W.visibilityM < 300) lines.push(`Mgła: widoczność ${esc(W.visibilityM)} m.`);
   if (grounded.length) lines.push(`Niedostępne: ${grounded.map((r) => esc(r.name.split(" (")[0]) + " (" + esc(r.reason) + ")").join(", ")}.`);
   const a0 = (S.assignments || [])[0]; if (a0) lines.push(`Plan podpowiada: ${esc(a0.resourceId)} -> ${esc(a0.segmentId)} (decyzja kierownika akcji).`);

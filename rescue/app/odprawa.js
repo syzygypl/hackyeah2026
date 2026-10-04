@@ -42,7 +42,7 @@
   }
 
   function picker(scs, t) {
-    $("sc").innerHTML = (scs.length ? scs : [{ name: SC }]).map((s) => `<option value="${esc(s.name)}"${s.name === SC ? " selected" : ""}>${esc(s.name)}</option>`).join("");
+    $("sc").innerHTML = (scs.length ? scs : [{ name: SC }]).map((s) => `<option value="${esc(s.name)}"${s.name === SC ? " selected" : ""}>${esc(s.incident ? String(s.incident).slice(0, 70) : s.name)}</option>`).join("");
     $("t").value = T || t;
     // a new scenario opens live; a changed hour opens the recording at that hour (?t=)
     $("sc").onchange = () => { location.search = new URLSearchParams({ sc: $("sc").value }); };
@@ -73,7 +73,7 @@
       : cur < s.set ? `do zachodu <b>${dur(s.set - cur)}</b> (zachód ${hm(s.set)}, zmrok ${hm(s.dusk)})`
       : `po zachodzie (${hm(s.set)}), ciemno do wschodu <b>${hm(s.rise)}</b> (${dur(s.rise + 1440 - cur)})`;
     const wx = [w.tempC != null ? `${w.tempC}°C` : "", w.windMs != null ? `wiatr ${w.windMs} m/s` : "", w.visibilityM != null ? `widzialność ${w.visibilityM} m` : "", w.precip && w.precip !== "none" ? precipPL(w.precip) : "", w.ice ? "oblodzenie" : ""].filter(Boolean).join(", ");
-    $("weather").innerHTML = `${wx || "brak danych"}<br>Światło: ${light}` + (w.survival ? `<br><span class="warn ${w.survival.level === "wysoki" || w.survival.level === "krytyczny" ? "red" : ""}">${esc(w.survival.text)}</span>` : "") + (w.note ? `<br><span class="mute od-weather-note">${esc(w.note)}</span>` : "");
+    $("weather").innerHTML = `${wx || "brak danych"}<br>Światło: ${light}` + (w.survival ? `<br><span class="warn ${w.survival.level === "wysoki" || w.survival.level === "krytyczny" ? "red" : ""}">${esc(String(w.survival.text || "").replace(/(\d)\.(\d)(?= h\b)/g, "$1,$2"))}</span>` : "") + (w.note ? `<br><span class="mute od-weather-note">${esc(w.note)}</span>` : "");
 
     const top = st.segments.slice(0, 3), area = top.reduce((a, x) => a + (+x.areaPct || 0), 0);
     $("topNote").textContent = `· top 3 to ${pct(area)} obszaru`;
