@@ -12,9 +12,9 @@ export const EVENTS = {
 };
 export const eventsFor = (k) => EVENTS[k] || [["rest", "Odpoczynek"], ["fault", "Usterka sprzętu"]];
 
-export function bar(label, pct, value, level) {
+export function bar(label, pct, value, level, title) {
   const p = Math.max(0, Math.min(100, pct));
-  return `<div class="bar ${level || ""}"><div class="lab"><span>${esc(label)}</span><b>${esc(value)}</b></div><div class="tr"><div class="fi" style="width:${p}%"></div></div></div>`;
+  return `<div class="bar ${level || ""}"${title ? ` title="${esc(title)}"` : ""}><div class="lab"><span>${esc(label)}</span><b>${esc(value)}</b></div><div class="tr"><div class="fi" style="width:${p}%"></div></div></div>`;
 }
 export function codeLevel(u, codes) { const w = (u.warnings || []).filter((x) => codes.includes(x.code)); return w.some((x) => x.level === "red") ? "red" : w.length ? "amber" : ""; }
 // opts (Ćwiczenia): acts: false hides the event buttons, title replaces the tooltip. Zasoby calls it without opts (array.map index is ignored).
@@ -24,14 +24,16 @@ export function unitCard(u, opts) {
   const bars = [];
   if (h.batteryPct != null) bars.push(bar(`Bateria (~${h.flightMinLeft} min lotu, zapas ${h.spareBatteries} szt.)`, h.batteryPct, h.batteryPct + "%", codeLevel(u, ["battery"])));
   if (h.fuelPct != null) bars.push(bar(`Paliwo (~${h.enduranceMinLeft} min)`, h.fuelPct, h.fuelPct + "%", codeLevel(u, ["fuel"])));
-  if (h.fatiguePct != null) bars.push(bar(`Zmęczenie - szacunek (${String(h.distanceKm).replace(".", ",")} km, +${h.climbM} m)`, h.fatiguePct, h.fatiguePct + "%", codeLevel(u, ["fatigue"])));
-  if (h.workMin != null) bars.push(bar(`Pies: praca bez przerwy (limit ${h.workLimitMin} min)`, (h.workMin / h.workLimitMin) * 100, `${h.workMin} min`, codeLevel(u, ["dogwork"])));
+  // sens-funkcji #24: estimates read as words (a % to the unit or "za 1 min" looks like a device reading), the number only in the tooltip
+  if (h.fatiguePct != null) bars.push(bar(`Zmęczenie - szacunek (${String(h.distanceKm).replace(".", ",")} km, +${h.climbM} m)`, h.fatiguePct, h.fatiguePct >= 70 ? "wymaga zmiany" : h.fatiguePct >= 40 ? "zmęczony" : "wypoczęty", codeLevel(u, ["fatigue"]), `szacunek ${h.fatiguePct}%`));
+  if (h.workMin != null) { const dl = codeLevel(u, ["dogwork"]); bars.push(bar(`Pies: praca bez przerwy (limit ${h.workLimitMin} min)`, (h.workMin / h.workLimitMin) * 100, dl === "red" ? "wymaga odpoczynku" : dl ? "przerwa wkrótce" : h.workMin > 0 ? "w normie" : "odpoczywa", dl, `szacunek: ${h.workMin} min pracy z ${h.workLimitMin}`)); }
   if (h.dutyMin != null) bars.push(bar(`Służba załogi (limit ${Math.round(h.dutyLimitMin / 60)} h)`, (h.dutyMin / h.dutyLimitMin) * 100, `${Math.floor(h.dutyMin / 60)} h ${String(h.dutyMin % 60).padStart(2, "0")} min`, codeLevel(u, ["duty"])));
   if (h.maintenanceDueInH != null) bars.push(bar(`Do przeglądu (co ${h.maintenanceEveryH} h, ostatni ${h.lastMaintenance || "?"})`, (Math.max(0, h.maintenanceDueInH) / h.maintenanceEveryH) * 100, `${String(h.maintenanceDueInH).replace(".", ",")} h`, codeLevel(u, ["maintenance"])));
   const crew = (u.crew || []).map((c) => `${esc(c.name)} <span class="mute">(${esc(c.role)})</span>`).join(", ");
   const dog = u.dog ? ` · pies: <b>${esc(u.dog.name)}</b> ${esc(u.dog.breed || "")}` : "";
   const feeds = (u.feeds || []).map((f) => `<span title="${esc(f.label)}: ${f.status === "live" ? "na żywo" : f.status === "stale" ? "nieaktualne" : "brak"}${f.lastAt ? ", ostatnio " + esc(f.lastAt) : ""}${f.note ? " - " + esc(f.note) : ""}"><i class="dot ${esc(f.status)}"></i>${esc(f.label.split(" ")[0])}</span>`).join("");
-  const warns = (u.warnings || []).map((w) => `<div class="warn ${esc(w.level)}">${esc(w.text)}</div>`).join("");
+  const WORD = { fatigue: "Zmęczenie (szacunek): wymaga zmiany", dogwork: "Pies: przerwa wkrótce" };   // #24: the server text with the number goes to title
+  const warns = (u.warnings || []).map((w) => { const t = w.code === "dogwork" && w.level === "red" ? "Pies: wymaga odpoczynku teraz" : WORD[w.code]; return t ? `<div class="warn ${esc(w.level)}" title="${esc(w.text)}">${esc(t)}</div>` : `<div class="warn ${esc(w.level)}">${esc(w.text)}</div>`; }).join("");
   const plan = !u.sc && u.atSc && (u.home || []).includes(u.atSc);   // untouched incident: the team works there from its scenario file
   const status = plan ? "w planie" : u.status;
   const st = plan ? "akcja" : u.status === "wolny" ? "wolny" : u.status === "w akcji" ? "akcja" : "";
