@@ -825,7 +825,7 @@ addEventListener("message", (e) => {
   const m = e.data, F = FRAMES[k];
   if (m.type === "ready") {
     F.ready = true;
-    if (F.visible() && (!switchTo || new URL(F.el.src).searchParams.get("sc") === switchTo)) window.__boot?.done(); tlPump();   // after a switch only the new scenario's view (a late "ready" of the previous one's must not lift the loader)   // map + Top 3 on screen: boot loader fades out; minute frames may load now
+    if (F.visible() && (!switchTo || (new URL(F.el.src).searchParams.get("sc") === switchTo && new URL(F.el.src).searchParams.get("scenario") !== "/story/scenario"))) window.__boot?.done(); tlPump();   // after a switch only the new scenario's view (a late "ready" of the previous one's must not lift the loader)   // map + Top 3 on screen: boot loader fades out; minute frames may load now
     if (afterUse.hook) afterUse.hook(F.el.contentWindow);
     warmOther(k); F.shown = F.visible(); postTo(k, { type: "visible", on: F.shown });
     if (Number.isInteger(m.step) ? m.step !== store.step - 1 : true) postTo(k, { type: "step", i: store.step - 1 });
@@ -927,7 +927,7 @@ function setMode(m, v) {
   $("views").innerHTML = views.map(([k, l]) => `<button data-view="${k}" role="tab">${l}</button>`).join("");
   $("views").style.display = views.length ? "" : "none";
   if (m === "edycja" && store.backend !== "studio" && store.hasStudio) { setMode.back = store.scenario; loadScenario("studio").catch((e) => toast(plErr(e))); }
-  else if (m !== "edycja" && store.backend === "studio" && setMode.back) { const b = setMode.back; setMode.back = null; loadScenario(b).then(renderLiveHead).catch((e) => toast(plErr(e))); }   // QA #1 (AI Mateusza #1): leaving Plan brings back the incident it replaced (Na żywo again)
+  else if (m !== "edycja" && store.backend === "studio" && setMode.back) { const b = setMode.back; setMode.back = null; switchTo = b; window.__boot?.show("Teren i scenariusz…", true); loadScenario(b).then(() => { renderLiveHead(); if (!(store.role === "operator" && Object.values(FRAMES).some((F) => F.visible()))) window.__boot?.done(); }).catch((e) => { toast(plErr(e)); window.__boot?.done(); }); }   // loader over the Studio views until the incident's own view is ready (no 3 s of "Studio - nowa historia")   // QA #1 (AI Mateusza #1): leaving Plan brings back the incident it replaced (Na żywo again)
   try { localStorage.setItem("rescue-app-mode", m); } catch (e) {}
   setFloat(); // before setView: the frames are created with the floating insets
   setTimeout(pushInsets, 260);   // the dock height animates (app.css): scene padding once more at the end
