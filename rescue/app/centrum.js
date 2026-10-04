@@ -539,6 +539,10 @@ let adv = null, advSel = 0, advOpen = true, advSig = "", advLlmAsked = false, ad
 const advTowns = [];
 const akcje = (n) => { n = +n || 0; const d = n % 10, t = n % 100; return n + (n === 1 ? " akcja" : d >= 2 && d <= 4 && (t < 12 || t > 14) ? " akcje" : " akcji"); };   // Polish plural (QA #8: "2 akcji")
 const num2 = (v) => (Math.round((v || 0) * 100) / 100).toFixed(2).replace(".", ",");
+// sens-funkcji #8: the score 0-1 is a sum of rule contributions, not a probability - "0,83" read as "83% pewności". Shown as a word,
+// thresholds = the advisor's own level cut-offs (rs/src/kit/advisor.rs level()): >= 0,70 silna, >= 0,50 umiarkowana, else słaba;
+// the number stays only in title for the operator
+const strength = (v) => (v || 0) >= 0.7 ? "silna" : (v || 0) >= 0.5 ? "umiarkowana" : "słaba";
 const LEVEL = { alarm: "ALARM", ostrzezenie: "OSTRZEŻENIE", obserwacja: "DO OBSERWACJI" };
 try { advOpen = localStorage.getItem("rescue-advisor-open") === "1"; } catch (e) { advOpen = false; }   // demo review 3: starts as a slim bar, never over the incident dots
 // Symulacja 24/7 (#1): only incidents running or just ended at the virtual clock (sim.view) count - a hypothesis shows once at
@@ -604,7 +608,7 @@ function advRender() {
         <section>${h.predicted ? `<h4>Prognoza</h4><p class="pred">${esc(h.predicted.text)}</p>${(h.predicted.towns || []).length ? `<table class="eta"><tr><th>Miejscowość</th><th>km rzeki</th><th>fala ok.</th><th>za</th></tr>${h.predicted.towns.map((t) => `<tr class="${t.kind === "town" ? "town" : ""}"><td>${esc(t.name)}</td><td class="mono">${String(t.km).replace(".", ",")}</td><td class="mono">${esc(t.eta)}</td><td class="mono">${t.inMin} min</td></tr>`).join("")}</table><div class="help">Czas od ostatniego zgłoszenia (${esc(h.predicted.from || "")}); prędkość fali ${String(h.predicted.speedMs || "").replace(".", ",")} m/s${h.wave && !h.wave.fitted ? " (domyślna, nie dopasowana)" : " (dopasowana do zgłoszeń)"}.</div>` : ""}` : ""}
           <h4>Zalecane działania</h4><ol class="act">${h.actions.map((a) => `<li class="${a.safety ? "safety" : ""}">${esc(a.text)}</li>`).join("")}</ol></section>
       </div>
-      <section class="narr"><h4>Dla operatora <span class="mute">${by}</span></h4><p>${esc(narr.summary || "")}</p>
+      <section class="narr"><h4>Dla operatora <span class="mute">${by}</span></h4><p>${esc((narr.summary || "").replace(/\(wynik (\d+[,.]\d+)\)/g, (m, v) => `(hipoteza ${strength(+v.replace(",", "."))})`))}</p>
         ${(narr.questions || []).length ? `<div class="qs"><b>Zapytaj:</b><ul>${narr.questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul></div>` : ""}
         ${narr.note ? `<div class="help">${esc(narr.note)}</div>` : ""}<button class="advllm" type="button" ${advLlmBusy ? "disabled" : ""}>${advLlmBusy ? "Model pisze..." : "Zapytaj model ponownie"}</button><div class="help">To hipoteza do sprawdzenia, nie potwierdzenie. Decyzja należy do kierownika akcji.</div></section>`;
     el.innerHTML = head + (advOpen ? tabs + body : advCollapsedHTML(hs, h));   // collapsed: every alarm hypothesis (#1 block)
@@ -1042,7 +1046,7 @@ function advNotes(now) {
     if (ms == null) { if (!advSeen.has(id)) advSeen.set(id, now); ms = advSeen.get(id); }
     const name = (sc) => { const x = incidents.find((i) => i.sc === sc); return x ? short(x) : sc; };
     return { key: `adv:${id}|${sim.lf ? sim.lf.warsaw(ms).day : ""}`, type: "adv", ms, title: h.title, sub: h.incidents.map(name).join(", "),
-      st: `${LEVEL[h.level] || h.level} · ${akcje(h.incidents.length)} · wynik ${num2(h.score)}`,
+      st: `${LEVEL[h.level] || h.level} · ${akcje(h.incidents.length)} · hipoteza ${strength(h.score)}`,
       onOpen: () => { const i = (adv.hypotheses || []).findIndex((x) => x.id === h.id); if (i < 0) return; advSel = i; advOpen = true; try { localStorage.setItem("rescue-advisor-open", "1"); } catch (e) {} const b = document.querySelector(".lfbell[aria-expanded=true]"); if (b) b.click(); advRender(); advFit(); if (innerWidth <= 900) $("advisor").scrollIntoView({ behavior: "smooth", block: "start" }); } };   // phone / narrow: the stacked page puts Doradca far below (qa2 #5)
   });
 }
@@ -1050,7 +1054,7 @@ function advCollapsedHTML(hs, h) {
   const al = hs.map((x, i) => [x, i]).filter(([x]) => x.level === "alarm");
   if (al.length < 2) return `<p class="help one">${esc(h.title)} · ${akcje(h.incidents.length)} · <button class="advt2" type="button">Pokaż szczegóły</button></p>`;
   return `<ul class="advrows">${al.map(([x, i]) => `<li><button type="button" class="advrow${i === advSel ? " on" : ""}" data-i="${i}" title="Dla operatora: wynik ${num2(x.score)} (0-1). Kliknij: pokaż powiązane akcje na mapie.">`
-    + `<span class="lvl ${esc(x.level)}">${esc(x.id)}</span><span class="t">${esc(x.title)}</span><span class="n mono">${num2(x.score)}</span><span class="mute">${akcje(x.incidents.length)}</span></button></li>`).join("")}</ul>`
+    + `<span class="lvl ${esc(x.level)}">${esc(x.id)}</span><span class="t">${esc(x.title)}</span><span class="n" title="Wynik ${num2(x.score)} (0-1), nie procent pewności">${strength(x.score)}</span><span class="mute">${akcje(x.incidents.length)}</span></button></li>`).join("")}</ul>`
     + `<p class="help one"><button class="advt2" type="button">Pokaż szczegóły</button></p>`;
 }
 // --- #1 (AI Mateusza #1, for #2's timeline): a marker or a row name opens the incident in Historia at that moment
@@ -1105,7 +1109,7 @@ function renderPick() {
     const xs = h.incidents.map((sc) => all.find((x) => x.sc === sc)).filter(Boolean); if (!xs.length) continue;
     xs.forEach((x) => used.add(x.sc));
     html += `<section class="pkg ${esc(h.level)}" aria-label="${esc(h.kindLabel)}"><h3><span class="lvl ${esc(h.level)}">${LEVEL[h.level] || esc(h.level)}</span>${esc(h.kindLabel)}
-      <span class="mute mono" title="Wynik hipotezy Doradcy (0-1)">${num2(h.score)}</span></h3><div class="pkh">${esc(h.title)} · ${akcje(xs.length)}</div>${xs.map(item).join("")}</section>`;
+      <span class="mute" title="Wynik hipotezy Doradcy ${num2(h.score)} (0-1), nie procent pewności">hipoteza ${strength(h.score)}</span></h3><div class="pkh">${esc(h.title)} · ${akcje(xs.length)}</div>${xs.map(item).join("")}</section>`;
   }
   const rest = all.filter((x) => !used.has(x.sc));
   html += (used.size ? `<h3 class="pkr">Pozostałe <span class="cnt">${rest.length}</span></h3>` : "") + rest.map(item).join("");
