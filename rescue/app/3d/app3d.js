@@ -1659,20 +1659,105 @@ const center = new THREE.Vector3(toX(bc[1]), hAt(bc[0], bc[1]) * 0.6, toZ(bc[0])
 const SPAN = Math.max((B.east - B.west) * KX * KM, (B.north - B.south) * KM) * 1.15;
 // frame a bbox ({south, west, north, east} or [s, w, n, e]) from the current azimuth, looking down ~42 degrees; the fly keeps the
 // camera above the ground on the way (aboveGround in frame()), so it never passes through a ridge
-function focusArea(bb) {
+// (the pose itself comes from frameScene below: the bbox corners and the named sectors framed, azimuth kept unless a ridge hides them)
+function focusArea(bb, m = {}) {
   const [s, w, n, e] = Array.isArray(bb) ? bb : [bb.south, bb.west, bb.north, bb.east];
   if (![s, w, n, e].every(Number.isFinite) || n <= s || e <= w) return;
-  const la = (s + n) / 2, lo = (w + e) / 2, t = v3(clamp(la, latS, latN), clamp(lo, lonW, lonE));
-  const wk = (e - w) * KX * KM, hk = (n - s) * KM, half = Math.tan((camera.fov * Math.PI) / 360);
-  const d = clamp((Math.max(wk / Math.max(camera.aspect, 0.3), hk) / (2 * half)) * 1.25, 0.6, Math.max(WKM, HKM) * 1.4);
-  const az = camera.position.clone().sub(controls.target).setY(0); if (az.lengthSq() < 1e-8) az.set(0, 0, 1); az.normalize();
-  const el = (42 * Math.PI) / 180, p1 = t.clone().addScaledVector(az, Math.cos(el) * d); p1.y += Math.sin(el) * d;
-  TL3D?.stopFpp(); fly = { t: 0, dur: 1.6, p0: camera.position.clone(), t0: controls.target.clone(), p1: aboveGround(p1, 0.4), t1: t };
+  const S = clamp(s, latS, latN), N = clamp(n, latS, latN), Wl = clamp(w, lonW, lonE), E = clamp(e, lonW, lonE);
+  const pts = [], vis = [];
+  for (const [a, b] of [[0, 0], [0, 0.5], [0, 1], [0.5, 0], [0.5, 1], [1, 0], [1, 0.5], [1, 1], [0.5, 0.5]]) pts.push(v3(S + (N - S) * a, Wl + (E - Wl) * b));
+  vis.push([v3((S + N) / 2, (Wl + E) / 2, 0.03)]);
+  for (const id of Array.isArray(m.segIds) ? m.segIds : []) { const g = segs.get(id); if (g) vis.push([v3(g.center[0], g.center[1], 0.03)]); }
+  frameScene({ pts, vis, keepAz: true, padRight: +m.padRight || 0, dur: 1.6 });
 }
 function overview(dur = 1.8) {
   TL3D?.stopFpp();
   // oblique view from the south-east, the whole massif in frame
   fly = { t: 0, dur, p0: camera.position.clone(), t0: controls.target.clone(), p1: center.clone().add(new THREE.Vector3(SPAN * 0.42, SPAN * 0.62, SPAN * 0.92)), t1: center.clone() };
+}
+// frameScene (AI Mateusza #2): one camera pose for "show me what matters". It frames the IPP and the current top 3 sectors
+// (or the given points) inside the free area between the shell's panels (insets + the scene's own control box), looks
+// obliquely (42 deg in the mountains, 36 deg over lakes / flat ground with a wider margin), and picks one of 8 azimuths by
+// marching rays from the candidate camera to sample points of each sector over the DEM: most visible wins, then north-up,
+// then sunlit (and, when re-framing a focus, the current azimuth). Mountain shots keep the targets a bit below the centre so
+// the far ridges and sky stay in the upper frame. The camera never ends below terrain + clearance; the fly orbits around
+// the moving target (azimuth / elevation / log distance interpolated) instead of cutting through it.
+let camUser = false; // the operator moved the camera since the last frameScene: do not reframe on 2D -> 3D or insets
+const MOUNTAIN = !FLAT && !LOW && zMax - zMin > 250;
+function framePoints() {
+  const ids = topDrawn ? topDrawn.split(',') : rankedOf(R.steps[Math.max(0, STEP)].segments).slice(0, 3).map((s) => s.id);
+  const pts = R.ipp && inside([R.ipp.lat, R.ipp.lon]) ? [v3(R.ipp.lat, R.ipp.lon)] : [], vis = [];
+  for (const id of ids) {
+    const g = segs.get(id); if (!g) continue;
+    const c = g.center, poly = g.polygon || [], k = Math.max(1, Math.floor(poly.length / 10)), sam = [v3(c[0], c[1], 0.03)];
+    for (let i = 0; i < poly.length; i += k) {
+      const [lo, la] = poly[i]; if (!inside([la, lo])) continue;
+      pts.push(v3(la, lo));
+      if (sam.length < 5 && i % (k * 2) === 0) sam.push(v3(c[0] + (la - c[0]) * 0.5, c[1] + (lo - c[1]) * 0.5, 0.03)); // halfway to the edge
+    }
+    pts.push(sam[0]); vis.push(sam);
+  }
+  return { pts, vis };
+}
+function frameScene({ pts, vis, keepAz = false, padRight = 0, dur } = {}) {
+  if (!pts) ({ pts, vis } = framePoints());
+  if (!pts.length) return;
+  vis = vis || [pts];
+  const W = innerWidth, H = innerHeight, [T0, R0, B0, L0] = INSETS, ctl = $('sceneCtl'), cr = ctl && !ctl.hidden ? ctl.getBoundingClientRect() : null;
+  const Rr = R0 + padRight + (cr && cr.width ? cr.width + 14 : 0), T = T0 + 12, Bm = B0 + 12, L = L0 + 12;
+  const fx0 = -1 + (2 * L) / W, fx1 = 1 - (2 * Rr) / W, fy0 = -1 + (2 * Bm) / H, fy1 = 1 - (2 * T) / H;
+  if (fx1 - fx0 < 0.3 || fy1 - fy0 < 0.3) return;
+  const pitch = ((MOUNTAIN ? 42 : 36) * Math.PI) / 180, fill = MOUNTAIN ? 0.74 : 0.68, bias = MOUNTAIN ? -0.14 : -0.04; // bias: NDC of the targets' centre in the free area
+  const tmp = camera.clone(), right = new THREE.Vector3(), up = new THREE.Vector3(), q = new THREE.Vector3(), tanH = Math.tan((camera.fov * Math.PI) / 360);
+  const c0 = pts.reduce((s, p) => s.add(p), new THREE.Vector3()).multiplyScalar(1 / pts.length);
+  const cur = camera.position.clone().sub(controls.target), curAz = Math.atan2(cur.x, cur.z);
+  const sunAz = Math.atan2(SUN_DIR.x, SUN_DIR.z);
+  const pose = (az) => {
+    const f = new THREE.Vector3(-Math.sin(az) * Math.cos(pitch), -Math.sin(pitch), -Math.cos(az) * Math.cos(pitch));
+    const t = c0.clone(); let d = clamp(Math.max(WKM, HKM) * 0.6, 1, 25);
+    for (let it = 0; it < 6; it++) {
+      tmp.position.copy(t).addScaledVector(f, -d); tmp.lookAt(t); tmp.updateMatrixWorld(); tmp.matrixWorldInverse.copy(tmp.matrixWorld).invert();
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity, behind = false;
+      for (const p of pts) { q.copy(p).project(tmp); if (q.z > 1 || q.z < -1) { behind = true; break; } x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
+      if (behind) { d *= 1.6; continue; }
+      right.setFromMatrixColumn(tmp.matrixWorld, 0); up.setFromMatrixColumn(tmp.matrixWorld, 1);
+      const ox = (x0 + x1) / 2 - (fx0 + fx1) / 2, oy = (y0 + y1) / 2 - ((fy0 + fy1) / 2 + (bias * (fy1 - fy0)) / 2);
+      t.addScaledVector(right, ox * d * tanH * tmp.aspect).addScaledVector(up, oy * d * tanH);
+      const s = Math.max((x1 - x0) / ((fx1 - fx0) * fill), (y1 - y0) / ((fy1 - fy0) * fill), 0.05);
+      d = clamp(d * (0.35 + 0.65 * s), 0.7, 28);
+    }
+    const p = aboveGround(t.clone().addScaledVector(f, -d), 0.35);
+    // share of the sample points the camera sees (a sector counts as much as the IPP)
+    let seen = 0;
+    for (const set of vis) {
+      let ok = 0;
+      for (const s of set) {
+        let clear = true;
+        for (let k = 1; k < 48 && clear; k++) {
+          const u = k / 48, x = p.x + (s.x - p.x) * u, y = p.y + (s.y - p.y) * u, z = p.z + (s.z - p.z) * u;
+          if (u < 0.97 && y < hAt(toLat(z), toLon(x)) - 0.004) clear = false;
+        }
+        ok += clear;
+      }
+      seen += ok / set.length;
+    }
+    const score = (seen / vis.length) * 10 + Math.cos(az) * 1.2 + Math.cos(az - sunAz) * 0.4 + (keepAz ? Math.cos(az - curAz) * 2.5 : 0);
+    return { p, t, score, seen: seen / vis.length };
+  };
+  let best = null;
+  for (const az of [...Array(8)].map((_, i) => (i * Math.PI) / 4).concat(keepAz ? [curAz] : [])) { const c = pose(az); if (!best || c.score > best.score) best = c; }
+  TL3D?.stopFpp(); camUser = false;
+  const hop = camera.position.distanceTo(best.p);
+  const o0 = camera.position.clone().sub(controls.target), o1 = best.p.clone().sub(best.t);
+  const sph0 = new THREE.Spherical().setFromVector3(o0), sph1 = new THREE.Spherical().setFromVector3(o1);
+  let dth = sph1.theta - sph0.theta; dth = Math.atan2(Math.sin(dth), Math.cos(dth)); // shortest way round
+  const t0 = controls.target.clone(), sp = new THREE.Spherical();
+  fly = { t: 0, dur: dur ?? clamp(1.2 + hop * 0.04, 1.2, 1.8), p0: camera.position.clone(), t0, p1: best.p, t1: best.t,
+    path: (k, out) => {
+      sp.set(Math.exp(Math.log(Math.max(sph0.radius, 1e-3)) * (1 - k) + Math.log(sph1.radius) * k), sph0.phi + (sph1.phi - sph0.phi) * k, sph0.theta + dth * k);
+      return out.setFromSpherical(sp).add(controls.target);
+    } };
+  return { seen: best.seen, pos: best.p, target: best.t };
 }
 $('btn-all').addEventListener('click', () => overview());
 $('btn-top').addEventListener('click', () => {
@@ -1682,7 +1767,7 @@ $('btn-top').addEventListener('click', () => {
 let autoRot = false, idleAt = performance.now();
 $('btn-rot').addEventListener('click', () => { TL3D?.stopFpp(); autoRot = !autoRot; $('btn-rot').classList.toggle('on', autoRot); });
 $('btn-fog').addEventListener('click', () => { weatherOn = !weatherOn; $('btn-fog').classList.toggle('on', weatherOn); setMood(R.steps[Math.max(0, STEP)].weather, Math.max(0, STEP)); });
-controls.addEventListener('start', () => { idleAt = Infinity; fly = null; if (CINE.on) cinema(false); });
+controls.addEventListener('start', () => { idleAt = Infinity; fly = null; camUser = true; if (CINE.on) cinema(false); });
 controls.addEventListener('end', () => { idleAt = performance.now(); });
 
 if (!(Array.isArray(R.difficulty) && R.difficulty.length === R.rows * R.cols)) $('btn-diff').hidden = true;
@@ -2134,12 +2219,14 @@ addEventListener('message', (e) => {
     else if (m.type === 'actor' && (m.id === null || typeof m.id === 'string')) TL3D?.selectActor(m.id, false);
     else if (m.type === 'highlight' && typeof m.actor === 'string') {
       TL3D?.selectActor(m.actor, false);
-      const f = m.fly ? TL3D?.actorFocus?.(m.actor) : null; if (f && inside([f.lat, f.lon])) flyTo(v3(f.lat, f.lon), 1.6);
+      const f = m.fly ? TL3D?.actorFocus?.(m.actor) : null;
+      if (f && inside([f.lat, f.lon])) { const r = 0.45 / KM, pts = [...Array(8)].map((_, i) => v3(clamp(f.lat + r * Math.cos(i * 0.785), latS, latN), clamp(f.lon + (r / KX) * Math.sin(i * 0.785), lonW, lonE))); frameScene({ pts, vis: [[v3(f.lat, f.lon, 0.03)]], keepAz: true, dur: 1.6 }); }
     }
-    else if (m.type === 'focusArea' && m.bbox) focusArea(m.bbox);
-    else if (m.type === 'visible') { shellHidden = m.on === false; if (!shellHidden) wake(); }
+    else if (m.type === 'focusArea' && m.bbox) focusArea(m.bbox, m);
+    else if (m.type === 'visible') { const was = shellHidden; shellHidden = m.on === false; if (!shellHidden) { if (was && !camUser && !CINE.on && !WALK?.on && !TL3D?.following) frameScene(); wake(); } } // 2D -> 3D: re-frame unless the operator moved
     else if (m.type === 'select' && typeof m.segmentId === 'string') selectSeg(m.segmentId);
-    else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
+    else if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { const k0 = INSETS.join(); INSETS = m.insets.map((v) => +v || 0); applyInsets();
+      if (INSETS.join() !== k0 && !camUser && !CINE.on && !WALK?.on && !TL3D?.following) frameScene({ dur: 1.2 }); }
     else if (m.type === 'evidence' && (typeof m.id === 'string' || Number.isInteger(m.id))) setEvidence(m.id, m.on !== false);
     else if (m.type === 'run' && m.run && typeof m.run === 'object') {
       sessionStorage.setItem('rescue3d-run', JSON.stringify(m.run));
@@ -2210,7 +2297,7 @@ function frame() {
   stepMood(dt);
   if (fly) {
     fly.t += dt / fly.dur; const k = ease(Math.min(1, fly.t));
-    camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k);
+    controls.target.lerpVectors(fly.t0, fly.t1, k); if (fly.path) fly.path(k, camera.position); else camera.position.lerpVectors(fly.p0, fly.p1, k);
     aboveGround(camera.position, 0.25);
     if (fly.t >= 1) { fly = null; idleAt = performance.now(); }
   }
@@ -2272,7 +2359,7 @@ const ZOOM = (Q.get('zoom') || '').split(',').map(Number);
 if (ZOOM[0] > 0) {
   const t = ZOOM.length === 3 && inside([ZOOM[1], ZOOM[2]]) ? v3(ZOOM[1], ZOOM[2]) : v3(bc[0], bc[1]);
   controls.target.copy(t); camera.position.copy(aboveGround(t.clone().add(new THREE.Vector3(0.3, 0.42, 0.86).normalize().multiplyScalar(clamp(ZOOM[0], 0.5, 30))), 0.25));
-} else overview(2.6);
+} else frameScene({ dur: 1.8 }); // the start shot: IPP + top 3 from the best side (was overview(2.6), from the south-east)
 renderer.shadowMap.needsUpdate = true;
 // shader programs link on the driver's threads (KHR_parallel_shader_compile) while the terrain bake finishes in its worker
 const [[nao, ...bands]] = await Promise.all([bakeJob, renderer.compileAsync(scene, camera).catch(() => {})]);
