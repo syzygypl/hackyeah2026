@@ -4,6 +4,7 @@
     python3 rescue/integration/test_top3_consistency.py                          # production, zawrat, Historia steps 1-10 + Na żywo
     python3 rescue/integration/test_top3_consistency.py --base http://127.0.0.1:8080 --steps 1,7,8 --sc zawrat
     python3 rescue/integration/test_top3_consistency.py --no-live --view 2d
+    python3 rescue/integration/test_top3_consistency.py --steps 8 --evidence-off   # also untick each signal (demo step 2), then restore all
 
 Headless Chrome over the DevTools protocol, stdlib only (CHROME env overrides the browser path). Read-only: every non-GET
 fetch / XHR / beacon is refused in the page and all its frames, so it is safe against production.
@@ -28,11 +29,12 @@ CHROME = os.environ.get("CHROME", "/Applications/Google Chrome.app/Contents/MacO
 # refuse writes in every frame (production is shared live data)
 NO_WRITES = r"""(() => {
   const ok = (m) => !m || /^(GET|HEAD|OPTIONS)$/i.test(m);
-  const f = window.fetch; window.fetch = function (u, o) { const m = (o && o.method) || (u && u.method); return ok(m) ? f.apply(this, arguments) : Promise.reject(new TypeError('blocked by test: ' + m)); };
+  const log = (m, u) => { try { (top.__blockedWrites = top.__blockedWrites || []).push(m + ' ' + String((u && u.url) || u)); } catch (e) {} };
+  const f = window.fetch; window.fetch = function (u, o) { const m = (o && o.method) || (u && u.method); if (ok(m)) return f.apply(this, arguments); log(m, u); return Promise.reject(new TypeError('blocked by test: ' + m)); };
   const op = XMLHttpRequest.prototype.open, sd = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function (m) { this.__m = m; return op.apply(this, arguments); };
-  XMLHttpRequest.prototype.send = function () { if (!ok(this.__m)) throw new Error('blocked by test: ' + this.__m); return sd.apply(this, arguments); };
-  try { navigator.sendBeacon = () => false; } catch (e) {}
+  XMLHttpRequest.prototype.open = function (m, u) { this.__m = m; this.__u = u; return op.apply(this, arguments); };
+  XMLHttpRequest.prototype.send = function () { if (!ok(this.__m)) { log(this.__m, this.__u); throw new Error('blocked by test: ' + this.__m); } return sd.apply(this, arguments); };
+  try { navigator.sendBeacon = (u) => { log('BEACON', u); return false; }; } catch (e) {}
   try { localStorage.setItem('rescue-app-hint-operator', '1'); } catch (e) {}
 })()"""
 
@@ -157,6 +159,7 @@ def main():
     ap.add_argument("--no-live", action="store_true")
     ap.add_argument("--view", default="split", choices=["split", "2d", "3d"], help="split = both views visible (default)")
     ap.add_argument("--timeout", type=float, default=150)
+    ap.add_argument("--evidence-off", action="store_true", help="per moment also untick each signal checkbox one at a time, then restore all (fails on any non-GET)")
     a = ap.parse_args()
     steps = []
     for part in a.steps.split(","):
@@ -190,17 +193,39 @@ def main():
             bad = (not ok) or m2 or m3
             fails += bad
             label = f"Historia krok {s}" if s else "Na żywo"
-            rows.append((label, ok, panel, d2, d3, m2, m3, p))
-            ids = " / ".join(f"{x['id']}" for x in p.get("panel") or [])
-            print(f"\n[{'FAIL' if bad else 'PASS'}] {label}   ({'settled' if ok else 'NOT SETTLED'})", flush=True)
-            print(f"   panel ({p.get('panelAt', '').strip()}): {' / '.join(panel)}   [{ids}]")
-            if need2d:
-                print(f"   2D    ({p.get('at2d', '?')}): {' / '.join(map(str, d2))}{'   <-- differs' if m2 else ''}")
-            if need3d:
-                print(f"   3D    : {' / '.join(map(str, d3))}{'   <-- differs' if m3 else ''}")
-            for e in ("err2d", "err3d"):
-                if p.get(e):
-                    print(f"   {e}: {p[e]}")
+            hints = c.js("[...document.querySelectorAll('#events .evt')].map((x) => x.dataset.hint)") if a.evidence_off else []
+            for h in [None] + list(dict.fromkeys(hints or [])) + (["*"] if hints else []):
+                if h == "*":  # the ↺ button
+                    c.js("document.getElementById('evReset').click()")
+                elif h:  # untick this signal only (the previous one is restored first, like a user would)
+                    c.js("document.getElementById('evReset').hidden || document.getElementById('evReset').click()")
+                    c.js(f"(() => {{ const x = document.querySelector('#events .evt[data-hint=\"{h}\"]'); if (x && x.checked) x.click(); }})()")
+                if h:
+                    time.sleep(1)
+                    p, ok = settle(c, need3d, a.timeout)
+                    panel = [x["name"] for x in p.get("panel") or []]
+                    d2, d3 = p.get("d2") or [None] * 3, p.get("d3") or [None] * 3
+                    m2 = need2d and [norm(x) for x in d2] != [norm(x) for x in panel]
+                    m3 = need3d and [norm(x) for x in d3] != [norm(x) for x in panel]
+                    bad = (not ok) or m2 or m3
+                    fails += bad
+                writes = c.js("window.__blockedWrites || []") or []
+                if writes:
+                    bad, fails = True, fails + 1
+                lab = label + ("" if not h else "  wszystkie sygnały" if h == "*" else f"  bez {h}")
+                rows.append((lab, ok and not writes, panel, d2, d3, m2, m3, p))
+                ids = " / ".join(f"{x['id']}" for x in p.get("panel") or [])
+                print(f"\n[{'FAIL' if bad else 'PASS'}] {lab}   ({'settled' if ok else 'NOT SETTLED'})", flush=True)
+                print(f"   panel ({p.get('panelAt', '').strip()}): {' / '.join(panel)}   [{ids}]")
+                if need2d:
+                    print(f"   2D    ({p.get('at2d', '?')}): {' / '.join(map(str, d2))}{'   <-- differs' if m2 else ''}")
+                if need3d:
+                    print(f"   3D    : {' / '.join(map(str, d3))}{'   <-- differs' if m3 else ''}")
+                for e in ("err2d", "err3d"):
+                    if p.get(e):
+                        print(f"   {e}: {p[e]}")
+                if writes:
+                    print(f"   non-GET attempted (blocked by test): {writes}")
         print("\n=== summary ===")
         w = max(len(r[0]) for r in rows)
         for label, ok, panel, d2, d3, m2, m3, _ in rows:
