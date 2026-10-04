@@ -745,21 +745,23 @@
     }));
   }
 
+  // a switched-off signal that already happened at this step (a future one changes nothing: the engine's minute frame stays in force)
+  const offNow = () => S.disabled.size > 0 && S.M.hints.some((h) => h.k <= S.step && S.disabled.has(h.id));
   function render() {
     const M = S.M, step = S.step, h = M.hints[step];
     const p = compute(step), st = stats(p);
     S.lastStats = st; S.lastP = p;
     const prevSt = step > 0 ? stats(compute(step - 1)) : null;
     // embedded in /app: the shell's top 3 (its panel) when it sent one, else this step's own ranking
-    const sTop = S.shellTop && !S.disabled.size ? S.shellTop.map((id) => st.find((x) => x.id === id)).filter(Boolean) : [];
+    const sTop = S.shellTop && !offNow() ? S.shellTop.map((id) => st.find((x) => x.id === id)).filter(Boolean) : [];
     const top3 = sTop.length === 3 ? sTop : st.slice(0, 3);
     // a signal switched off: this view's own ranking is the one in force - tell the shell's panel (null = back to its own)
-    const t3key = S.disabled.size ? top3.map((x) => x.id).join(',') : '';
+    const t3key = offNow() ? top3.map((x) => x.id).join(',') : '';
     if (t3key !== (S.top3Sent || '')) { S.top3Sent = t3key; toParent({ type: 'top3', ids: t3key ? t3key.split(',') : null }); }
     const searched = searchedState(step);
     const ov = overlays(step, top3);
     // timeline mode: the minute's frame heat stays (tlDraw); the step heat only without a frame or with a signal switched off
-    if (S.tlHeatAt == null || S.disabled.size) { S.view.setHeat(p); S.tlHeatAt = null; }
+    if (S.tlHeatAt == null || offNow()) { S.view.setHeat(p); S.tlHeatAt = null; }
     S.view.setSegments(segFC(top3, searched));
     S.view.setOverlay(ov.fc);
     S.view.setChips(ov.chips);
@@ -831,7 +833,7 @@
     else for (const f of frames) { if (f.minute <= mf) fr = f; else break; }
     if (fr) for (const c of fr.cov || []) { const cell = S.M.cells[c[0]]; if (cell) feats.push(feat(cell.geometry, { k: 'cov', pod: c[1] })); }
     // heat = the frame's posterior (drop-in for steps[].poaGrid); only when the frame changed and no signal is switched off
-    if (fr && Array.isArray(fr.poaGrid) && fr.poaGrid.length === S.M.N && !S.disabled.size && S.tlHeatAt !== fr.minute) {
+    if (fr && Array.isArray(fr.poaGrid) && fr.poaGrid.length === S.M.N && !offNow() && S.tlHeatAt !== fr.minute) {
       // crossfade between neighbouring frames; when they come faster than the fade (fast play) just swap
       const now = performance.now(), fast = now - (S.tlHeatTs || 0) < 300; S.tlHeatTs = now;
       if (S.view.setHeatFade && S.tlHeatAt != null && !fast) S.view.setHeatFade(fr.poaGrid); else (S.view.setHeatFade ? S.view.setHeatFade(fr.poaGrid, 0) : S.view.setHeat(fr.poaGrid));
