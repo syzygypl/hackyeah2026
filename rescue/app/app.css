@@ -565,3 +565,7 @@ body.picking{overflow:hidden}
 /* Symulacja 24/7 bell in the header (appbell.js, AI Mateusza #1): operator only; the rescuer phone has its own screen */
 header>.lfhost{display:inline-flex;align-items:center}
 header>.lfhost[hidden],body.role-ratownik header>.lfhost,body.role-ratownik .lftoasts{display:none}
+/* qa-wieczor #2 (AI Mateusza #1): Plan adds Nowa historia / Cofnij / name / Zapisz to the bar, which pushed Czat, Udostępnij, ? and
+   Rola off screen at 1440 px. In Plan the story is always Historia (no Na żywo), the scenario is the studio and a new live action
+   needs Na żywo, so those three go and the bar fits again */
+body.mode-edycja header>#tmode,body.mode-edycja header>.scenlbl,body.mode-edycja header>#newActionBtn{display:none!important}
