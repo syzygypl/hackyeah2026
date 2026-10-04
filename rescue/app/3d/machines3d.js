@@ -282,7 +282,8 @@ export function createProp(THREE, p) {
     add(new THREE.CylinderGeometry(KM(0.016), KM(0.016), KM(2.2), 6).rotateZ(Math.PI / 2), mat(0x2a2d31), 0, KM(0.03));
     for (const x of [1.15, -1.15]) add(new THREE.BoxGeometry(KM(0.45), KM(0.01), KM(0.17)), mat(0xf0c419), KM(x), KM(0.03));
   } else if (k === 'car-in-river') {
-    const L = car(0x9a1c1c); obj.rotation.z = -0.32; float = true; sink = KM(0.9); tick = hazard(L, KM(0.8));
+    const L = car(0x9a1c1c); float = true; tick = hazard(L, KM(0.8));
+    if (p.upsideDown) { obj.rotation.x = Math.PI; obj.rotation.z = 0.08; sink = KM(-0.9); } else { obj.rotation.z = -0.32; sink = KM(0.9); } // on its roof: wheels up, roof in the water
   } else if (k === 'car-parked') {
     car(p.color ? new THREE.Color(p.color).getHex() : 0xb9bec4);
   } else if (k === 'basket') { // a wicker basket of mushrooms, ~45 cm

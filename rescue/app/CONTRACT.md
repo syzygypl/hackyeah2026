@@ -585,7 +585,7 @@ Kinds (real size, placed on the rendered terrain; `float` kinds sit on the water
 | `kayak-capsized` | kayak bottom up (on a bank or gravel bar) | - |
 | `kayak-drifting` | empty kayak, floats and rocks | - |
 | `paddle` | double paddle lying on the ground | - |
-| `car-in-river` | car nose-down, half under water, hazard lights blinking | - |
+| `car-in-river` | car nose-down, half under water, hazard lights blinking; `"upsideDown": true` = on its roof, wheels up | - |
 | `car-damaged` | car with a crushed front, hazard lights (road shoulder) | - |
 | `car-parked` | parked car, e.g. the missing person's car at a car park (optional `"color": "#rrggbb"`) | - |
 | `basket` | wicker basket with mushrooms (a found item) | - |

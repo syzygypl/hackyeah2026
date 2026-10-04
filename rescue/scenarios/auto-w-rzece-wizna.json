@@ -284,7 +284,7 @@
  ],
  "props": [
   {
-   "kind": "car-in-river",
+   "kind": "car-in-river", "upsideDown": true,
    "at": [
     53.20005,
     22.40805
