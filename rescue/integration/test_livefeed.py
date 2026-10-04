@@ -73,7 +73,7 @@ def main():
     try:
         c = Cdp(port)
         c.call("Runtime.enable")
-        base = f"{srv.base}/app/?role=operator&mode=akcja&time=hist&sc=zawrat&dyzurny=0"
+        base = f"{srv.base}/app/?role=operator&mode=akcja&time=hist&sc=zawrat&dyzurny=0&bell=all"   # the whole country: Otwórz across incidents (default = this incident only)
         url = f"{base}&simAt={at}"
         open_page(c, url, 1440, 900, False)
         c.js("localStorage.removeItem('rescue-live-acks');localStorage.removeItem('rescue-sim247');localStorage.removeItem('rescue-app-time')")
@@ -152,6 +152,17 @@ def main():
         check("phone_list_on_screen", bool(pr) and pr[0] >= 0 and pr[1] <= 390 and pr[2] >= 80 and pr[3] <= 844, json.dumps(pr))
         sw = c.js("[document.documentElement.scrollWidth, innerWidth]")
         check("phone_no_sideways_scroll", bool(sw) and sw[0] <= sw[1] + 1, json.dumps(sw))
+        # sens-funkcji #2: by default the commander's bell holds only the open incident; the toast stays off #right
+        c.call("Emulation.setDeviceMetricsOverride", {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False})
+        open_page(c, base.replace("&bell=all", "") + f"&simAt={hhmm(mins(e['start']) + 2)}", 1440, 900, False)
+        c.until("window.rescueBell&&rescueBell.entries.length?1:0", 30)
+        time.sleep(3)
+        own = c.js("JSON.stringify([...new Set(rescueBell.bell.notes.map(n=>n.inst&&n.inst.sc))])")
+        check("bell_only_this_incident", json.loads(own or "[]") in ([], ["zawrat"]), f"notes from {own}")
+        open_page(c, f"{srv.base}/app/?role=operator&mode=akcja&time=hist&sc={e['sc']}&dyzurny=0&simAt={at}", 1440, 900, False)
+        tt = c.until(f"(()=>{{const t=[...document.querySelectorAll('.lftoast')].find(x=>x.querySelector('[data-key^=\"{key}\"]'));if(!t)return '';const a=t.getBoundingClientRect(),r=document.getElementById('right').getBoundingClientRect();return JSON.stringify([Math.round(a.right),Math.round(r.left)])}})()", 120)
+        tr = json.loads(tt or "[0,0]")
+        check("toast_own_incident_not_over_right", bool(tt) and tr[0] <= tr[1], f"toast right {tr[0]} vs #right left {tr[1]}")
         check("no_js_exceptions", not errs_desktop and not c.errors, "; ".join(map(str, errs_desktop + c.errors))[:200])
     finally:
         chrome.terminate()

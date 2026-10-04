@@ -594,3 +594,5 @@ header #pinbox .kstate{display:none}
 #shareDlg #pinbox:not([style*="none"]){display:flex!important;align-items:center;gap:10px;padding:0 0 10px;font-size:var(--rl-fs-m,14px)}
 #shareDlg #pinbox input{flex:0 1 200px;width:auto;margin:0}
 #shareDlg #pinbox .kstate{color:var(--rl-mute);font-size:var(--rl-fs-s,12px)}
+/* sens-funkcji #2 (AI Mateusza #1): bell toasts never over "Gdzie szukać najpierw" - next to it, in the map */
+@media (min-width:901px){body.float .lftoasts{right:calc(var(--float-gap,12px) * 2 + var(--rail-r-w,360px));width:min(380px,calc(100vw - var(--rail-r-w,360px) - 64px))}}

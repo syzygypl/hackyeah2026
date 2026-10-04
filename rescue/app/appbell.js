@@ -18,13 +18,20 @@ const bell = lf.mountBell(host, {
     return false;
   },
 });
+// sens-funkcji #2: the commander of one incident hears only that incident (its report and calls); "Nowa akcja" elsewhere in
+// Poland is the dispatcher's, in Centrum. ?bell=all keeps the whole country here (a dispatcher on /app, tests). sc follows the
+// in-place switch (pushState), read on every tick
+const ALL = new URLSearchParams(location.search).get("bell") === "all";
+const curSc = () => new URLSearchParams(location.search).get("sc") || (window.rescueApp && window.rescueApp.scenario) || "";
 function tick() {
   const on = lf.simEnabled();
   host.hidden = !on;
-  bell.update(on ? lf.instancesAt(entries, lf.nowMs(), { pastMin: 120 }) : []);
+  const all = on ? lf.instancesAt(entries, lf.nowMs(), { pastMin: 120 }) : [], sc = curSc();
+  bell.update(ALL || !sc ? all : all.filter((i) => i.sc === sc));
 }
 tick();
 setInterval(tick, 5000);
 setInterval(() => lf.acks.sync(), 15000); lf.acks.sync();
-addEventListener("storage", (e) => { if (e.key === "rescue-sim247") tick(); });   // the Centrum switch in another tab
+addEventListener("storage", (e) => { if (e.key === "rescue-sim247") tick(); });
+addEventListener("popstate", () => setTimeout(tick, 0));   // Back / Forward between incidents   // the Centrum switch in another tab
 window.rescueBell = { lf, bell, tick, get entries() { return entries; } };   // tests
