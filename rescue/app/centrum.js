@@ -457,8 +457,8 @@ function advRender() {
       <section class="narr"><h4>Dla operatora <span class="mute">${by}</span></h4><p>${esc(narr.summary || "")}</p>
         ${(narr.questions || []).length ? `<div class="qs"><b>Zapytaj:</b><ul>${narr.questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ul></div>` : ""}
         ${narr.note ? `<div class="help">${esc(narr.note)}</div>` : ""}<button class="advllm" type="button" ${advLlmBusy ? "disabled" : ""}>${advLlmBusy ? "Model pisze..." : "Zapytaj model ponownie"}</button><div class="help">To hipoteza do sprawdzenia, nie potwierdzenie. Decyzja należy do kierownika akcji.</div></section>`;
-    el.innerHTML = head + (advOpen ? tabs + body : `<p class="help one">${esc(h.title)} · ${h.incidents.length} akcji · <button class="advt2" type="button">Pokaż szczegóły</button></p>`);
-    el.querySelectorAll(".advtabs button").forEach((b) => b.onclick = () => { advSel = +b.dataset.i; advRender(); advFit(); });
+    el.innerHTML = head + (advOpen ? tabs + body : advCollapsedHTML(hs, h));   // collapsed: every alarm hypothesis (#1 block)
+    el.querySelectorAll(".advtabs button, .advrow").forEach((b) => b.onclick = () => { advSel = +b.dataset.i; advRender(); advFit(); });
     el.querySelectorAll("[data-sc]").forEach((c) => { c.onmouseenter = () => setHl(c.dataset.sc); c.onmouseleave = () => setHl(null); });
     const fitB = el.querySelector(".advfit"), llmB = el.querySelector(".advllm");   // both absent while the panel is collapsed (Zwiń)
     if (fitB) fitB.onclick = advFit; if (llmB) llmB.onclick = advLlm;
@@ -826,6 +826,16 @@ function tlInit() {
   ro.observe(el);
 }
 tlInit();
+// --- #1 (AI Mateusza #1, ASK AI Andrzeja): the collapsed Doradca shows EVERY alarm-level hypothesis, one row each (level,
+// title, score 0-1, linked incidents), so a second alarm (e.g. kolej 0,83 next to zapora 0,97) is visible without "Rozwiń".
+// A row selects that hypothesis (map + linked cards) like the tabs of the open panel. No alarm: the old one-line summary.
+function advCollapsedHTML(hs, h) {
+  const al = hs.map((x, i) => [x, i]).filter(([x]) => x.level === "alarm");
+  if (al.length < 2) return `<p class="help one">${esc(h.title)} · ${h.incidents.length} akcji · <button class="advt2" type="button">Pokaż szczegóły</button></p>`;
+  return `<ul class="advrows">${al.map(([x, i]) => `<li><button type="button" class="advrow${i === advSel ? " on" : ""}" data-i="${i}" title="Dla operatora: wynik ${num2(x.score)} (0-1). Kliknij: pokaż powiązane akcje na mapie.">`
+    + `<span class="lvl ${esc(x.level)}">${esc(x.id)}</span><span class="t">${esc(x.title)}</span><span class="n mono">${num2(x.score)}</span><span class="mute">${x.incidents.length} akcji</span></button></li>`).join("")}</ul>`
+    + `<p class="help one"><button class="advt2" type="button">Pokaż szczegóły</button></p>`;
+}
 // --- #1 (AI Mateusza #1, for #2's timeline): a marker or a row name opens the incident in Historia at that moment
 // (/app ?time=hist&t=HH:MM, app.js boot), markers get the dock-style tooltip "HH:MM · title". Phone: a tap opens.
 const histURL = (sc, clock) => PICK ? openURL(sc) : `./?role=operator&mode=akcja&time=hist&sc=${encodeURIComponent(sc)}${clock ? `&t=${encodeURIComponent(clock)}` : ""}`;

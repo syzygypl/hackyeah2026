@@ -345,3 +345,9 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 /* #1 (AI Mateusza #1): timeline markers open Historia at that moment */
 #tl .tlr .tlk[data-at]{cursor:pointer}
 #tl .tlr .tlk[data-at]:hover{transform:scale(1.5)}
+/* #1 (AI Mateusza #1): collapsed Doradca - one row per alarm hypothesis */
+#advisor .advrows{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:3px}
+#advisor .advrow{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;width:100%;text-align:left;font:inherit;font-size:var(--rl-fs-s);background:none;border:1px solid var(--rl-line);border-radius:var(--rl-radius-s);padding:3px 8px;cursor:pointer;color:inherit}
+#advisor .advrow.on{border-color:var(--rl-line-strong);background:var(--rl-card)}
+#advisor .advrow .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#advisor .advrow .lvl{font-size:var(--rl-fs-xs)}
