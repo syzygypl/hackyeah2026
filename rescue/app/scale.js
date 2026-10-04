@@ -38,11 +38,11 @@ export function paintGrid(grid, cols, rows, canvas = document.createElement("can
 export const gradientCSS = () => `linear-gradient(90deg, ${STOPS.map((s, i) => `rgba(${s.color.join(",")},${Math.max(s.alpha, 0.35)}) ${Math.round((i / (STOPS.length - 1)) * 100)}%`).join(", ")})`;
 
 /** Legend markup: title, ramp, stop labels. Style it with the host page's tokens. */
-export function legendHTML(title = "Waga mapy względem średniej komórki") {
-  return `<div class="rl-legend" style="font:11px/1.3 var(--rl-font,sans-serif);color:var(--rl-ink-2,#b7c3cd)">
-  <div>${title}</div>
+export function legendHTML(title = "Waga mapy") {   // sens-funkcji #13: niska / średnia / wysoka like the phone, the multipliers only in the (i) title
+  return `<div class="rl-legend" style="font:11px/1.3 var(--rl-font,sans-serif);color:var(--rl-ink-2,#b7c3cd)" title="Waga mapy względem średniej komórki: ${STOPS.map((s) => s.label).join(" · ")}; poniżej 0,5× bez koloru">
+  <div>${title} <span style="cursor:help">ⓘ</span></div>
   <div style="height:8px;border-radius:4px;margin:3px 0;background:${gradientCSS()}"></div>
-  <div style="display:flex;justify-content:space-between">${STOPS.map((s) => `<span>${s.label}</span>`).join("")}</div></div>`;
+  <div style="display:flex;justify-content:space-between"><span>niska</span><span>średnia</span><span>wysoka</span></div></div>`;
 }
 
 if (typeof window !== "undefined") window.RescueScale = { STOPS, ratio, colorFor, paintGrid, gradientCSS, legendHTML };

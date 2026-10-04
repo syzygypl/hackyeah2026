@@ -395,7 +395,7 @@
         e.quantilesKm.forEach((q, j) => {
           f.push(poly(circle(e.point[0], e.point[1], q * 1000, 120), { color: '#ffffff', width: 1.4, opacity: 0.75, dash: 1, fillOpacity: 0 }));
           const lat = e.point[0] + (q * 1000) / 110540;
-          if (lat < M.bbox.north) chips.push({ key: 'ring' + j, at: [e.point[1], lat], cls: 'chip ring', html: `${[25, 50, 75, 95][j] || ''}% · ${nf(q, 1)} km`, title: 'Pierścień Koestera (ISRID, wartości przybliżone)' });
+          if (lat < M.bbox.north) chips.push({ key: 'ring' + j, at: [e.point[1], lat], cls: 'chip ring', html: `${[25, 50, 75, 95][j] || ''}% osób w ${nf(q, 1)} km${j ? '' : ' (Koester)'}`, title: 'Pierścień Koestera (ISRID, wartości przybliżone): tylu zaginionych tego typu odnajduje się w tej odległości od miejsca zaginięcia' });
         });
       }
       if (h.kind === 'route' && e.points) {
@@ -1110,9 +1110,9 @@
       $('#legend').innerHTML = `<div class="lg-title">Trudność terenu (silnik)</div><div class="lg-diff">${cls.map((c) => `<span><i class="lg-sw" style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`;
       return;
     }
-    $('#legend').title = `Waga mapy w komórce 100 x 100 m względem średniej: 1× = średnio ${pct(1 / S.M.N, 3)} na komórkę; poniżej 0,5× bez koloru`;
-    $('#legend').innerHTML = `<div class="lg-title">Waga mapy <span class="lg-sub">względem średniej</span></div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
-      <div class="lg-stops">${SCALE.STOPS.map((x) => `<span>${x.label}</span>`).join('')}</div>
+    $('#legend').title = `Waga mapy w komórce 100 x 100 m względem średniej: 1× = średnio ${pct(1 / S.M.N, 3)} na komórkę (${SCALE.STOPS.map((x) => x.label).join(' · ')}); poniżej 0,5× bez koloru`;   // sens-funkcji #13: niska / średnia / wysoka like the phone, multipliers in the (i) title
+    $('#legend').innerHTML = `<div class="lg-title">Waga mapy <span class="lg-sub" style="cursor:help">ⓘ</span></div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
+      <div class="lg-stops"><span>niska</span><span>średnia</span><span>wysoka</span></div>
       <div class="lg-keys"><span><i class="k ln-seg"></i>top 3</span><span><i class="k ln-srch"></i>przeszukany</span></div>`;
   }
 
