@@ -23,7 +23,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 | Stan serwera | https://rescue-locator.vercel.app/health (ma być `"llm":"llm-openai"`, `"store":"shared"`) |
 
 **Klucz akcji (zapis).** Na Vercel odczyt jest otwarty, każdy zapis wymaga klucza. Dwa klucze żyją tylko w zmiennych Vercel: operatora `RESCUE_PIN` (wszystko) i terenowy `RESCUE_FIELD_PIN` (tylko meldunki i ślady). Klucz operatora weź od Mateusza prywatnie (nigdy w wątku ani w repo).
-1. **Zanim podłączysz projektor**: w aplikacji operatora wpisz klucz w pole **Klucz** w pasku (pole pokazuje go jawnie). Zostaje w `localStorage`.
+1. **Zanim podłączysz projektor**: w aplikacji operatora kliknij kłódkę w pasku (albo **Udostępnij**) i wpisz klucz w oknie (pole ukryte jak hasło). Zostaje w `localStorage`; kłódka robi się zielona i otwarta.
 2. Kliknij **Udostępnij**. Dialog pokazuje 3 kody QR: *Ratownik (telefon)* z kluczem terenowym, *Operator (drugi komputer)* z kluczem operatora (nie na rzutnik), *Podgląd (jury)* bez klucza. Brak klucza na laptopie = komunikat "linki są tylko do podglądu".
 3. Telefonem 1 zeskanuj QR **Ratownik**. Klucz zapisuje się w telefonie i znika z paska adresu. Wybierz zespół **Patrol TOPR A**.
 
@@ -108,7 +108,7 @@ Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kol
 |---|---|
 | Pierwsza mapa ładuje się ok. 4-8 s, Centrum zwykle < 2 s | Karty otwarte i rozgrzane w T-30; nigdy nie otwieraj nowej karty na scenie. |
 | Brak Wi-Fi / Vercel nie odpowiada | Laptop i telefony na hotspot; dalej źle: lokalny Rust w Dockerze (Plan B wyżej, otwieraj przez IP laptopa), awaryjnie `swift run rescue-server`, a jak i to nie - nagranie wideo. |
-| "Zmiany wymagają klucza akcji" / 401 | Na laptopie wpisz klucz w pole Klucz (odłącz projektor); telefon: zeskanuj ponownie QR Ratownik. |
+| "Zmiany wymagają klucza akcji" / 401 | Na laptopie kliknij kłódkę (albo Udostępnij) i wpisz klucz w oknie (odłącz projektor); telefon: zeskanuj ponownie QR Ratownik. |
 | Cudze dane: obce ślady, zakończone akcje, inne przydziały | **Udostępnij -> Wyczyść akcję**, potem przydział TOPR A -> S7; "Test nocny" na liście ignoruj (znany problem #1). |
 | Telefon bez GPS / w hali brak fixa | https://rescue-locator.vercel.app/web/patrol/?sc=zawrat&run=/api/run/zawrat&team=topr-a&me=49.216,20.018 (`?me=lat,lon` udaje pozycję; klucz już jest w telefonie z QR). |
 | Strzałka kierunku "nie tak" | Od c0ee99f strzałka obraca się wg kompasu telefonu (na iPhonie najpierw "Włącz kompas"). Bez kompasu pokazuje "▲N · północ u góry": trzymaj telefon północą do góry. Na pokazie bez GPS: ?me=lat,lon, a kierunek: ?heading=NN. |
