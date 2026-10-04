@@ -56,7 +56,7 @@ Kryteria (DEFENCE): **I** innowacja 30%, **K** związek z kategorią 20%, **U** 
 | # | Czas | Klik / URL | Co widać | Zdanie (PL) | Kryt. |
 |---|---|---|---|---|---|
 | 1 | 0:00-0:20 | Karta 1: Zawrat, **Historia**, oś na początku (URL z `&step=0` albo ⏮) | mapa Doliny Pięciu Stawów, IPP przy schronisku, pierścienie | "Sobota 17:40, żona dzwoni: mąż poszedł sam na Zawrat. Mgła, zaraz zmrok, a ratownik ma tylko okruchy informacji." | K |
-| 2 | 0:20-0:50 | Przesuń oś czasu do 18:30 (plan trasy, auto na Palenicy, BTS 14:12, mgła); odznacz jedną wskazówkę na liście po lewej i zaznacz z powrotem | mapa przelicza się po każdej wskazówce, top 3 sektory po prawej | "Każda wskazówka to osobny moduł, mapa liczy się na żywo i od razu mówi, gdzie szukać najpierw." | I, D |
+| 2 | 0:20-0:50 | Przesuń oś czasu do 18:30 (plan trasy, auto na Palenicy, BTS 14:12, mgła); odznacz jedną wskazówkę w Sygnałach (☰ w doku) i zaznacz z powrotem | mapa przelicza się po każdej wskazówce, top 3 sektory po prawej | "Każda wskazówka to osobny moduł, mapa liczy się na żywo i od razu mówi, gdzie szukać najpierw." | I, D |
 | 3 | 0:50-1:20 | **▶** albo przesuń oś 18:40 -> 20:03 | sektory wracają puste, dron nic, Żleb pod Zawratem wskakuje na #1, śmigłowiec, **ZNALEZIONO** | "Brak wyniku to też informacja. Prawdopodobieństwo spływa do żlebu, plan wysyła tam śmigłowiec - 20:03, znaleziony." | I |
 | 4 | 1:20-1:55 | Przełącz na **Na żywo** (19:45). Telefon: **Pogoda · status · meldunek** -> wpisz `S8 pusto, widoczność 50 m` -> **Wyślij meldunek** | na laptopie w ciągu ~3 s wpis w panelu *Na żywo* (podświetlony, "Niepotwierdzone: 1"), mapa się przelicza; kliknij **Potwierdź wszystkie** -> na telefonie do 15 s "Operator potwierdził Twój meldunek ✓" | "Ratownik pisze zwykłym zdaniem, model zamienia to w dowód, kierownik potwierdza jednym klikiem." | U, C |
 | 5 | 1:55-2:15 | Link **Centrum - wszystkie akcje** (karta 2). Przeciągnij wolny zespół na kartę Morskiego Oka. Telefon: **ŚLAD / ZNALEZIONO** -> **poszkodowany ZNALEZIONY** -> Wyślij | 18 akcji na mapie Polski (1 LIVE); po kilku-kilkunastu s Zawrat przechodzi do **Zakończone**, zespoły wracają do puli, telefon: "Akcja zakończona" | "Centrala widzi wszystkie akcje i jedną pulę zespołów. Znalezienie w terenie zamyka akcję i zwalnia ludzi do następnej." | K, U |
@@ -69,7 +69,7 @@ Jeśli zostaje czas albo jury pyta (każde ~10 s):
 - **Odprawa** (`odprawa.html?sc=zawrat`): cała odprawa kierownika na jednej stronie A4 do druku.
 - **Rodzina** (`rodzina.html`): "Ktoś zaginął - co robić": najpierw 112, potem lista tego, o co pyta dyspozytor.
 
-Uwaga do kroku 2 (stan na `1db6bc4`): odznaczenie wskazówki przelicza dziś tylko widok 3D, a mapa 2D i panel zostają bez zmian (qa-demo-path.md, B1/B2). Dopóki to nie jest poprawione, w kroku 2 tylko przesuwaj oś, bez odznaczania.
+Krok 2 na produkcji (`4973b34`, z 33a6ad6): odznaczenie wskazówki w **Sygnałach (☰ w doku)**, np. "CPR 112: ostatni sektor BTS 14:12" o 18:05, przelicza panel, mapę 2D i 3D na to samo top 3 (S4/S3/S6 -> S3/S2/S4), a ↺ przywraca. Sprawdzone headless 02:10.
 
 Nie pokazujemy: procentów POA jako szansy, trybu Walidacja, oceny LLM, Monitoringu, "+ Nowa akcja" (patrz `najmocniejsze-funkcje.md`, "Czego NIE pokazywać").
 
