@@ -338,7 +338,7 @@ function setEvidence(id, on, from) {
   for (const k in FRAMES) if (k !== from) postTo(k, { type: "evidence", id, on });
   renderEvents();
   $("evReset").hidden = !evOff.size;
-  if (!evOff.size && store.evTop) { store.evTop = null; renderPanels(); }
+  if (!evOff.size && store.evTop) { store.evTop = null; renderPanels(); tlPostTime(undefined, true); }
 }
 $("events").addEventListener("change", (e) => { const c = e.target.closest(".evt"); if (c) setEvidence(c.dataset.hint, c.checked, "panel"); });
 $("events").addEventListener("click", (e) => { if (e.target.closest(".evt")) e.stopPropagation(); }, true);
@@ -736,7 +736,7 @@ addEventListener("message", (e) => {
     if (tlDoc() && store.minute != null) tlPostOne(k, tlDoc(), store.minute, tlFrameAt(tlDoc(), store.minute));
   }
   if (m.type === "time" && Number.isFinite(m.minute) && F.ready) setMinute(m.minute, k);
-  if (m.type === "top3" && k === "2da") { store.evTop = evOff.size && Array.isArray(m.ids) && m.ids.length ? m.ids.map(String) : null; renderPanels(); } // signal off: the 2D's recomputed ranking
+  if (m.type === "top3" && k === "2da") { store.evTop = evOff.size && Array.isArray(m.ids) && m.ids.length ? m.ids.map(String) : null; renderPanels(); tlPostTime(k, true); }   // the 3D labels follow (msg.top) // signal off: the 2D's recomputed ranking
   if (m.type === "cinema") { document.body.classList.toggle("cinema", !!m.on); pushInsets(); } // 3D Kino: panels step aside, full-frame shots
   if (m.type === "select" && (typeof m.segmentId === "string" || m.segmentId === null)) selectSeg(m.segmentId, k);
   if (m.type === "evidence" && typeof m.id === "string") setEvidence(m.id, !!m.on, k);
@@ -1317,7 +1317,7 @@ function tlPostOne(k, T, m, frame) {
   if (frame && last && frame !== last && playing && now - (TLP.sentAt[k] || 0) < 180 && last.minute <= m) frame = last;
   if (frame) { msg.frameMinute = frame.minute; if (last !== frame) { msg.frame = frame; TLP.sent[k] = frame; TLP.sentAt[k] = now; } }
   // the panel's top 3 (tlSegments: the minute's frame in Historia, the step on Na żywo) - the views label the same sectors #1-#3
-  const S = curStep(); if (S) msg.top = tlSegments(S).slice(0, 3).map((g) => g.id);
+  const S = curStep(); if (S) msg.top = evOff.size && store.evTop ? store.evTop.slice(0, 3) : tlSegments(S).slice(0, 3).map((g) => g.id);   // = the panel (a signal off: the 2D's recomputed top 3)
   postTo(k, msg);
 }
 // throttled to ~30 messages per second (the last one always goes out); force = now
