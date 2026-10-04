@@ -20,3 +20,22 @@ Fixed right away: #3 and #8 (7ec0f2a). The rest goes to the owners.
 | 13 | minor | Swift server only | No /api/positions, /api/schedule, /api/notifications in Swift: 404 every 5 s locally (fallbacks work; Rust deploy fine) | AI Andrzeja (Swift parity, optional) | open |
 
 Works: 2D / 3D / 2D+3D switching, Historia / Na żywo, play and scrub, Zmień scenariusz in place, events drawer, Udostępnij, Instrukcja, roles, Więcej (Teren, Monitoring, Walidacja); bell (filters, Potwierdź after reload, Otwórz in place zoomed); Centrum cards, map, Doradca (no links before incidents start), Grafik 24/7; zasoby, odprawa, porównanie, ćwiczenia, start, czat, rodzina without errors and without sideways scroll on a phone; ratownik phone layout; mazury-burza-sniardwy, senior-demencja-lodz, paralotniarz-beskidy, krakow-nowa-huta, zapora-zaluz in 2D and 3D with "% obszaru".
+
+## Runda 2 (~22:00, origin/main 1e8dc99)
+
+Agent QA AI Mateusza #1, same setup (local Swift, headless Chrome 1440 / 1100 / 390, read-only). No JS exceptions. Round-1 fixes re-checked and holding (#1, #2, #4, #10, Centrum overlap), except the loader text (regression of #6, here #2).
+
+| # | Sev | Where / steps | What happens vs expected | Owner (likely file) | Status |
+|---|---|---|---|---|---|
+| 1 | major | Centrum ?sim=1&simAt=07:55 | Myczkowce / Uherce cards "Brak mapy dla tej chwili": /api/run/zapora-*?t= 404 "no timeline" for all 7 zapora-* (lesko, huzele, zaluz, tlo-tarnica, tlo-olszanica, myczkowce, uherce); expected Top 3 like the others | AI Andrzeja (zapora-* timeline / tracks, like 59f1e9b) | open |
+| 2 | major (honesty) | /app loader on switch and first load | "Silnik - mapa prawdopodobieństwa…" back (4e78ab2 re-touched app.js); 3D frame "Mapa prawdopodobieństwa, sygnały i zespoły…" (app3d.js); web/photo legend "Prawdopodobieństwo…" | #1 (app.js, web/photo), AI Andrzeja (app3d.js) | shell + photo fixed (this commit), 3D open |
+| 3 | major | /app Akcja / Plan at 1100x800 | Bar 140 px too wide: ? and Rola off screen, Udostępnij cut | #1 (app.css) | fixed (this commit) |
+| 4 | minor | /app Zmień scenariusz at 1440 / 390 | Pick overlay opens scrolled to the current scenario: title and Wróć out of view, no way out but Esc (none on a phone) | #2 (centrum.js pick embed) | #2 working |
+| 5 | minor | Centrum phone, Doradca toast -> Otwórz | Panel opens ~22 500 px down, no scroll to it | #1 (centrum.js advNotes) | fixed (this commit) |
+| 6 | minor | Centrum team movement | TM_SCS hardcoded without dywersja-poprad(-2) (tracks since 59f1e9b); zapora-* no tracks; team dots tiny, under the incident marker at zoom 11 | #2 (centrum.js) | #2 working |
+| 7 | minor | /app 3D on a phone | Sterowanie 3D open over half the view and "Test na ślepo" | AI Andrzeja | fixed 61ba997 |
+| 8 | minor | /app 3D pozar-biebrza | "#2 Łąki i rowy…" label over the #1 sector name | AI Andrzeja (3D label declutter) | open |
+| 9 | minor | Centrum at 1100 | Grafik 24/7 hour axis labels overlap; "Bieszczady / Dolina Sanu" map label cut by Zespoły | #2 (centrum.css) | #2 working |
+| 10 | minor (test) | test_panels.py | hover_opens_right / held_after_leave_right red: headless Chrome sends no pointerenter to #right coming out of the 2D iframe | #1 (test) | fixed (this commit) |
+
+Works: panels (106 checks), bell (Doradca ALARM, Czas do potwierdzenia, escalation badge and red toast, system notifications off by default, /app toasts only after load), team movement at Morskie Oko, water3d in zawrat / kasprowy / morskie-oko / zapora-zaluz / mazury-burza-sniardwy, readable fog start views (dywersja-poprad, pozar-biebrza). Not checked: traffic off forest roads (faa78bb).

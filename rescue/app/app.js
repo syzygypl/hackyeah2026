@@ -1310,7 +1310,7 @@ async function switchScenario(sc, push = true, fromPick = false) {
   stopPlay();
   Object.assign(store, { selSeg: null, selEv: null });
   const sp = FRAMES["2da"]; if (sp.spare) { sp.spare.remove(); sp.spare = null; sp.spareReady = null; }
-  window.__boot?.step("Silnik - mapa prawdopodobieństwa…");
+  window.__boot?.step("Silnik - mapa poszukiwań…");
   try { await loadScenario(sc); } catch (e) { toast(plErr(e), 5000); window.__boot?.done(); return; }
   if (store.scenario !== sc) return;   // a newer switch (Back/Forward) took over: its own loader
   if (store.role === "operator" && Object.values(FRAMES).some((F) => F.visible())) window.__boot?.step("Mapa…"); else window.__boot?.done();   // no scene view to wait for

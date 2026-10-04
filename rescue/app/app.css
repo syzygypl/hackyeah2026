@@ -573,3 +573,11 @@ header>.lfhost[hidden],body.role-ratownik header>.lfhost,body.role-ratownik .lft
    Rola off screen at 1440 px. In Plan the story is always Historia (no Na żywo), the scenario is the studio and a new live action
    needs Na żywo, so those three go and the bar fits again */
 body.mode-edycja header>#tmode,body.mode-edycja header>.scenlbl,body.mode-edycja header>#newActionBtn{display:none!important}
+/* qa-wieczor round 2 #3 (AI Mateusza #1): 1100 px - the bar ran 140 px past the edge (? and Rola off screen); tighter gaps and padding,
+   13 px labels between the phone layout and 1250 px, same items */
+@media (min-width:601px) and (max-width:1250px){
+  header{gap:4px!important;column-gap:4px!important}
+  header>button,header>a,header>.scenlbl>button,header .views button,header .lfbell{padding-left:7px!important;padding-right:7px!important}
+  header>button:not(#newActionBtn),header>a:not(#centrumLink),header>.scenlbl>button,header .views button{font-size:13px!important}   /* not the two short-label links (font-size:0 + ::after) */
+  header>h1 .logo{margin-right:0}
+}

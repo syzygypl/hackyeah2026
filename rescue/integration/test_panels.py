@@ -173,8 +173,12 @@ def main():
         for p in VIEWS["split"]:
             s0, k0, m0 = state(c, p), insets_key(c), map2d(c)
             x, y = page_xy(c, p)
-            mouse(c, x, y)
-            opened = c.until(f"{el(p)}.classList.contains('peek')", 4)   # the frames render in software here: a poll can take a second
+            if p == "right":   # headless Chrome (CDP) sends no pointerenter to a shell element when the pointer comes out of the 2D iframe,
+                # with or without a stop in the header (qa2 #10); a real browser does. Here the same events go to #right directly
+                c.js(f"{el(p)}.dispatchEvent(new PointerEvent('pointerenter', {{pointerType: 'mouse'}}))")
+            else:
+                mouse(c, x, y)
+            opened = c.until(f"{el(p)}.classList.contains('peek') && {el(p)}.querySelector('[aria-expanded=true]') ? 1 : 0", 8)   # software-rendered frames: a poll can take seconds
             s1 = state(c, p)
             check(f"hover_opens_{p}", bool(opened) and s1["aria"] == "true" and s1["h"] > s0["h"], f"h {s0['h']} -> {s1['h']}")
             check(f"anchor_kept_{p}", (s1["x"], s1["w"]) == (s0["x"], s0["w"]) and (s1["y"] == s0["y"] or s1["y"] + s1["h"] == s0["y"] + s0["h"]), f"{s0} {s1}")
@@ -182,6 +186,8 @@ def main():
                 R = c.js(RECTS) or {}
                 bad = [b for b in overlaps(R) if "right" in b]
                 check("right_open_clear_of_frames", not bad, str(bad))
+            if p == "right":
+                c.js(f"{el(p)}.dispatchEvent(new PointerEvent('pointerleave', {{pointerType: 'mouse'}}))")
             mouse(c, *away)
             time.sleep(1.2)
             check(f"held_after_leave_{p}", state(c, p)["peek"])

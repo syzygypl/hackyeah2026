@@ -113,7 +113,7 @@
       <ul>
         <li>Na zdjęciu wykrywamy linię horyzontu (granica nieba i grani).</li>
         <li>Z modelu terenu liczymy, jak wygląda horyzont z każdej z 3600 komórek siatki i w każdym kierunku.</li>
-        <li>Porównujemy profile - im lepsze dopasowanie, tym większe prawdopodobieństwo komórki. Wynik dokłada się do mapy poszukiwań.</li>
+        <li>Porównujemy profile - im lepsze dopasowanie, tym większa waga komórki. Wynik dokłada się do mapy poszukiwań.</li>
       </ul>
     </div>
     <div class="card limits">
@@ -165,7 +165,7 @@
   $("eAcc").textContent = `±${Math.round(exif.point.accM)} m`;
   $("eErr").textContent = `${Math.round(ev.exif.errM)} m`;
   $("toplist").innerHTML = clue.top.slice(0, 5).map((t, i) => `${i + 1}. ${t.lat.toFixed(5)}, ${t.lon.toFixed(5)} · kierunek patrzenia ${Math.round(t.headingDeg)}°`).join("<br>");
-  $("legend").innerHTML = legendHTML("Prawdopodobieństwo względem średniej komórki");
+  $("legend").innerHTML = legendHTML("Waga mapy względem średniej komórki");
 
   // ---------- horizon line over the photo ----------
   const [W, H] = clue.imageWH;

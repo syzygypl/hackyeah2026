@@ -1031,7 +1031,7 @@ function advNotes(now) {
     const name = (sc) => { const x = incidents.find((i) => i.sc === sc); return x ? short(x) : sc; };
     return { key: `adv:${id}|${sim.lf ? sim.lf.warsaw(ms).day : ""}`, type: "adv", ms, title: h.title, sub: h.incidents.map(name).join(", "),
       st: `${LEVEL[h.level] || h.level} · ${akcje(h.incidents.length)} · wynik ${num2(h.score)}`,
-      onOpen: () => { const i = (adv.hypotheses || []).findIndex((x) => x.id === h.id); if (i < 0) return; advSel = i; advOpen = true; try { localStorage.setItem("rescue-advisor-open", "1"); } catch (e) {} const b = document.querySelector(".lfbell[aria-expanded=true]"); if (b) b.click(); advRender(); advFit(); } };
+      onOpen: () => { const i = (adv.hypotheses || []).findIndex((x) => x.id === h.id); if (i < 0) return; advSel = i; advOpen = true; try { localStorage.setItem("rescue-advisor-open", "1"); } catch (e) {} const b = document.querySelector(".lfbell[aria-expanded=true]"); if (b) b.click(); advRender(); advFit(); if (innerWidth <= 900) $("advisor").scrollIntoView({ behavior: "smooth", block: "start" }); } };   // phone / narrow: the stacked page puts Doradca far below (qa2 #5)
   });
 }
 function advCollapsedHTML(hs, h) {
