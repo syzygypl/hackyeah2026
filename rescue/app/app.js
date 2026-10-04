@@ -88,7 +88,7 @@ function applyRun(run, extra = {}, why = "run") {
   const fit = !store.run || JSON.stringify(store.run.bbox) !== JSON.stringify(run.bbox);
   if (why === "load") evOff.clear();
   set({ ...extra, run, step: run.steps ? run.steps.length : 1 }, why);
-  if (fit && run.bbox && mapReady) map.fitBounds([[run.bbox.west, run.bbox.south], [run.bbox.east, run.bbox.north]], { padding: 20, duration: 0 });
+  if (fit && run.bbox && mapReady) fitRun(run.bbox);
   if (fit && run.bbox) swapBasemap(run.bbox);
   fetchAssessment();
 }
@@ -147,7 +147,7 @@ function setupLayers() {
   map.addLayer({ id: "ev-fill", type: "fill", source: "ev", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["get", "color"], "fill-opacity": 0.08 } });
   map.addLayer({ id: "ev-line", type: "line", source: "ev", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": ["get", "color"], "line-width": ["coalesce", ["get", "w"], 2], "line-dasharray": [2, 1.5] } });
   mapReady = true;
-  if (store.run && store.run.bbox) map.fitBounds([[store.run.bbox.west, store.run.bbox.south], [store.run.bbox.east, store.run.bbox.north]], { padding: 20, duration: 0 });
+  if (store.run && store.run.bbox) fitRun(store.run.bbox);
   renderMap();
 }
 // Offline basemap of the run's region (Tatry, Bieszczady, ..., Kraków); the style swap re-adds our layers via style.load
@@ -162,7 +162,15 @@ async function swapBasemap(bb) {
 }
 // style.load fires without a paint (hidden tabs); "load" waits for the first frame
 map.on("style.load", setupLayers); map.on("load", setupLayers); if (map.isStyleLoaded()) setupLayers();
-map.on("resize", () => { if (renderMap.stale) renderMap(); });   // a hidden #map skipped renderMap; setView / setRole resize it when it shows
+map.on("resize", () => { if (renderMap.stale) renderMap(); if (fitRun.pending) fitRun(fitRun.pending); });   // a hidden #map skipped renderMap / fitRun; setView / setRole resize it when it shows
+// the run's area on the shell map. #map is display:none outside Plan (0x0 canvas): fitBounds there only warned "Map cannot fit within
+// canvas" (rodzina-dziecko-las) - fit when it shows; the 20 px margin shrinks to what the free area (canvas minus insets) allows
+function fitRun(bb) {
+  const c = map.getContainer(), p = map.getPadding(), free = Math.min(c.clientWidth - p.left - p.right, c.clientHeight - p.top - p.bottom);
+  if (!(free > 8)) { fitRun.pending = bb; return; }
+  fitRun.pending = null;
+  map.fitBounds([[bb.west, bb.south], [bb.east, bb.north]], { padding: Math.min(20, Math.floor(free / 4)), duration: 0 });
+}
 function circle(c, rM, n = 48) {
   const k = 111320, ring = [];
   for (let i = 0; i <= n; i++) { const a = i / n * 2 * Math.PI; ring.push([c[1] + rM * Math.sin(a) / (k * Math.cos(c[0] * Math.PI / 180)), c[0] + rM * Math.cos(a) / k]); }

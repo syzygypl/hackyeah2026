@@ -1260,7 +1260,10 @@
     const map = S.view && S.view.map; if (!map || !S.M) return;
     const { west, south, east, north } = S.M.bbox;
     map.setPadding({ top: T, right: Rr, bottom: Bm, left: L });
-    map.fitBounds([[west, south], [east, north]], { padding: 24, duration: 0 });
+    // free area = canvas minus the insets; 0 while the shell hides this frame (Plan, 3D): fitBounds there only warned "Map cannot fit
+    // within canvas" (rodzina-dziecko-las) - the shell sends insets again when the view shows. The 24 px margin shrinks to fit.
+    const c = map.getContainer(), free = Math.min(c.clientWidth - L - Rr, c.clientHeight - T - Bm);
+    if (free > 8) map.fitBounds([[west, south], [east, north]], { padding: Math.min(24, Math.floor(free / 4)), duration: 0 });
   }
   function onHover(i, pt) {
     const tip = $('#tip');
