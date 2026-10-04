@@ -112,3 +112,27 @@ export function focusUnion(ts) {
   const t = ts.filter(Boolean); if (!t.length) return null;
   return { bbox: t.reduce((b, x) => joinBox(b, x.bbox), null), kind: t.some((x) => x.kind === "found") ? "found" : t[t.length - 1].kind, segIds: [...new Set(t.flatMap((x) => x.segIds || []))] };
 }
+// hover-hold (Mateusz 2026-10-04): a panel opens on hover and stays open a while after the pointer leaves. Shared helper - the dock
+// uses it, the right panels and the 2D legend may too. hoverHold(el, {intentMs, holdMs, onOpen, onClose, cls}) toggles `cls`
+// (default "peek") on el: mouse/pen = open after intentMs over el (passing over does nothing), close holdMs after leaving, re-entry
+// cancels; keyboard = open on focus inside, close holdMs after focus leaves; touch = a tap opens, close holdMs after the last touch
+// or at once on a tap outside; held open while a pointer is pressed inside (slider scrub). Esc closes. Reduced motion: the CSS
+// (@media prefers-reduced-motion) drops the animation, the timing stays. Returns {open, close, isOpen}.
+export function hoverHold(el, { intentMs = 150, holdMs = 3000, onOpen, onClose, cls = "peek" } = {}) {
+  if (!el) return null;
+  let on = false, t = 0, down = false, hover = false;
+  const set = (v) => { clearTimeout(t); if (v === on) return; on = v; el.classList.toggle(cls, v); const f = v ? onOpen : onClose; if (f) f(el); };
+  const later = (v, ms) => { clearTimeout(t); if (v !== on) t = setTimeout(() => set(v), ms); };
+  el.addEventListener("pointerenter", (e) => { if (e.pointerType === "touch") return; hover = true; if (on) clearTimeout(t); else later(true, intentMs); });
+  el.addEventListener("pointerleave", (e) => { if (e.pointerType === "touch") return; hover = false; if (down) return; if (on) later(false, holdMs); else clearTimeout(t); });
+  el.addEventListener("pointerdown", () => { down = true; set(true); });
+  addEventListener("pointerup", (e) => { if (!down) return; down = false; if (on && (e.pointerType === "touch" || !hover)) later(false, holdMs); }, true);
+  addEventListener("pointercancel", () => { if (!down) return; down = false; if (on) later(false, holdMs); }, true);
+  addEventListener("pointermove", (e) => { if (down && !e.buttons) { down = false; if (on && !hover) later(false, holdMs); } }, true);   // released over the map iframe
+  document.addEventListener("pointerdown", (e) => { if (on && !el.contains(e.target)) set(false); }, true);   // a tap / click outside
+  addEventListener("blur", () => { if (on && !hover && !down) set(false); });   // ... also on the map, which is an iframe (focus leaves the page)
+  el.addEventListener("focusin", () => { if (!down) set(true); });
+  el.addEventListener("focusout", (e) => { if (on && !hover && !down && !el.contains(e.relatedTarget)) later(false, holdMs); });
+  el.addEventListener("keydown", (e) => { if (e.key === "Escape" && on) set(false); });
+  return { open: () => set(true), close: () => set(false), isOpen: () => on };
+}

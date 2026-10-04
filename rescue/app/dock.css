@@ -37,3 +37,12 @@ body.time-live .tlfill{background:var(--rl-danger)}
 .ticker .tk .tx{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tltip{position:fixed;z-index:70;pointer-events:none;padding:4px 8px;border-radius:var(--rl-radius-s);background:var(--rl-chrome);color:var(--rl-on-chrome);font:600 12px/1.3 var(--rl-font);white-space:nowrap;box-shadow:var(--rl-shadow)}
 .tltip[hidden]{display:none}
+/* hover-hold dock (hoverHold in dock.js, #bottom.peek): in Akcja with Sygnały off the event cards open as a layer ABOVE the dock row
+   (fade + 8 px slide), so --dock-h, the rails and the map padding never change (no map reflow, no layout shift) and the slider stays
+   under the pointer. Sygnały / Plan already show the cards in the dock, so nothing happens there; Kino hides the whole dock. */
+@media (min-width:901px){
+  body.float:not(.signals):not(.mode-edycja) #bottom{overflow:visible}
+  body.float:not(.signals):not(.mode-edycja) #bottom #events{display:flex;position:absolute;left:-1px;right:-1px;bottom:calc(100% + 6px);max-height:150px;padding:10px 12px;box-sizing:border-box;background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(8px);transition:opacity .18s ease,transform .18s ease,visibility 0s linear .18s}
+  body.float:not(.signals):not(.mode-edycja):not(.cinema) #bottom.peek #events{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition:opacity .18s ease,transform .18s ease}
+}
+@media (prefers-reduced-motion:reduce){body.float #bottom #events{transition:none!important;transform:none!important}}

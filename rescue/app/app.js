@@ -3,7 +3,7 @@
 // `swift run rescue-server` on a laptop). Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/basemap/basemap.js";
-import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML, focusTarget, focusUnion } from "./dock.js";   // compact dock, shared with Ćwiczenia
+import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML, focusTarget, focusUnion, hoverHold } from "./dock.js";   // compact dock, shared with Ćwiczenia
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
 import { initRescuer, render as renderRescuer, pollTask, myTeam, startGps } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
@@ -848,6 +848,7 @@ function showFirstRun(role) {
 }
 // Akcja: the event cards hide behind "Sygnały" so the dock is one line; Plan always shows them
 $("sigBtn").onclick = () => { const on = document.body.classList.toggle("signals"); $("sigBtn").setAttribute("aria-pressed", on); setTimeout(pushInsets, 50); };
+hoverHold($("bottom"));   // hover: the cards open above the dock and stay 3 s after leaving (dock.css #bottom.peek, no inset change)
 function setRescuerFrame() { const t = myTeam(); setFrame("frameRescuer", patrolURL(t)); }
 $("roleBtn").onclick = () => { $("rolePick").hidden = false; };
 $("rolePick").onclick = (e) => { const b = e.target.closest("[data-role]"); if (b) setRole(b.dataset.role); };
