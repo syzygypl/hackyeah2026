@@ -681,7 +681,8 @@ function syncFrame(k, why) {
   const u = frameURL(k); if (u === F.src && !F.dirty && why !== "edit" && why !== "run") return;
   if (!F.visible() && F.src) {   // a hidden warm view reloads in the background once the page idles (3D boot yields, 90c2681), so the next switch is instant
     F.dirty = true; clearTimeout(F.rw);
-    F.rw = setTimeout(() => (window.requestIdleCallback || ((f) => f()))(() => { if (F.visible() || !F.dirty || store.mode !== "akcja") return; const v = frameURL(k); F.src = v; F.ready = false; F.el.src = v; F.dirty = false; }, { timeout: 4000 }), 1500);
+    const t0 = Date.now();   // and only after a buffered 2D swap is done: both booting at once took the new 2D 2 s -> 16 s (chat.js measure)
+    F.rw = setTimeout(function go() { (window.requestIdleCallback || ((f) => f()))(() => { if (F.visible() || !F.dirty || store.mode !== "akcja") return; if (k !== "2da" && FRAMES["2da"].next && Date.now() - t0 < 20000) { F.rw = setTimeout(go, 700); return; } const v = frameURL(k); F.src = v; F.ready = false; F.el.src = v; F.dirty = false; }, { timeout: 4000 }); }, 1500);
     return;
   }
   clearTimeout(F.h);
