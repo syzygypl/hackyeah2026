@@ -523,8 +523,10 @@ header .livehead{overflow:hidden}
   header .scenlbl select{max-width:120px}
   body.float header{column-gap:8px!important}
 }
-/* QA mobile (qa-mobile.md "For AI Marcina" 4, 5): the field screen shows the key box only once the server asked for it (401), at touch size */
-body.role-ratownik:not(.pin-needed) header #pinbox{display:none!important}
+/* QA mobile (qa-mobile.md "For AI Marcina" 4, 5): the field screen shows the key box only once the server asked for it (401), at touch size.
+   pin-asked (a real 401 on a change, hidden again after 20 s unless typing), not pin-needed (set at boot whenever no key is stored): a rescuer without a key reads the map
+   and the task without the box popping up on every load */
+body.role-ratownik:not(.pin-asked) header #pinbox{display:none!important}
 body.role-ratownik header #pinbox input{min-height:44px;font-size:16px}
 #firstRunOk,#roleBtn{min-height:44px}
 /* QA (AI Michała, Walidacja at 1920 px): outside Akcja/Plan the bar is a plain top row - room for the NA ŻYWO / HISTORIA tab above it

@@ -56,12 +56,16 @@ async function send() {
   try {
     await C.api("/api/positions/" + encodeURIComponent(C.store.scenario), { unit: team, lat: +p[0].toFixed(6), lon: +p[1].toFixed(6), acc: Math.round(p[2] || 0), ts: Date.now(), source: SIM ? "sim" : "gps" });
     lastSent = { t: Date.now(), p, err: null };
-  } catch (e) { lastSent = { t: lastSent?.t || 0, p: lastSent?.p || p, err: e.message || "błąd sieci" }; }
+  } catch (e) {
+    lastSent = { t: lastSent?.t || 0, p: lastSent?.p || p, err: e.message || "błąd sieci" };
+    // no / wrong key: stop instead of retrying every 10 s (each retry re-raised the key prompt); one calm line, the box once
+    if (/klucz/i.test(e.message || "")) { sending = false; setShare(false); shareStatus(); const s = $("rShareStatus"); if (s) s.textContent = "Udostępnianie pozycji wymaga klucza ratownika - zeskanuj kod QR od kierownika akcji."; return; }
+  }
   sending = false; shareStatus();
 }
 function shareStatus(msg) {
   const s = $("rShareStatus"); if (!s) return;
-  if (!share) { s.textContent = ""; return; }
+  if (!share) { if (!/wymaga klucza/.test(s.textContent)) s.textContent = ""; return; }
   if (msg) { s.textContent = msg; return; }
   const acc = gps ? "dokładność ±" + Math.round(gps[2] || 0) + " m" : "czekam na GPS…";
   const ago = lastSent?.t ? Math.round((Date.now() - lastSent.t) / 1000) : null;

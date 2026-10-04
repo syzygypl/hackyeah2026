@@ -20,7 +20,7 @@ if (!LOOPBACK) { $("pinbox").style.display = ""; if (!PIN) document.body.classLi
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
   const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
-  if (r.status === 401) { document.body.classList.add("pin-needed"); throw new Error("Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz."); }
+  if (r.status === 401) { document.body.classList.add("pin-needed", "pin-asked"); clearTimeout(api.calm); api.calm = setTimeout(() => { if (document.activeElement !== $("pin")) document.body.classList.remove("pin-asked"); }, 20000); throw new Error("Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz."); }
   if (r.status === 404) throw new Error("Nie znaleziono danych na serwerze.");
   if (r.status >= 500) throw new Error("Serwer zgłosił błąd - spróbuj ponownie za chwilę.");
   if (!r.ok) throw new Error("Serwer odrzucił żądanie (" + r.status + ").");
