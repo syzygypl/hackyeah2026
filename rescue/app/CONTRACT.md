@@ -599,3 +599,15 @@ Kinds (real size, placed on the rendered terrain; `float` kinds sit on the water
 | `damaged-track` | torn rails, crater and barriers on the nearest railway; its `label` pin is drawn only when it is > 150 m from the IPP | - |
 
 Check: open `/app/3d/?embed=scene&sc=<sc>&step=<i>` (or the app); `?stats=1` exposes `window.__r3d.props.list` (kind, visibility). The older top-level `wreck` field (`{kind: "train", at, cars, sabotage: [{at, label}]}`) still works; new scenarios use `props`.
+
+## Live team positions (GPS from rescuers' phones) - v1
+
+Rust server only (`rescue/rs/src/server/positions.rs`); the Swift rescue-server has no counterpart (no parity needed). Wall-clock positions for the operator's live map, separate from the timeline's per-minute fixes, but fed into them (below).
+
+- `POST /api/positions/<sc> { unit, lat, lon, acc?, ts?, source? }` -> `{ ok, unit, ts, trail, fix }`. Field key like `POST /api/fix` (`X-Rescue-Pin`); `unit` = roster / resource id, may come from `X-Rescue-Team`; `acc` metres (default 15); `ts` ms since epoch from the phone (more than 10 min off = server time); `source`: `gps` (default) | `sim` (`?simgps=1` replay) | `manual` (operator-moved unit). A position older than the unit's last one is ignored (`ignored`). 400 bad body, 404 unknown scenario.
+- `GET /api/positions/<sc>?since=<ms>` -> `{ schema: "rescue-positions/1", sc, now, staleS: 120, units: [{ unit, lat, lon, acc, ts, ageS, stale, source, trail: [[lat, lon, ts], ...] }] }`. Latest position per unit plus its trail of the last 15 min (oldest first, current last); `since` = only units with a newer position; units silent for 30 min drop out. `stale` = no position for 2 min.
+- Storage: shared store doc `positions:<sc>` on Vercel (Neon), memory locally; cleared by `/api/reset`.
+- About once a minute per unit the position is also stored as a live fix (`POST /api/fix` store; `manual` as `src: est`), so `GET /api/tracks`, the timeline, coverage and Zasoby see the same GPS.
+- Phone (`app/rescuer.js`, role Ratownik): button "Udostępnij pozycję" next to "Moja pozycja" (added by the script, no change to `index.html`), remembered on the phone; sends every 10 s, or at once after 25 m; shows the accuracy and when the position was last sent. `?simgps=1` replays the team's scenario track (`GET /api/tracks/<sc>?live=0`, one track minute per 2 s, from where the team leaves its base) instead of the phone's GPS.
+- Operator 2D (`web/livepos.js`, loaded by `web/app.js` through `window.__rescue2d`): polls every 5 s; marker in the unit's colour with its name and the age of the position, trail of the last 10 min; stale = grey dot, dashed grey trail, "brak sygnału N min". Hidden in Historia (`?live=0` runs). 3D: not yet.
+- Test: `python3 rescue/integration/test_positions.py` (own server) or `--server <url> --pin <key>`.

@@ -31,7 +31,9 @@ pub fn is_write(q: &Req) -> bool {
     !["/api/run", "/api/parse", "/story/assessment", "/client-event"].contains(&q.path.as_str())
 }
 /// What a rescuer's phone may do with the field key (RESCUE_FIELD_PIN): send reports and clues.
-pub fn is_field_write(q: &Req) -> bool { q.method == "POST" && (q.path == "/report" || q.path == "/api/clue" || q.path == "/api/fix") }
+pub fn is_field_write(q: &Req) -> bool {
+    q.method == "POST" && (q.path == "/report" || q.path == "/api/clue" || q.path == "/api/fix" || q.path.starts_with("/api/positions/"))
+}
 
 const KNOWN_PATHS: [&str; 10] = ["/", "/api/scenarios", "/api/run", "/report", "/live-events", "/health", "/metrics", "/client-event", "/modules", "/story"];
 
@@ -76,6 +78,9 @@ pub async fn handle(q: Req) -> Resp {
 
 pub async fn route(q: &Req) -> Resp {
     if let Some(d) = timeline_route(q).await {
+        return d;
+    }
+    if let Some(d) = super::positions::positions_route(q).await {
         return d;
     }
     if let Some(d) = inventory_route(q).await {
@@ -136,6 +141,7 @@ pub async fn route(q: &Req) -> Resp {
             SHARED.forget().await;
             ASSESS_CACHE.clear();
             LIVE_FIXES.reset().await;
+            super::positions::POSITIONS.reset().await;
             TIMELINE_CACHE.clear();
             RESET_GEN.fetch_add(1, Ordering::SeqCst);
             RUN_CACHE.clear();

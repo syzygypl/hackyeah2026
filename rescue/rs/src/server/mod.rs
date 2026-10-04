@@ -10,6 +10,7 @@ mod incidents;
 mod inventory;
 mod live;
 mod parse;
+mod positions;
 mod state;
 mod store;
 
