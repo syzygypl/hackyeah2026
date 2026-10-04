@@ -37,6 +37,11 @@ TAIL_MIN = 15          # keep simulating this long after the last step / the fin
 # km/h: moving to a task (cap; the unit arrives later than the engine's ETA if the ETA is too optimistic) and sweeping
 MOVE_KMH = {"ground": 4.5, "dog": 5.0, "drone": 45, "heli": 180, "boat": 30, "diver": 25}     # divers ride a boat
 SWEEP_KMH = {"ground": 2.5, "dog": 3.5, "drone": 25, "heli": 60, "boat": 8, "diver": 1.0}
+# per scenario + unit + sector: a planned telemetry sweep instead of the generic lawnmower. The drone flies parallel tracks over
+# the sector's highest-weight cells (`core` = share of the sector's weight), launches in `launchMin`, logs GPS every minute
+# (drone telemetry) and stays until its next task. zawrat: the 19:35 report "dron: S4 przeszukany, nic" (POD 0.75) needs a track
+# that actually covers S4 (was a 5 min generic sweep, track coverage about 0.15).
+SWEEP_PLAN = {("zawrat", "drone", "S4"): {"core": 0.8, "launchMin": 1}}
 
 
 def m_per_deg(lat):
@@ -165,6 +170,35 @@ def sector_sweep(run, seg_id, start_pt):
     return pts
 
 
+def core_zigzag(run, seg_id, grid, core, n):
+    """n + 1 vertices of an east-west zigzag over the sector cells holding `core` of its weight (one vertex per minute)."""
+    b, rows, cols = run["bbox"], run["rows"], run["cols"]
+    dlat, dlon = (b["north"] - b["south"]) / rows, (b["east"] - b["west"]) / cols
+    cells = sorted((i for i, s in enumerate(run["segOf"]) if s == seg_id), key=lambda i: -grid[i])
+    tot, acc, keep = sum(grid[i] for i in cells) or 1.0, 0.0, []
+    for i in cells:
+        if acc >= core * tot:
+            break
+        keep.append(i)
+        acc += grid[i]
+    by_row = {}
+    for i in keep:
+        by_row.setdefault(i // cols, []).append(i % cols)
+    r0, r1 = min(by_row), max(by_row)
+    seg_row = {}
+    for i, s in enumerate(run["segOf"]):
+        if s == seg_id:
+            seg_row.setdefault(i // cols, []).append(i % cols)
+    wide = [q for q in seg_row if r0 <= q <= r1 and len(seg_row[q]) >= 4] or list(by_row)
+    pts = []
+    for k in range(n + 1):                                   # east-west tracks across the sector, over the core's rows
+        y = min(wide) + (max(wide) + 1 - min(wide)) * (k + 0.5) / (n + 1)
+        r = min(wide, key=lambda q: abs(q + 0.5 - y))
+        c = (min(seg_row[r]) if k % 2 == 0 else max(seg_row[r])) + 0.5
+        pts.append([b["north"] - y * dlat, b["west"] + c * dlon])
+    return pts
+
+
 def in_segment(run, p, seg_id):
     b, rows, cols = run["bbox"], run["rows"], run["cols"]
     r = int((b["north"] - p[0]) / (b["north"] - b["south"]) * rows)
@@ -243,7 +277,7 @@ def simulate(scenario, run, terrain, seed):
         ready = clock_to_min(res["readyAt"], start) if res.get("readyAt") else 0
         pos = list(res.get("base") or scenario["ipp"]["at"])
         changes = plan_changes(run, uid)
-        truth, legs = {}, []
+        truth, legs, tele = {}, [], []
         # waypoints: (minute, point) with leg labels; built leg by leg
         t = 0
         for m in range(0, min(ready, end) + 1):
@@ -261,7 +295,15 @@ def simulate(scenario, run, terrain, seed):
                 legs.append({"kind": "hold", "from": t, "to": t0, "segmentId": None})
             nxt = changes[k + 1][0] if k + 1 < len(changes) else end
             seg_obj = next((s for s in scenario.get("segments", []) if s["id"] == seg), None)
-            sweep = sector_sweep(run, seg, pos) if seg else None
+            plan = SWEEP_PLAN.get((scenario.get("_name"), uid, seg))
+            if plan:
+                grid = next((s["poaGrid"] for s in run["steps"] if s["minute"] >= step_m), run["steps"][-1]["poaGrid"])
+                zig_n = max(1, min(nxt, end) - (t0 + plan["launchMin"]))
+                sweep = core_zigzag(run, seg, grid, plan["core"], zig_n)
+                arrive = t0 + plan["launchMin"]
+                busy = min(nxt, end)
+            else:
+                sweep = sector_sweep(run, seg, pos) if seg else None
             target = sweep[0] if sweep else (seg_obj["seed"] if seg_obj else pos)
             path = [pos, target] if typ in STRAIGHT else trails.route(pos, target)
             plen = sum(dist_m(p0, p1) for p0, p1 in zip(path, path[1:]))
@@ -275,7 +317,13 @@ def simulate(scenario, run, terrain, seed):
             if leg_end < arrive:                        # re-tasked (or the incident ended) before arriving
                 continue
             search_end = min(max(busy, arrive), nxt, end)
-            if sweep and search_end > t:
+            if plan and search_end > t:
+                for m in range(t, search_end + 1):
+                    truth[m] = list(sweep[min(m - t, len(sweep) - 1)])
+                legs.append({"kind": "search", "from": t, "to": search_end, "segmentId": seg})
+                tele.append((t, search_end))
+                pos, t = truth[search_end], search_end
+            elif sweep and search_end > t:
                 loop = sweep + sweep[::-1][1:]
                 llen = sum(dist_m(p0, p1) for p0, p1 in zip(loop, loop[1:])) or 1.0
                 per_min = SWEEP_KMH.get(typ, 2.5) * 1000 / 60
@@ -324,6 +372,16 @@ def simulate(scenario, run, terrain, seed):
                           "lon": round(p[1] + e * math.sin(a) / mx, 6), "accM": int(round(sigma * 2)), "src": "gps"})
         if gap_from is not None:
             gaps.append({"from": gap_from, "to": end, "why": "brak zasięgu"})
+        have = {f["minute"] for f in fixes}
+        for t_from, t_to in tele:                         # telemetry sweep (SWEEP_PLAN): a GPS fix every minute
+            for m in range(t_from, t_to + 1):
+                if m in have:
+                    continue
+                p = truth[m]
+                my, mx = m_per_deg(p[0])
+                e, a = abs(rng.gauss(0, sigma)) + 2, rng.uniform(0, 2 * math.pi)
+                fixes.append({"minute": m, "t": min_to_clock(m, start), "lat": round(p[0] + e * math.cos(a) / my, 6),
+                              "lon": round(p[1] + e * math.sin(a) / mx, 6), "accM": int(round(sigma * 2)), "src": "gps"})
         segname = {sg["id"]: sg.get("name", sg["id"]) for sg in scenario.get("segments", [])}
         for leg in legs:                                  # radio call on arrival: a coarse 'report' fix (accM 300)
             if leg["kind"] == "search" and leg["from"] <= end:
