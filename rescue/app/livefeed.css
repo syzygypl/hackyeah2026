@@ -55,6 +55,11 @@ body.lfopen .lftoasts{display:none}
 .t-call .lfic{background:color-mix(in srgb,var(--rl-accent) 16%,transparent);color:var(--rl-accent)}
 .late .lfic{background:var(--rl-danger);color:var(--rl-on-danger)}
 .lfi.t-call,.lfti.t-call{border-left-color:var(--rl-accent)}
+.lfgrp + .lfi,.lfi + .lfgrp,.lfgrp + .lfgrp{border-top:1px solid var(--rl-line)}   /* sens-funkcji #25: calls grouped by action */
+.lfgrp > summary{list-style:none;cursor:pointer}.lfgrp > summary::-webkit-details-marker{display:none}
+.lfgrp > .lfi{padding-left:28px;border-top:1px solid var(--rl-line)}
+.lfgrp[open] > summary .lfst{color:var(--rl-mute)}
+.lfb .lfgack{background:var(--rl-accent);border-color:var(--rl-accent);color:var(--rl-on-accent);font-weight:700}
 .lfi.t-call.late,.lfti.t-call.late{border-left-color:var(--rl-danger)}
 .lfty{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--rl-warn-ink)}
 .t-call .lfty{color:var(--rl-accent)}

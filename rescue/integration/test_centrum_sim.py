@@ -177,6 +177,17 @@ def main():
         check("call_note", bool(call) and "CPR" in call and "Zgłoszenie".upper() in call.upper(), (call or "").replace("\n", " | ")[:120])
         only = c.js("[...document.querySelectorAll('.lflist .lfi')].every(x=>x.classList.contains('t-call'))")
         check("filter_calls_only", only is True)
+        # sens-funkcji #25: calls of one action are one row "<place>: N zgłoszenia"; its Potwierdź acks them all
+        c.js("localStorage.removeItem('rescue-live-acks')")
+        open_page(c, f"{srv.base}/app/centrum.html?dyzurny=0&simAt=20:00", 1440, 900, False)
+        c.until("document.querySelector('.lfbell')?1:0", 30)
+        c.js("document.querySelector('.lfbell').click();document.querySelector('.lffil [data-f=call]').click()")
+        grp = c.until("(()=>{const g=document.querySelector('.lflist details.lfgrp');return g?[g.dataset.g,g.querySelector('summary').innerText,g.querySelectorAll('.lfi[data-key]').length]:null})()", 20)
+        check("calls_grouped_by_action", bool(grp) and grp[2] >= 2 and f"{grp[2]} zgłoszenia" in grp[1], json.dumps(grp, ensure_ascii=False)[:160])
+        if grp:
+            c.js(f"document.querySelector('.lflist details.lfgrp[data-g=\"{grp[0]}\"] .lfgack').click()")
+            done = c.until(f"(()=>{{const g=document.querySelector('.lflist details.lfgrp[data-g=\"{grp[0]}\"]');return g&&!g.querySelector('.lfgack')&&g.querySelectorAll('.lfi.acked[data-key]').length==={grp[2]}?1:0}})()", 10)
+            check("group_ack_all", done == 1)
         # virtual dispatcher (sens-funkcji #5, default): sim notes acked after 1-3 min, at most 1 toast on load, almost no red cards
         c.js("localStorage.removeItem('rescue-live-acks')")
         open_page(c, f"{srv.base}/app/centrum.html?simAt={hhmm(mins(e['start']) + 4)}", 1440, 900, False)

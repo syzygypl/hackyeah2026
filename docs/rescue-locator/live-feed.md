@@ -42,6 +42,7 @@ Two kinds of notes, different icon and colour, filters **Wszystko / Nowe akcje /
 
 - **Nowa akcja** (amber, siren icon): an occurrence starts (the 112 report that opens it). ACK key `<id>|<day>`.
 - **Zgłoszenie** (navy, phone icon): an incoming call inside a running occurrence = the scenario's call-like events at their scenario clock, mapped onto the occurrence's wall clock: `Cell112Fix` (CPR 112 / BTS), `RatunekPing`, `Clue` whose title names a witness / report / phone / radio / family (`Świadek`, `Zgłoszenie`, `Widziałem`, `Radio klubowe`, `telefon`, `112`, ...). Calls of one occurrence within 2 min are one note ("2 zgłoszenia: ..."). ACK key `<id>#HHMM|<day>` (HHMM = scenario clock of the call). "Otwórz" = Historia at that minute.
+- Calls of one occurrence (2 or more in the list) are one row "Karpacz: 2 zgłoszenia" with **Potwierdź N** (acks them all); a click opens the single calls under it (sens-funkcji #25).
 - The incident line uses Centrum's `window.rescueCentrum.incidentPath(sc)` / `pathOf(x)` ("województwo → rejon → nazwa") when the map block provides it, else type · place.
 
 - Toast once per page for every occurrence that started within the last 15 min and is not acked; the bell lists every occurrence of the last 60 min (time, incident name, type, region, trwa / zakończona, ack state), newest first.

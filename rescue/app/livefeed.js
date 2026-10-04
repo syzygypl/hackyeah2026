@@ -291,6 +291,26 @@ export function mountBell(host, opts = {}) {
     });
   }
   const recent = (now) => notes.filter((n) => now - n.ms <= windowMin * 60000);
+  // sens-funkcji #25: with many incidents the bell held one row per call. Calls of one action (occurrence) are grouped into one
+  // row "Huzele: 3 zgłoszenia" with "Potwierdź 3"; the single calls open under it (details). One call = the plain row as before.
+  const openG = new Set();
+  const zgl = (n) => { const d = n % 10, t = n % 100; return n + (n === 1 ? " zgłoszenie" : d >= 2 && d <= 4 && (t < 12 || t > 14) ? " zgłoszenia" : " zgłoszeń"); };
+  function groupHTML(ns, now) {
+    const i = ns[0].inst, d = info[i.sc] || { name: i.sc }, un = ns.filter((n) => !acks.isAcked(n.key)).length;
+    const late = ns.some((n) => !acks.isAcked(n.key) && now - n.ms > ESCALATE_MIN * 60000);
+    return `<details class="lfgrp" data-g="${esc(i.key)}"${openG.has(i.key) ? " open" : ""}><summary class="lfi lfgs t-call${un ? "" : " acked"}${late ? " late" : ""}">`
+      + `<span class="lft"><span class="lfic" title="${TYPE_LABEL.call}">${ICON.call}</span><span class="mono">${hm(ns[0].ms)}</span></span>`
+      + `<span class="lfn"><span class="lfty">Zgłoszenia</span><b>${esc(String(d.place || d.name).split(/[,:]/)[0])}: ${zgl(ns.length)}</b><span class="lfp">${esc(d.name)}</span><span class="lfst">${un ? `niepotwierdzone: ${un}` : "wszystkie potwierdzone"} · kliknij, aby rozwinąć</span></span>`
+      + `<span class="lfb">${un ? `<button type="button" class="lfgack">Potwierdź ${un}</button>` : ""}</span></summary>${ns.map((n) => itemHTML(n, now, "lfi")).join("")}</details>`;
+  }
+  function listHTML(shown, now) {
+    const rows = [], by = new Map();
+    for (const n of shown) {
+      if (n.type === "call" && n.inst) { const g = by.get(n.inst.key); if (g) { g.push(n); continue; } const ng = [n]; by.set(n.inst.key, ng); rows.push(ng); }
+      else rows.push([n]);
+    }
+    return rows.map((g) => g.length < 2 ? itemHTML(g[0], now, "lfi") : groupHTML(g, now)).join("");
+  }
   function kpi() {   // time from a note to its ACK over the notes the bell holds (#1: the pitch's response number); minutes, rounded
     const d = notes.map((n) => { const a = acks.get(n.key); return a ? (Date.parse(a.at) - n.ms) / 60000 : null; }).filter((x) => x != null && x >= 0).sort((a, b) => a - b);
     if (!d.length) return { n: 0 };
@@ -333,8 +353,12 @@ export function mountBell(host, opts = {}) {
     const shown = rec.filter((n) => filter === "all" || n.type === filter);
     const sig = JSON.stringify([filter, shown.map((n) => [n.key, n.inst ? n.inst.state : n.st, acks.get(n.key), Math.floor((now - n.ms) / 60000) > ESCALATE_MIN, !!(n.inst && info[n.inst.sc]), n.n])]);
     if (sig === shownSig) return; shownSig = sig;
-    list.innerHTML = shown.length ? shown.map((n) => itemHTML(n, now, "lfi")).join("") : `<div class="lfempty">Brak ${filter === "call" ? "zgłoszeń" : filter === "new" ? "nowych akcji" : "powiadomień"} w ostatnich ${windowMin} min.</div>`;
+    list.innerHTML = shown.length ? listHTML(shown, now) : `<div class="lfempty">Brak ${filter === "call" ? "zgłoszeń" : filter === "new" ? "nowych akcji" : "powiadomień"} w ostatnich ${windowMin} min.</div>`;
     wire(list);
+    list.querySelectorAll("details.lfgrp").forEach((g) => {
+      g.ontoggle = () => { if (g.open) openG.add(g.dataset.g); else openG.delete(g.dataset.g); };
+      const b = g.querySelector(".lfgack"); if (b) b.onclick = (ev) => { ev.preventDefault(); ev.stopPropagation(); Promise.all(shown.filter((n) => n.type === "call" && n.inst && n.inst.key === g.dataset.g && !acks.isAcked(n.key)).map((n) => acks.ack(n.key))).then(render); };
+    });
   }
   wrap.querySelector(".lfall").onclick = () => { const now = nowMs(); Promise.all(recent(now).filter((n) => !acks.isAcked(n.key) && (filter === "all" || n.type === filter)).map((n) => acks.ack(n.key))).then(render); };
   const onAck = () => render(); ackListeners.add(onAck);
