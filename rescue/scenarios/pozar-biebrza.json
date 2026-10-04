@@ -1,0 +1,185 @@
+{
+  "incident": "Pożar lasu i torfowiska odcina turystów - Biebrzański Park Narodowy, Czerwone Bagno koło Grzędów (scenariusz fikcyjny)",
+  "date": "2026-07-24",
+  "startClock": "14:35",
+  "subject": {
+    "name": "Marta i Paweł S. (osoby fikcyjne)",
+    "age": 34,
+    "category": "hiker",
+    "note": "Para turystów z Białegostoku wyszła ok. 12:40 z parkingu w Grzędach niebieskim szlakiem przez Czerwone Bagno do Perewidy (ok. 6 km), tam miał na nich czekać kolega z samochodem. Upał 31°C, trzeci tydzień bez deszczu, wysuszony torf i ściółka. Ok. 14:10 za ich plecami, między szlakiem a Grzędami, zaczął się pożar lasu i torfowiska; wiatr z zachodu pcha ogień i dym na wschód, wzdłuż szlaku. O 14:35 Marta dzwoni na 112: gęsty dym, płomienie od strony Grzędów, nie mogą wrócić, idą dalej w stronę kładki. Po minucie połączenie się urywa, telefony nie odpowiadają. Mają jeden telefon z 20% baterii, butelkę wody, bez latarki.",
+    "lastContact": "14:35"
+  },
+  "bbox": { "south": 53.59, "west": 22.745, "north": 53.65, "east": 22.845 },
+  "cellM": 100,
+  "ipp": {
+    "name": "PLS: miejsce zgłoszenia 112 na niebieskim szlaku, ok. 2.5 km za Grzędami (14:35)",
+    "at": [53.6234, 22.8110]
+  },
+  "terrain": { "trails": [], "streams": [], "ridges": [], "lakes": [], "huts": [] },
+  "segments": [
+    { "id": "B1", "name": "Grzędy: leśniczówka i parking (punkt startu)", "seed": [53.6319, 22.7736] },
+    { "id": "B2", "name": "Las na północ od Grzędów (do Jegrzni)", "seed": [53.6420, 22.7650] },
+    { "id": "B3", "name": "Niebieski szlak: Grzędy - wschód (pod dymem)", "seed": [53.6300, 22.7860] },
+    { "id": "B4", "name": "Ognisko pożaru: las i torf przy niebieskim szlaku", "seed": [53.6285, 22.7965] },
+    { "id": "B5", "name": "Czerwony szlak: zakręt na południe od pożaru", "seed": [53.6205, 22.8020] },
+    { "id": "B6", "name": "Niebieski szlak: miejsce zgłoszenia 112", "seed": [53.6240, 22.8105] },
+    { "id": "B7", "name": "Czerwone Bagno: kładka ścieżki edukacyjnej", "seed": [53.6180, 22.8205] },
+    { "id": "B8", "name": "Czerwone Bagno: torfowisko na północ od szlaku", "seed": [53.6340, 22.8160] },
+    { "id": "B9", "name": "Czerwone Bagno: wschód (Dział Kumkowskiego)", "seed": [53.6260, 22.8370] },
+    { "id": "B10", "name": "Niebieski szlak: kładka - Perewida (odcinek południowy)", "seed": [53.6085, 22.8200] },
+    { "id": "B11", "name": "Perewida: polana i dojazd", "seed": [53.6060, 22.8340] },
+    { "id": "B12", "name": "Łąki i rowy melioracyjne na zachód od szlaku", "seed": [53.6080, 22.8070] },
+    { "id": "B13", "name": "Czerwony szlak: odcinek południowy (las)", "seed": [53.6040, 22.7880] },
+    { "id": "B14", "name": "Zielony szlak: pętla na południe od Grzędów", "seed": [53.6080, 22.7680] },
+    { "id": "B15", "name": "Las między Grzędami a czerwonym szlakiem", "seed": [53.6200, 22.7720] },
+    { "id": "B16", "name": "Czarny szlak: Ostra Góra - bagna wschodnie", "seed": [53.5970, 22.8300] },
+    { "id": "B17", "name": "Bagno na północ od pożaru", "seed": [53.6420, 22.7980] },
+    { "id": "B18", "name": "Dolina Jegrzni (zachód)", "seed": [53.6380, 22.7520] },
+    { "id": "B19", "name": "Lasy południowo-zachodnie", "seed": [53.5960, 22.7600] },
+    { "id": "B20", "name": "Las na południe od łąk (czerwony szlak)", "seed": [53.5950, 22.8060] }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): mokra łąka przy rowie melioracyjnym, 200 m od niebieskiego szlaku przed Perewidą",
+    "at": [53.6088, 22.8168]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "14:35",
+      "title": "Teren: płaskie torfowisko Czerwonego Bagna, las sosnowo-brzozowy, kładki i rowy melioracyjne",
+      "detail": "Szlaki po groblach i kładkach, poza nimi mszar, turzyce i gęsty młodnik. Wysuszony torf pali się też pod powierzchnią, ogień wraca w miejscach już przegaszonych.",
+      "factor": 1
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "14:35",
+      "title": "Trudność: pożar i dym na szlaku, teren grząski poza groblami",
+      "detail": "Strefa ognia wyłączona z poszukiwań pieszych. Patrole tylko od strony Perewidy i czerwonego szlaku, z drogą odwrotu, w łączności z kierującym działaniem gaśniczym PSP."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "14:35",
+      "title": "Warunki: upał 31°C, sucho, wiatr 6 m/s z zachodu, dym ogranicza widzialność do 600 m",
+      "detail": "Trzeci tydzień bez opadów, wilgotność 28%. Dym zalega nisko nad bagnem na wschód od ognia: dron i śmigłowiec mają przerwy w widoczności. Zachód słońca ok. 20:50.",
+      "visibilityM": 600,
+      "windMs": 6,
+      "windFromDeg": 260,
+      "tempC": 31,
+      "precip": "none",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "14:35",
+      "title": "Pierścienie od miejsca zgłoszenia (turysta, teren płaski)",
+      "detail": "0.6 / 1.3 / 2.4 / 4.5 km. Ucieczka przed ogniem w stronę od dymu, czyli na wschód i południe.",
+      "point": [53.6234, 22.8110],
+      "quantilesKm": [0.6, 1.3, 2.4, 4.5]
+    },
+    {
+      "provider": "TripPlan",
+      "at": "14:40",
+      "title": "Kolega w Perewidzie: 'mieli dojść niebieskim szlakiem przez kładkę na Czerwonym Bagnie do mnie'",
+      "detail": "Plan trasy: Grzędy - niebieski szlak - kładka ścieżki edukacyjnej - Perewida. Kolega czeka na polanie w Perewidzie od 14:15.",
+      "points": [[53.6234, 22.8110], [53.62268, 22.81367], [53.62259, 22.81564], [53.62129, 22.81924], [53.62082, 22.82283], [53.61567, 22.81758], [53.60981, 22.81911], [53.60762, 22.82016], [53.60674, 22.82121], [53.60406, 22.82264], [53.60275, 22.824], [53.60306, 22.82606], [53.60316, 22.82926], [53.60327, 22.83327], [53.60531, 22.83376], [53.60647, 22.83472]],
+      "radiusM": 300
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "14:45",
+      "title": "CPR Białystok: ostatnie logowanie telefonu 14:36, BTS Goniądz",
+      "detail": "Sektor obejmuje wschodnią część Czerwonego Bagna od niebieskiego szlaku do Perewidy, promień 1.5 km. Po 14:36 brak logowania (słaby zasięg albo rozładowana bateria).",
+      "point": [53.6180, 22.8170],
+      "radiusM": 1500
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "15:00",
+      "title": "PSP: rozpoznanie wzdłuż frontu pożaru od Grzędów, nikogo",
+      "detail": "Roty gaśnicze przy groblach na zachodnim skraju ognia, w dymie i z przerwami. POD 30%.",
+      "segments": ["B3", "B4"],
+      "pod": 0.3
+    },
+    {
+      "provider": "Clue",
+      "at": "15:05",
+      "title": "Kolega w Perewidzie: ok. 14:55 słyszał wołanie od strony bagna, na zachód od polany",
+      "detail": "Dwa razy krótkie wołanie, potem cisza. Dym nad lasem nie pozwalał nic zobaczyć.",
+      "point": [53.6075, 22.8150],
+      "radiusM": 700,
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "15:20",
+      "title": "Warunki: wiatr skręca na WSW 7 m/s, ogień przeskoczył niebieski szlak",
+      "detail": "Pożar torfu rozszerza się na wschód, dym nad kładką i miejscem zgłoszenia. Widzialność 400 m. Samolot gaśniczy Dromader LP robi zrzuty na zachodni skraj.",
+      "visibilityM": 400,
+      "windMs": 7,
+      "windFromDeg": 250,
+      "tempC": 31,
+      "precip": "none"
+    },
+    {
+      "provider": "Clue",
+      "at": "15:30",
+      "title": "Straż leśna: porzucony plecak przy kładce ścieżki edukacyjnej Czerwone Bagno",
+      "detail": "Niebieski plecak z dokumentami Pawła S., obok pusta butelka. Ślady na kładce w kierunku południowym, w stronę Perewidy.",
+      "point": [53.6170, 22.8180],
+      "radiusM": 150,
+      "clueKind": "trace"
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "15:45",
+      "title": "Dron termowizyjny PSP: torfowisko na północ od szlaku i wschodni skraj bagna, nic",
+      "detail": "Termowizja oślepiona przez żar i nagrzany torf, przerwy w dymie. POD 40%.",
+      "segments": ["B8", "B9"],
+      "pod": 0.4
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "15:55",
+      "title": "Policja i straż leśna: czerwony szlak na południe od pożaru i Perewida, nikogo",
+      "detail": "Patrol pieszy po groblach z drogą odwrotu, nawoływanie co 200 m. POD 60%.",
+      "segments": ["B5", "B11"],
+      "pod": 0.6
+    },
+    {
+      "provider": "Clue",
+      "at": "16:05",
+      "title": "Śmigłowiec gaśniczy LP: w przerwie w dymie dwie osoby machają na łące przy rowie",
+      "detail": "Pilot między zrzutami: łąka z rowem melioracyjnym na zachód od niebieskiego szlaku, przed Perewidą. Pozycja z oka, bez GPS.",
+      "point": [53.6092, 22.8160],
+      "radiusM": 300,
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "Clue",
+      "at": "16:25",
+      "title": "ZNALEZIONO: zespół z psem OSP i patrol Policji na mokrej łące przy rowie melioracyjnym",
+      "detail": "Oboje przytomni, odwodnieni, lekkie podtrucie dymem i oparzenie dłoni u Pawła. Schronili się w mokrym rowie, gdzie torf się nie pali. Przekazani ZRM w Perewidzie. Meldunek zespołu, nie GPS.",
+      "point": [53.6088, 22.8168],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "resources": [
+    { "id": "psp-monki-grzedy", "name": "PSP JRG Mońki z OSP Goniądz - rota rozpoznawcza (Grzędy)", "type": "ground", "base": [53.6319, 22.7736], "readyAt": "14:55" },
+    { "id": "osp-goniadz-perewida", "name": "OSP Goniądz - patrol od Perewidy", "type": "ground", "base": [53.6062, 22.8345], "readyAt": "15:10" },
+    { "id": "straz-lesna-bpn", "name": "Straż leśna i straż parku (Biebrzański PN) - patrol terenowy", "type": "ground", "base": [53.6062, 22.8345], "readyAt": "15:15" },
+    { "id": "policja-monki", "name": "Policja Mońki - patrol pieszy", "type": "ground", "base": [53.6062, 22.8345], "readyAt": "15:25" },
+    { "id": "dron-psp-monki", "name": "Dron termowizyjny PSP Mońki", "type": "drone", "base": [53.6319, 22.7736], "readyAt": "15:30" },
+    { "id": "pies-osp-biebrza", "name": "Zespół z psem OSP (grupa poszukiwawcza, Podlasie)", "type": "dog", "base": [53.6062, 22.8345], "readyAt": "15:50" },
+    { "id": "lp-heli-gasniczy", "name": "Śmigłowiec gaśniczy Lasów Państwowych (rozpoznanie między zrzutami)", "type": "heli", "base": [53.4892, 22.7324], "readyAt": "15:15" },
+    { "id": "lpr-bialystok", "name": "Śmigłowiec LPR (Białystok), lot ograniczony przez dym", "type": "heli", "base": [53.1018, 23.1715], "readyAt": "15:40" }
+  ],
+  "props": [
+    { "kind": "burn", "at": [53.6290, 22.7955], "size": 150, "from": "14:35", "until": "15:20", "label": "Ognisko pożaru (14:10)" },
+    { "kind": "burn", "at": [53.6285, 22.7985], "size": 350, "from": "15:20", "until": "16:05" },
+    { "kind": "burn", "at": [53.6280, 22.8010], "size": 550, "from": "16:05", "label": "Pogorzelisko, torf tli się" },
+    { "kind": "smoke", "at": [53.6290, 22.7960], "heading": 80, "size": 250, "from": "14:35" },
+    { "kind": "smoke", "at": [53.6275, 22.8040], "heading": 70, "size": 300, "from": "15:20" },
+    { "kind": "smoke", "at": [53.6290, 22.8000], "heading": 70, "size": 200, "from": "16:05" }
+  ]
+}

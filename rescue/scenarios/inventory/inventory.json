@@ -813,6 +813,77 @@
    "fictional": true
   },
   {
+   "id": "dron-psp-monki",
+   "kind": "dron",
+   "name": "Dron termowizyjny PSP Mońki",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-554",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 250.4,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 237.9,
+    "lastMaintenance": "2026-09-14"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-10",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-21",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-MONKI-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-MONKI-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "Dron termowizyjny PSP Mońki",
+     "readyAt": "15:30",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-MONKI-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-MONKI-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-psp-nowy-targ",
    "kind": "dron",
    "name": "Dron termowizyjny PSP Nowy Targ",
@@ -2547,6 +2618,144 @@
    "fictional": true
   },
   {
+   "id": "lp-heli-gasniczy",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec gaśniczy Lasów Państwowych (rozpoznanie między zrzutami)",
+   "base": "rozpoznanie między zrzutami",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "LP-113",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 4078.9,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 4048.9,
+    "lastMaintenance": "2026-09-06"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-08",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "LP-HELI-GASNICZY-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "LP-HELI-GASNICZY-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "LP-HELI-GASNICZY-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "Śmigłowiec gaśniczy Lasów Państwowych (rozpoznanie między zrzutami)",
+     "readyAt": "15:15",
+     "base": "rozpoznanie między zrzutami",
+     "operator": null,
+     "crew": [
+      {
+       "name": "LP-HELI-GASNICZY-1 (fikcyjny)",
+       "role": "pilot dowódca"
+      },
+      {
+       "name": "LP-HELI-GASNICZY-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki"
+      },
+      {
+       "name": "LP-HELI-GASNICZY-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "lpr-bialystok",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Białystok), lot ograniczony przez dym",
+   "base": "Białystok",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "LPR-363",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 3503.7,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 3431.7,
+    "lastMaintenance": "2026-09-02"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-25",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "LPR-BIALYSTOK-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "LPR-BIALYSTOK-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "LPR-BIALYSTOK-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "Śmigłowiec LPR (Białystok), lot ograniczony przez dym",
+     "readyAt": "15:40",
+     "base": "Białystok",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "LPR-BIALYSTOK-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "LPR-BIALYSTOK-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "LPR-BIALYSTOK-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "lpr-krakow",
    "kind": "smiglowiec",
    "name": "Śmigłowiec LPR (Kraków), ZRM w gotowości w Szczawnicy",
@@ -2820,6 +3029,69 @@
       {
        "name": "OSP-BOAT-2 (fikcyjny)",
        "role": "ratownik (OSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "osp-goniadz-perewida",
+   "kind": "pieszy",
+   "name": "OSP Goniądz - patrol od Perewidy",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-942",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-14",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-GONIADZ-PEREWIDA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-GONIADZ-PEREWIDA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-GONIADZ-PEREWIDA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "OSP Goniądz - patrol od Perewidy",
+     "readyAt": "15:10",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-GONIADZ-PEREWIDA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-GONIADZ-PEREWIDA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-GONIADZ-PEREWIDA-3 (fikcyjny)",
+       "role": "ratownik"
       }
      ]
     }
@@ -3373,6 +3645,58 @@
      "crew": [
       {
        "name": "PIES-OSP-1 (fikcyjny)",
+       "role": "przewodnik psa (OSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-osp-biebrza",
+   "kind": "pies",
+   "name": "Zespół z psem OSP (grupa poszukiwawcza, Podlasie)",
+   "base": "grupa poszukiwawcza, Podlasie",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-288",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-21",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Nuka (fikcyjny)",
+    "breed": "border collie",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-OSP-BIEBRZA-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "Zespół z psem OSP (grupa poszukiwawcza, Podlasie)",
+     "readyAt": "15:50",
+     "base": "grupa poszukiwawcza, Podlasie",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "PIES-OSP-BIEBRZA-1 (fikcyjny)",
        "role": "przewodnik psa (OSP)"
       }
      ]
@@ -4349,6 +4673,61 @@
    "fictional": true
   },
   {
+   "id": "policja-monki",
+   "kind": "pieszy",
+   "name": "Policja Mońki - patrol pieszy",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POLICJA-156",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-11",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POLICJA-MONKI-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POLICJA-MONKI-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "Policja Mońki - patrol pieszy",
+     "readyAt": "15:25",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICJA-MONKI-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICJA-MONKI-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "policja-szczawnica",
    "kind": "pieszy",
    "name": "Policja Szczawnica - patrol brzegowy",
@@ -5059,6 +5438,69 @@
    "fictional": true
   },
   {
+   "id": "psp-monki-grzedy",
+   "kind": "pieszy",
+   "name": "PSP JRG Mońki z OSP Goniądz - rota rozpoznawcza (Grzędy)",
+   "base": "Grzędy",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-604",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-23",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-MONKI-GRZEDY-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-MONKI-GRZEDY-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-MONKI-GRZEDY-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "PSP JRG Mońki z OSP Goniądz - rota rozpoznawcza (Grzędy)",
+     "readyAt": "14:55",
+     "base": "Grzędy",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-MONKI-GRZEDY-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-MONKI-GRZEDY-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "PSP-MONKI-GRZEDY-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "psp-ns",
    "kind": "pieszy",
    "name": "PSP JRG Nowy Sącz - zastęp",
@@ -5529,6 +5971,61 @@
       },
       {
        "name": "STRAZ-LESNA-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "straz-lesna-bpn",
+   "kind": "pieszy",
+   "name": "Straż leśna i straż parku (Biebrzański PN) - patrol terenowy",
+   "base": "Biebrzański PN",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "STRAZ-467",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-11",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "STRAZ-LESNA-BPN-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "STRAZ-LESNA-BPN-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "pozar-biebrza": {
+     "name": "Straż leśna i straż parku (Biebrzański PN) - patrol terenowy",
+     "readyAt": "15:15",
+     "base": "Biebrzański PN",
+     "operator": null,
+     "crew": [
+      {
+       "name": "STRAZ-LESNA-BPN-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "STRAZ-LESNA-BPN-2 (fikcyjny)",
        "role": "ratownik"
       }
      ]

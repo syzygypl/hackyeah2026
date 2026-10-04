@@ -459,6 +459,14 @@ EXAMPLES["los-augustow"] = [
   "Dron PSP przeleciał nad L13, nic",
   "Mgła nad torfowiskiem, widoczność 300 m, +1 stopień",
 ];
+EXAMPLES["pozar-biebrza"] = [
+  "Kolega z Perewidy słyszał wołanie od strony bagna o 14:55",
+  "Straż leśna przeszła czerwony szlak na południe od pożaru, nic",
+  "Znaleziono niebieski plecak przy kładce na Czerwonym Bagnie",
+  "Pies podjął trop od kładki w stronę Perewidy",
+  "Dron PSP przeleciał nad B8, nic, dym zasłania",
+  "Wiatr z zachodu 7 m/s, dym, widoczność 400 m",
+];
 EXAMPLES.sniardwy = [
   "Rybak widział żeglarza w wodzie o 17:10 przy Nowych Gutach",
   "Łódź WOPR przeszukała toń na wschód od LKP, nic",

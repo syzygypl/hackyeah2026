@@ -28,13 +28,14 @@ The whole archive is loaded into memory, so a plain `python3 -m http.server` wor
 ## Other regions
 
 One file per region, cut with `--bbox` (no scenario needed): `bieszczady.pmtiles` (incl. Tarnica), `solina.pmtiles` (Solina - Lesko, zapora-*), `karkonosze.pmtiles` (4.3 MB),
-`sniardwy.pmtiles` (3.6 MB), `mamry.pmtiles`, `moryn.pmtiles`, `pieniny.pmtiles` (3.9 MB, Przełom Dunajca, kajak-pieniny), `notecka.pmtiles` (2.2 MB, Puszcza Notecka). `basemap.js` exports `REGIONS` (file, bounds, label) and
+`sniardwy.pmtiles` (3.6 MB), `mamry.pmtiles`, `moryn.pmtiles`, `pieniny.pmtiles` (3.9 MB, Przełom Dunajca, kajak-pieniny), `notecka.pmtiles` (2.2 MB, Puszcza Notecka), `biebrza.pmtiles` (Czerwone Bagno, Grzędy, pozar-biebrza). `basemap.js` exports `REGIONS` (file, bounds, label) and
 `regionFor(bbox)` to pick the file for a scenario. Demo: `basemap/index.html?region=bieszczady`.
 
 ```sh
 python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.40,49.03,22.80,49.20 --pad 0 --out rescue/web/basemap/bieszczady.pmtiles
 python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.24,49.40,22.50,49.56 --pad 0 --out rescue/web/basemap/solina.pmtiles
 python3 rescue/web/basemap/extract_pmtiles.py --bbox 20.60,49.42,20.78,49.53 --pad 0 --out rescue/web/basemap/poprad.pmtiles
+python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.68,53.575,22.87,53.685 --pad 0 --out rescue/web/basemap/biebrza.pmtiles
 ```
 
 ## What is here

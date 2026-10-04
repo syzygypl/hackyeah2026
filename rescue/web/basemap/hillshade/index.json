@@ -155,6 +155,19 @@
    ]
   ]
  },
+ "pozar-biebrza": {
+  "file": "hillshade/pozar-biebrza.png",
+  "bounds": [
+   [
+    22.72208333333333,
+    53.576388888888886
+   ],
+   [
+    22.867916666666662,
+    53.66361111111111
+   ]
+  ]
+ },
  "rodzina-dziecko-las": {
   "file": "hillshade/rodzina-dziecko-las.png",
   "bounds": [
