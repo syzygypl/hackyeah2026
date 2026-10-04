@@ -20,7 +20,9 @@ const POLL_MS = 10000;   // 10 s: /api/incidents + /api/teams per tick (perf rou
 const PICK = new URLSearchParams(location.search).get("pick") === "1";
 const PICK_BACK = (() => { try { const u = new URL(new URLSearchParams(location.search).get("return") || "./", location.href); if (u.origin === location.origin) return u; } catch (e) {} return new URL("./?role=operator", location.href); })();
 const pickURL = (sc) => { const u = new URL(PICK_BACK); u.searchParams.set("sc", sc); return u.pathname + u.search + u.hash; };
-const openURL = (sc) => PICK ? pickURL(sc) : `./?role=operator&mode=akcja&time=live&sc=${encodeURIComponent(sc)}`;
+// ?simAt=HH:MM (demo clock, livefeed.js nowMs) goes along to /app, so its bell runs on the same virtual clock (qa-wieczor #9)
+const SIM_AT_Q = (() => { const v = new URLSearchParams(location.search).get("simAt"); return v ? `&simAt=${encodeURIComponent(v)}` : ""; })();
+const openURL = (sc) => PICK ? pickURL(sc) : `./?role=operator&mode=akcja&time=live&sc=${encodeURIComponent(sc)}${SIM_AT_Q}`;
 // embed (centrum.html?pick=1&embed=1, an iframe overlay in /app): no navigation at all, the choice goes to the parent as a
 // postMessage (CONTRACT.md "Centrum pick mode, embedded"); the iframe stays alive and is reused, so polling pauses while hidden
 const EMBED = PICK && new URLSearchParams(location.search).get("embed") === "1";
@@ -314,7 +316,7 @@ async function initMap() {
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
   map.on("load", () => { mapReady = true; renderMarkers(); fitAll(); loadRegions(); stackLabels(); advMap();
     map.getContainer().querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show"); });   // attribution as the (i) button: open, it covered Śniardwy on a phone
-  map.on("moveend", loadRegions);
+  map.on("moveend", loadRegions); map.on("moveend", () => advDeclutter());
   map.on("zoom", () => document.body.classList.toggle("zin", map.getZoom() >= 9));   // zoomed in: labels next to their own dots
   map.on("zoomend", stackLabels);
   map.on("resize", stackLabels);
@@ -502,6 +504,7 @@ function stackLabels() {
     if (lbl && k !== undefined) { const ll = items[i][1].getLngLat(), c = el.classList.contains("clu"); block.push([ll, "MM", "center", [0, 0]], [ll, lbl.textContent + "··", "left", [(c ? 19 : 14) / 12, (k * ROW + (c ? 1 : 0)) / 12]]); }
     if (ld) { const dx = el.classList.contains("clu") ? 11 : 6, dy = (k ?? 0) * ROW + 1, len = Math.hypot(dx, dy); ld.style.display = k ? "block" : "none"; ld.style.width = len + "px"; ld.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`; }
   }
+  advDeclutter();
   map.getSource("md-block")?.setData({ type: "FeatureCollection", features: block.map(([ll, t, a, o]) => ({ type: "Feature", properties: { t, a, o }, geometry: { type: "Point", coordinates: [ll.lng, ll.lat] } })) });
 }
 function fitAll() {
@@ -640,7 +643,27 @@ function advMap() {
   for (const t of (h && h.predicted && h.predicted.towns) || []) pins.push({ cls: t.kind === "town" ? "town" : "", at: t.at, text: `${t.name} ~${t.eta}` });
   for (const p of pins) {
     const el = document.createElement("div"); el.className = "advpin " + p.cls; el.innerHTML = `<span class="d"></span><span class="t">${esc(p.text)}</span>`;
+    el.title = p.text;
     advTowns.push(new maplibregl.Marker({ element: el, anchor: "left", offset: [p.cls === "src" ? -6 : -4, 0] }).setLngLat([p.at[1], p.at[0]]).addTo(map));
+  }
+  advDeclutter();
+}
+// Doradca pins (source, towns with ETA) vs the incident dots and labels (qa-wieczor #11: "Linia kolejowa nr 96" lay over Huzele
+// and ran off a phone screen): a pin's text goes left of its dot when the right side is taken or off the map, else it hides
+// (the dot stays; the text is in the Doradca panel). Incident labels win: they are placed first (stackLabels).
+function advDeclutter() {
+  if (!mapReady || !advTowns.length) return;
+  const box = map.getContainer().getBoundingClientRect(), taken = [];
+  for (const e of map.getContainer().querySelectorAll(".mk:not(.inclu):not(.pre) .dot, .mk:not(.inclu):not(.pre) .lbl")) {
+    if (e.style.visibility === "hidden") continue; const r = e.getBoundingClientRect(); if (r.width) taken.push(r);
+  }
+  const hit = (r) => r.left < box.left + 2 || r.right > box.right - 2 || taken.some((t) => r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top);
+  for (const m of advTowns.slice().sort((a, b) => b.getElement().classList.contains("src") - a.getElement().classList.contains("src"))) {
+    const el = m.getElement(), t = el.querySelector(".t");
+    el.classList.remove("flip", "notext");
+    let r = t.getBoundingClientRect();
+    if (hit(r)) { el.classList.add("flip"); r = t.getBoundingClientRect(); if (hit(r)) { el.classList.remove("flip"); el.classList.add("notext"); continue; } }
+    taken.push(r);
   }
 }
 function advFit() {
@@ -986,7 +1009,7 @@ function advCollapsedHTML(hs, h) {
 }
 // --- #1 (AI Mateusza #1, for #2's timeline): a marker or a row name opens the incident in Historia at that moment
 // (/app ?time=hist&t=HH:MM, app.js boot), markers get the dock-style tooltip "HH:MM · title". Phone: a tap opens.
-const histURL = (sc, clock) => PICK ? openURL(sc) : `./?role=operator&mode=akcja&time=hist&sc=${encodeURIComponent(sc)}${clock ? `&t=${encodeURIComponent(clock)}` : ""}`;
+const histURL = (sc, clock) => PICK ? openURL(sc) : `./?role=operator&mode=akcja&time=hist&sc=${encodeURIComponent(sc)}${clock ? `&t=${encodeURIComponent(clock)}` : ""}${SIM_AT_Q}`;
 function tlClockAt(it, v) {   // the scenario clock of timeline value v in this incident (clamped to its report .. end)
   const s0 = toMin(it.start); if (s0 == null) return null;
   const o = Math.max(0, Math.min(it.end ?? it.last, Math.round(v - tlBase(it)))), m = (s0 + o) % 1440;
@@ -1134,7 +1157,11 @@ async function skeleton(teamP) {
     Promise.all(list.map((s) => loadMeta(s.name))).then(render);   // map dots
   } catch (e) {}
 }
-setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("pl-PL"); }, 1000);
+setInterval(() => {   // ?simAt: the header shows the virtual clock (the one the timeline and the bell use), marked "sym."
+  if (SIM_AT_Q && sim.lf) { const m = sim.lf.warsaw(sim.lf.nowMs()).min, s = Math.floor(m * 60) % 86400;
+    $("clock").innerHTML = `<span class="symb" title="Zegar symulacji (?simAt w adresie), nie czas rzeczywisty">sym.</span> ${pad2(Math.floor(s / 3600))}:${pad2(Math.floor(s / 60) % 60)}:${pad2(s % 60)}`; }
+  else $("clock").textContent = new Date().toLocaleTimeString("pl-PL");
+}, 1000);
 setInterval(tick, POLL_MS);
 tick();
 window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, get map() { return map; }, tl, tlSet, pathOf, regionOf };   // tests; pathOf(sc) for other modules
@@ -1211,7 +1238,10 @@ function simPaint() {
   const need = [...new Set(sim.view.map((i) => i.sc))].filter((sc) => !sim.info[sc]);
   if (need.length) Promise.all(need.map((sc) => sim.lf.describe(sc).then((d) => { sim.info[sc] = d; }))).then(() => { sim.cardSig = ""; simPaint(); });
   const rows = sim.view.map((i) => { const d = sim.info[i.sc], clk = d && d.startClock ? sim.lf.scenarioClock(i, d.startClock) : null, c5 = clk && simClock5(i, d.startClock); return { i, d, clk, c5, f: c5 ? sim.frames[i.sc + "|" + c5] : undefined }; });
-  for (const r of rows) if (r.c5 && r.i.state === "live" && r.f === undefined) simFetch(r.i.sc, r.c5);
+  for (const r of rows) if (r.c5 && r.i.state === "live" && r.f === undefined) {   // the scenario file first: simClock5 clamps to its last event
+    if (meta[r.i.sc]) simFetch(r.i.sc, r.c5);
+    else if (!sim.mwait?.[r.i.sc]) { (sim.mwait ||= {})[r.i.sc] = 1; loadMeta(r.i.sc).then((md) => { if (md) { sim.cardSig = ""; simPaint(); } else simFetch(r.i.sc, r.c5); }); }
+  }
   const sig = JSON.stringify([rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d]), tl.cur == null]);
   if (sig === sim.cardSig) return; sim.cardSig = sig;
   const live = rows.filter((r) => r.i.state === "live"), ended = rows.filter((r) => r.i.state !== "live");
@@ -1240,7 +1270,13 @@ function simNext() {
   const e = sim.entries.map((x) => ({ x, d: ((toMin(x.start) - m) % 1440 + 1440) % 1440 })).sort((a, b) => a.d - b.d)[0];
   return e ? `${e.x.start} (${short({ sc: e.x.sc, place: e.x.sc })})` : "-";
 }
-function simClock5(i, s0) { const b = toMin(s0), m = (b + Math.floor(Math.max(0, i.elapsedMin) / 5) * 5) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
+// frame clock: 5-min steps, never past the scenario's last scripted event (GET /api/run/<sc>?t= answers 404 there, qa-wieczor #7)
+function simLastOff(sc, b) {
+  const md = meta[sc]; if (!md) return Infinity;
+  const offs = [...(md.events || []).map((e) => e.at), ...(md.ready || []).map((r) => r.at)].map(toMin).filter((m) => m != null).map((m) => { let d = m - b; if (d < -180) d += 1440; return d; });
+  return offs.length ? Math.max(0, ...offs) : Infinity;
+}
+function simClock5(i, s0) { const b = toMin(s0), m = (b + Math.floor(Math.min(Math.max(0, i.elapsedMin), simLastOff(i.sc, b)) / 5) * 5) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
 function simFetch(sc, clk) {
   const key = sc + "|" + clk;
   if (sim.fbusy >= 2 || key in sim.frames || (tl.play && performance.now() - (sim.flast || 0) < 1500)) return;

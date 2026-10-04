@@ -388,3 +388,9 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 .card .rpath{font-size:var(--rl-fs-xs);color:var(--rl-mute);margin-top:6px;line-height:1.2}
 .card .rpath + h3{margin-top:0}
 .pk .rpath{color:var(--rl-ink-2)}
+/* Doradca pins: text left of the dot or hidden when it would cover an incident (advDeclutter, qa-wieczor #11) */
+.advpin{position:relative}
+.advpin.flip .t{position:absolute;right:100%;margin-right:4px}
+.advpin.notext .t{display:none}
+/* ?simAt: header clock = the virtual clock (qa-wieczor #9) */
+#clock .symb{font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:6px;background:var(--rl-warn);color:var(--rl-ink);vertical-align:1px}
