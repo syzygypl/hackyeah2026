@@ -527,5 +527,26 @@
    "radiusM": 30,
    "found": true
   }
+ ],
+ "props": [
+  {
+   "kind": "car-parked",
+   "at": [
+    52.72796,
+    16.11281
+   ],
+   "heading": 20,
+   "color": "#3f5f7f",
+   "label": "Auto zaginionego (parking przy Trakcie Wieleńskim)"
+  },
+  {
+   "kind": "basket",
+   "at": [
+    52.7225,
+    16.0745
+   ],
+   "from": "21:40",
+   "label": "Koszyk z podgrzybkami (21:40)"
+  }
  ]
 }

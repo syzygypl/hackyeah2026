@@ -587,6 +587,8 @@ Kinds (real size, placed on the rendered terrain; `float` kinds sit on the water
 | `paddle` | double paddle lying on the ground | - |
 | `car-in-river` | car nose-down, half under water, hazard lights blinking | - |
 | `car-damaged` | car with a crushed front, hazard lights (road shoulder) | - |
+| `car-parked` | parked car, e.g. the missing person's car at a car park (optional `"color": "#rrggbb"`) | - |
+| `basket` | wicker basket with mushrooms (a found item) | - |
 | `elk` | dead elk (bull) lying on its side | - |
 | `avalanche` | debris tongue along `heading` (downhill), lumps draped on the terrain | length m, default 300 |
 | `skis` | pair of skis and a pole stuck in the snow | - |

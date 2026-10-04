@@ -253,7 +253,7 @@ export function createDamagedTrack(THREE) {
 // ---------- scenario props: objects of the story (scenario "props", app3d places them; real size) ----------
 // createProp(THREE, p) -> { obj, tick?, float? (sits on the water surface), sink? (km below it) } or null for an unknown
 // kind. obj's local +x = p.heading; origin on the ground. Kinds: kayak-capsized, kayak-drifting, paddle, car-in-river,
-// car-damaged, elk, avalanche (size = length m), skis, burn (size = radius m), smoke, paraglider.
+// car-damaged, car-parked, basket, elk, avalanche (size = length m), skis, burn (size = radius m), smoke, paraglider.
 const KM = (m) => m / 1000;
 export function createProp(THREE, p) {
   const k = p.kind, obj = new THREE.Group(); obj.rotation.order = 'YXZ'; obj.name = 'prop-' + k;
@@ -283,6 +283,13 @@ export function createProp(THREE, p) {
     for (const x of [1.15, -1.15]) add(new THREE.BoxGeometry(KM(0.45), KM(0.01), KM(0.17)), mat(0xf0c419), KM(x), KM(0.03));
   } else if (k === 'car-in-river') {
     const L = car(0x9a1c1c); obj.rotation.z = -0.32; float = true; sink = KM(0.9); tick = hazard(L, KM(0.8));
+  } else if (k === 'car-parked') {
+    car(p.color ? new THREE.Color(p.color).getHex() : 0xb9bec4);
+  } else if (k === 'basket') { // a wicker basket of mushrooms, ~45 cm
+    const wick = mat(0xa8763e, { roughness: 0.95 });
+    add(new THREE.CylinderGeometry(KM(0.22), KM(0.17), KM(0.2), 10, 1, true), wick, 0, KM(0.1));
+    add(new THREE.TorusGeometry(KM(0.2), KM(0.015), 4, 12, Math.PI).rotateY(Math.PI / 2), wick, 0, KM(0.2));
+    for (let i = 0; i < 6; i++) { const a = i * 1.05; add(new THREE.SphereGeometry(KM(0.055), 6, 4, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x6b4226, { roughness: 0.8 }), KM(Math.cos(a) * 0.1), KM(0.19), KM(Math.sin(a) * 0.1)); }
   } else if (k === 'car-damaged') {
     const L = car(0x6f7780, 1.1); tick = hazard(L, KM(0.8)); obj.rotation.x = 0.04;
   } else if (k === 'elk') { // a dead bull elk lying on its side, ~2.7 m long
