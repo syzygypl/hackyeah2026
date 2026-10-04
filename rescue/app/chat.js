@@ -597,6 +597,8 @@ export function createChat(root, host, opts = {}) {
     if (!r.ok) throw new Error("serwer nie policzył symulacji (" + r.status + ")");
     const run = await r.json(); if (run.error) throw new Error(run.error); return run;
   }
+  function baseRun() { if (!sim.baseP) { sim.baseP = simRun([]).then((r) => (sim.base = r)); sim.baseP.catch(() => { sim.baseP = null; }); } return sim.baseP; }
+  async function prefetch() { try { await ensureCtx(); if (host.mode() === "hist" && ctx.scn) await baseRun(); } catch (e) { /* computed on the first Dodaj */ } }
   async function commitSim(evIn, k) {
     const list = Array.isArray(evIn) ? evIn : [evIn], ev = list[0];
     if (list.some((e) => e.kind === "dispatch")) throw new Error("wysłanie zespołu działa tylko na żywo");
@@ -606,10 +608,12 @@ export function createChat(root, host, opts = {}) {
     if (!evs.length) { if (ev.kind === "status") throw new Error("status zespołu bez zmiany pogody nie zmienia mapy w historii - dodaj go na żywo"); throw new Error("za mało danych (miejsce / sektor)"); }
     // "teraz" = the latest of the events and the clock: an old observation still changes where to search NOW
     const cmp = list.map(atOf).reduce((a, b) => rel(b, ctx.start) > rel(a, ctx.start) ? b : a, at0);
-    if (!sim.base) sim.base = await simRun([]);
-    const prev = sim.events.length ? sim.last : sim.base, before = ranking(prev, cmp, ctx.start);
+    // the baseline (recording without chat events) is prefetched when the chat opens, else computed in parallel with the new run
+    const prevLast = sim.events.length ? sim.last : null;
     sim.events.push(...evs);
-    const run = await simRun(sim.events); sim.last = run;
+    let run, base;
+    try { [base, run] = await Promise.all([baseRun(), simRun(sim.events)]); } catch (e) { sim.events = sim.events.filter((x) => !evs.includes(x)); throw e; }
+    const before = ranking(prevLast || base, cmp, ctx.start); sim.last = run;
     await host.apply(run, { at: cmp });
     const undo = async () => {
       sim.events = sim.events.filter((e) => !evs.includes(e));
@@ -644,7 +648,7 @@ export function createChat(root, host, opts = {}) {
     const lines = done.filter((d) => !d.el.classList.contains("undone")).map((d) => "- " + summary(d.ev).replace(/^Na mapie zaznaczę: /, "").replace(/^Oznaczę jako /, ""));
     return `Rescue Locator - ${host.scenario()}: moje zgłoszenia\n${lines.join("\n") || "- (jeszcze nic)"}\nGdzie szukać najpierw: ${top.map((s, i) => `${i + 1}. ${s.id} ${s.name} (${pl1(+s.areaPct || 0)}% obszaru)`).join("; ")}`;
   }
-  return { say, onText, ensureCtx, summaryText, resetSim: () => { sim.events = []; sim.last = null; sim.base = null; }, get simActive() { return sim.events.length > 0; }, renderChips, hello };
+  return { say, onText, ensureCtx, summaryText, resetSim: () => { sim.events = []; sim.last = null; sim.base = null; sim.baseP = null; }, prefetch, get simActive() { return sim.events.length > 0; }, renderChips, hello };
 }
 
 // the embedded 2D view (same origin, web/ untouched): a what-if run lives at a blob: URL, and the view's 5 s HEAD poll of its run
@@ -717,7 +721,7 @@ export function mountAppChat() {
   };
   { const tm = document.getElementById("tlMarks"); if (tm) new MutationObserver(markDock).observe(tm, { childList: true }); }
   const mode = () => { const m = host.mode(); dr.querySelector(".ch-mode").textContent = m === "live" ? "NA ŻYWO" : m === "studio" ? "PLAN" : "HISTORIA"; dr.querySelector(".ch-mode").className = "ch-mode m-" + m; };
-  const open = (on) => { dr.classList.toggle("open", on); btn.classList.toggle("on", on); mode(); if (on) { chat.ensureCtx(); setTimeout(() => dr.querySelector("textarea").focus(), 200); } try { sessionStorage.setItem("rescue-chat-open", on ? "1" : ""); } catch (e) {} };
+  const open = (on) => { dr.classList.toggle("open", on); btn.classList.toggle("on", on); mode(); if (on) { chat.prefetch(); setTimeout(() => dr.querySelector("textarea").focus(), 200); } try { sessionStorage.setItem("rescue-chat-open", on ? "1" : ""); } catch (e) {} };
   btn.onclick = () => open(!dr.classList.contains("open"));
   dr.querySelector(".ch-x").onclick = () => open(false);
   dr.querySelector("[data-back]").onclick = () => { chat.resetSim(); host.restore(); chat.say("Wróciłem do nagrania - symulacja wyczyszczona."); };
@@ -775,6 +779,7 @@ export async function mountStandalone() {
     async restore() { run = startRun; try { run = await runText(); } catch (e) {} swapTo(`/api/run/${sc}`); },
     focus({ segId }) { if (segId) post({ type: "select", segmentId: segId }); document.body.classList.add("cz-map-big"); setTimeout(() => document.getElementById("czMapBox").scrollIntoView({ behavior: "smooth", block: "nearest" }), 50); },
   };
+  setTimeout(() => chat.prefetch(), 1500);
   const chat = createChat(body, host, { voice: true, placeholder: "Co widziałeś? Np. „widziałem kogoś przy Wielkim Stawie 20 min temu”" });
   const sh = document.getElementById("czShare");
   if (sh) sh.onclick = async () => {
