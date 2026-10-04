@@ -862,7 +862,7 @@
         const dLat = cur.lat - fa.pos[0], dLon = cur.lon - fa.pos[1];
         feats.push(poly(fa.fov.map((q) => [q[0] + dLon, q[1] + dLat]), { k: 'fov', color: col }));
       }
-      feats.push(pt([cur.lon, cur.lat], { k: 'pos', color: col }));
+      feats.push(pt([cur.lon, cur.lat], { k: 'pos', color: col, id: a.id }));
       // demo review 5: name only on the map (labels covered #1-#3 and IPP); GPS / estimate and the accuracy in the tooltip, the
       // accuracy circle and the legend show it on the map
       labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col, html: `<b>${esc(String(a.name || a.id).split(' (')[0])}</b>`,
@@ -1621,6 +1621,7 @@
     window.__rescue2d = { map: S.view.map || null, sc: () => (S.M && S.M.R && S.M.R.scenario) || CFG.sc, hist: () => /[?&]live=0/.test(CFG.run || ''),
       units: () => { const st = S.M && S.M.R && S.M.R.steps; return (st && st.length && st[st.length - 1].resources) || []; } };
     if (S.view.map && !document.getElementById('livepos-js')) { const s = document.createElement('script'); s.id = 'livepos-js'; s.src = 'livepos.js'; document.body.appendChild(s); }
+    if (S.view.map && !document.getElementById('move2d-js')) { const s = document.createElement('script'); s.id = 'move2d-js'; s.src = 'move.js'; document.body.appendChild(s); }   // click-to-move (move.js)
     applyInsets();
     S.view.setBaseFC(baseFeatures(M));
     setBase(S.base);
