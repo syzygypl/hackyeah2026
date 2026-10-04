@@ -182,6 +182,7 @@ const openDet = new Set();   // roster <details> the operator opened (kept acros
 const kmTo = (a, b) => { const R = 6371, r = Math.PI / 180, dl = (b[0] - a[0]) * r, dn = (b[1] - a[1]) * r, x = Math.sin(dl / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
 const kmTxt = (d) => (d < 10 ? d.toFixed(1).replace(".", ",") : Math.round(d)) + " km";
 const regKey = (ll) => { const r = ll && regionOf(ll); return r ? `${r.woj} → ${r.rejon}` : "inne"; };
+const chipName = (id) => { const t = teams.find((x) => x.id === id), n = t ? t.name.split(" - ")[0].replace(/\s*\(.*?\)/g, "").trim() : id; return n.length > 22 ? n.slice(0, 21) + "…" : n; };   // "OSP Wizna - patrol brzegu" -> "OSP Wizna"
 const simLocal = {};   // team id -> sc: dropped on a 24/7 simulation card (virtual, never POSTed, gone on reload)
 const busyOf = (t, b) => t.sc || (simLocal[t.id] && b.has(simLocal[t.id]) ? simLocal[t.id] : null) || (t.home || []).find((h) => b.has(h)) || null;
 const kindLabel = (k) => ({ pieszy: "pieszy", pies: "pies", dron: "dron", smiglowiec: "śmigłowiec", lodz: "łódź", nurkowie: "nurkowie" }[k] || k || "zespół");
@@ -1413,7 +1414,7 @@ function simPaint() {
       <div class="simt" title="${i.state === "live" && clk ? `W scenariuszu ${esc(clk)} (mapa liczona na ${esc(r.c5 || "")})` : ""}">${i.state === "live" ? stateLine(r, el) : `zakończona ${hm(i.endMs)} · po ${i.durationMin} min`}</div>
       ${i.state !== "live" ? "" : t3 ? (t3.length ? `<div class="top3"><div class="seg" title="${esc(t3.slice(0, 3).map((s, k) => `#${k + 1} ${s.id || s.segmentId} ${s.name}`).join("\n"))}"><span class="lbl">Szukać najpierw:</span><span class="nm">#1 ${esc(t3[0].id || t3[0].segmentId)} ${esc(t3[0].name)}</span></div></div>` : `<div class="loading">Brak mapy dla tej chwili.</div>`)
         : `<div class="loading">Liczę mapę...</div>`}
-      ${loc.length ? `<div class="cteams">Dosłane: ${loc.map((id) => `<span class="chip" title="${esc((teams.find((t) => t.id === id) || {}).name || id)} · przydział tylko w symulacji, nie zapisany">${esc(id)}</span>`).join("")}<span class="simtag">symulacja</span></div>` : ""}
+      ${loc.length ? `<div class="cteams">Dosłane: ${loc.map((id) => `<span class="chip" title="${esc((teams.find((t) => t.id === id) || {}).name || id)} · przydział tylko w symulacji, nie zapisany">${esc(chipName(id))}</span>`).join("")}<span class="simtag">symulacja</span></div>` : ""}
       ${i.state === "live" ? `<div class="drophint">Upuść tutaj: symulacja, przydział nie jest zapisywany</div>` : ""}</article>`;
   };
   box.innerHTML = `<h2 class="cgrp sim">${tl.mode === "sim" && tl.cur != null ? "Trwają o " + esc(tlFmt(tl.cur)) : "Trwają teraz"} <span class="cnt">${live.length}</span><span class="simh">${esc(sim.lf.SIM_NOTE)}</span></h2>`
