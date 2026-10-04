@@ -364,3 +364,64 @@ Jedyne "nieudane" żądania to `net::ERR_ABORTED` na `basemap.js` / zakresach `t
 6. fps 3D na prawdziwym GPU dalej niezmierzone (headless = swiftshader) - na laptopie demo.
 
 W obszarze AI Michała (`web/patrol`, `web/seen`, `web/photo`, `web/basemap`) nic nowego do poprawy: 0 błędów, 0 long tasków, Patrol 3.4 s / 0.5 s do mapy, polling 15-60 s.
+
+## Runda 5
+
+AI Mateusza #2, niedziela 2026-10-04, 14:50-15:45 CEST, przed pitchem finałowym. Pytanie AI Andrzeja: `/api/run/zawrat?live=0` szło 3.9 s (w rundzie 2 p50 0.85 s).
+
+### Wersja i metoda
+
+- Produkcja `d85ea68` -> `035a026` (pomiary w trakcie kolejnych deployów). API: nowy `rescue/integration/perf_smoke.py` (10 prób na endpoint, p50/p95, kolumna `server` = nagłówek `Server-Timing: app;dur` z serwera Rust, czyli czas wewnątrz serwera bez sieci). Każdy może go puścić: `python3 rescue/integration/perf_smoke.py [URL] [-n 10]`.
+- Strony: Playwright + Chrome headless (skrypty w scratchpadzie), 1440x900 i 390x844; filmstrip 100 ms z `Page.startScreencast`; CLS z `PerformanceObserver('layout-shift')`; "mapa" = iframe 2D/3D widoczny z `body[data-state=ready]`, "Top 3" = `#segs` wypełniony. Przebiegi porównawcze przed/po: te same odpowiedzi serwera nagrane raz i odtwarzane lokalnie (bez szumu Wi-Fi), a pliki `/app/*` z `HEAD` albo z worktree.
+
+### Wynik główny: wolno = Wi-Fi sali, nie serwer
+
+| Pomiar | Runda 3 | Runda 5 |
+|---|---|---|
+| `/health` p50 total (pusta odpowiedź) | 0.27 s | 0.97 s (p95 3.7 s) |
+| `/api/run/zawrat` p50 / p95 total | 0.55 / 0.61 s | 2.3-3.5 / 7.2 s |
+| czas wewnątrz serwera (`Server-Timing`) | - | `/health` 0.4 ms, `/api/incidents` 12 ms, `/api/inventory` 23 ms, `/api/run/zawrat` 6-12 ms |
+| rozmiar runu zawratu (gzip) | 753-769 KB | 746-761 KB (bez zmian) |
+| TLS handshake do Vercela | - | 1.4-3.4 s |
+| kontrolnie: `google.com/generate_204` | - | 2.9-6.3 s |
+| kontrolnie: 1 MB z `speed.cloudflare.com` | - | 7.3 s (137 KB/s) |
+
+Drugi przebieg `perf_smoke.py` (produkcja `8031183`, 15:50, Wi-Fi chwilowo lżejsze), p50 / p95 total, w nawiasie czas serwera p50:
+
+| endpoint | p50 / p95 total | serwer |
+|---|---|---|
+| `/health` | 0.30 / 3.27 s | 0.2 ms |
+| `/api/scenarios`, `/api/incidents(?fast=1)`, `/api/teams`, `/api/inventory`, `/api/tracks`, `/api/live` | 0.22-0.28 / 0.30-0.46 s | 6-25 ms |
+| `/api/run/zawrat` | 1.03 / 3.24 s | 12 ms |
+| `/api/run/zawrat?live=0` | 1.09 / 3.06 s | 6.5 ms |
+| `/api/run/zawrat?live=0&t=19:45` | 0.25 / 0.46 s | 4.6 ms |
+| `POST /api/parse` (1 wywołanie, LLM) | 2.31 s | 2025 ms (model; klient czeka do 6 s, potem reguły) |
+
+Serwer odpowiada w milisekundach, run ma ten sam rozmiar co w nocy; czas zjada łącze (handshake TLS po kilka sekund, ok. 140 KB/s). Na pitch: demo z hotspotu telefonu albo z serwera lokalnego, nie z Wi-Fi sali.
+
+### Strony i 3D
+
+| Pomiar | Wynik |
+|---|---|
+| Akcja 2D -> 3D (1440, zimno, Wi-Fi) | 7.0 MB / 178 żądań; run pobierany 3 razy (2 x `/api/run/zawrat` 730 KB + `?live=0` 744 KB) |
+| Centrum / Zasoby / Czat / Porównanie | 626 KB / 50, 170 KB / 16, 2.4 MB / 63, 2.4 MB / 90 - bajty jak w rundzie 3 |
+| 3D na GPU (Metal, 1440) | 60 klatek/s, wątek główny zajęty 0.6 s na 10 s, 0 long tasków; ruch samochodów (`?traffic=0` vs domyślnie) +0.04 s na 10 s - pomijalne |
+| 3D na swiftshader (headless bez GPU) | 1 klatka/s, long taski 5.8-10 s - tylko emulacja CPU, nie regresja na prawdziwym GPU (runda 4 mierzyła lżejszą scenę) |
+| Nowe statyki 3D | `*-traffic.json` 0.1-288 KB (zawrat 18 KB, 5 KB br) z `Cache-Control` `app/3d/data`; `poland.json` 13 KB (4 KB br) bez reguły - tani |
+
+### Start /app: loader (3eede53) i Centrum jako nakładka
+
+| Pomiar (odpowiedzi odtwarzane, 1440 / 390) | Przed | Po |
+|---|---|---|
+| CLS przy starcie | 0.21 / 0 | 0.006 / 0 |
+| Stany pośrednie przed mapą (filmstrip) | 5: biały, pusty układ 3-kolumnowy, pływające panele bez mapy, ciemny 2D, sam hillshade | 1: ekran ładowania z krokiem |
+| Mapa + Top 3 gotowe | 0.66-0.69 s / 1.5 s | 0.59-0.60 s / 0.6 s |
+| Produkcja po deployu (Wi-Fi sali) | CLS 0.21 | CLS 0.006 / 0.011, 0 błędów JS |
+| "Zmień scenariusz" -> mapa nowego scenariusza | pełne przeładowanie /app (5-7 s na Wi-Fi sali) | 0.96-1.06 s / 2.5 s, bez przeładowania strony |
+
+### Do zrobienia (kolejność = wpływ)
+
+1. **Run pobierany drugi raz przez 3D** (730 KB): `warmRun` (`rescue/app/app.js:756`) podmienia `window.__rescueRunText` na tekst zapasowego runu `?live=0`, a 3D bootujący w tym oknie nie trafia w swój URL i pobiera run sam (`rescue/app/3d/app3d.js:131`). Poprawka: słownik `__rescueRunTexts[url]` czytany przez 3D i 2D (`rescue/web/app.js:1219, 1573`) - AI Andrzeja + AI Marcina.
+2. ETag liczony przed silnikiem + `max-age`/SWR dla nagrań (AI Andrzeja, w toku) - po stronie klienta `preRun` już nie wymusza `no-cache`.
+3. Mapa Plan (`rescue/app/app.js:130`, top-level `await loadBasemap`) opóźnia start iframe 2D o ok. 0.4 s - odroczyć do pierwszego wejścia w Plan (po pitchu, ryzyko).
+4. `await api("/story/assign")` w `boot()` przed `setRole` - kolejna runda przez sieć przed pokazaniem roli.
