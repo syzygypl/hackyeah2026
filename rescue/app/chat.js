@@ -427,6 +427,14 @@ EXAMPLES["rodzina-dziecko-las"] = [
   "Dron przeleciał nad R6, nic",
   "Zmierzch o 18:30, 8 stopni",
 ];
+EXAMPLES["auto-w-rzece-wizna"] = [
+  "Wędkarz słyszał wołanie z wody o 19:20 ok. 1 km poniżej mostu",
+  "Łódź PSP przeszukała Narew od mostu do Kalenia, nic",
+  "Znaleziono but kierowcy w trzcinach przy prawym brzegu",
+  "Pies podjął trop od trzcin w stronę Kopcia",
+  "Dron przeleciał nad N1 i N2, nic",
+  "Ciemno od 19:40, 11 stopni, woda 17",
+];
 EXAMPLES.sniardwy = [
   "Rybak widział żeglarza w wodzie o 17:10 przy Nowych Gutach",
   "Łódź WOPR przeszukała toń na wschód od LKP, nic",
