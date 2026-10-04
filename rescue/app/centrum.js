@@ -164,7 +164,16 @@ async function assignTeam(team, sc) {
 }
 
 // ---------- state + render
-let incidents = [], teams = [], hl = null, dragging = false, fitted = false;
+let incidents = [], teams = [], hl = null, dragging = false, fitted = false, sel = null;   // sel: clicked card (focus for team dots)
+// sens-funkcji #1: a team whose home scenario runs now (a live 24/7 occurrence or a LIVE incident) is in the field (its dot moves
+// on the map), so it is not free, whatever /api/teams says; t.sc (a manual assignment) wins
+function busyScs() {
+  const s = new Set();
+  try { for (const i of simView()) if (i.state === "live") s.add(i.sc); } catch (e) {}
+  for (const x of incidents) if (x.live && !x.found) s.add(x.sc);
+  return s;
+}
+const busyOf = (t, b) => t.sc || (t.home || []).find((h) => b.has(h)) || null;
 const kindLabel = (k) => ({ pieszy: "pieszy", pies: "pies", dron: "dron", smiglowiec: "śmigłowiec", lodz: "łódź", nurkowie: "nurkowie" }[k] || k || "zespół");
 const ICON = {
   pieszy: '<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7m0 0-3 7m3-7 3 7M7 11l5-3 5 3"/>',
@@ -204,7 +213,8 @@ function sortIncidents(a) {
 }
 let shown = "";   // what the cards / roster / markers were last built from: a poll that brings nothing new touches no DOM
 function render() {
-  const sig = JSON.stringify([incidents, teams, Object.keys(meta).filter((k) => meta[k]).length, has.incidents, has.teams]);
+  const bz = busyScs();
+  const sig = JSON.stringify([incidents, teams, [...bz].sort(), sel, Object.keys(meta).filter((k) => meta[k]).length, has.incidents, has.teams]);
   if (sig === shown) return;
   const selectOpen = $("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT";   // renderTeams skips then: build again next poll
   if (!dragging) { renderCards(); renderTeams(); if (!selectOpen) shown = sig; }
@@ -213,7 +223,7 @@ function render() {
   tlApply();
   advApply();   // Doradca: re-mark linked incidents after the cards / markers were rebuilt
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
-  $("counts").innerHTML = `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
+  $("counts").innerHTML = `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !busyOf(t, bz)).length}/${teams.length}`;
   // data source only as a tooltip on the counts (review: no technical text in the header)
   $("counts").title = "Źródło danych: " + (has.incidents ? "GET /api/incidents" : "GET /api/scenarios + /api/run/<sc> (zapas)") + " · zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce");
 }
@@ -225,7 +235,7 @@ function renderCards() {
     const m = modeOf(x), mine = teams.filter((t) => t.sc === x.sc);
     const when = x.lastEventAt ? `ost. zdarzenie ${hhmm(x.lastEventAt)}` : x.lastClock ? `scenariusz ${esc(x.lastClock)}` : "";
     const rf = x.replayFound && !x.found ? `<span class="mute" title="Plik scenariusza kończy się odnalezieniem; tu pokazujemy moment przed nim">odtworzenie z odnalezieniem</span>` : "";
-    return `<article class="card ${m} ${hl === x.sc ? "hl" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
+    return `<article class="card ${m} ${hl === x.sc ? "hl" : ""} ${sel === x.sc ? "sel" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
       <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="mute">${esc(x.sc)}</span><span class="when mono">${when}</span></div>
       ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${openURL(x.sc)}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>
       ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw${x.top3.every((s) => s.areaPct != null) ? ` · top 3 to ${areaTxt(x.top3.reduce((a, s) => a + (+s.areaPct || 0), 0))} obszaru` : ""}</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span>${s.areaPct != null ? `<span class="mute">${areaTxt(s.areaPct)} obszaru</span>` : ""}</div>`).join("")}</div>`
@@ -238,7 +248,8 @@ function renderCards() {
   $("cards").innerHTML = (all.length ? `<h2 class="cgrp">Trwające <span class="cnt">${cur.length}</span></h2>${cur.map(card).join("") || `<div class="help">Brak trwających akcji.</div>`}`
     + (done.length ? `<h2 class="cgrp done">Zakończone <span class="cnt">${done.length}</span></h2>${done.map(card).join("")}` : "") : `<div class="help">Brak akcji na serwerze.</div>`);
   $("cards").querySelectorAll(".card").forEach((el) => {
-    el.onclick = (e) => { if (!e.target.closest("a")) location.href = openURL(el.dataset.sc); };
+    el.onclick = (e) => { if (!e.target.closest("a")) setSel(el.dataset.sc); };   // sens-funkcji #1: a click focuses (teams), the title opens
+    el.title = "Kliknij: zespoły tej akcji na mapie. Tytuł: otwórz akcję";
     el.onmouseenter = () => setHl(el.dataset.sc); el.onmouseleave = () => setHl(null);
   });
   wireDrops($("cards"));
@@ -252,9 +263,15 @@ function renderTeams() {
       <span class="meta"><span>${esc(kindLabel(t.kind))}</span><span class="st ${t.status === "wolny" ? "wolny" : t.status === "w akcji" ? "akcja" : ""}">${esc(t.status || (t.sc ? "w drodze" : "wolny"))}${t.segmentId ? " " + esc(t.segmentId) : ""}</span>
       <select data-team="${esc(t.id)}" aria-label="Przydziel ${esc(t.name)} do akcji">${opts(t.sc)}</select></span></div>`;
   const grp = (sc, title, ts, extra = "") => `<section class="grp" data-drop="${esc(sc)}"><h3>${title} <span class="cnt">${ts.length}</span>${extra}</h3>${ts.map(row).join("") || `<div class="help">${sc ? "Brak zespołów - przeciągnij tutaj." : "Wszystkie zespoły pracują."}</div>`}</section>`;
-  const free = teams.filter((t) => !t.sc);
+  const bz = busyScs(), free = teams.filter((t) => !busyOf(t, bz));
   const busy = list.filter((x) => teams.some((t) => t.sc === x.sc));
-  $("teams").innerHTML = grp("", "Wolne", free) + busy.map((x) => grp(x.sc, esc(short(x)), teams.filter((t) => t.sc === x.sc), modeOf(x) === "live" ? ' <span class="badge live">LIVE</span>' : "")).join("")
+  // teams of running 24/7 occurrences / LIVE incidents (not assigned by hand): per action, collapsed
+  const field = [...bz].map((sc) => ({ sc, ts: teams.filter((t) => !t.sc && busyOf(t, bz) === sc) })).filter((g) => g.ts.length)
+    .map((g) => ({ ...g, x: incidents.find((i) => i.sc === g.sc) || { sc: g.sc, place: g.sc, title: "" } })).sort((a, b) => short(a.x).localeCompare(short(b.x), "pl"));
+  const fieldRow = (t) => row({ ...t, status: "w akcji" }).replace("<select ", "<select disabled ");
+  $("teams").innerHTML = (grp("", "Wolne", free) + busy.map((x) => grp(x.sc, esc(short(x)), teams.filter((t) => t.sc === x.sc), modeOf(x) === "live" ? ' <span class="badge live">LIVE</span>' : "")).join("")
+    + (field.length ? `<section class="grp tfield"><h3>W akcji (symulacja 24/7) <span class="cnt">${field.reduce((a, g) => a + g.ts.length, 0)}</span></h3>`
+      + field.map((g) => `<details data-sc="${esc(g.sc)}"${sel === g.sc ? " open" : ""}><summary>${esc(short(g.x))} <span class="cnt">${g.ts.length}</span></summary>${g.ts.map(fieldRow).join("")}</details>`).join("") + `</section>` : ""))
     || `<div class="help">Brak zespołów.</div>`;
   $("teams").querySelectorAll(".team").forEach((el) => {
     el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", el.dataset.team); e.dataTransfer.effectAllowed = "move"; dragging = true; document.body.classList.add("dragging"); };
@@ -285,6 +302,13 @@ async function doAssign(team, sc) {
     dragging = false; document.body.classList.remove("dragging");
     tick();
   } catch (e) { toast("Przydział nie został zapisany: " + e.message); }
+}
+function setSel(sc) {   // focus one action: its teams' dots on the map (tmTick), zoomed in enough to see them
+  sel = sel === sc ? null : sc;
+  document.querySelectorAll(".card").forEach((el) => el.classList.toggle("sel", el.dataset.sc === sel));
+  const md = sel && meta[sel];
+  if (md && md.ipp && map && mapReady && map.getZoom() < TM_Z) map.easeTo({ center: [md.ipp[1], md.ipp[0]], zoom: TM_Z + 1.5, duration: 600 });
+  render(); tmTick();
 }
 function setHl(sc) {
   hl = sc;
@@ -1273,6 +1297,7 @@ function simTick() {
   sim.insts = sim.on ? sim.lf.instancesAt(sim.entries, sim.lf.nowMs(), { pastMin: 120 }) : [];
   if (sim.bell) sim.bell.update(sim.insts);
   simPaint(); simEscPaint();
+  if (incidents.length) render();   // sens-funkcji #1: the busy set (running occurrences) changes the roster / header
 }
 // cards + dots at the virtual clock (cheap when nothing changed: signature of keys, states and 5-min clocks)
 function simPaint() {
@@ -1311,7 +1336,8 @@ function simPaint() {
     + (live.map(card).join("") || `<div class="help">Teraz nic nie trwa. Następne zgłoszenie: ${esc(simNext())}.</div>`) + ended.map(card).join("")
     + `<h2 class="cgrp">Wszystkie scenariusze <span class="mute">nagrania</span></h2>`;
   box.querySelectorAll(".card").forEach((el) => {
-    el.onclick = (e) => { if (!e.target.closest("a")) location.href = el.querySelector("h3 a").getAttribute("href"); };
+    el.onclick = (e) => { if (!e.target.closest("a")) setSel(el.dataset.sc); };   // sens-funkcji #1: focus, the title opens
+    el.classList.toggle("sel", el.dataset.sc === sel);
     el.onmouseenter = () => setHl(el.dataset.sc); el.onmouseleave = () => setHl(null);
   });
   simEscPaint();
@@ -1418,8 +1444,9 @@ function tmTick() {
   }   // the dots are HTML markers (.tmk, above the incident markers, QA runda 2 #6); trails stay on the canvas
   const f = [];
   const live = simMarks() ? simView().filter((i) => i.state === "live" && TM_SCS.has(i.sc)) : [];
+  const foc = hl || sel, show = live.filter((i) => i.sc === foc);   // sens-funkcji #1: dots only for the action in focus
   for (const i of live) if (!(i.sc in tm.data)) tmLoad(i.sc);   // prefetched at any zoom, so zooming in shows them at once
-  if (map.getZoom() >= TM_Z - 0.5) for (const i of live) {
+  if (map.getZoom() >= TM_Z - 0.5) for (const i of show) {
     const acts = tm.data[i.sc]; if (!acts) continue;
     const m = Math.max(0, (Math.min(simNowAt(), i.endMs) - i.startMs) / 60000);
     for (const a of acts) {
@@ -1427,10 +1454,10 @@ function tmTick() {
       const c = TM_COL[a.kind] || "#e76f51";
       const tr = a.path.filter((q) => q[2] > m - TM_TRAIL && q[2] < m).map((q) => [q[1], q[0]]).concat([pos]);
       if (tr.length > 1) f.push({ type: "Feature", properties: { c }, geometry: { type: "LineString", coordinates: tr } });
-      f.push({ type: "Feature", properties: { c, id: a.id, n: a.name, sc: i.sc }, geometry: { type: "Point", coordinates: pos } });
+      f.push({ type: "Feature", properties: { c, id: a.id, n: a.name, k: a.kind, sc: i.sc }, geometry: { type: "Point", coordinates: pos } });
     }
   }
-  const z = map.getZoom(), sig = JSON.stringify(f.map((x) => x.geometry.coordinates.at(-1))) + (z >= TM_Z) + Math.round(z * 4);
+  const z = map.getZoom(), sig = JSON.stringify(f.map((x) => x.geometry.coordinates.at(-1))) + (z >= TM_Z) + Math.round(z * 4) + foc + live.length;
   if (sig === tm.sig) return; tm.sig = sig;
   map.getSource("tm").setData({ type: "FeatureCollection", features: f });
   // dots: readable (12 px, dark outline) and above the incident dot; a team standing on its incident's point (IPP) is fanned out
@@ -1442,6 +1469,7 @@ function tmTick() {
     let m = tm.mk[k];
     if (!m) {
       const el = document.createElement("div"); el.className = "tmk"; el.title = p.n || p.id;
+      const lb = document.createElement("span"); lb.textContent = tmLabel(p.n || p.id); el.append(lb);
       m = tm.mk[k] = new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat(x.geometry.coordinates).addTo(map);
     }
     m.getElement().style.background = p.c;
@@ -1454,6 +1482,16 @@ function tmTick() {
     m.setOffset(off);
   }
   for (const k of Object.keys(tm.mk)) if (!seen.has(k)) { tm.mk[k].remove(); delete tm.mk[k]; }
+  // legend: which action, colours of the kinds on the map now
+  let lg = $("tmLeg");
+  if (!lg) { lg = document.createElement("div"); lg.id = "tmLeg"; $("map").append(lg); }
+  const kinds = [...new Set(f.filter((x) => x.geometry.type === "Point").map((x) => x.properties.k))];
+  lg.hidden = !seen.size;
+  if (seen.size) {
+    const x = incidents.find((i) => i.sc === foc) || { sc: foc, place: foc, title: "" };
+    lg.innerHTML = `<b>Zespoły w akcji: ${esc(short(x))}</b>` + kinds.map((k) => `<span><i style="background:${TM_COL[k] || "#e76f51"}"></i>${esc(kindLabel(k))}</span>`).join("");
+  } else if (foc && show.length && tm.data[foc]) { lg.hidden = false; lg.textContent = z < TM_Z ? "Przybliż mapę, aby zobaczyć ruch zespołów tej akcji" : "Zespoły tej akcji jeszcze nie wyruszyły (brak pozycji)"; }
 }
+const tmLabel = (n) => { const s = String(n).replace(/\s*\(.*?\)\s*/g, " ").trim(); return s.length > 16 ? s.slice(0, 15) + "…" : s; };
 setInterval(tmTick, 1000);
 window.rescueTm = tm;   // tests

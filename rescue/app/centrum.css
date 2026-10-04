@@ -415,3 +415,14 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 #simCards .escb{float:right;margin:0 0 4px 8px;padding:2px 8px;border-radius:6px;background:var(--rl-danger);color:var(--rl-on-danger);font-size:11px;font-weight:700}
 /* team dots (QA runda 2 #6): above the incident markers (z 1-3), readable outline; clicks go through to the incident */
 .tmk{width:12px;height:12px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1.5px #1b1f24,0 1px 3px rgba(0,0,0,.4);z-index:5;pointer-events:none}
+/* sens-funkcji #1: teams only for the action in focus (hover / clicked card), labelled, with a legend; roster counts the 24/7 field */
+.card.sel{border-color:var(--rl-accent);box-shadow:0 0 0 2px var(--rl-accent)}
+.tmk span{position:absolute;left:14px;top:-4px;white-space:nowrap;font:600 10px/14px var(--rl-font,system-ui);color:#1b1f24;background:rgba(255,255,255,.85);border-radius:3px;padding:0 3px}
+#tmLeg{position:absolute;z-index:4;top:calc(var(--gap) * 2 + var(--bar-h) + 6px);left:calc(var(--list-w) + var(--gap) * 2 + 8px);max-width:calc(100% - var(--list-w) - var(--roster-w) - var(--gap) * 4 - 16px);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;background:var(--rl-panel);border:1px solid var(--rl-line);border-radius:var(--rl-radius);padding:5px 10px;font-size:var(--rl-fs-xs);color:var(--rl-ink-2);box-shadow:var(--rl-shadow)}
+#tmLeg[hidden]{display:none}
+#tmLeg b{color:var(--rl-ink)}
+#tmLeg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px;border:1.5px solid #fff;box-shadow:0 0 0 1px #1b1f24}
+.tfield details{margin:2px 0}
+.tfield summary{cursor:pointer;font-size:var(--rl-fs-s);padding:3px 0}
+.tfield summary .cnt{color:var(--rl-mute)}
+@media (max-width:900px){#tmLeg{top:8px;left:8px;max-width:calc(100% - 16px)}}
