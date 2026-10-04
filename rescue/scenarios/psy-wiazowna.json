@@ -1,0 +1,553 @@
+{
+ "incident": "Dwa psy uciekły przed fajerwerkami - Lipowo, gmina Wiązowna, dolina Świdra i S17 (scenariusz fikcyjny)",
+ "date": "2026-10-10",
+ "startClock": "20:50",
+ "subject": {
+  "name": "Kora, suka husky w typie mieszańca, 2 lata (pies fikcyjny)",
+  "age": 2,
+  "category": "hiker",
+  "note": "O 20:15 fajerwerki z wesela w Pęclinie. Dwa psy państwa K. (osoby fikcyjne) przecisnęły się pod bramą ogrodu przy ul. Armii Krajowej w Lipowie. Luna (9 lat, lękliwa) zwykle chowa się blisko domu. Kora (2 lata, husky, biegaczka) ma obrożę GPS: ostatni ping 20:41 nad Świdrem przy Kopkach, potem bateria padła. Szare szelki, czerwona obroża z adresówką, nie podchodzi do obcych. Silnik nie ma profilu psa: kategoria hiker (pies pokonuje kilka km w pierwszych godzinach i trzyma się linii: rzeki, wałów, skrajów lasu, dróg), pierścienie ustawione ręcznie wg danych o zaginionych psach. Właściciele zgłaszają się do gminy i grupy wolontariuszy o 20:50.",
+  "lastContact": "20:15"
+ },
+ "bbox": {
+  "south": 52.118,
+  "west": 21.305,
+  "north": 52.176,
+  "east": 21.42
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: ogród przy ul. Armii Krajowej w Lipowie (psy uciekły o 20:15)",
+  "at": [
+   52.1412,
+   21.3899
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "W1",
+   "name": "Zdroja",
+   "seed": [
+    52.16875,
+    21.3165
+   ]
+  },
+  {
+   "id": "W2",
+   "name": "Płachta",
+   "seed": [
+    52.16875,
+    21.3395
+   ]
+  },
+  {
+   "id": "W3",
+   "name": "Pęclin",
+   "seed": [
+    52.16875,
+    21.3625
+   ]
+  },
+  {
+   "id": "W4",
+   "name": "Dziechciniec Duchnowski",
+   "seed": [
+    52.16875,
+    21.3855
+   ]
+  },
+  {
+   "id": "W5",
+   "name": "Pola na wschód od Pęclina",
+   "seed": [
+    52.16875,
+    21.4085
+   ]
+  },
+  {
+   "id": "W6",
+   "name": "Radiówek",
+   "seed": [
+    52.15425,
+    21.3165
+   ]
+  },
+  {
+   "id": "W7",
+   "name": "Żanęcin",
+   "seed": [
+    52.15425,
+    21.3395
+   ]
+  },
+  {
+   "id": "W8",
+   "name": "Piskorz",
+   "seed": [
+    52.15425,
+    21.3625
+   ]
+  },
+  {
+   "id": "W9",
+   "name": "Malcanów",
+   "seed": [
+    52.15425,
+    21.3855
+   ]
+  },
+  {
+   "id": "W10",
+   "name": "Malcanów - wsch.",
+   "seed": [
+    52.15425,
+    21.4085
+   ]
+  },
+  {
+   "id": "W11",
+   "name": "Rudka - zach.",
+   "seed": [
+    52.13975,
+    21.3165
+   ]
+  },
+  {
+   "id": "W12",
+   "name": "Rudka - wsch.",
+   "seed": [
+    52.13975,
+    21.3395
+   ]
+  },
+  {
+   "id": "W13",
+   "name": "Kopki",
+   "seed": [
+    52.13975,
+    21.3625
+   ]
+  },
+  {
+   "id": "W14",
+   "name": "Lipowo",
+   "seed": [
+    52.13975,
+    21.3855
+   ]
+  },
+  {
+   "id": "W15",
+   "name": "Glinianka - płn.",
+   "seed": [
+    52.13975,
+    21.4085
+   ]
+  },
+  {
+   "id": "W16",
+   "name": "Las nad Świdrem - zach.",
+   "seed": [
+    52.12525,
+    21.3165
+   ]
+  },
+  {
+   "id": "W17",
+   "name": "S17",
+   "seed": [
+    52.12525,
+    21.3395
+   ]
+  },
+  {
+   "id": "W18",
+   "name": "Adamówka",
+   "seed": [
+    52.12525,
+    21.3625
+   ]
+  },
+  {
+   "id": "W19",
+   "name": "Wola Karczewska",
+   "seed": [
+    52.12525,
+    21.3855
+   ]
+  },
+  {
+   "id": "W20",
+   "name": "Glinianka - płd.",
+   "seed": [
+    52.12525,
+    21.4085
+   ]
+  },
+  {
+   "id": "W21",
+   "name": "Most S17 nad Świdrem",
+   "seed": [
+    52.13955,
+    21.33125
+   ]
+  },
+  {
+   "id": "W22",
+   "name": "Dolina Świdra przy Kopkach",
+   "seed": [
+    52.1295,
+    21.372
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "osp-glinianka",
+   "name": "OSP Glinianka - zastęp",
+   "type": "ground",
+   "base": [
+    52.13117,
+    21.41708
+   ],
+   "readyAt": "21:00"
+  },
+  {
+   "id": "osp-wiazowna",
+   "name": "OSP Wiązowna - zastęp",
+   "type": "ground",
+   "base": [
+    52.1712,
+    21.304
+   ],
+   "readyAt": "21:05"
+  },
+  {
+   "id": "dron-wolontariusze",
+   "name": "Dron termowizyjny wolontariuszy (grupa poszukiwań zwierząt)",
+   "type": "drone",
+   "base": [
+    52.1412,
+    21.3899
+   ],
+   "readyAt": "21:20"
+  },
+  {
+   "id": "gmina-straz",
+   "name": "Straż Gminna Wiązowna i opiekun schroniska (klatka, chwytak)",
+   "type": "ground",
+   "base": [
+    52.1712,
+    21.304
+   ],
+   "readyAt": "21:30"
+  },
+  {
+   "id": "pol-otwock",
+   "name": "Patrol Policji (KPP Otwock) - S17",
+   "type": "ground",
+   "base": [
+    52.1052,
+    21.2614
+   ],
+   "readyAt": "22:10"
+  },
+  {
+   "id": "pies-tropiacy",
+   "name": "Przewodnik z psem tropiącym (wolontariusz, K9)",
+   "type": "dog",
+   "base": [
+    52.137,
+    21.235
+   ],
+   "readyAt": "22:15"
+  }
+ ],
+ "volunteers": [
+  {
+   "id": "wlasciciele",
+   "name": "Właściciele i sąsiedzi (GPS telefonu)",
+   "from": "20:20",
+   "to": "21:40",
+   "route": [
+    [
+     52.1412,
+     21.3899
+    ],
+    [
+     52.1398,
+     21.3885
+    ],
+    [
+     52.137,
+     21.385
+    ],
+    [
+     52.1345,
+     21.3815
+    ],
+    [
+     52.131,
+     21.379
+    ],
+    [
+     52.1299,
+     21.3756
+    ],
+    [
+     52.12936,
+     21.37886
+    ],
+    [
+     52.12859,
+     21.38713
+    ],
+    [
+     52.133,
+     21.386
+    ],
+    [
+     52.1412,
+     21.3899
+    ]
+   ]
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): trzciny pod mostem S17 nad Świdrem",
+  "at": [
+   52.13955,
+   21.33125
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "20:50",
+   "title": "Teren: dolina Świdra, łąki i zarośla, skraj lasów Mazowieckiego Parku Krajobrazowego, S17 na zachodzie",
+   "detail": "OSM i DEM. Wystraszony pies biegnie wzdłuż linii: rzeki, wału, skraju lasu i dróg; chowa się w zaroślach i pod mostami. Ekspresowa S17 przecina dolinę Świdra ok. 4 km na zachód od Lipowa.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "20:50",
+   "title": "Pierścienie: zaginiony pies, biegacz (brak profilu psa w silniku)",
+   "detail": "Przybliżenie z danych o zaginionych psach (nie tabele ISRID dla ludzi): 25% 0,5 km, 50% 1,6 km, 75% 3,5 km, 95% 8 km od domu.",
+   "point": [
+    52.1412,
+    21.3899
+   ],
+   "quantilesKm": [
+    0.5,
+    1.6,
+    3.5,
+    8.0
+   ]
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "20:50",
+   "title": "Trudność terenu: łąki zalewowe i zarośla nad Świdrem",
+   "detail": "Klasy terenu z nachylenia DEM: płasko, skarpy nad rzeką i nasypy S17."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "20:50",
+   "title": "Warunki: noc, +8°C, wiatr 3 m/s, bez opadów",
+   "detail": "Zachód słońca 18:12. Fajerwerki jeszcze do ok. 21:00, pies może biec dalej przy każdym huku.",
+   "visibilityM": 2000,
+   "windMs": 3,
+   "tempC": 8,
+   "precip": "none",
+   "dark": true,
+   "ice": false
+  },
+  {
+   "provider": "Clue",
+   "at": "20:52",
+   "title": "Obroża GPS Kory: ostatni ping 20:41 nad Świdrem przy Kopkach, potem bateria padła",
+   "detail": "Aplikacja obroży: punkt z dokładnością ok. 20 m, wcześniejsze punkty z 20:25 i 20:33 na drodze w stronę rzeki. Od 20:41 brak sygnału (bateria 3%).",
+   "point": [
+    52.1299,
+    21.3756
+   ],
+   "radiusM": 60,
+   "seenAt": "20:41",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "Clue",
+   "at": "20:58",
+   "title": "Sąsiadka (meldunek): husky biegł ulicą w dół, w stronę rzeki",
+   "detail": "Meldunek: sąsiadka z Armii Krajowej, ok. 20:25: biały pies z szelkami biegł środkiem drogi w stronę Kopek.",
+   "point": [
+    52.1345,
+    21.3815
+   ],
+   "radiusM": 200,
+   "seenAt": "20:25",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "TripPlan",
+   "at": "21:00",
+   "title": "Właściciel: na spacerach Kora zawsze ciągnie wałem nad Świdrem na zachód",
+   "detail": "\"Codziennie chodzimy z Kopek wałem wzdłuż rzeki w stronę lasu i z powrotem. Ona zna tę drogę.\"",
+   "points": [
+    [
+     52.1299,
+     21.3756
+    ],
+    [
+     52.12909,
+     21.35317
+    ],
+    [
+     52.13212,
+     21.35114
+    ],
+    [
+     52.13505,
+     21.34949
+    ],
+    [
+     52.13612,
+     21.34505
+    ]
+   ],
+   "radiusM": 300
+  },
+  {
+   "provider": "Clue",
+   "at": "21:10",
+   "title": "Grupa FB (meldunek): husky przy kapliczce w Dziechcińcu",
+   "detail": "Zdjęcie z telefonu, nieostre. Autor nie zna Kory.",
+   "point": [
+    52.14966,
+    21.35153
+   ],
+   "radiusM": 250,
+   "seenAt": "21:00",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "DronePassEmpty",
+   "at": "21:30",
+   "title": "Dron wolontariuszy: łąki przy Malcanowie - sygnał termiczny to lis, nie pies",
+   "detail": "Termowizja dobrze widzi na otwartych łąkach. Jedno zwierzę, sylwetka i chód lisa. POD 60%.",
+   "segments": [
+    "W9"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "21:35",
+   "title": "Wolontariusz: husky z Dziechcińca to pies sąsiadów, nie Kora",
+   "detail": "Sprawdzone na miejscu: inny pies, z obrożą bez GPS. Fałszywe zgłoszenie z grupy FB.",
+   "segments": [
+    "W8"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "21:50",
+   "title": "Luna odnaleziona pod drewutnią sąsiada, 200 m od domu; Kory w okolicy domu nie ma",
+   "detail": "Lękliwa Luna schowała się tam, gdzie pachniało znajomo, i nie odpowiadała na wołanie. Właściciele i OSP przeszli ogrody i ulicę Armii Krajowej z latarkami.",
+   "segments": [
+    "W14",
+    "W14"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "Clue",
+   "at": "22:05",
+   "title": "112 (kierowca): pies biegnie poboczem S17 przy moście na Świdrze - Policja zamyka pas",
+   "detail": "Zgłoszenie priorytetowe: zagrożenie dla psa i kierowców. Patrol KPP Otwock zwalnia ruch i zamyka prawy pas. Kierowca widział białego psa z obrożą, zbiegł ze skarpy w stronę rzeki.",
+   "point": [
+    52.1408,
+    21.3308
+   ],
+   "radiusM": 300,
+   "seenAt": "22:03",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "Clue",
+   "at": "22:20",
+   "title": "OSP Wiązowna: szare szelki Kory zaczepione o siatkę przy ścieżce nad Świdrem",
+   "detail": "Właściciel potwierdza. Pies wyswobodził się z szelek przechodząc pod ogrodzeniem, został w obroży.",
+   "point": [
+    52.13505,
+    21.34949
+   ],
+   "radiusM": 150,
+   "seenAt": "21:40"
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "22:30",
+   "title": "Policja: pobocza i nasyp S17 1 km w obie strony od mostu, nic",
+   "detail": "Ruch wstrzymany na 10 minut, latarki i szperacz. Psa na jezdni już nie ma.",
+   "segments": [
+    "W11"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "Clue",
+   "at": "22:40",
+   "title": "Pies tropiący podjął trop wzdłuż brzegu Świdra w stronę mostu S17",
+   "detail": "Przewodnik: świeży trop od szelek na zachód, brzegiem, ok. 1 km.",
+   "point": [
+    52.13924,
+    21.33674
+   ],
+   "radiusM": 200,
+   "seenAt": "21:55"
+  },
+  {
+   "provider": "Clue",
+   "at": "23:30",
+   "title": "ZNALEZIONO: pies tropiący i wolontariusze - Kora w trzcinach pod mostem S17",
+   "detail": "Leżała wciśnięta w trzciny pod przęsłem, przemoczona, z otarciem łapy. Podeszła dopiero do właściciela. Przekazana do lecznicy w Wiązownie. Meldunek radiowy, nie GPS.",
+   "point": [
+    52.13955,
+    21.33125
+   ],
+   "radiusM": 30,
+   "found": true
+  }
+ ],
+ "props": [
+  {
+   "kind": "gps-ping",
+   "at": [
+    52.1299,
+    21.3756
+   ],
+   "from": "20:52",
+   "size": 20,
+   "label": "Obroża GPS: ostatni ping 20:41"
+  },
+  {
+   "kind": "harness",
+   "at": [
+    52.13505,
+    21.34949
+   ],
+   "heading": 60,
+   "from": "22:20",
+   "label": "Szelki Kory (22:20)"
+  }
+ ]
+}

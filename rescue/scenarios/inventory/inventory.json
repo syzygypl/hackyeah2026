@@ -307,6 +307,77 @@
    "fictional": true
   },
   {
+   "id": "dron-gopr",
+   "kind": "dron",
+   "name": "Dron termowizyjny GOPR Grupy Beskidzkiej",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-897",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 131.9,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 100.8,
+    "lastMaintenance": "2026-09-02"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-19",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-04",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-GOPR-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-GOPR-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "Dron termowizyjny GOPR Grupy Beskidzkiej",
+     "readyAt": "16:45",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "DRON-GOPR-1 (fikcyjny)",
+       "role": "operator drona (GOPR)"
+      },
+      {
+       "name": "DRON-GOPR-2 (fikcyjny)",
+       "role": "obserwator (GOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-gopr-kpz",
    "kind": "dron",
    "name": "Dron termowizyjny GOPR Karkonosze",
@@ -884,6 +955,77 @@
    "fictional": true
   },
   {
+   "id": "dron-psp-mragowo",
+   "kind": "dron",
+   "name": "Dron PSP Mrągowo z termowizją",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-829",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 244.6,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 225.1,
+    "lastMaintenance": "2026-09-11"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-25",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-09",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-MRAGOWO-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-MRAGOWO-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-mikolajki": {
+     "name": "Dron PSP Mrągowo z termowizją",
+     "readyAt": "16:15",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-MRAGOWO-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-MRAGOWO-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-psp-nowy-targ",
    "kind": "dron",
    "name": "Dron termowizyjny PSP Nowy Targ",
@@ -1019,6 +1161,290 @@
       {
        "name": "DRON-PSP-NS-2 (fikcyjny)",
        "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "dron-wolontariusze",
+   "kind": "dron",
+   "name": "Dron termowizyjny wolontariuszy (grupa poszukiwań zwierząt)",
+   "base": "grupa poszukiwań zwierząt",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-280",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 160.8,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 122.9,
+    "lastMaintenance": "2026-09-18"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-26",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-12",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-WOLONTARIUSZE-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-WOLONTARIUSZE-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "psy-wiazowna": {
+     "name": "Dron termowizyjny wolontariuszy (grupa poszukiwań zwierząt)",
+     "readyAt": "21:20",
+     "base": "grupa poszukiwań zwierząt",
+     "operator": null,
+     "crew": [
+      {
+       "name": "DRON-WOLONTARIUSZE-1 (fikcyjny)",
+       "role": "operator drona"
+      },
+      {
+       "name": "DRON-WOLONTARIUSZE-2 (fikcyjny)",
+       "role": "obserwator"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "dron-wopr-beldany",
+   "kind": "dron",
+   "name": "Dron WOPR z termowizją (Ruciane-Nida)",
+   "base": "Ruciane-Nida",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-926",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 122.0,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 95.9,
+    "lastMaintenance": "2026-09-14"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-23",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-20",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-WOPR-BELDANY-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-WOPR-BELDANY-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-beldany": {
+     "name": "Dron WOPR z termowizją (Ruciane-Nida)",
+     "readyAt": "16:20",
+     "base": "Ruciane-Nida",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "DRON-WOPR-BELDANY-1 (fikcyjny)",
+       "role": "operator drona (WOPR)"
+      },
+      {
+       "name": "DRON-WOPR-BELDANY-2 (fikcyjny)",
+       "role": "obserwator (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "dron-wopr-mikolajki",
+   "kind": "dron",
+   "name": "Dron WOPR z termowizją (Mikołajki)",
+   "base": "Mikołajki",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-172",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 256.3,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 222.4,
+    "lastMaintenance": "2026-09-26"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-18",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-15",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-WOPR-MIKOLAJKI-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-WOPR-MIKOLAJKI-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-sniardwy": {
+     "name": "Dron WOPR z termowizją (Mikołajki)",
+     "readyAt": "16:30",
+     "base": "Mikołajki",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "DRON-WOPR-MIKOLAJKI-1 (fikcyjny)",
+       "role": "operator drona (WOPR)"
+      },
+      {
+       "name": "DRON-WOPR-MIKOLAJKI-2 (fikcyjny)",
+       "role": "obserwator (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "dron-wopr-talty",
+   "kind": "dron",
+   "name": "Dron WOPR z termowizją (Tałty)",
+   "base": "Tałty",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-656",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 123.0,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 109.6,
+    "lastMaintenance": "2026-09-06"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-15",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-19",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-WOPR-TALTY-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-WOPR-TALTY-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-talty": {
+     "name": "Dron WOPR z termowizją (Tałty)",
+     "readyAt": "17:10",
+     "base": "Tałty",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "DRON-WOPR-TALTY-1 (fikcyjny)",
+       "role": "operator drona (WOPR)"
+      },
+      {
+       "name": "DRON-WOPR-TALTY-2 (fikcyjny)",
+       "role": "obserwator (WOPR)"
       }
      ]
     }
@@ -1234,6 +1660,61 @@
       {
        "name": "DRONE-2 (fikcyjny)",
        "role": "obserwator"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "gmina-straz",
+   "kind": "pieszy",
+   "name": "Straż Gminna Wiązowna i opiekun schroniska (klatka, chwytak)",
+   "base": "klatka, chwytak",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GMINA-396",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-07",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GMINA-STRAZ-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GMINA-STRAZ-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "psy-wiazowna": {
+     "name": "Straż Gminna Wiązowna i opiekun schroniska (klatka, chwytak)",
+     "readyAt": "21:30",
+     "base": "klatka, chwytak",
+     "operator": null,
+     "crew": [
+      {
+       "name": "GMINA-STRAZ-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GMINA-STRAZ-2 (fikcyjny)",
+       "role": "ratownik"
       }
      ]
     }
@@ -2073,6 +2554,148 @@
    "fictional": true
   },
   {
+   "id": "gopr-skrzyczne",
+   "kind": "pieszy",
+   "name": "GOPR Grupa Beskidzka - patrol A (stacja Skrzyczne)",
+   "base": "stacja Skrzyczne",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-437",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-14",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-SKRZYCZNE-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-SKRZYCZNE-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SKRZYCZNE-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SKRZYCZNE-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "GOPR Grupa Beskidzka - patrol A (stacja Skrzyczne)",
+     "readyAt": "16:10",
+     "base": "stacja Skrzyczne",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-SKRZYCZNE-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-SKRZYCZNE-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SKRZYCZNE-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SKRZYCZNE-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "gopr-szczyrk",
+   "kind": "pieszy",
+   "name": "GOPR Grupa Beskidzka - patrol B (Centralna Stacja Szczyrk)",
+   "base": "Centralna Stacja Szczyrk",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-445",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-26",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-SZCZYRK-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-SZCZYRK-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SZCZYRK-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SZCZYRK-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "GOPR Grupa Beskidzka - patrol B (Centralna Stacja Szczyrk)",
+     "readyAt": "16:35",
+     "base": "Centralna Stacja Szczyrk",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-SZCZYRK-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-SZCZYRK-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SZCZYRK-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SZCZYRK-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "heli",
    "kind": "smiglowiec",
    "name": "Śmigłowiec Policji (Rzeszów)",
@@ -2295,6 +2918,75 @@
       {
        "name": "HELI-3 (fikcyjny)",
        "role": "ratownik (TOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "heli-lpr",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Kraków)",
+   "base": "Kraków",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "HELI-505",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 3424.8,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 3354.5,
+    "lastMaintenance": "2026-09-11"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-20",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "HELI-LPR-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "HELI-LPR-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "HELI-LPR-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "Śmigłowiec LPR (Kraków)",
+     "readyAt": "16:30",
+     "base": "Kraków",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
       }
      ]
     }
@@ -2825,6 +3517,214 @@
    "fictional": true
   },
   {
+   "id": "lpr-olsztyn",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Olsztyn)",
+   "base": "Olsztyn",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "LPR-203",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 4656.7,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 4623.3,
+    "lastMaintenance": "2026-09-10"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-23",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "LPR-OLSZTYN-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "LPR-OLSZTYN-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "LPR-OLSZTYN-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-beldany": {
+     "name": "Śmigłowiec LPR (Olsztyn)",
+     "readyAt": "16:30",
+     "base": "Olsztyn",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "LPR-OLSZTYN-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    },
+    "mazury-burza-mikolajki": {
+     "name": "Śmigłowiec LPR (Olsztyn)",
+     "readyAt": "16:10",
+     "base": "Olsztyn",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "LPR-OLSZTYN-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    },
+    "mazury-burza-sniardwy": {
+     "name": "Śmigłowiec LPR (Olsztyn)",
+     "readyAt": "16:35",
+     "base": "Olsztyn",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "LPR-OLSZTYN-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    },
+    "mazury-burza-talty": {
+     "name": "Śmigłowiec LPR (Olsztyn)",
+     "readyAt": "17:30",
+     "base": "Olsztyn",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "LPR-OLSZTYN-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "LPR-OLSZTYN-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "nurkowie-psp-gizycko",
+   "kind": "nurkowie",
+   "name": "Nurkowie PSP (SGRW Giżycko)",
+   "base": "SGRW Giżycko",
+   "model": "grupa ratownictwa wodnego, nurkowie (fikcyjna)",
+   "callsign": "NURKOWIE-226",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "butla 12 l (pełna)",
+     "qty": 6
+    },
+    {
+     "item": "skafander suchy",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-17",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "NURKOWIE-PSP-GIZYCKO-1 (fikcyjny)",
+     "role": "nurek kierujący"
+    },
+    {
+     "name": "NURKOWIE-PSP-GIZYCKO-2 (fikcyjny)",
+     "role": "nurek roboczy"
+    },
+    {
+     "name": "NURKOWIE-PSP-GIZYCKO-3 (fikcyjny)",
+     "role": "nurek asekuracyjny"
+    },
+    {
+     "name": "NURKOWIE-PSP-GIZYCKO-4 (fikcyjny)",
+     "role": "sygnalista"
+    },
+    {
+     "name": "NURKOWIE-PSP-GIZYCKO-5 (fikcyjny)",
+     "role": "sprzętowiec"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-sniardwy": {
+     "name": "Nurkowie PSP (SGRW Giżycko)",
+     "readyAt": "17:30",
+     "base": "SGRW Giżycko",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "NURKOWIE-PSP-GIZYCKO-1 (fikcyjny)",
+       "role": "nurek kierujący (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-GIZYCKO-2 (fikcyjny)",
+       "role": "nurek roboczy (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-GIZYCKO-3 (fikcyjny)",
+       "role": "nurek asekuracyjny (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-GIZYCKO-4 (fikcyjny)",
+       "role": "sygnalista (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-GIZYCKO-5 (fikcyjny)",
+       "role": "sprzętowiec (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "nurkowie-psp-nowy-sacz",
    "kind": "nurkowie",
    "name": "Nurkowie PSP (SGRW Nowy Sącz)",
@@ -2896,6 +3796,85 @@
       },
       {
        "name": "NURKOWIE-PSP-NOWY-SACZ-5 (fikcyjny)",
+       "role": "sprzętowiec (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "nurkowie-sgrw-olsztyn",
+   "kind": "nurkowie",
+   "name": "Nurkowie PSP (SGRW Olsztyn)",
+   "base": "SGRW Olsztyn",
+   "model": "grupa ratownictwa wodnego, nurkowie (fikcyjna)",
+   "callsign": "NURKOWIE-367",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "butla 12 l (pełna)",
+     "qty": 6
+    },
+    {
+     "item": "skafander suchy",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-05",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "NURKOWIE-SGRW-OLSZTYN-1 (fikcyjny)",
+     "role": "nurek kierujący"
+    },
+    {
+     "name": "NURKOWIE-SGRW-OLSZTYN-2 (fikcyjny)",
+     "role": "nurek roboczy"
+    },
+    {
+     "name": "NURKOWIE-SGRW-OLSZTYN-3 (fikcyjny)",
+     "role": "nurek asekuracyjny"
+    },
+    {
+     "name": "NURKOWIE-SGRW-OLSZTYN-4 (fikcyjny)",
+     "role": "sygnalista"
+    },
+    {
+     "name": "NURKOWIE-SGRW-OLSZTYN-5 (fikcyjny)",
+     "role": "sprzętowiec"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-talty": {
+     "name": "Nurkowie PSP (SGRW Olsztyn)",
+     "readyAt": "17:50",
+     "base": "SGRW Olsztyn",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "NURKOWIE-SGRW-OLSZTYN-1 (fikcyjny)",
+       "role": "nurek kierujący (PSP)"
+      },
+      {
+       "name": "NURKOWIE-SGRW-OLSZTYN-2 (fikcyjny)",
+       "role": "nurek roboczy (PSP)"
+      },
+      {
+       "name": "NURKOWIE-SGRW-OLSZTYN-3 (fikcyjny)",
+       "role": "nurek asekuracyjny (PSP)"
+      },
+      {
+       "name": "NURKOWIE-SGRW-OLSZTYN-4 (fikcyjny)",
+       "role": "sygnalista (PSP)"
+      },
+      {
+       "name": "NURKOWIE-SGRW-OLSZTYN-5 (fikcyjny)",
        "role": "sprzętowiec (PSP)"
       }
      ]
@@ -3029,6 +4008,69 @@
       {
        "name": "OSP-BOAT-2 (fikcyjny)",
        "role": "ratownik (OSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "osp-glinianka",
+   "kind": "pieszy",
+   "name": "OSP Glinianka - zastęp",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-330",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-12",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-GLINIANKA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-GLINIANKA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-GLINIANKA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "psy-wiazowna": {
+     "name": "OSP Glinianka - zastęp",
+     "readyAt": "21:00",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-GLINIANKA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-GLINIANKA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-GLINIANKA-3 (fikcyjny)",
+       "role": "ratownik"
       }
      ]
     }
@@ -3308,6 +4350,128 @@
    "fictional": true
   },
   {
+   "id": "osp-ruciane-lodz",
+   "kind": "lodz",
+   "name": "Łódź OSP KSRG Ruciane-Nida",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "OSP-101",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 810.3,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 775.6,
+    "lastMaintenance": "2026-09-13"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-08",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-RUCIANE-LODZ-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "OSP-RUCIANE-LODZ-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-beldany": {
+     "name": "Łódź OSP KSRG Ruciane-Nida",
+     "readyAt": "16:10",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-RUCIANE-LODZ-1 (fikcyjny)",
+       "role": "sternik (OSP)"
+      },
+      {
+       "name": "OSP-RUCIANE-LODZ-2 (fikcyjny)",
+       "role": "ratownik (OSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "osp-ryn-lodz",
+   "kind": "lodz",
+   "name": "Łódź OSP Ryn",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "OSP-331",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 568.3,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 548.3,
+    "lastMaintenance": "2026-09-19"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-09",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-RYN-LODZ-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "OSP-RYN-LODZ-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-talty": {
+     "name": "Łódź OSP Ryn",
+     "readyAt": "17:00",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-RYN-LODZ-1 (fikcyjny)",
+       "role": "sternik (OSP)"
+      },
+      {
+       "name": "OSP-RYN-LODZ-2 (fikcyjny)",
+       "role": "ratownik (OSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "osp-rytro",
    "kind": "pieszy",
    "name": "OSP Rytro",
@@ -3434,6 +4598,69 @@
    "fictional": true
   },
   {
+   "id": "osp-wiazowna",
+   "kind": "pieszy",
+   "name": "OSP Wiązowna - zastęp",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-262",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-02",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-WIAZOWNA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-WIAZOWNA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-WIAZOWNA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "psy-wiazowna": {
+     "name": "OSP Wiązowna - zastęp",
+     "readyAt": "21:05",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-WIAZOWNA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-WIAZOWNA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-WIAZOWNA-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "osp-wizna",
    "kind": "pieszy",
    "name": "OSP Wizna - patrol brzegu",
@@ -3490,6 +4717,58 @@
       {
        "name": "OSP-WIZNA-3 (fikcyjny)",
        "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-gopr",
+   "kind": "pies",
+   "name": "GOPR - przewodnik z psem tropiącym",
+   "base": "baza wg scenariusza",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-906",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-18",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Saba (fikcyjny)",
+    "breed": "owczarek belgijski",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-GOPR-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "GOPR - przewodnik z psem tropiącym",
+     "readyAt": "17:20",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "PIES-GOPR-1 (fikcyjny)",
+       "role": "przewodnik psa (GOPR)"
       }
      ]
     }
@@ -3965,6 +5244,58 @@
    "fictional": true
   },
   {
+   "id": "pies-tropiacy",
+   "kind": "pies",
+   "name": "Przewodnik z psem tropiącym (wolontariusz, K9)",
+   "base": "wolontariusz, K9",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-757",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-23",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Nuka (fikcyjny)",
+    "breed": "border collie",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-TROPIACY-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "psy-wiazowna": {
+     "name": "Przewodnik z psem tropiącym (wolontariusz, K9)",
+     "readyAt": "22:15",
+     "base": "wolontariusz, K9",
+     "operator": null,
+     "crew": [
+      {
+       "name": "PIES-TROPIACY-1 (fikcyjny)",
+       "role": "przewodnik psa"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "pol-a",
    "kind": "pieszy",
    "name": "Patrol Policji A (KP Nowa Huta)",
@@ -4240,6 +5571,61 @@
    "fictional": true
   },
   {
+   "id": "pol-lipowa",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KPP Żywiec, Lipowa)",
+   "base": "KPP Żywiec, Lipowa",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-681",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-28",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-LIPOWA-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-LIPOWA-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "Patrol Policji (KPP Żywiec, Lipowa)",
+     "readyAt": "16:30",
+     "base": "KPP Żywiec, Lipowa",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-LIPOWA-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-LIPOWA-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "pol-lodz-baluty",
    "kind": "pieszy",
    "name": "Patrol Policji A (KP Łódź-Bałuty)",
@@ -4452,6 +5838,61 @@
       },
       {
        "name": "POL-NS-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-otwock",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KPP Otwock) - S17",
+   "base": "KPP Otwock",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-838",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-11",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-OTWOCK-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-OTWOCK-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "psy-wiazowna": {
+     "name": "Patrol Policji (KPP Otwock) - S17",
+     "readyAt": "22:10",
+     "base": "KPP Otwock",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-OTWOCK-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-OTWOCK-2 (fikcyjny)",
        "role": "policjant"
       }
      ]
@@ -4673,6 +6114,179 @@
    "fictional": true
   },
   {
+   "id": "policja-brzeg-beldany",
+   "kind": "pieszy",
+   "name": "Policja Pisz - patrol brzegowy",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POLICJA-409",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-11",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POLICJA-BRZEG-BELDANY-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POLICJA-BRZEG-BELDANY-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-beldany": {
+     "name": "Policja Pisz - patrol brzegowy",
+     "readyAt": "16:00",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICJA-BRZEG-BELDANY-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICJA-BRZEG-BELDANY-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "policja-brzeg-mikolajki",
+   "kind": "pieszy",
+   "name": "Policja Mrągowo - patrol brzegowy",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POLICJA-233",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-08",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POLICJA-BRZEG-MIKOLAJKI-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POLICJA-BRZEG-MIKOLAJKI-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-mikolajki": {
+     "name": "Policja Mrągowo - patrol brzegowy",
+     "readyAt": "15:50",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICJA-BRZEG-MIKOLAJKI-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICJA-BRZEG-MIKOLAJKI-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "policja-brzeg-talty",
+   "kind": "pieszy",
+   "name": "Policja Mrągowo + OSP - patrol brzegowy (wschodni brzeg)",
+   "base": "wschodni brzeg",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POLICJA-606",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-26",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POLICJA-BRZEG-TALTY-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POLICJA-BRZEG-TALTY-2 (fikcyjny)",
+     "role": "policjant"
+    },
+    {
+     "name": "POLICJA-BRZEG-TALTY-3 (fikcyjny)",
+     "role": "strażak OSP"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-talty": {
+     "name": "Policja Mrągowo + OSP - patrol brzegowy (wschodni brzeg)",
+     "readyAt": "16:55",
+     "base": "wschodni brzeg",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICJA-BRZEG-TALTY-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICJA-BRZEG-TALTY-2 (fikcyjny)",
+       "role": "policjant"
+      },
+      {
+       "name": "POLICJA-BRZEG-TALTY-3 (fikcyjny)",
+       "role": "strażak OSP"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "policja-monki",
    "kind": "pieszy",
    "name": "Policja Mońki - patrol pieszy",
@@ -4776,6 +6390,83 @@
       {
        "name": "POLICJA-SZCZAWNICA-2 (fikcyjny)",
        "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "policja-wodna-mikolajki",
+   "kind": "lodz",
+   "name": "Policja wodna Mikołajki - łódź",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "POLICJA-993",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 689.0,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 673.9,
+    "lastMaintenance": "2026-09-18"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-22",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POLICJA-WODNA-MIKOLAJKI-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "POLICJA-WODNA-MIKOLAJKI-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-mikolajki": {
+     "name": "Policja wodna Mikołajki - łódź",
+     "readyAt": "15:45",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICJA-WODNA-MIKOLAJKI-1 (fikcyjny)",
+       "role": "sternik (Policja)"
+      },
+      {
+       "name": "POLICJA-WODNA-MIKOLAJKI-2 (fikcyjny)",
+       "role": "ratownik (Policja)"
+      }
+     ]
+    },
+    "mazury-burza-sniardwy": {
+     "name": "Policja wodna Mikołajki - łódź",
+     "readyAt": "16:05",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICJA-WODNA-MIKOLAJKI-1 (fikcyjny)",
+       "role": "sternik (Policja)"
+      },
+      {
+       "name": "POLICJA-WODNA-MIKOLAJKI-2 (fikcyjny)",
+       "role": "ratownik (Policja)"
       }
      ]
     }
@@ -5057,6 +6748,69 @@
       },
       {
        "name": "PSP-LESKO-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-lipowa",
+   "kind": "pieszy",
+   "name": "PSP JRG Żywiec + OSP Lipowa",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-612",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-27",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-LIPOWA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-LIPOWA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-LIPOWA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "PSP JRG Żywiec + OSP Lipowa",
+     "readyAt": "16:40",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LIPOWA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-LIPOWA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "PSP-LIPOWA-3 (fikcyjny)",
        "role": "ratownik"
       }
      ]
@@ -5501,6 +7255,75 @@
    "fictional": true
   },
   {
+   "id": "psp-mragowo-lodz",
+   "kind": "lodz",
+   "name": "Łódź PSP JRG Mrągowo",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "PSP-112",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 305.4,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 261.7,
+    "lastMaintenance": "2026-09-27"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-11",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-MRAGOWO-LODZ-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "PSP-MRAGOWO-LODZ-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-MRAGOWO-LODZ-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-mikolajki": {
+     "name": "Łódź PSP JRG Mrągowo",
+     "readyAt": "15:55",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-MRAGOWO-LODZ-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-MRAGOWO-LODZ-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-MRAGOWO-LODZ-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "psp-ns",
    "kind": "pieszy",
    "name": "PSP JRG Nowy Sącz - zastęp",
@@ -5549,6 +7372,75 @@
       {
        "name": "PSP-NS-2 (fikcyjny)",
        "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-pisz-lodz",
+   "kind": "lodz",
+   "name": "Łódź PSP JRG Pisz",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "PSP-929",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 359.5,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 337.5,
+    "lastMaintenance": "2026-09-09"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-28",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-PISZ-LODZ-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "PSP-PISZ-LODZ-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-PISZ-LODZ-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-sniardwy": {
+     "name": "Łódź PSP JRG Pisz",
+     "readyAt": "16:20",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-PISZ-LODZ-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-PISZ-LODZ-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-PISZ-LODZ-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
       }
      ]
     }
@@ -6026,6 +7918,67 @@
       },
       {
        "name": "STRAZ-LESNA-BPN-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "szkolka-beldany-lodz",
+   "kind": "lodz",
+   "name": "Motorówka asekuracyjna szkółki (Bełdany)",
+   "base": "Bełdany",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "SZKOLKA-890",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 622.1,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 598.5,
+    "lastMaintenance": "2026-09-21"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-22",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "SZKOLKA-BELDANY-LODZ-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "SZKOLKA-BELDANY-LODZ-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "mazury-burza-beldany": {
+     "name": "Motorówka asekuracyjna szkółki (Bełdany)",
+     "readyAt": "15:42",
+     "base": "Bełdany",
+     "operator": null,
+     "crew": [
+      {
+       "name": "SZKOLKA-BELDANY-LODZ-1 (fikcyjny)",
+       "role": "sternik"
+      },
+      {
+       "name": "SZKOLKA-BELDANY-LODZ-2 (fikcyjny)",
        "role": "ratownik"
       }
      ]
@@ -6741,1793 +8694,6 @@
    "fictional": true
   },
   {
-   "id": "wopr-pieniny",
-   "kind": "lodz",
-   "name": "Łódź WOPR Pieniny (Czorsztyn)",
-   "base": "Czorsztyn",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "WOPR-932",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 411.6,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 399.8,
-    "lastMaintenance": "2026-09-12"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-05",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "WOPR-PIENINY-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "WOPR-PIENINY-2 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "kajak-pieniny": {
-     "name": "Łódź WOPR Pieniny (Czorsztyn)",
-     "readyAt": "17:10",
-     "base": "Czorsztyn",
-     "operator": "WOPR",
-     "crew": [
-      {
-       "name": "WOPR-PIENINY-1 (fikcyjny)",
-       "role": "sternik (WOPR)"
-      },
-      {
-       "name": "WOPR-PIENINY-2 (fikcyjny)",
-       "role": "ratownik (WOPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "wopr-solina",
-   "kind": "lodz",
-   "name": "Łódź WOPR Bieszczady (Polańczyk)",
-   "base": "Polańczyk",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "WOPR-980",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 732.5,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 675.2,
-    "lastMaintenance": "2026-09-25"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-16",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "WOPR-SOLINA-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "WOPR-SOLINA-2 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "zapora-myczkowce": {
-     "name": "Łódź WOPR Bieszczady (Polańczyk)",
-     "readyAt": "05:48",
-     "base": "Polańczyk",
-     "operator": "WOPR",
-     "crew": [
-      {
-       "name": "WOPR-SOLINA-1 (fikcyjny)",
-       "role": "sternik (WOPR)"
-      },
-      {
-       "name": "WOPR-SOLINA-2 (fikcyjny)",
-       "role": "ratownik (WOPR)"
-      }
-     ]
-    },
-    "zapora-uherce": {
-     "name": "Łódź WOPR Bieszczady (Polańczyk)",
-     "readyAt": "06:07",
-     "base": "Polańczyk",
-     "operator": "WOPR",
-     "crew": [
-      {
-       "name": "WOPR-SOLINA-1 (fikcyjny)",
-       "role": "sternik (WOPR)"
-      },
-      {
-       "name": "WOPR-SOLINA-2 (fikcyjny)",
-       "role": "ratownik (WOPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "zrm-ns",
-   "kind": "pieszy",
-   "name": "ZRM (PRM Nowy Sącz) - ratownicy medyczni",
-   "base": "PRM Nowy Sącz",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "ZRM-472",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-27",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "ZRM-NS-1 (fikcyjny)",
-     "role": "kierownik patrolu"
-    },
-    {
-     "name": "ZRM-NS-2 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "dywersja-poprad": {
-     "name": "ZRM (PRM Nowy Sącz) - ratownicy medyczni",
-     "readyAt": "05:30",
-     "base": "PRM Nowy Sącz",
-     "operator": null,
-     "crew": [
-      {
-       "name": "ZRM-NS-1 (fikcyjny)",
-       "role": "kierownik patrolu"
-      },
-      {
-       "name": "ZRM-NS-2 (fikcyjny)",
-       "role": "ratownik"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "dron-gopr",
-   "kind": "dron",
-   "name": "Dron termowizyjny GOPR Grupy Beskidzkiej",
-   "base": "baza wg scenariusza",
-   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
-   "callsign": "DRON-897",
-   "equipment": {
-    "spareBatteries": 4,
-    "flightMinPerBattery": 35,
-    "hoursTotal": 131.9,
-    "maintenanceEveryH": 50,
-    "hoursAtLastMaintenance": 100.8,
-    "lastMaintenance": "2026-09-02"
-   },
-   "spares": [
-    {
-     "item": "akumulator TB30",
-     "qty": 4
-    },
-    {
-     "item": "śmigła (kpl.)",
-     "qty": 2
-    },
-    {
-     "item": "stacja ładowania BS30",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-19",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    },
-    {
-     "date": "2026-09-04",
-     "type": "baterie",
-     "note": "wymiana 2 akumulatorów po 150 cyklach"
-    }
-   ],
-   "crew": [
-    {
-     "name": "DRON-GOPR-1 (fikcyjny)",
-     "role": "operator drona"
-    },
-    {
-     "name": "DRON-GOPR-2 (fikcyjny)",
-     "role": "obserwator"
-    }
-   ],
-   "byHome": {
-    "paralotniarz-beskidy": {
-     "name": "Dron termowizyjny GOPR Grupy Beskidzkiej",
-     "readyAt": "16:45",
-     "base": "baza wg scenariusza",
-     "operator": "GOPR",
-     "crew": [
-      {
-       "name": "DRON-GOPR-1 (fikcyjny)",
-       "role": "operator drona (GOPR)"
-      },
-      {
-       "name": "DRON-GOPR-2 (fikcyjny)",
-       "role": "obserwator (GOPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "gopr-skrzyczne",
-   "kind": "pieszy",
-   "name": "GOPR Grupa Beskidzka - patrol A (stacja Skrzyczne)",
-   "base": "stacja Skrzyczne",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "GOPR-437",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-14",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "GOPR-SKRZYCZNE-1 (fikcyjny)",
-     "role": "kierownik patrolu"
-    },
-    {
-     "name": "GOPR-SKRZYCZNE-2 (fikcyjny)",
-     "role": "ratownik"
-    },
-    {
-     "name": "GOPR-SKRZYCZNE-3 (fikcyjny)",
-     "role": "ratownik"
-    },
-    {
-     "name": "GOPR-SKRZYCZNE-4 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "paralotniarz-beskidy": {
-     "name": "GOPR Grupa Beskidzka - patrol A (stacja Skrzyczne)",
-     "readyAt": "16:10",
-     "base": "stacja Skrzyczne",
-     "operator": "GOPR",
-     "crew": [
-      {
-       "name": "GOPR-SKRZYCZNE-1 (fikcyjny)",
-       "role": "kierownik patrolu"
-      },
-      {
-       "name": "GOPR-SKRZYCZNE-2 (fikcyjny)",
-       "role": "ratownik"
-      },
-      {
-       "name": "GOPR-SKRZYCZNE-3 (fikcyjny)",
-       "role": "ratownik"
-      },
-      {
-       "name": "GOPR-SKRZYCZNE-4 (fikcyjny)",
-       "role": "ratownik"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "gopr-szczyrk",
-   "kind": "pieszy",
-   "name": "GOPR Grupa Beskidzka - patrol B (Centralna Stacja Szczyrk)",
-   "base": "Centralna Stacja Szczyrk",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "GOPR-445",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-26",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "GOPR-SZCZYRK-1 (fikcyjny)",
-     "role": "kierownik patrolu"
-    },
-    {
-     "name": "GOPR-SZCZYRK-2 (fikcyjny)",
-     "role": "ratownik"
-    },
-    {
-     "name": "GOPR-SZCZYRK-3 (fikcyjny)",
-     "role": "ratownik"
-    },
-    {
-     "name": "GOPR-SZCZYRK-4 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "paralotniarz-beskidy": {
-     "name": "GOPR Grupa Beskidzka - patrol B (Centralna Stacja Szczyrk)",
-     "readyAt": "16:35",
-     "base": "Centralna Stacja Szczyrk",
-     "operator": "GOPR",
-     "crew": [
-      {
-       "name": "GOPR-SZCZYRK-1 (fikcyjny)",
-       "role": "kierownik patrolu"
-      },
-      {
-       "name": "GOPR-SZCZYRK-2 (fikcyjny)",
-       "role": "ratownik"
-      },
-      {
-       "name": "GOPR-SZCZYRK-3 (fikcyjny)",
-       "role": "ratownik"
-      },
-      {
-       "name": "GOPR-SZCZYRK-4 (fikcyjny)",
-       "role": "ratownik"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "heli-lpr",
-   "kind": "smiglowiec",
-   "name": "Śmigłowiec LPR (Kraków)",
-   "base": "Kraków",
-   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
-   "callsign": "HELI-505",
-   "equipment": {
-    "enduranceMin": 150,
-    "hoursTotal": 3424.8,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 3354.5,
-    "lastMaintenance": "2026-09-11"
-   },
-   "spares": [
-    {
-     "item": "nosze / kosz ratowniczy",
-     "qty": 1
-    },
-    {
-     "item": "lina wyciągarki (zapas)",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-20",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "HELI-LPR-1 (fikcyjny)",
-     "role": "pilot dowódca"
-    },
-    {
-     "name": "HELI-LPR-2 (fikcyjny)",
-     "role": "drugi pilot / operator wyciągarki"
-    },
-    {
-     "name": "HELI-LPR-3 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "paralotniarz-beskidy": {
-     "name": "Śmigłowiec LPR (Kraków)",
-     "readyAt": "16:30",
-     "base": "Kraków",
-     "operator": "LPR",
-     "crew": [
-      {
-       "name": "HELI-LPR-1 (fikcyjny)",
-       "role": "pilot dowódca (LPR)"
-      },
-      {
-       "name": "HELI-LPR-2 (fikcyjny)",
-       "role": "drugi pilot / operator wyciągarki (LPR)"
-      },
-      {
-       "name": "HELI-LPR-3 (fikcyjny)",
-       "role": "ratownik (LPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "pies-gopr",
-   "kind": "pies",
-   "name": "GOPR - przewodnik z psem tropiącym",
-   "base": "baza wg scenariusza",
-   "model": "zespół z psem ratowniczym (fikcyjny)",
-   "callsign": "PIES-906",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "woda dla psa (l)",
-     "qty": 3
-    },
-    {
-     "item": "kamizelka chłodząca",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-18",
-     "type": "weterynarz",
-     "note": "badanie okresowe psa"
-    }
-   ],
-   "dog": {
-    "name": "Saba (fikcyjny)",
-    "breed": "owczarek belgijski",
-    "certified": "2025-05"
-   },
-   "crew": [
-    {
-     "name": "PIES-GOPR-1 (fikcyjny)",
-     "role": "przewodnik psa"
-    }
-   ],
-   "byHome": {
-    "paralotniarz-beskidy": {
-     "name": "GOPR - przewodnik z psem tropiącym",
-     "readyAt": "17:20",
-     "base": "baza wg scenariusza",
-     "operator": "GOPR",
-     "crew": [
-      {
-       "name": "PIES-GOPR-1 (fikcyjny)",
-       "role": "przewodnik psa (GOPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "pol-lipowa",
-   "kind": "pieszy",
-   "name": "Patrol Policji (KPP Żywiec, Lipowa)",
-   "base": "KPP Żywiec, Lipowa",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "POL-681",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-28",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "POL-LIPOWA-1 (fikcyjny)",
-     "role": "dowódca patrolu (Policja)"
-    },
-    {
-     "name": "POL-LIPOWA-2 (fikcyjny)",
-     "role": "policjant"
-    }
-   ],
-   "byHome": {
-    "paralotniarz-beskidy": {
-     "name": "Patrol Policji (KPP Żywiec, Lipowa)",
-     "readyAt": "16:30",
-     "base": "KPP Żywiec, Lipowa",
-     "operator": "Policja",
-     "crew": [
-      {
-       "name": "POL-LIPOWA-1 (fikcyjny)",
-       "role": "dowódca patrolu (Policja)"
-      },
-      {
-       "name": "POL-LIPOWA-2 (fikcyjny)",
-       "role": "policjant"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "psp-lipowa",
-   "kind": "pieszy",
-   "name": "PSP JRG Żywiec + OSP Lipowa",
-   "base": "baza wg scenariusza",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "PSP-612",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-27",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "PSP-LIPOWA-1 (fikcyjny)",
-     "role": "kierownik patrolu"
-    },
-    {
-     "name": "PSP-LIPOWA-2 (fikcyjny)",
-     "role": "ratownik"
-    },
-    {
-     "name": "PSP-LIPOWA-3 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "paralotniarz-beskidy": {
-     "name": "PSP JRG Żywiec + OSP Lipowa",
-     "readyAt": "16:40",
-     "base": "baza wg scenariusza",
-     "operator": "PSP",
-     "crew": [
-      {
-       "name": "PSP-LIPOWA-1 (fikcyjny)",
-       "role": "kierownik patrolu"
-      },
-      {
-       "name": "PSP-LIPOWA-2 (fikcyjny)",
-       "role": "ratownik"
-      },
-      {
-       "name": "PSP-LIPOWA-3 (fikcyjny)",
-       "role": "ratownik"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "dron-psp-mragowo",
-   "kind": "dron",
-   "name": "Dron PSP Mrągowo z termowizją",
-   "base": "baza wg scenariusza",
-   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
-   "callsign": "DRON-829",
-   "equipment": {
-    "spareBatteries": 4,
-    "flightMinPerBattery": 35,
-    "hoursTotal": 244.6,
-    "maintenanceEveryH": 50,
-    "hoursAtLastMaintenance": 225.1,
-    "lastMaintenance": "2026-09-11"
-   },
-   "spares": [
-    {
-     "item": "akumulator TB30",
-     "qty": 4
-    },
-    {
-     "item": "śmigła (kpl.)",
-     "qty": 2
-    },
-    {
-     "item": "stacja ładowania BS30",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-25",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    },
-    {
-     "date": "2026-09-09",
-     "type": "baterie",
-     "note": "wymiana 2 akumulatorów po 150 cyklach"
-    }
-   ],
-   "crew": [
-    {
-     "name": "DRON-PSP-MRAGOWO-1 (fikcyjny)",
-     "role": "operator drona"
-    },
-    {
-     "name": "DRON-PSP-MRAGOWO-2 (fikcyjny)",
-     "role": "obserwator"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-mikolajki": {
-     "name": "Dron PSP Mrągowo z termowizją",
-     "readyAt": "16:15",
-     "base": "baza wg scenariusza",
-     "operator": "PSP",
-     "crew": [
-      {
-       "name": "DRON-PSP-MRAGOWO-1 (fikcyjny)",
-       "role": "operator drona (PSP)"
-      },
-      {
-       "name": "DRON-PSP-MRAGOWO-2 (fikcyjny)",
-       "role": "obserwator (PSP)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "dron-wopr-beldany",
-   "kind": "dron",
-   "name": "Dron WOPR z termowizją (Ruciane-Nida)",
-   "base": "Ruciane-Nida",
-   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
-   "callsign": "DRON-926",
-   "equipment": {
-    "spareBatteries": 4,
-    "flightMinPerBattery": 35,
-    "hoursTotal": 122.0,
-    "maintenanceEveryH": 50,
-    "hoursAtLastMaintenance": 95.9,
-    "lastMaintenance": "2026-09-14"
-   },
-   "spares": [
-    {
-     "item": "akumulator TB30",
-     "qty": 4
-    },
-    {
-     "item": "śmigła (kpl.)",
-     "qty": 2
-    },
-    {
-     "item": "stacja ładowania BS30",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-23",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    },
-    {
-     "date": "2026-09-20",
-     "type": "baterie",
-     "note": "wymiana 2 akumulatorów po 150 cyklach"
-    }
-   ],
-   "crew": [
-    {
-     "name": "DRON-WOPR-BELDANY-1 (fikcyjny)",
-     "role": "operator drona"
-    },
-    {
-     "name": "DRON-WOPR-BELDANY-2 (fikcyjny)",
-     "role": "obserwator"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-beldany": {
-     "name": "Dron WOPR z termowizją (Ruciane-Nida)",
-     "readyAt": "16:20",
-     "base": "Ruciane-Nida",
-     "operator": "WOPR",
-     "crew": [
-      {
-       "name": "DRON-WOPR-BELDANY-1 (fikcyjny)",
-       "role": "operator drona (WOPR)"
-      },
-      {
-       "name": "DRON-WOPR-BELDANY-2 (fikcyjny)",
-       "role": "obserwator (WOPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "dron-wopr-mikolajki",
-   "kind": "dron",
-   "name": "Dron WOPR z termowizją (Mikołajki)",
-   "base": "Mikołajki",
-   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
-   "callsign": "DRON-172",
-   "equipment": {
-    "spareBatteries": 4,
-    "flightMinPerBattery": 35,
-    "hoursTotal": 256.3,
-    "maintenanceEveryH": 50,
-    "hoursAtLastMaintenance": 222.4,
-    "lastMaintenance": "2026-09-26"
-   },
-   "spares": [
-    {
-     "item": "akumulator TB30",
-     "qty": 4
-    },
-    {
-     "item": "śmigła (kpl.)",
-     "qty": 2
-    },
-    {
-     "item": "stacja ładowania BS30",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-18",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    },
-    {
-     "date": "2026-09-15",
-     "type": "baterie",
-     "note": "wymiana 2 akumulatorów po 150 cyklach"
-    }
-   ],
-   "crew": [
-    {
-     "name": "DRON-WOPR-MIKOLAJKI-1 (fikcyjny)",
-     "role": "operator drona"
-    },
-    {
-     "name": "DRON-WOPR-MIKOLAJKI-2 (fikcyjny)",
-     "role": "obserwator"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-sniardwy": {
-     "name": "Dron WOPR z termowizją (Mikołajki)",
-     "readyAt": "16:30",
-     "base": "Mikołajki",
-     "operator": "WOPR",
-     "crew": [
-      {
-       "name": "DRON-WOPR-MIKOLAJKI-1 (fikcyjny)",
-       "role": "operator drona (WOPR)"
-      },
-      {
-       "name": "DRON-WOPR-MIKOLAJKI-2 (fikcyjny)",
-       "role": "obserwator (WOPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "dron-wopr-talty",
-   "kind": "dron",
-   "name": "Dron WOPR z termowizją (Tałty)",
-   "base": "Tałty",
-   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
-   "callsign": "DRON-656",
-   "equipment": {
-    "spareBatteries": 4,
-    "flightMinPerBattery": 35,
-    "hoursTotal": 123.0,
-    "maintenanceEveryH": 50,
-    "hoursAtLastMaintenance": 109.6,
-    "lastMaintenance": "2026-09-06"
-   },
-   "spares": [
-    {
-     "item": "akumulator TB30",
-     "qty": 4
-    },
-    {
-     "item": "śmigła (kpl.)",
-     "qty": 2
-    },
-    {
-     "item": "stacja ładowania BS30",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-15",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    },
-    {
-     "date": "2026-09-19",
-     "type": "baterie",
-     "note": "wymiana 2 akumulatorów po 150 cyklach"
-    }
-   ],
-   "crew": [
-    {
-     "name": "DRON-WOPR-TALTY-1 (fikcyjny)",
-     "role": "operator drona"
-    },
-    {
-     "name": "DRON-WOPR-TALTY-2 (fikcyjny)",
-     "role": "obserwator"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-talty": {
-     "name": "Dron WOPR z termowizją (Tałty)",
-     "readyAt": "17:10",
-     "base": "Tałty",
-     "operator": "WOPR",
-     "crew": [
-      {
-       "name": "DRON-WOPR-TALTY-1 (fikcyjny)",
-       "role": "operator drona (WOPR)"
-      },
-      {
-       "name": "DRON-WOPR-TALTY-2 (fikcyjny)",
-       "role": "obserwator (WOPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "lpr-olsztyn",
-   "kind": "smiglowiec",
-   "name": "Śmigłowiec LPR (Olsztyn)",
-   "base": "Olsztyn",
-   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
-   "callsign": "LPR-203",
-   "equipment": {
-    "enduranceMin": 150,
-    "hoursTotal": 4656.7,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 4623.3,
-    "lastMaintenance": "2026-09-10"
-   },
-   "spares": [
-    {
-     "item": "nosze / kosz ratowniczy",
-     "qty": 1
-    },
-    {
-     "item": "lina wyciągarki (zapas)",
-     "qty": 1
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-23",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "LPR-OLSZTYN-1 (fikcyjny)",
-     "role": "pilot dowódca"
-    },
-    {
-     "name": "LPR-OLSZTYN-2 (fikcyjny)",
-     "role": "drugi pilot / operator wyciągarki"
-    },
-    {
-     "name": "LPR-OLSZTYN-3 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-beldany": {
-     "name": "Śmigłowiec LPR (Olsztyn)",
-     "readyAt": "16:30",
-     "base": "Olsztyn",
-     "operator": "LPR",
-     "crew": [
-      {
-       "name": "LPR-OLSZTYN-1 (fikcyjny)",
-       "role": "pilot dowódca (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-2 (fikcyjny)",
-       "role": "drugi pilot / operator wyciągarki (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-3 (fikcyjny)",
-       "role": "ratownik (LPR)"
-      }
-     ]
-    },
-    "mazury-burza-mikolajki": {
-     "name": "Śmigłowiec LPR (Olsztyn)",
-     "readyAt": "16:10",
-     "base": "Olsztyn",
-     "operator": "LPR",
-     "crew": [
-      {
-       "name": "LPR-OLSZTYN-1 (fikcyjny)",
-       "role": "pilot dowódca (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-2 (fikcyjny)",
-       "role": "drugi pilot / operator wyciągarki (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-3 (fikcyjny)",
-       "role": "ratownik (LPR)"
-      }
-     ]
-    },
-    "mazury-burza-sniardwy": {
-     "name": "Śmigłowiec LPR (Olsztyn)",
-     "readyAt": "16:35",
-     "base": "Olsztyn",
-     "operator": "LPR",
-     "crew": [
-      {
-       "name": "LPR-OLSZTYN-1 (fikcyjny)",
-       "role": "pilot dowódca (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-2 (fikcyjny)",
-       "role": "drugi pilot / operator wyciągarki (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-3 (fikcyjny)",
-       "role": "ratownik (LPR)"
-      }
-     ]
-    },
-    "mazury-burza-talty": {
-     "name": "Śmigłowiec LPR (Olsztyn)",
-     "readyAt": "17:30",
-     "base": "Olsztyn",
-     "operator": "LPR",
-     "crew": [
-      {
-       "name": "LPR-OLSZTYN-1 (fikcyjny)",
-       "role": "pilot dowódca (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-2 (fikcyjny)",
-       "role": "drugi pilot / operator wyciągarki (LPR)"
-      },
-      {
-       "name": "LPR-OLSZTYN-3 (fikcyjny)",
-       "role": "ratownik (LPR)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "nurkowie-psp-gizycko",
-   "kind": "nurkowie",
-   "name": "Nurkowie PSP (SGRW Giżycko)",
-   "base": "SGRW Giżycko",
-   "model": "grupa ratownictwa wodnego, nurkowie (fikcyjna)",
-   "callsign": "NURKOWIE-226",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "butla 12 l (pełna)",
-     "qty": 6
-    },
-    {
-     "item": "skafander suchy",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-17",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "NURKOWIE-PSP-GIZYCKO-1 (fikcyjny)",
-     "role": "nurek kierujący"
-    },
-    {
-     "name": "NURKOWIE-PSP-GIZYCKO-2 (fikcyjny)",
-     "role": "nurek roboczy"
-    },
-    {
-     "name": "NURKOWIE-PSP-GIZYCKO-3 (fikcyjny)",
-     "role": "nurek asekuracyjny"
-    },
-    {
-     "name": "NURKOWIE-PSP-GIZYCKO-4 (fikcyjny)",
-     "role": "sygnalista"
-    },
-    {
-     "name": "NURKOWIE-PSP-GIZYCKO-5 (fikcyjny)",
-     "role": "sprzętowiec"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-sniardwy": {
-     "name": "Nurkowie PSP (SGRW Giżycko)",
-     "readyAt": "17:30",
-     "base": "SGRW Giżycko",
-     "operator": "PSP",
-     "crew": [
-      {
-       "name": "NURKOWIE-PSP-GIZYCKO-1 (fikcyjny)",
-       "role": "nurek kierujący (PSP)"
-      },
-      {
-       "name": "NURKOWIE-PSP-GIZYCKO-2 (fikcyjny)",
-       "role": "nurek roboczy (PSP)"
-      },
-      {
-       "name": "NURKOWIE-PSP-GIZYCKO-3 (fikcyjny)",
-       "role": "nurek asekuracyjny (PSP)"
-      },
-      {
-       "name": "NURKOWIE-PSP-GIZYCKO-4 (fikcyjny)",
-       "role": "sygnalista (PSP)"
-      },
-      {
-       "name": "NURKOWIE-PSP-GIZYCKO-5 (fikcyjny)",
-       "role": "sprzętowiec (PSP)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "nurkowie-sgrw-olsztyn",
-   "kind": "nurkowie",
-   "name": "Nurkowie PSP (SGRW Olsztyn)",
-   "base": "SGRW Olsztyn",
-   "model": "grupa ratownictwa wodnego, nurkowie (fikcyjna)",
-   "callsign": "NURKOWIE-367",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "butla 12 l (pełna)",
-     "qty": 6
-    },
-    {
-     "item": "skafander suchy",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-05",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "NURKOWIE-SGRW-OLSZTYN-1 (fikcyjny)",
-     "role": "nurek kierujący"
-    },
-    {
-     "name": "NURKOWIE-SGRW-OLSZTYN-2 (fikcyjny)",
-     "role": "nurek roboczy"
-    },
-    {
-     "name": "NURKOWIE-SGRW-OLSZTYN-3 (fikcyjny)",
-     "role": "nurek asekuracyjny"
-    },
-    {
-     "name": "NURKOWIE-SGRW-OLSZTYN-4 (fikcyjny)",
-     "role": "sygnalista"
-    },
-    {
-     "name": "NURKOWIE-SGRW-OLSZTYN-5 (fikcyjny)",
-     "role": "sprzętowiec"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-talty": {
-     "name": "Nurkowie PSP (SGRW Olsztyn)",
-     "readyAt": "17:50",
-     "base": "SGRW Olsztyn",
-     "operator": "PSP",
-     "crew": [
-      {
-       "name": "NURKOWIE-SGRW-OLSZTYN-1 (fikcyjny)",
-       "role": "nurek kierujący (PSP)"
-      },
-      {
-       "name": "NURKOWIE-SGRW-OLSZTYN-2 (fikcyjny)",
-       "role": "nurek roboczy (PSP)"
-      },
-      {
-       "name": "NURKOWIE-SGRW-OLSZTYN-3 (fikcyjny)",
-       "role": "nurek asekuracyjny (PSP)"
-      },
-      {
-       "name": "NURKOWIE-SGRW-OLSZTYN-4 (fikcyjny)",
-       "role": "sygnalista (PSP)"
-      },
-      {
-       "name": "NURKOWIE-SGRW-OLSZTYN-5 (fikcyjny)",
-       "role": "sprzętowiec (PSP)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "osp-ruciane-lodz",
-   "kind": "lodz",
-   "name": "Łódź OSP KSRG Ruciane-Nida",
-   "base": "baza wg scenariusza",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "OSP-101",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 810.3,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 775.6,
-    "lastMaintenance": "2026-09-13"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-08",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "OSP-RUCIANE-LODZ-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "OSP-RUCIANE-LODZ-2 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-beldany": {
-     "name": "Łódź OSP KSRG Ruciane-Nida",
-     "readyAt": "16:10",
-     "base": "baza wg scenariusza",
-     "operator": "OSP",
-     "crew": [
-      {
-       "name": "OSP-RUCIANE-LODZ-1 (fikcyjny)",
-       "role": "sternik (OSP)"
-      },
-      {
-       "name": "OSP-RUCIANE-LODZ-2 (fikcyjny)",
-       "role": "ratownik (OSP)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "osp-ryn-lodz",
-   "kind": "lodz",
-   "name": "Łódź OSP Ryn",
-   "base": "baza wg scenariusza",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "OSP-331",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 568.3,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 548.3,
-    "lastMaintenance": "2026-09-19"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-09",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "OSP-RYN-LODZ-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "OSP-RYN-LODZ-2 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-talty": {
-     "name": "Łódź OSP Ryn",
-     "readyAt": "17:00",
-     "base": "baza wg scenariusza",
-     "operator": "OSP",
-     "crew": [
-      {
-       "name": "OSP-RYN-LODZ-1 (fikcyjny)",
-       "role": "sternik (OSP)"
-      },
-      {
-       "name": "OSP-RYN-LODZ-2 (fikcyjny)",
-       "role": "ratownik (OSP)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "policja-brzeg-beldany",
-   "kind": "pieszy",
-   "name": "Policja Pisz - patrol brzegowy",
-   "base": "baza wg scenariusza",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "POLICJA-409",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-11",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "POLICJA-BRZEG-BELDANY-1 (fikcyjny)",
-     "role": "dowódca patrolu (Policja)"
-    },
-    {
-     "name": "POLICJA-BRZEG-BELDANY-2 (fikcyjny)",
-     "role": "policjant"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-beldany": {
-     "name": "Policja Pisz - patrol brzegowy",
-     "readyAt": "16:00",
-     "base": "baza wg scenariusza",
-     "operator": "Policja",
-     "crew": [
-      {
-       "name": "POLICJA-BRZEG-BELDANY-1 (fikcyjny)",
-       "role": "dowódca patrolu (Policja)"
-      },
-      {
-       "name": "POLICJA-BRZEG-BELDANY-2 (fikcyjny)",
-       "role": "policjant"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "policja-brzeg-mikolajki",
-   "kind": "pieszy",
-   "name": "Policja Mrągowo - patrol brzegowy",
-   "base": "baza wg scenariusza",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "POLICJA-233",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-08",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "POLICJA-BRZEG-MIKOLAJKI-1 (fikcyjny)",
-     "role": "dowódca patrolu (Policja)"
-    },
-    {
-     "name": "POLICJA-BRZEG-MIKOLAJKI-2 (fikcyjny)",
-     "role": "policjant"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-mikolajki": {
-     "name": "Policja Mrągowo - patrol brzegowy",
-     "readyAt": "15:50",
-     "base": "baza wg scenariusza",
-     "operator": "Policja",
-     "crew": [
-      {
-       "name": "POLICJA-BRZEG-MIKOLAJKI-1 (fikcyjny)",
-       "role": "dowódca patrolu (Policja)"
-      },
-      {
-       "name": "POLICJA-BRZEG-MIKOLAJKI-2 (fikcyjny)",
-       "role": "policjant"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "policja-brzeg-talty",
-   "kind": "pieszy",
-   "name": "Policja Mrągowo + OSP - patrol brzegowy (wschodni brzeg)",
-   "base": "wschodni brzeg",
-   "model": "patrol pieszy (fikcyjny)",
-   "callsign": "POLICJA-606",
-   "equipment": {},
-   "spares": [
-    {
-     "item": "akumulator radiotelefonu",
-     "qty": 2
-    },
-    {
-     "item": "baterie do czołówek (kpl.)",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-26",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "POLICJA-BRZEG-TALTY-1 (fikcyjny)",
-     "role": "dowódca patrolu (Policja)"
-    },
-    {
-     "name": "POLICJA-BRZEG-TALTY-2 (fikcyjny)",
-     "role": "policjant"
-    },
-    {
-     "name": "POLICJA-BRZEG-TALTY-3 (fikcyjny)",
-     "role": "strażak OSP"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-talty": {
-     "name": "Policja Mrągowo + OSP - patrol brzegowy (wschodni brzeg)",
-     "readyAt": "16:55",
-     "base": "wschodni brzeg",
-     "operator": "Policja",
-     "crew": [
-      {
-       "name": "POLICJA-BRZEG-TALTY-1 (fikcyjny)",
-       "role": "dowódca patrolu (Policja)"
-      },
-      {
-       "name": "POLICJA-BRZEG-TALTY-2 (fikcyjny)",
-       "role": "policjant"
-      },
-      {
-       "name": "POLICJA-BRZEG-TALTY-3 (fikcyjny)",
-       "role": "strażak OSP"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "policja-wodna-mikolajki",
-   "kind": "lodz",
-   "name": "Policja wodna Mikołajki - łódź",
-   "base": "baza wg scenariusza",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "POLICJA-993",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 689.0,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 673.9,
-    "lastMaintenance": "2026-09-18"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-22",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "POLICJA-WODNA-MIKOLAJKI-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "POLICJA-WODNA-MIKOLAJKI-2 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-mikolajki": {
-     "name": "Policja wodna Mikołajki - łódź",
-     "readyAt": "15:45",
-     "base": "baza wg scenariusza",
-     "operator": "Policja",
-     "crew": [
-      {
-       "name": "POLICJA-WODNA-MIKOLAJKI-1 (fikcyjny)",
-       "role": "sternik (Policja)"
-      },
-      {
-       "name": "POLICJA-WODNA-MIKOLAJKI-2 (fikcyjny)",
-       "role": "ratownik (Policja)"
-      }
-     ]
-    },
-    "mazury-burza-sniardwy": {
-     "name": "Policja wodna Mikołajki - łódź",
-     "readyAt": "16:05",
-     "base": "baza wg scenariusza",
-     "operator": "Policja",
-     "crew": [
-      {
-       "name": "POLICJA-WODNA-MIKOLAJKI-1 (fikcyjny)",
-       "role": "sternik (Policja)"
-      },
-      {
-       "name": "POLICJA-WODNA-MIKOLAJKI-2 (fikcyjny)",
-       "role": "ratownik (Policja)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "psp-mragowo-lodz",
-   "kind": "lodz",
-   "name": "Łódź PSP JRG Mrągowo",
-   "base": "baza wg scenariusza",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "PSP-112",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 305.4,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 261.7,
-    "lastMaintenance": "2026-09-27"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-11",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "PSP-MRAGOWO-LODZ-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "PSP-MRAGOWO-LODZ-2 (fikcyjny)",
-     "role": "ratownik"
-    },
-    {
-     "name": "PSP-MRAGOWO-LODZ-3 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-mikolajki": {
-     "name": "Łódź PSP JRG Mrągowo",
-     "readyAt": "15:55",
-     "base": "baza wg scenariusza",
-     "operator": "PSP",
-     "crew": [
-      {
-       "name": "PSP-MRAGOWO-LODZ-1 (fikcyjny)",
-       "role": "sternik (PSP)"
-      },
-      {
-       "name": "PSP-MRAGOWO-LODZ-2 (fikcyjny)",
-       "role": "ratownik (PSP)"
-      },
-      {
-       "name": "PSP-MRAGOWO-LODZ-3 (fikcyjny)",
-       "role": "ratownik (PSP)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "psp-pisz-lodz",
-   "kind": "lodz",
-   "name": "Łódź PSP JRG Pisz",
-   "base": "baza wg scenariusza",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "PSP-929",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 359.5,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 337.5,
-    "lastMaintenance": "2026-09-09"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-28",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "PSP-PISZ-LODZ-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "PSP-PISZ-LODZ-2 (fikcyjny)",
-     "role": "ratownik"
-    },
-    {
-     "name": "PSP-PISZ-LODZ-3 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-sniardwy": {
-     "name": "Łódź PSP JRG Pisz",
-     "readyAt": "16:20",
-     "base": "baza wg scenariusza",
-     "operator": "PSP",
-     "crew": [
-      {
-       "name": "PSP-PISZ-LODZ-1 (fikcyjny)",
-       "role": "sternik (PSP)"
-      },
-      {
-       "name": "PSP-PISZ-LODZ-2 (fikcyjny)",
-       "role": "ratownik (PSP)"
-      },
-      {
-       "name": "PSP-PISZ-LODZ-3 (fikcyjny)",
-       "role": "ratownik (PSP)"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
-   "id": "szkolka-beldany-lodz",
-   "kind": "lodz",
-   "name": "Motorówka asekuracyjna szkółki (Bełdany)",
-   "base": "Bełdany",
-   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
-   "callsign": "SZKOLKA-890",
-   "equipment": {
-    "enduranceMin": 240,
-    "hoursTotal": 622.1,
-    "maintenanceEveryH": 100,
-    "hoursAtLastMaintenance": 598.5,
-    "lastMaintenance": "2026-09-21"
-   },
-   "spares": [
-    {
-     "item": "kanister paliwa 20 l",
-     "qty": 2
-    },
-    {
-     "item": "kamizelki ratunkowe",
-     "qty": 4
-    }
-   ],
-   "maintenanceLog": [
-    {
-     "date": "2026-09-22",
-     "type": "przegląd",
-     "note": "przegląd okresowy (fikcyjny)"
-    }
-   ],
-   "crew": [
-    {
-     "name": "SZKOLKA-BELDANY-LODZ-1 (fikcyjny)",
-     "role": "sternik"
-    },
-    {
-     "name": "SZKOLKA-BELDANY-LODZ-2 (fikcyjny)",
-     "role": "ratownik"
-    }
-   ],
-   "byHome": {
-    "mazury-burza-beldany": {
-     "name": "Motorówka asekuracyjna szkółki (Bełdany)",
-     "readyAt": "15:42",
-     "base": "Bełdany",
-     "operator": null,
-     "crew": [
-      {
-       "name": "SZKOLKA-BELDANY-LODZ-1 (fikcyjny)",
-       "role": "sternik"
-      },
-      {
-       "name": "SZKOLKA-BELDANY-LODZ-2 (fikcyjny)",
-       "role": "ratownik"
-      }
-     ]
-    }
-   },
-   "fictional": true
-  },
-  {
    "id": "wopr-mikolajki-r1",
    "kind": "lodz",
    "name": "Łódź WOPR Mazury R-1 (Mikołajki)",
@@ -8650,6 +8816,67 @@
    "fictional": true
   },
   {
+   "id": "wopr-pieniny",
+   "kind": "lodz",
+   "name": "Łódź WOPR Pieniny (Czorsztyn)",
+   "base": "Czorsztyn",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "WOPR-932",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 411.6,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 399.8,
+    "lastMaintenance": "2026-09-12"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-05",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "WOPR-PIENINY-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "WOPR-PIENINY-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "Łódź WOPR Pieniny (Czorsztyn)",
+     "readyAt": "17:10",
+     "base": "Czorsztyn",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-PIENINY-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-PIENINY-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "wopr-ruciane",
    "kind": "lodz",
    "name": "Łódź WOPR Mazury (Ruciane-Nida)",
@@ -8703,6 +8930,83 @@
       },
       {
        "name": "WOPR-RUCIANE-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "wopr-solina",
+   "kind": "lodz",
+   "name": "Łódź WOPR Bieszczady (Polańczyk)",
+   "base": "Polańczyk",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "WOPR-980",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 732.5,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 675.2,
+    "lastMaintenance": "2026-09-25"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-16",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "WOPR-SOLINA-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "WOPR-SOLINA-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "zapora-myczkowce": {
+     "name": "Łódź WOPR Bieszczady (Polańczyk)",
+     "readyAt": "05:48",
+     "base": "Polańczyk",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-SOLINA-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-SOLINA-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
+    },
+    "zapora-uherce": {
+     "name": "Łódź WOPR Bieszczady (Polańczyk)",
+     "readyAt": "06:07",
+     "base": "Polańczyk",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-SOLINA-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-SOLINA-2 (fikcyjny)",
        "role": "ratownik (WOPR)"
       }
      ]
@@ -8765,6 +9069,61 @@
       {
        "name": "WOPR-TALTY-R3-2 (fikcyjny)",
        "role": "ratownik (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "zrm-ns",
+   "kind": "pieszy",
+   "name": "ZRM (PRM Nowy Sącz) - ratownicy medyczni",
+   "base": "PRM Nowy Sącz",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "ZRM-472",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-27",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "ZRM-NS-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "ZRM-NS-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "ZRM (PRM Nowy Sącz) - ratownicy medyczni",
+     "readyAt": "05:30",
+     "base": "PRM Nowy Sącz",
+     "operator": null,
+     "crew": [
+      {
+       "name": "ZRM-NS-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "ZRM-NS-2 (fikcyjny)",
+       "role": "ratownik"
       }
      ]
     }
