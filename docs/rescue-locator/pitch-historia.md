@@ -20,7 +20,7 @@
     - Linia "66% / 56% / 43%" (symulacja) usunięta ze strony startowej razem z sekcją walidacji na landingu, notki prawne zostały (`e949d42`). Liczby nadal są w `docs/rescue-locator/pitch.md` z opisem "symulacja, nie prawdziwe akcje".
 12. **Sob 23:18-niedz 00:11 - port backendu do Rusta.** Szkielet (`c8ff366`), zasady identyczności bajt w bajt (`cef47bd`), port: silnik 11-240 ms zamiast 2-6 s, `/api/incidents` z 29,5 s do ok. 1,5 s rozgrzewki, potem z cache, zgodność z serwerem Swift na 93 ze 105 odpowiedzi wzorcowych (`6604627`). Produkcja na Ruście (`324a184`, `785fcf1`, Swift zostaje do wycofania), API w fra1 obok Neon (`c18e869`), ETag i 304 zamiast ponownego pobierania do 2,6 MB (`0f59ef4`, `71e426a`). Przed portem produkcja mierzyła 28-36 s na każde wywołanie `/api/incidents` (`docs/rescue-locator/wydajnosc.md`). Pomiar produkcji po porcie (`402802f`, wydajnosc.md "Runda 2", p50 z sali, ok. 0,2 s to sieć): `/api/incidents` 34,3 -> 0,43 s, `/api/inventory` 9,8 -> 0,32 s, `/api/run?live=0` 7,4 -> 0,85 s, `/api/tracks` 7,5 -> 0,29 s.
 
-Uwaga: liczba "ok. 22 ms" z wątku nie jest udokumentowana - w pitchu cytujemy pomiar produkcji z `402802f` (34,3 s -> 0,43 s).
+Uwaga: "22 ms" to pomiar lokalny (Rust release, `/api/incidents` po rozgrzewce, `wydajnosc.md`), nie produkcja - w pitchu cytujemy pomiar produkcji z `402802f` (34,3 s -> 0,43 s).
 
 ## B) Narracja do pitchu (60-90 s)
 

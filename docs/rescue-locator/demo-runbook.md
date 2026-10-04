@@ -1,6 +1,6 @@
 # Rescue Locator - runbook pokazu na żywo (3 min)
 
-Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze-funkcje.md`](najmocniejsze-funkcje.md) (kolejność), [`pitch.md`](pitch.md) (liczby i odpowiedzi), [`demo-review.md`](demo-review.md) (znane problemy), `rescue/app/CONTRACT.md`, `rescue/README.md`. Stan kodu: `b2ed46d`. Wszystkie URL-e niżej sprawdzone GET-em (200) 2026-10-03.
+Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze-funkcje.md`](najmocniejsze-funkcje.md) (kolejność), [`pitch.md`](pitch.md) (liczby i odpowiedzi), [`demo-review.md`](demo-review.md) (znane problemy), `rescue/app/CONTRACT.md`, `rescue/README.md`. Stan kodu: `aa6d8ce`. Wszystkie URL-e niżej sprawdzone GET-em (200) 2026-10-04 (`docs/rescue-locator/fact-check.md`).
 
 ## 1. Przygotowanie (T-30 min)
 
@@ -33,7 +33,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 3. [ ] Karty rozgrzane (niżej), Historia otwarta z `&step=0`, telefon na danych komórkowych, "Nie przeszkadzać" włączone.
 4. [ ] Od teraz nikt z zespołu nie pisze na produkcję.
 
-Czasy (serwer Rust, `545fe02`, pomiar AI Marcina 04:59): meldunek u operatora **~1-2 s**, Potwierdź wszystkie -> "Wszystko potwierdzone" 0,5 s, ZNALEZIONO w Centrum **~7 s**, u operatora od razu. Czeka się tylko na telefon (odpytuje co 15 s): przydział ~10-15 s, potwierdzenie i "Akcja zakończona" **~20-25 s**. Na te chwile masz zdania w tabeli niżej.
+Czasy (serwer Rust, produkcja na `545fe02`, pomiar AI Marcina, wątek 04:59; pomiaru nie ma w repo): meldunek u operatora **~1-2 s**, Potwierdź wszystkie -> "Wszystko potwierdzone" 0,5 s, ZNALEZIONO w Centrum **~7 s**, u operatora od razu. Czeka się tylko na telefon (odpytuje co 15 s): przydział ~10-15 s, potwierdzenie i "Akcja zakończona" **~20-25 s**. Na te chwile masz zdania w tabeli niżej.
 
 **Czyszczenie stanu (obowiązkowo po każdej próbie i 10 min przed pokazem).** Mechanizm: `POST /api/reset` (klucz operatora). Czyści meldunki, ślady, feed LIVE, przydziały, potwierdzenia (ACK), kursor "Następne zdarzenie", pulę zespołów i listę akcji zakończonych, a także bieżącą historię Studio (Plan). **Nie** usuwa zapisanych historii Studio (`scn:*`).
 - Przycisk: **Udostępnij -> Wyczyść akcję -> OK** (działa tylko z kluczem operatora na urządzeniu).
@@ -45,7 +45,7 @@ Czasy (serwer Rust, `545fe02`, pomiar AI Marcina 04:59): meldunek u operatora **
 
 **Zawsze jawne `sc=zawrat`.** Na produkcji akcja LIVE w Centrum to inny scenariusz (2026-10-04 01:30: Połonina Wetlińska), a aplikacja bez `sc=` pamięta ostatni scenariusz i tryb. Historia bez `&step=0` otwiera się na **końcu** nagrania (20:03 ZNALEZIONO): użyj URL-a z tabeli albo kliknij ⏮ w doku przed pokazem.
 
-**Rozgrzanie (pierwsze wejście jest wolne: mapa 15-25 s, `/api/incidents` na zimno ~17 s).** Otwórz i zostaw w kartach: (1) operator Zawrat w **Historia**, (2) Centrum, (3) operator `?sc=sniardwy`, (4) `?sc=krakow-nowa-huta`. Na telefonie: ekran ratownika + karta z Widziałem.
+**Rozgrzanie (pierwsze wejście jest wolniejsze: mapa ok. 4-8 s, lista akcji `/api/incidents` < 1 s; serwer Rust, `perf-transitions.md` Runda 3, `wydajnosc.md` Runda 2).** Otwórz i zostaw w kartach: (1) operator Zawrat w **Historia**, (2) Centrum, (3) operator `?sc=sniardwy`, (4) `?sc=krakow-nowa-huta`. Na telefonie: ekran ratownika + karta z Widziałem.
 
 **Ekran.** Chrome w pełnym ekranie (Ctrl+Cmd+F), zoom 100% (pasek mieści się w 1 wierszu od 1280 px; jeśli się łamie: 90%). Zakładki zakładek ukryte, inne karty zamknięte. macOS: Centrum sterowania -> **Skupienie -> Nie przeszkadzać**; na telefonach też. Jasność telefonu max, blokada ekranu wyłączona.
 
@@ -67,7 +67,7 @@ Kryteria (DEFENCE): **I** innowacja 30%, **K** związek z kategorią 20%, **U** 
 | 2 | 0:20-0:50 | Przesuń oś czasu do 18:30 (plan trasy, auto na Palenicy, BTS 14:12, mgła); odznacz jedną wskazówkę w Sygnałach (☰ w doku) i zaznacz z powrotem | mapa przelicza się po każdej wskazówce, top 3 sektory po prawej | "Każda wskazówka to osobny moduł, mapa liczy się na żywo i od razu mówi, gdzie szukać najpierw." | I, D |
 | 3 | 0:50-1:20 | **▶** albo przesuń oś 18:40 -> 20:03 | sektory wracają puste, dron nic, Żleb pod Zawratem wskakuje na #1, śmigłowiec, **ZNALEZIONO** | "Brak wyniku to też informacja. Prawdopodobieństwo spływa do żlebu, plan wysyła tam śmigłowiec - 20:03, znaleziony." | I |
 | 4 | 1:20-1:55 | Przełącz na **Na żywo** (19:45). Telefon: **Pogoda · status · meldunek** -> wpisz `S8 pusto, widoczność 50 m` -> **Wyślij meldunek** | na laptopie po **~1-2 s** wpis w panelu *Na żywo* (podświetlony, "Niepotwierdzone: 1"), mapa się przelicza; kliknij **Potwierdź wszystkie** -> na telefonie po **~20-25 s** "Operator potwierdził Twój meldunek ✓" | "Ratownik pisze zwykłym zdaniem, model zamienia to w dowód, kierownik potwierdza jednym klikiem." Meldunek jest od razu: pokaż wpis i powiedz "model przeczytał zdanie: sektor S8, przeszukany, nic, widoczność 50 metrów - nikt tego nie przepisuje". Potwierdzenie na telefonie przychodzi po ~20-25 s: nie czekaj, idź do kroku 5, telefon pokaż na końcu kroku 5 (będą na nim już oba: potwierdzenie i koniec akcji). | U, C |
-| 5 | 1:55-2:15 | Link **Centrum - wszystkie akcje** (karta 2). Przeciągnij wolny zespół na kartę Morskiego Oka. Telefon: **ŚLAD / ZNALEZIONO** -> **poszkodowany ZNALEZIONY** -> Wyślij | 18 akcji na mapie Polski (1 LIVE); po **~7 s** Zawrat przechodzi do **Zakończone**, zespoły wracają do puli, telefon: "Akcja zakończona" po **~20-25 s** | "Centrala widzi wszystkie akcje i jedną pulę zespołów. Znalezienie w terenie zamyka akcję i zwalnia ludzi do następnej." Przez ~7 s do "Zakończone" mów: "Kilka zespołów jest w terenie przy innych akcjach. Gdy jedna się kończy, centrala od razu widzi, kto jest wolny." Telefon ("Akcja zakończona" po ~20-25 s) pokaż na końcu kroku albo na początku kroku 6. | K, U |
+| 5 | 1:55-2:15 | Link **Centrum - wszystkie akcje** (karta 2). Przeciągnij wolny zespół na kartę Morskiego Oka. Telefon: **ŚLAD / ZNALEZIONO** -> **poszkodowany ZNALEZIONY** -> Wyślij | 17 akcji na mapie Polski (1 LIVE); po **~7 s** Zawrat przechodzi do **Zakończone**, zespoły wracają do puli, telefon: "Akcja zakończona" po **~20-25 s** | "Centrala widzi wszystkie akcje i jedną pulę zespołów. Znalezienie w terenie zamyka akcję i zwalnia ludzi do następnej." Przez ~7 s do "Zakończone" mów: "Kilka zespołów jest w terenie przy innych akcjach. Gdy jedna się kończy, centrala od razu widzi, kto jest wolny." Telefon ("Akcja zakończona" po ~20-25 s) pokaż na końcu kroku albo na początku kroku 6. | K, U |
 | 6 | 2:15-2:35 | Karta 3 (Śniardwy), karta 4 (Kraków). Telefon 2: Widziałem -> wskaż miejsce -> **Wyślij zgłoszenie**. Opcjonalnie 3 s widoku 3D | dryf łodzi na jeziorze; senior w Nowej Hucie, zgłoszenie mieszkańca wpada do feedu | "Ten sam silnik na wodzie i w mieście - mieszkaniec zgłasza, że widział seniora, i to staje się dowodem." | K, D |
 | 7 | 2:35-3:00 | Bez klikania (albo slajd z liczbami) | - | "Na tysiącu symulowanych zaginięć właściwy sektor jest w pierwszej trójce w 66%, u doświadczonego kierownika w 56%, od ostatniego punktu w 43%. To symulacja, nie prawdziwe akcje. Planer jest najsłabszy - decyduje człowiek. Rescue Locator: gdzie szukać najpierw." | C |
 
@@ -87,7 +87,7 @@ Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kol
 
 | Problem | Ratunek w jednej linii |
 |---|---|
-| Pierwsza mapa ładuje się 15-25 s, Centrum ~17 s | Karty otwarte i rozgrzane w T-30; nigdy nie otwieraj nowej karty na scenie. |
+| Pierwsza mapa ładuje się ok. 4-8 s, Centrum zwykle < 2 s | Karty otwarte i rozgrzane w T-30; nigdy nie otwieraj nowej karty na scenie. |
 | Brak Wi-Fi / Vercel nie odpowiada | Laptop i telefony na hotspot; dalej źle: lokalny `swift run rescue-server` (wyżej), a jak i to nie - nagranie wideo. |
 | "Zmiany wymagają klucza akcji" / 401 | Na laptopie wpisz klucz w pole Klucz (odłącz projektor); telefon: zeskanuj ponownie QR Ratownik. |
 | Cudze dane: obce ślady, zakończone akcje, inne przydziały | **Udostępnij -> Wyczyść akcję**, potem przydział TOPR A -> S7; "Test nocny" na liście ignoruj (znany problem #1). |
@@ -100,7 +100,7 @@ Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kol
 
 ## 4. Pytania jury - krótkie odpowiedzi
 
-1. **Skąd wiecie, że to działa?** Kalibracja na 1000 symulowanych zaginięć w 5 pasmach: top 3 66% vs ekspert 56% vs od ostatniego punktu 43%; 90% osób na 29% obszaru vs 37% vs 68%. Woda, 600 przypadków: top 3 91% vs 81%. To symulacja, nie prawdziwe akcje.
+1. **Skąd wiecie, że to działa?** Kalibracja na 1000 symulowanych zaginięć w 5 rejonach górskich (Tatry, Bieszczady, Karkonosze): top 3 66% vs ekspert 56% vs od ostatniego punktu 43%; 90% osób na 29% obszaru vs 37% vs 68%. Woda, 600 przypadków: top 3 91% vs 81%. To symulacja, nie prawdziwe akcje.
 2. **Symulator i silnik pisał ten sam zespół?** Tak, ta sama rodzina AI - to test spójności, nie walidacja. Na wodzie oba używają tych samych tabel dryfu, więc ten wynik jest zawyżony. Następny krok: backtest na anonimizowanych akcjach GOPR/TOPR.
 3. **"45%" na sektorze to szansa, że tam jest?** Nie. Ranking działa, procenty są przesadnie pewne: sektor "45%" trafiał w ~19% (Brier 0,81). Czytaj mapę jako kolejność szukania; dlatego w panelach nie pokazujemy procentów jako szansy.
 4. **Test na ślepo?** AI Marcina chowa osobę i publikuje hash SHA-256 miejsca przed startem. Dwie rundy, obie znalezione, ale oba razy przez decyzję koordynatora wbrew planerowi; sama mapa raz pomogła (2,1% obszaru), raz nie (37,4% vs 35,7% naiwnie). N = 2, to przypis.
