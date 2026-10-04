@@ -451,6 +451,14 @@ EXAMPLES["senior-demencja-lodz"] = [
   "Dron nad Łódzkimi Błoniami, nic",
   "Mżawka, 8 stopni, zmrok o 18:35",
 ];
+EXAMPLES["los-augustow"] = [
+  "Kierowca ciężarówki widział mężczyznę o 23:35 na poboczu DW 664 w stronę Lipska",
+  "Patrol Policji sprawdził pobocze i rów przy aucie, nic",
+  "Znaleziono brązowy półbut na skraju torfowiska Kozi Rynek",
+  "Pies podjął trop od auta na północny wschód",
+  "Dron PSP przeleciał nad L13, nic",
+  "Mgła nad torfowiskiem, widoczność 300 m, +1 stopień",
+];
 EXAMPLES.sniardwy = [
   "Rybak widział żeglarza w wodzie o 17:10 przy Nowych Gutach",
   "Łódź WOPR przeszukała toń na wschód od LKP, nic",

@@ -103,6 +103,19 @@
    ]
   ]
  },
+ "los-augustow": {
+  "file": "hillshade/los-augustow.png",
+  "bounds": [
+   [
+    23.142083333333318,
+    53.75638888888889
+   ],
+   [
+    23.28791666666665,
+    53.83555555555556
+   ]
+  ]
+ },
  "miedzyzdroje": {
   "file": "hillshade/miedzyzdroje.png",
   "bounds": [

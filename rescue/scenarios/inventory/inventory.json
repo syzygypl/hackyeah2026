@@ -378,9 +378,80 @@
    "fictional": true
   },
   {
+   "id": "dron-pol-ns",
+   "kind": "dron",
+   "name": "Dron Policji z termowizją (KMP Nowy Sącz)",
+   "base": "KMP Nowy Sącz",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-542",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 187.7,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 167.0,
+    "lastMaintenance": "2026-09-05"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-25",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-25",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-POL-NS-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-POL-NS-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad-2": {
+     "name": "Dron Policji z termowizją (KMP Nowy Sącz)",
+     "readyAt": "06:50",
+     "base": "KMP Nowy Sącz",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "DRON-POL-NS-1 (fikcyjny)",
+       "role": "operator drona (Policja)"
+      },
+      {
+       "name": "DRON-POL-NS-2 (fikcyjny)",
+       "role": "obserwator (Policja)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-psp",
    "kind": "dron",
-   "name": "Dron termowizyjny PSP Krosno",
+   "name": "Dron termowizyjny PSP Międzychód",
    "base": "baza wg scenariusza",
    "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
    "callsign": "DRON-335",
@@ -429,6 +500,22 @@
     }
    ],
    "byHome": {
+    "grzybiarz-puszcza-notecka": {
+     "name": "Dron termowizyjny PSP Międzychód",
+     "readyAt": "20:45",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    },
     "zapora-huzele": {
      "name": "Dron termowizyjny PSP Krosno",
      "readyAt": "08:16",
@@ -513,6 +600,77 @@
    "fictional": true
   },
   {
+   "id": "dron-psp-664",
+   "kind": "dron",
+   "name": "Dron termowizyjny PSP Augustów",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-825",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 169.6,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 141.4,
+    "lastMaintenance": "2026-09-06"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-22",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-15",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-664-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-664-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "los-augustow": {
+     "name": "Dron termowizyjny PSP Augustów",
+     "readyAt": "23:55",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-664-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-664-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-psp-lodz",
    "kind": "dron",
    "name": "Dron PSP Łódź z termowizją",
@@ -584,6 +742,77 @@
    "fictional": true
   },
   {
+   "id": "dron-psp-lomza",
+   "kind": "dron",
+   "name": "Dron termowizyjny PSP Łomża",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-724",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 159.9,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 149.2,
+    "lastMaintenance": "2026-09-19"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-05",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-05",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-LOMZA-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-LOMZA-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "Dron termowizyjny PSP Łomża",
+     "readyAt": "20:35",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-LOMZA-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-LOMZA-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "dron-psp-nowy-targ",
    "kind": "dron",
    "name": "Dron termowizyjny PSP Nowy Targ",
@@ -647,6 +876,77 @@
       },
       {
        "name": "DRON-PSP-NOWY-TARG-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "dron-psp-ns",
+   "kind": "dron",
+   "name": "Dron termowizyjny PSP Nowy Sącz",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-800",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 166.3,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 154.4,
+    "lastMaintenance": "2026-09-19"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-23",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-09",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-NS-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-NS-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "Dron termowizyjny PSP Nowy Sącz",
+     "readyAt": "06:05",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-NS-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-NS-2 (fikcyjny)",
        "role": "obserwator (PSP)"
       }
      ]
@@ -1298,6 +1598,148 @@
    "fictional": true
   },
   {
+   "id": "gopr-krynica",
+   "kind": "pieszy",
+   "name": "GOPR Krynica - patrol (Rytro)",
+   "base": "Rytro",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-141",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-06",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-KRYNICA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-KRYNICA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KRYNICA-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KRYNICA-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "GOPR Krynica - patrol (Rytro)",
+     "readyAt": "05:55",
+     "base": "Rytro",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-KRYNICA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-KRYNICA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KRYNICA-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KRYNICA-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "gopr-krynica-b",
+   "kind": "pieszy",
+   "name": "GOPR Krynica - patrol B (Piwniczna)",
+   "base": "Piwniczna",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-541",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-20",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-KRYNICA-B-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-KRYNICA-B-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KRYNICA-B-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-KRYNICA-B-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad-2": {
+     "name": "GOPR Krynica - patrol B (Piwniczna)",
+     "readyAt": "06:45",
+     "base": "Piwniczna",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-KRYNICA-B-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-KRYNICA-B-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KRYNICA-B-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-KRYNICA-B-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "gopr-lesko",
    "kind": "pieszy",
    "name": "GOPR Bieszczady - patrol Lesko",
@@ -1789,6 +2231,75 @@
    "fictional": true
   },
   {
+   "id": "heli-lpr-664",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Białystok), lot nocny",
+   "base": "Białystok",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "HELI-682",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 5111.5,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 5071.8,
+    "lastMaintenance": "2026-09-06"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-20",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "HELI-LPR-664-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "HELI-LPR-664-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "HELI-LPR-664-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "los-augustow": {
+     "name": "Śmigłowiec LPR (Białystok), lot nocny",
+     "readyAt": "00:10",
+     "base": "Białystok",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-664-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-664-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-664-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "heli-lpr-jg",
    "kind": "smiglowiec",
    "name": "Śmigłowiec LPR (Jelenia Góra)",
@@ -1850,6 +2361,75 @@
       },
       {
        "name": "HELI-LPR-JG-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "heli-lpr-krk",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Kraków)",
+   "base": "Kraków",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "HELI-501",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 3582.8,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 3526.0,
+    "lastMaintenance": "2026-09-25"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-12",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "HELI-LPR-KRK-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "HELI-LPR-KRK-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "HELI-LPR-KRK-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "Śmigłowiec LPR (Kraków)",
+     "readyAt": "07:00",
+     "base": "Kraków",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-KRK-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-KRK-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-KRK-3 (fikcyjny)",
        "role": "ratownik (LPR)"
       }
      ]
@@ -2247,6 +2827,69 @@
    "fictional": true
   },
   {
+   "id": "osp-ksrg-664",
+   "kind": "pieszy",
+   "name": "Zastęp OSP (KSRG, gmina Nowinka)",
+   "base": "KSRG, gmina Nowinka",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-163",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-12",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-KSRG-664-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-KSRG-664-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-KSRG-664-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "los-augustow": {
+     "name": "Zastęp OSP (KSRG, gmina Nowinka)",
+     "readyAt": "23:40",
+     "base": "KSRG, gmina Nowinka",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-KSRG-664-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-KSRG-664-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-KSRG-664-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "osp-olszanica",
    "kind": "pieszy",
    "name": "OSP Olszanica",
@@ -2330,6 +2973,258 @@
    "fictional": true
   },
   {
+   "id": "osp-piwniczna",
+   "kind": "pieszy",
+   "name": "OSP Piwniczna-Zdrój",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-811",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-09",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-PIWNICZNA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-PIWNICZNA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-PIWNICZNA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad-2": {
+     "name": "OSP Piwniczna-Zdrój",
+     "readyAt": "06:20",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-PIWNICZNA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-PIWNICZNA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-PIWNICZNA-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "osp-rytro",
+   "kind": "pieszy",
+   "name": "OSP Rytro",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-654",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-23",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-RYTRO-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-RYTRO-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-RYTRO-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "OSP Rytro",
+     "readyAt": "05:15",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-RYTRO-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-RYTRO-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-RYTRO-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "osp-sierakow",
+   "kind": "pieszy",
+   "name": "OSP Sieraków - zastęp",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-572",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-23",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-SIERAKOW-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-SIERAKOW-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-SIERAKOW-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "grzybiarz-puszcza-notecka": {
+     "name": "OSP Sieraków - zastęp",
+     "readyAt": "20:05",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-SIERAKOW-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-SIERAKOW-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-SIERAKOW-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "osp-wizna",
+   "kind": "pieszy",
+   "name": "OSP Wizna - patrol brzegu",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "OSP-750",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-17",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "OSP-WIZNA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "OSP-WIZNA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "OSP-WIZNA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "OSP Wizna - patrol brzegu",
+     "readyAt": "19:40",
+     "base": "baza wg scenariusza",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "OSP-WIZNA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "OSP-WIZNA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "OSP-WIZNA-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "pies-gopr-kpz",
    "kind": "pies",
    "name": "Przewodnik z psem tropiącym GOPR",
@@ -2375,6 +3270,266 @@
       {
        "name": "PIES-GOPR-KPZ-1 (fikcyjny)",
        "role": "przewodnik psa (GOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-gopr-krynica",
+   "kind": "pies",
+   "name": "Przewodnik z psem tropiącym GOPR Krynica",
+   "base": "baza wg scenariusza",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-234",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-13",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Saba (fikcyjny)",
+    "breed": "owczarek niemiecki",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-GOPR-KRYNICA-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad-2": {
+     "name": "Przewodnik z psem tropiącym GOPR Krynica",
+     "readyAt": "07:30",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "PIES-GOPR-KRYNICA-1 (fikcyjny)",
+       "role": "przewodnik psa (GOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-osp",
+   "kind": "pies",
+   "name": "Grupa poszukiwawcza OSP z psami terenowymi (Wronki)",
+   "base": "Wronki",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-629",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-18",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Saba (fikcyjny)",
+    "breed": "owczarek belgijski",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-OSP-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "grzybiarz-puszcza-notecka": {
+     "name": "Grupa poszukiwawcza OSP z psami terenowymi (Wronki)",
+     "readyAt": "21:20",
+     "base": "Wronki",
+     "operator": "OSP",
+     "crew": [
+      {
+       "name": "PIES-OSP-1 (fikcyjny)",
+       "role": "przewodnik psa (OSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-pol",
+   "kind": "pies",
+   "name": "Policyjny pies tropiący (KMP Nowy Sącz)",
+   "base": "KMP Nowy Sącz",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-415",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-11",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Saba (fikcyjny)",
+    "breed": "owczarek belgijski",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-POL-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "Policyjny pies tropiący (KMP Nowy Sącz)",
+     "readyAt": "06:20",
+     "base": "KMP Nowy Sącz",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "PIES-POL-1 (fikcyjny)",
+       "role": "przewodnik psa (Policja)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-pol-664",
+   "kind": "pies",
+   "name": "Przewodnik z psem tropiącym (Policja, Białystok)",
+   "base": "Policja, Białystok",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-327",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-07",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Aron (fikcyjny)",
+    "breed": "owczarek niemiecki",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-POL-664-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "los-augustow": {
+     "name": "Przewodnik z psem tropiącym (Policja, Białystok)",
+     "readyAt": "00:35",
+     "base": "Policja, Białystok",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "PIES-POL-664-1 (fikcyjny)",
+       "role": "przewodnik psa (Policja)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-pol-bialystok",
+   "kind": "pies",
+   "name": "Przewodnik z psem tropiącym (Policja Białystok)",
+   "base": "Policja Białystok",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-262",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-13",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Saba (fikcyjny)",
+    "breed": "border collie",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-POL-BIALYSTOK-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "Przewodnik z psem tropiącym (Policja Białystok)",
+     "readyAt": "21:00",
+     "base": "Policja Białystok",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "PIES-POL-BIALYSTOK-1 (fikcyjny)",
+       "role": "przewodnik psa (Policja)"
       }
      ]
     }
@@ -2434,6 +3589,58 @@
    "fictional": true
   },
   {
+   "id": "pies-policja",
+   "kind": "pies",
+   "name": "Przewodnik z psem tropiącym Policji (KPP Szamotuły)",
+   "base": "KPP Szamotuły",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-274",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-11",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Nuka (fikcyjny)",
+    "breed": "owczarek niemiecki",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-POLICJA-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "grzybiarz-puszcza-notecka": {
+     "name": "Przewodnik z psem tropiącym Policji (KPP Szamotuły)",
+     "readyAt": "21:00",
+     "base": "KPP Szamotuły",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "PIES-POLICJA-1 (fikcyjny)",
+       "role": "przewodnik psa (Policja)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "pol-a",
    "kind": "pieszy",
    "name": "Patrol Policji A (KP Nowa Huta)",
@@ -2481,6 +3688,61 @@
       },
       {
        "name": "POL-A-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-augustow-664",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KPP Augustów)",
+   "base": "KPP Augustów",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-222",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-08",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-AUGUSTOW-664-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-AUGUSTOW-664-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "los-augustow": {
+     "name": "Patrol Policji (KPP Augustów)",
+     "readyAt": "23:20",
+     "base": "KPP Augustów",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-AUGUSTOW-664-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-AUGUSTOW-664-2 (fikcyjny)",
        "role": "policjant"
       }
      ]
@@ -2599,6 +3861,61 @@
    "fictional": true
   },
   {
+   "id": "pol-krynica",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KPP Krynica-Zdrój)",
+   "base": "KPP Krynica-Zdrój",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-919",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-07",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-KRYNICA-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-KRYNICA-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad-2": {
+     "name": "Patrol Policji (KPP Krynica-Zdrój)",
+     "readyAt": "06:15",
+     "base": "KPP Krynica-Zdrój",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-KRYNICA-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-KRYNICA-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "pol-lodz-baluty",
    "kind": "pieszy",
    "name": "Patrol Policji A (KP Łódź-Bałuty)",
@@ -2701,6 +4018,226 @@
       },
       {
        "name": "POL-LODZ-POLESIE-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-lomza",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KMP Łomża)",
+   "base": "KMP Łomża",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-629",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-26",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-LOMZA-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-LOMZA-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "Patrol Policji (KMP Łomża)",
+     "readyAt": "19:45",
+     "base": "KMP Łomża",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-LOMZA-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-LOMZA-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-ns",
+   "kind": "pieszy",
+   "name": "Patrol Policji B (KMP Nowy Sącz)",
+   "base": "KMP Nowy Sącz",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-899",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-12",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-NS-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-NS-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "Patrol Policji B (KMP Nowy Sącz)",
+     "readyAt": "05:50",
+     "base": "KMP Nowy Sącz",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-NS-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-NS-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-piwniczna",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KP Piwniczna-Zdrój)",
+   "base": "KP Piwniczna-Zdrój",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-611",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-02",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-PIWNICZNA-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-PIWNICZNA-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "Patrol Policji (KP Piwniczna-Zdrój)",
+     "readyAt": "05:22",
+     "base": "KP Piwniczna-Zdrój",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-PIWNICZNA-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-PIWNICZNA-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-sierakow",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KPP Międzychód, posterunek Sieraków)",
+   "base": "KPP Międzychód, posterunek Sieraków",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-385",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-09",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-SIERAKOW-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-SIERAKOW-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "grzybiarz-puszcza-notecka": {
+     "name": "Patrol Policji (KPP Międzychód, posterunek Sieraków)",
+     "readyAt": "19:50",
+     "base": "KPP Międzychód, posterunek Sieraków",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-SIERAKOW-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-SIERAKOW-2 (fikcyjny)",
        "role": "policjant"
       }
      ]
@@ -2860,6 +4397,116 @@
       {
        "name": "POLICJA-SZCZAWNICA-2 (fikcyjny)",
        "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "prm-lomza",
+   "kind": "pieszy",
+   "name": "Zespół PRM Łomża (po przekazaniu pasażera: brzeg przy moście)",
+   "base": "po przekazaniu pasażera: brzeg przy moście",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PRM-992",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-15",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PRM-LOMZA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PRM-LOMZA-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "Zespół PRM Łomża (po przekazaniu pasażera: brzeg przy moście)",
+     "readyAt": "20:10",
+     "base": "po przekazaniu pasażera: brzeg przy moście",
+     "operator": null,
+     "crew": [
+      {
+       "name": "PRM-LOMZA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PRM-LOMZA-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-augustow-664",
+   "kind": "pieszy",
+   "name": "Zastęp PSP (JRG Augustów)",
+   "base": "JRG Augustów",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-351",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-18",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-AUGUSTOW-664-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-AUGUSTOW-664-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "los-augustow": {
+     "name": "Zastęp PSP (JRG Augustów)",
+     "readyAt": "23:30",
+     "base": "JRG Augustów",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-AUGUSTOW-664-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-AUGUSTOW-664-2 (fikcyjny)",
+       "role": "ratownik"
       }
      ]
     }
@@ -3288,6 +4935,185 @@
    "fictional": true
   },
   {
+   "id": "psp-lomza-lodz",
+   "kind": "lodz",
+   "name": "Łódź PSP JRG Łomża",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "PSP-461",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 659.2,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 601.0,
+    "lastMaintenance": "2026-09-25"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-24",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-LOMZA-LODZ-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "PSP-LOMZA-LODZ-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-LOMZA-LODZ-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "Łódź PSP JRG Łomża",
+     "readyAt": "19:50",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LOMZA-LODZ-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-LOMZA-LODZ-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-LOMZA-LODZ-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-miedzychod",
+   "kind": "pieszy",
+   "name": "PSP JRG Międzychód - zastęp",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-698",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-24",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-MIEDZYCHOD-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-MIEDZYCHOD-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "grzybiarz-puszcza-notecka": {
+     "name": "PSP JRG Międzychód - zastęp",
+     "readyAt": "20:25",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-MIEDZYCHOD-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-MIEDZYCHOD-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-ns",
+   "kind": "pieszy",
+   "name": "PSP JRG Nowy Sącz - zastęp",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-551",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-25",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-NS-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-NS-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "PSP JRG Nowy Sącz - zastęp",
+     "readyAt": "05:35",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-NS-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-NS-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "sar-boat",
    "kind": "lodz",
    "name": "Łódź Morskiej Służby SAR (Świnoujście)",
@@ -3350,6 +5176,85 @@
       {
        "name": "SAR-BOAT-3 (fikcyjny)",
        "role": "ratownik (SAR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "sgrw-bialystok",
+   "kind": "nurkowie",
+   "name": "Nurkowie PSP (SGRW Białystok)",
+   "base": "SGRW Białystok",
+   "model": "grupa ratownictwa wodnego, nurkowie (fikcyjna)",
+   "callsign": "SGRW-686",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "butla 12 l (pełna)",
+     "qty": 6
+    },
+    {
+     "item": "skafander suchy",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-12",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "SGRW-BIALYSTOK-1 (fikcyjny)",
+     "role": "nurek kierujący"
+    },
+    {
+     "name": "SGRW-BIALYSTOK-2 (fikcyjny)",
+     "role": "nurek roboczy"
+    },
+    {
+     "name": "SGRW-BIALYSTOK-3 (fikcyjny)",
+     "role": "nurek asekuracyjny"
+    },
+    {
+     "name": "SGRW-BIALYSTOK-4 (fikcyjny)",
+     "role": "sygnalista"
+    },
+    {
+     "name": "SGRW-BIALYSTOK-5 (fikcyjny)",
+     "role": "sprzętowiec"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "Nurkowie PSP (SGRW Białystok)",
+     "readyAt": "20:50",
+     "base": "SGRW Białystok",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "SGRW-BIALYSTOK-1 (fikcyjny)",
+       "role": "nurek kierujący (PSP)"
+      },
+      {
+       "name": "SGRW-BIALYSTOK-2 (fikcyjny)",
+       "role": "nurek roboczy (PSP)"
+      },
+      {
+       "name": "SGRW-BIALYSTOK-3 (fikcyjny)",
+       "role": "nurek asekuracyjny (PSP)"
+      },
+      {
+       "name": "SGRW-BIALYSTOK-4 (fikcyjny)",
+       "role": "sygnalista (PSP)"
+      },
+      {
+       "name": "SGRW-BIALYSTOK-5 (fikcyjny)",
+       "role": "sprzętowiec (PSP)"
       }
      ]
     }
@@ -3460,6 +5365,171 @@
       {
        "name": "SM-LODZ-BALUTY-2 (fikcyjny)",
        "role": "strażnik miejski"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "sok-krynica",
+   "kind": "pieszy",
+   "name": "SOK - patrol Straży Ochrony Kolei (Krynica)",
+   "base": "Krynica",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "SOK-492",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-21",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "SOK-KRYNICA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "SOK-KRYNICA-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad-2": {
+     "name": "SOK - patrol Straży Ochrony Kolei (Krynica)",
+     "readyAt": "06:15",
+     "base": "Krynica",
+     "operator": null,
+     "crew": [
+      {
+       "name": "SOK-KRYNICA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "SOK-KRYNICA-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "sok-ns",
+   "kind": "pieszy",
+   "name": "SOK - patrol Straży Ochrony Kolei (Nowy Sącz)",
+   "base": "Nowy Sącz",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "SOK-359",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-21",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "SOK-NS-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "SOK-NS-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "SOK - patrol Straży Ochrony Kolei (Nowy Sącz)",
+     "readyAt": "05:25",
+     "base": "Nowy Sącz",
+     "operator": null,
+     "crew": [
+      {
+       "name": "SOK-NS-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "SOK-NS-2 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "straz-lesna",
+   "kind": "pieszy",
+   "name": "Straż Leśna Nadleśnictwa Sieraków (zna linie oddziałowe)",
+   "base": "zna linie oddziałowe",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "STRAZ-882",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-21",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "STRAZ-LESNA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "STRAZ-LESNA-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "grzybiarz-puszcza-notecka": {
+     "name": "Straż Leśna Nadleśnictwa Sieraków (zna linie oddziałowe)",
+     "readyAt": "20:15",
+     "base": "zna linie oddziałowe",
+     "operator": null,
+     "crew": [
+      {
+       "name": "STRAZ-LESNA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "STRAZ-LESNA-2 (fikcyjny)",
+       "role": "ratownik"
       }
      ]
     }
@@ -4113,6 +6183,67 @@
    "fictional": true
   },
   {
+   "id": "wopr-lomza",
+   "kind": "lodz",
+   "name": "Łódź WOPR Łomża",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "WOPR-674",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 549.8,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 541.2,
+    "lastMaintenance": "2026-09-09"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-17",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "WOPR-LOMZA-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "WOPR-LOMZA-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "auto-w-rzece-wizna": {
+     "name": "Łódź WOPR Łomża",
+     "readyAt": "20:20",
+     "base": "baza wg scenariusza",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-LOMZA-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-LOMZA-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "wopr-pieniny",
    "kind": "lodz",
    "name": "Łódź WOPR Pieniny (Czorsztyn)",
@@ -4244,6 +6375,61 @@
       {
        "name": "WOPR-SOLINA-2 (fikcyjny)",
        "role": "ratownik (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "zrm-ns",
+   "kind": "pieszy",
+   "name": "ZRM (PRM Nowy Sącz) - ratownicy medyczni",
+   "base": "PRM Nowy Sącz",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "ZRM-472",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-27",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "ZRM-NS-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "ZRM-NS-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "dywersja-poprad": {
+     "name": "ZRM (PRM Nowy Sącz) - ratownicy medyczni",
+     "readyAt": "05:30",
+     "base": "PRM Nowy Sącz",
+     "operator": null,
+     "crew": [
+      {
+       "name": "ZRM-NS-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "ZRM-NS-2 (fikcyjny)",
+       "role": "ratownik"
       }
      ]
     }

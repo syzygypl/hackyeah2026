@@ -1,0 +1,452 @@
+{
+ "incident": "Kierowca po zderzeniu z łosiem - DW 664 Augustów-Lipsk, Puszcza Augustowska, noc (scenariusz fikcyjny)",
+ "date": "2026-10-17",
+ "startClock": "23:05",
+ "subject": {
+  "name": "Paweł K., 46 lat (osoba fikcyjna)",
+  "age": 46,
+  "category": "dementia",
+  "note": "Wracał z żoną z Augustowa do domu pod Lipskiem. Ok. 22:40 na DW 664 w Puszczy Augustowskiej, na wysokości rezerwatu Kozi Rynek, zderzenie z łosiem. Poduszki wystrzeliły, rana głowy, szok. Wysiadł i poszedł w las po lewej stronie drogi, bez telefonu i latarki. Ciemnozielona kurtka, dżinsy, brązowe półbuty. Żona, oszołomiona, znalazła swój telefon pod fotelem i o 23:05 zadzwoniła na 112. Kategoria ISRID: brak osobnej dla ofiary wypadku w szoku, najbliższa w silniku to 'dementia' (zdezorientowany dorosły, krótkie dystanse, idzie prosto do przeszkody i tam zostaje).",
+  "lastContact": "22:45"
+ },
+ "bbox": {
+  "south": 53.77,
+  "west": 23.165,
+  "north": 53.822,
+  "east": 23.265
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: auto po zderzeniu z łosiem na DW 664 (kierowca odszedł ok. 22:45)",
+  "at": [
+   53.79128,
+   23.22306
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "L1",
+   "name": "Chruskie - płn.",
+   "seed": [
+    53.8155,
+    23.175
+   ]
+  },
+  {
+   "id": "L2",
+   "name": "Brzozowe Grądy - zach.",
+   "seed": [
+    53.8155,
+    23.195
+   ]
+  },
+  {
+   "id": "L3",
+   "name": "Brzozowe Grądy",
+   "seed": [
+    53.8155,
+    23.215
+   ]
+  },
+  {
+   "id": "L4",
+   "name": "Brzozowe Grądy - wsch.",
+   "seed": [
+    53.8155,
+    23.235
+   ]
+  },
+  {
+   "id": "L5",
+   "name": "Krzyżykowa - płn.",
+   "seed": [
+    53.8155,
+    23.255
+   ]
+  },
+  {
+   "id": "L6",
+   "name": "Chruskie - zach.",
+   "seed": [
+    53.8025,
+    23.175
+   ]
+  },
+  {
+   "id": "L7",
+   "name": "Chruskie",
+   "seed": [
+    53.8025,
+    23.195
+   ]
+  },
+  {
+   "id": "L8",
+   "name": "Kozi Rynek - zach.",
+   "seed": [
+    53.8025,
+    23.215
+   ]
+  },
+  {
+   "id": "L9",
+   "name": "Kozi Rynek",
+   "seed": [
+    53.8025,
+    23.235
+   ]
+  },
+  {
+   "id": "L10",
+   "name": "Krzyżykowa",
+   "seed": [
+    53.8025,
+    23.255
+   ]
+  },
+  {
+   "id": "L11",
+   "name": "Budy",
+   "seed": [
+    53.7895,
+    23.175
+   ]
+  },
+  {
+   "id": "L12",
+   "name": "DW 664 - zach.",
+   "seed": [
+    53.7895,
+    23.195
+   ]
+  },
+  {
+   "id": "L13",
+   "name": "DW 664 - środek",
+   "seed": [
+    53.7895,
+    23.215
+   ]
+  },
+  {
+   "id": "L14",
+   "name": "DW 664 - wsch.",
+   "seed": [
+    53.7895,
+    23.235
+   ]
+  },
+  {
+   "id": "L15",
+   "name": "Sokoli Las",
+   "seed": [
+    53.7895,
+    23.255
+   ]
+  },
+  {
+   "id": "L16",
+   "name": "Glinki",
+   "seed": [
+    53.7765,
+    23.175
+   ]
+  },
+  {
+   "id": "L17",
+   "name": "Glinki - wsch.",
+   "seed": [
+    53.7765,
+    23.195
+   ]
+  },
+  {
+   "id": "L18",
+   "name": "Hruskie - zach.",
+   "seed": [
+    53.7765,
+    23.215
+   ]
+  },
+  {
+   "id": "L19",
+   "name": "Hruskie",
+   "seed": [
+    53.7765,
+    23.235
+   ]
+  },
+  {
+   "id": "L20",
+   "name": "Hruskie - wsch.",
+   "seed": [
+    53.7765,
+    23.255
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "pol-augustow-664",
+   "name": "Patrol Policji (KPP Augustów)",
+   "type": "ground",
+   "base": [
+    53.7918,
+    23.2213
+   ],
+   "readyAt": "23:20"
+  },
+  {
+   "id": "psp-augustow-664",
+   "name": "Zastęp PSP (JRG Augustów)",
+   "type": "ground",
+   "base": [
+    53.7908,
+    23.2247
+   ],
+   "readyAt": "23:30"
+  },
+  {
+   "id": "osp-ksrg-664",
+   "name": "Zastęp OSP (KSRG, gmina Nowinka)",
+   "type": "ground",
+   "base": [
+    53.79,
+    23.2272
+   ],
+   "readyAt": "23:40"
+  },
+  {
+   "id": "dron-psp-664",
+   "name": "Dron termowizyjny PSP Augustów",
+   "type": "drone",
+   "base": [
+    53.7908,
+    23.2247
+   ],
+   "readyAt": "23:55"
+  },
+  {
+   "id": "pies-pol-664",
+   "name": "Przewodnik z psem tropiącym (Policja, Białystok)",
+   "type": "dog",
+   "base": [
+    53.7918,
+    23.2213
+   ],
+   "readyAt": "00:35"
+  },
+  {
+   "id": "heli-lpr-664",
+   "name": "Śmigłowiec LPR (Białystok), lot nocny",
+   "type": "heli",
+   "base": [
+    53.1001,
+    23.17
+   ],
+   "readyAt": "00:10"
+  }
+ ],
+ "props": [
+  {
+   "kind": "car-damaged",
+   "at": [
+    53.79125,
+    23.22303
+   ],
+   "heading": 116,
+   "label": "Auto po zderzeniu z łosiem"
+  },
+  {
+   "kind": "elk",
+   "at": [
+    53.79127,
+    23.22325
+   ],
+   "heading": 30,
+   "label": "Martwy łoś"
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): trzcinowisko na torfowisku Kozi Rynek, ok. 1,1 km od auta",
+  "at": [
+   53.7995,
+   23.2335
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "23:05",
+   "title": "Teren: Puszcza Augustowska, bór sosnowy, torfowiska i rowy",
+   "detail": "OSM. Płasko (112-163 m n.p.m.), mało szlaków, na północ od drogi torfowisko w rezerwacie Kozi Rynek.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "23:05",
+   "title": "Koester: zdezorientowany dorosły (najbliższa kategoria: demencja), las",
+   "detail": "Pierścienie ISRID od auta (wartości przybliżone). Osoba w szoku po urazie głowy zwykle idzie niedaleko, prosto, do pierwszej przeszkody (gęstwina, woda, torfowisko).",
+   "point": [
+    53.79128,
+    23.22306
+   ],
+   "quantilesKm": [
+    0.3,
+    0.8,
+    1.6,
+    3.2
+   ]
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "23:05",
+   "title": "Trudność terenu",
+   "detail": "Klasy terenu z nachylenia DEM: teren płaski, łatwy do przejścia poza torfowiskami."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "23:05",
+   "title": "Warunki: noc, +3°C, bezwietrznie, bez opadów",
+   "detail": "IMGW: po północy mgła radiacyjna nad torfowiskami, nad ranem przymrozek do -2°C. Wschód słońca ok. 7:10.",
+   "visibilityM": 4000,
+   "windMs": 2,
+   "tempC": 3,
+   "precip": "none",
+   "dark": true,
+   "ice": false
+  },
+  {
+   "provider": "TripPlan",
+   "at": "23:10",
+   "title": "Żona: 'poszedł w las po lewej, tam gdzie uciekł łoś'",
+   "detail": "\"Wysiadł, zostawił otwarte drzwi i telefon, szedł prosto między drzewa na północ od drogi. Nie odpowiadał, jak go wołałam.\" Kierunek z relacji, nie ślad.",
+   "points": [
+    [
+     53.79128,
+     23.22306
+    ],
+    [
+     53.793,
+     23.2238
+    ],
+    [
+     53.7952,
+     23.2248
+    ],
+    [
+     53.7975,
+     23.226
+    ]
+   ],
+   "radiusM": 200
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "23:30",
+   "title": "Policja: pobocze, rów i pas lasu 200 m przy aucie, nic",
+   "detail": "Patrol z latarkami, wołanie, syrena. ZRM (PRM Augustów) zabrał żonę do szpitala w Augustowie.",
+   "segments": [
+    "L13"
+   ],
+   "pod": 0.3
+  },
+  {
+   "provider": "Clue",
+   "at": "23:45",
+   "title": "PSP: ślad - złamane gałęzie i odcisk półbuta 150 m od auta",
+   "detail": "Zastęp PSP: świeży odcisk płaskiej podeszwy w mchu i złamane gałązki brzozy, kierunek północny wschód.",
+   "point": [
+    53.7926,
+    23.2243
+   ],
+   "radiusM": 100
+  },
+  {
+   "provider": "Clue",
+   "at": "23:50",
+   "title": "Kierowca z DW 664 (meldunek): człowiek przy drodze w stronę Lipska",
+   "detail": "Meldunek: Mieszkaniec - kierowca jadący DW 664 (osoba fikcyjna, telefon z GPS): ok. 23:35 widziałem w światłach mężczyznę idącego poboczem, ok. 1 km za miejscem wypadku, w stronę Lipska.",
+   "point": [
+    53.7875,
+    23.2365
+   ],
+   "radiusM": 300,
+   "seenAt": "23:35",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "DronePassEmpty",
+   "at": "00:05",
+   "title": "Dron PSP: las na południe od drogi, nic",
+   "detail": "Termowizja w nocy w rzadkim borze widzi dobrze. POD 60%.",
+   "segments": [
+    "L13"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "00:15",
+   "title": "Mgła nad torfowiskami, widzialność 300 m, +1°C",
+   "detail": "LPR odwołuje start: mgła na trasie i nad lądowiskiem. Dron leci nisko, termowizja przez mgłę słabnie.",
+   "visibilityM": 300,
+   "windMs": 1,
+   "tempC": 1,
+   "precip": "none",
+   "dark": true,
+   "ice": false
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "00:25",
+   "title": "Policja: to mieszkaniec Hruskiego wracający pieszo, nie Paweł K.",
+   "detail": "Patrol dogonił pieszego na poboczu DW 664: inny mężczyzna, wracał do domu. Fałszywy trop.",
+   "segments": [
+    "L14"
+   ],
+   "pod": 0.5
+  },
+  {
+   "provider": "Clue",
+   "at": "00:50",
+   "title": "Pies podjął trop od auta na północny wschód, w stronę Koziego Rynku",
+   "detail": "Przewodnik: pies prowadzi wyraźnie, od otwartych drzwi kierowcy, przez rów i dalej w bór.",
+   "point": [
+    53.7955,
+    23.2285
+   ],
+   "radiusM": 200
+  },
+  {
+   "provider": "Clue",
+   "at": "01:05",
+   "title": "OSP: brązowy półbut w błocie na skraju torfowiska",
+   "detail": "Lewy but, rozmiar 44, jak w opisie żony. Dalej mokradło i trzciny, ślady w głąb rezerwatu.",
+   "point": [
+    53.7975,
+    23.2318
+   ],
+   "radiusM": 120
+  },
+  {
+   "provider": "Clue",
+   "at": "01:20",
+   "title": "ZNALEZIONO: dron PSP - kierowca w trzcinach na torfowisku Kozi Rynek",
+   "detail": "Termowizja: plama ciepła ok. 250 m za butem. Zastęp OSP doszedł po kępach z noszami. Przemoczony do pasa, wychłodzony, rana głowy, nie pamięta wypadku. Mgła: LPR nie leci, ZRM zabrał go do szpitala w Augustowie.",
+   "point": [
+    53.7995,
+    23.2335
+   ],
+   "radiusM": 30,
+   "found": true
+  }
+ ]
+}
