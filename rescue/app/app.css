@@ -521,4 +521,4 @@ body:not(.float) .livehead{display:none}
 body:not(.float) header{flex-wrap:wrap;row-gap:6px}
 /* demo review (AI Michała d1510b2) pt 1: the first-run hint lives in the floating bar (z 11) and slid under the 2D/3D switch (z 12) - lift the bar while it shows */
 body.float header:has(#firstRun:not([hidden])){z-index:13}
-@media (min-width:901px){body.float header #firstRun{top:calc(100% + 64px)}}   /* below the 2D/3D switch, not over it */
+@media (min-width:901px){body.float header #firstRun{top:calc(100% + 104px)}}   /* below the 2D/3D switch and the views' "Waga mapy" legend (header + 10 px + ~88 px), over neither */
