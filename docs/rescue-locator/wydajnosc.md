@@ -304,3 +304,63 @@ Patrol i Zdjęcie potrzebują mapy od razu (to ich treść), polling Patrolu jes
 6. Centrum co 5 s `/api/incidents` + `/api/teams` (`app/centrum.js:14`): 24 żądania / min po 0.3 s - nieszkodliwe, wystarczy 10 s (AI Marcina).
 7. `/api/run/sniardwy` p95 3.1 s na zimnej instancji - runy liczone w obrazie (w toku u AI Andrzeja).
 8. fps 3D na prawdziwym GPU dalej niezmierzone (headless = swiftshader) - do pomiaru na laptopie, z którego będzie demo.
+
+## Runda 4
+
+AI Michała, niedziela 2026-10-04, 02:15-02:45 CEST. Co zmieniły poprawki po rundzie 3 (iframe 2D w `/app` bez własnego pollingu `de41e02`, okno klatek w Historii `31edd66`, rozgrzewka 3D po pierwszej interakcji `735b147`, Centrum co 10 s, Czat z jednym GET runu).
+
+### Wersja i metoda
+
+- Produkcja: `/version.json` = `f326647` (2026-10-04 00:26 UTC). Zawiera `de41e02`, `31edd66`, `735b147`, `193f30b`, `8d943e4`; nie zawiera jeszcze `52eb5a9` (etykiety 3D).
+- Ten sam skrypt co w rundzie 3 (`pages4.mjs` w scratchpadzie, nie w repo), 1920x1080, Patrol 390x844. Nowe: ok. 4 s po nawigacji 3 ruchy myszy (`Input.dispatchMouseEvent`), jak prawdziwy użytkownik - od `735b147` dopiero to startuje rozgrzewkę drugiego widoku; liczenie żądań API na minutę (stan ustalony = żądania po 15. sekundzie przeliczone na 60 s); Plan -> Akcja (klik w zakładki, próbkowanie przezroczystości obu paneli co klatkę przez 10 s); Czat: wpisanie zdania, Enter, "Dodaj", czas do zniknięcia spinnera i do `ready` nowego (buforowanego) iframe 2D.
+- Produkcja tylko do odczytu: żaden POST nie doszedł do serwera. W Czacie `POST /api/run` był obsłużony lokalnie przez skrypt (`Fetch.fulfillRequest`) odpowiedzią z `GET /api/run/zawrat?live=0` po sztucznych 550 ms (= p50 pełnego runu z tabeli API), więc czas Czatu = klient + typowy serwer.
+- 12 stron w 4 Chrome'ach naraz, potem Akcja 2D i Historia powtórzone 2 naraz (w tabeli wartości z powtórzenia; w przebiegu 4 naraz Historia miała 2D gotowe dopiero po 9.8 s, bo `/api/run/zawrat?live=0` szedł 3.1 s - konkurencja o łącze, nie regresja).
+- API: `api3.py` jak w rundzie 3 - bez zmian (p50 0.28-0.41 s, pełny run zawratu p50 0.62 s, sniardwy p95 1.0 s zamiast 3.1 s).
+
+### Runda 3 -> runda 4 (produkcja)
+
+| Pomiar | Runda 3 (`37fca04`) | Runda 4 (`f326647`) |
+|---|---|---|
+| Żądania API / min, 1 operator w Akcji 2D (stan ustalony) | ok. 63 | 41-51 |
+| - `GET /api/live` w 60 s | 31 | 31 (bez zmian: powłoka co 3 s + iframe 3D co 4 s) |
+| - `HEAD /api/run/zawrat` w 60 s | 12 | 0 |
+| - `GET /live-events` w 60 s | 14-15 | 2 |
+| - `GET /metrics` w 60 s | 6 | 6 |
+| - `GET /api/assessment` w 60 s | < 6 (nie liczone) | 4-10 (nowo widoczne, patrz problem 2) |
+| Historia krok 7: klatki `?t=` w 60 s | ok. 150 / 2.9 MB | 24 / 320 KB |
+| Historia: wszystkie żądania / bajty zimno | 355 / 7.56 MB | 201 / 5.85 MB (w tym 2.1 MB rozgrzewki 3D po ruchu myszy; bez niej 169 / 3.63 MB) |
+| Historia: 2D pierwszy / gotowy zimno, ciepło | 3.0 / 3.7, 1.9 / 2.3 s | 2.3 / 2.9, 1.4 / 1.7 s |
+| Akcja 2D: pierwszy / gotowy / ustalony zimno | 4.8 / 5.6 / 6.3 s | 2.5 / 3.3 / 3.8 s (pierwszy przebieg: 2.0 / 3.1 / 3.7) |
+| Akcja 2D ciepło (gotowy) | 2.4 s | 1.5 s |
+| Akcja 2D bez ruchu myszy: 3D w tle | zawsze (2.1 MB) | dopiero po pierwszym ruchu / dotyku / klawiszu (tu 3D gotowe 7.2-7.5 s, czyli ok. 3 s po ruchu) |
+| Akcja 3D: nakładka zimno / ciepło | 7.1 / 2.9 s | 4.2 / 3.1 s, 60 fps (swiftshader) |
+| Przełączenie 2D -> 3D -> 2D -> 3D (oba ciepłe) | 0.21 / 0.20 / 0.20 s | 0.17-0.20 s |
+| Plan -> Akcja (3D / 2D) | nie mierzone | 0.20 / 0.21 s do pełnej widoczności i `ready`; 6 klatek (ok. 0.1 s) płynnego wejścia z przezroczystości 0, żadnego przeładowania mapy. Raz (pierwszy przebieg, 4 Chrome'y) 3D 2.6 s do `ready` - widok był widoczny, tylko scena dociągała stan |
+| Czat: zdanie -> karta z "Dodaj" | - | 0.05 s (parser lokalny) |
+| Czat: "Dodaj" -> spinner znika | - | 0.64 s (z tego 0.55 s to symulowany serwer) |
+| Czat: "Dodaj" -> nowa mapa 2D `ready` | - | 2.1 s (buforowany iframe, stara mapa widoczna do podmiany - bez pustego ekranu) |
+| Czat: run pobierany | 2 x 736 KB | 1 x 754 KB (iframe 2D bierze tekst z `__rescueRunText`) |
+| Centrum: `/api/incidents` + `/api/teams` | co 5 s (24 / min) | co 10 s (12 / min) |
+| Błędy konsoli (wszystkie 12 stron) | 404 `/scenarios/studio.json` na Akcji/Historii/3D, 404 favicon na landingu | 0 |
+| Long taski > 200 ms | 1-3 na Akcji | 0 na wszystkich stronach |
+| Pozostałe strony (Zasoby, Ćwiczenia, Landing, Widziałem, Zdjęcie, Patrol, Porównanie) | | bez zmian w granicach +-0.3 s; Porównanie już bez `POST /api/run` (0 żądań API, dane z `porownanie-data`) |
+
+Jedyne "nieudane" żądania to `net::ERR_ABORTED` na `basemap.js` / zakresach `tatry.pmtiles` (przerwane przez podmianę buforowanego iframe 2D - nieszkodliwe, niewidoczne dla użytkownika).
+
+### Co się poprawiło
+
+- Ruch w tle: 63 -> ok. 45 żądań API na minutę na operatora. Zniknęły `HEAD /api/run` (12/min) i prawie cały `/live-events` (14 -> 2).
+- Historia: 150 -> 24 klatki, 2.9 MB -> 0.3 MB w pierwszej minucie; mapa szybciej o ok. 0.8 s.
+- Pierwsza mapa w Akcji ok. 2 s szybciej na zimno (3D nie konkuruje już o pasmo przed ruchem użytkownika), 3D na zimno 7.1 -> 4.2 s.
+- Konsola czysta, zero long tasków.
+
+### Co dalej (kolejność = wpływ)
+
+1. **`/api/live` dalej podwójnie: 31 żądań / min.** Iframe 3D w `/app` polluje sam co 4 s (`rescue/app/3d/app3d.js:2213-2224`, start w `app3d.js:2413`), także gdy jest ukryty, obok powłoki co 3 s (`rescue/app/app.js:1080-1092`). Poprawka: w osadzeniu (`window.parent !== window`) nie pollować, brać zdarzenia z powłoki przez postMessage, albo przynajmniej pauzować przy `{type:"visible", on:false}` - AI Andrzeja. Zysk: -15 żądań / min.
+2. **`/api/assessment` w kółko co 5 s przez 200 s po każdej zmianie kroku.** Na Vercelu odpowiedź ma zawsze `pending: true` (`rescue/rs/src/server/live.rs:672-684`: tło `tokio::spawn` z lokalnym LLM nie kończy się / nie trafia do cache w funkcji serverless), a klient pyta do 40 razy (`rescue/app/app.js:112-118`). To 12 żądań / min, które nigdy nie przyniosą wersji z modelu. Poprawka po stronie serwera: bez lokalnego LLM (Vercel) zwracać reguły bez `pending` - AI Andrzeja; albo w kliencie limit 3 prób - AI Marcina.
+3. `/metrics` co 10 s z powłoki (`rescue/app/app.js:314`, `pollAlerts`) - 6 / min, tanie, można zostawić.
+4. Czat standalone: iframe 2D polluje `/live-events` co 4 s (19 w 60 s), bo `czat.html` nie jest powłoką (`rescue/web/app.js:1561`, `inShell` fałszywe) - drobne, AI Marcina.
+5. Historia/Akcja: rozgrzewka 3D liczy ruchy myszy dopiero po `ready` widoku (`rescue/app/app.js:703-715`); użytkownik, który rusza myszą tylko przed załadowaniem mapy, rozgrzewki nie dostanie aż do kolejnego ruchu - zgodne z intencją, tylko do wiadomości.
+6. fps 3D na prawdziwym GPU dalej niezmierzone (headless = swiftshader) - na laptopie demo.
+
+W obszarze AI Michała (`web/patrol`, `web/seen`, `web/photo`, `web/basemap`) nic nowego do poprawy: 0 błędów, 0 long tasków, Patrol 3.4 s / 0.5 s do mapy, polling 15-60 s.
