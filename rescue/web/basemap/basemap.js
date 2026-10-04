@@ -30,6 +30,7 @@ export const REGIONS = {
   pieniny:    { file: "pieniny.pmtiles",    bounds: [[20.37, 49.38], [20.49, 49.455]], label: "Pieniny - Przełom Dunajca" },
   krakow:     { file: "krakow.pmtiles",     bounds: [[19.97, 50.03], [20.10, 50.106]], label: "Kraków - Nowa Huta (miasto)" },
   poprad:     { file: "poprad.pmtiles",     bounds: [[20.60, 49.42], [20.78, 49.53]], label: "Dolina Popradu (Rytro - Piwniczna, linia 96)" },
+  notecka:    { file: "notecka.pmtiles",    bounds: [[15.98, 52.68], [16.18, 52.77]], label: "Puszcza Notecka (Kobusz, Smolarnia)" },
 };
 // Pick the region whose bounds contain a scenario bbox ({west,south,east,north}); null if none.
 export function regionFor(bb) {
