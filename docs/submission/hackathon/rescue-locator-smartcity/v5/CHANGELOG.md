@@ -1,0 +1,48 @@
+# Rescue Locator (SMART CITY) - changelog zgłoszenia
+## v5 - 2026-10-04 03:00 (main `7cc81b9`, Vercel `44ee1d3`)
+
+- **Nowe funkcje:**
+  - Czat (`4973b34`, `f326647`; kilka zdarzeń w jednej wiadomości, `czat.html`),
+  - Odprawa (druk) A4 i karty zadań (`c6cfcc1`, `8b17d71`),
+  - "Ktoś zaginął - co robić" (`fdba636`) i strona startowa podzielona na ratowników i rodziny,
+  - kryptonimy w Zasobach (`70c9f1d`), Doradca jako wąski pasek (`7453117`),
+  - 3D: kadrowanie, porządkowanie etykiet, deszcz, widok z perspektywy (FPP),
+  - Ćwiczenia bez przeładowań i z Kluczem (`90fd82f`),
+  - porównanie "Co zmienia jedna relacja" (`cf5a36c`),
+  - analiza zdjęcia pokazuje kierunek, nie procent (`a4ac6bb`).
+- **Backend produkcji:** Rust (`rescue/rs`) w fra1, gzip i ETag w pamięci podręcznej. Wydajność z rund 3-4 (`docs/rescue-locator/wydajnosc.md`): API 0,28-0,41 s, mapa 2D gotowa po 3,3 s na zimno i 1,5 s na ciepło, 3D po 4,2 s.
+- **Wideo:** szkic 2:07 (`7dcb415`, `docs/submission/hackathon/rescue-locator/video/draft.mp4`).
+- **Bez zmian w zasadach:** nie twierdzimy, że działa tryb automatyczny (wycięty) ani 3D FOV. Zdjęcie to demo syntetyczne. Nie deklarujemy pracy offline.
+- **Deck:** zrzuty z serii 3 (Kraków, Centrum z Doradcą zwiniętym). Slajd 5 ma Czat i "Ktoś zaginął", slajd 9 ma Odprawę.
+
+## v4 - 2026-10-03 23:10 (main `f54c390`, Vercel `b00b3e1`)
+
+- **Bez deklaracji pracy offline:** model w pokazie to OpenAI, z regułami jako zapasem. Lokalny model wymieniamy tylko jako możliwość w kodzie.
+- **Nowe funkcje:**
+  - ciągła oś czasu 1x-30x z grupami zdarzeń (`ef5f100`) i Kino za grupami (`f54c390`),
+  - wagi wskazówek z ręczną korektą (`bd88de5`, `08f5029`),
+  - Zasoby i karta zespołu (`54b0204`, `356458c`),
+  - Doradca przy wielu akcjach, np. ćwiczenie awarii zapory z 7 akcjami (`35045fb`),
+  - Ćwiczenia (`c043d18`, `285ee6a`),
+  - analiza zdjęcia (`1250eb7`), opisana wprost jako **demo syntetyczne**,
+  - scenariusz rodzina-dziecko-las (`2303503`),
+  - `/landing` ze statusem funkcji (`e6a7d02`).
+- Na produkcji jest 18 fikcyjnych scenariuszy (`/api/scenarios`).
+- 3D FOV jest w przebudowie i go nie pokazujemy.
+- Supervisorem tematu 2 jest AI Andrzeja.
+- **Deck:** slajd 9 to teraz "Jedna usługa dla miasta i regionu" (wagi zgłoszeń, Doradca), bez deklaracji pracy offline. Slajd 10 linkuje `/landing`.
+
+## v3 - 2026-10-03 20:50 (main `4e48798`, Vercel `4e48798`)
+
+Pierwsza wersja wariantu Smart City (decyzja Mateusza: zgłaszamy do DEFENCE i do Smart City).
+
+- **Na pierwszym planie Kraków, Nowa Huta:** senior z demencją w upale, mieszkańcy jako czujniki ("Widziałem" z GPS), MPK, Centrum.
+- **Liczby:**
+  - scenariusz krakowski: 4,8% vs 24,5% obszaru, segment #4 vs #9 (autorski, ilustracja),
+  - kategoria demencja w symulacji: top 3 w 76%,
+  - kalibracja 1000 + 600 przypadków, nazwana raz "symulacja, nie prawdziwe akcje",
+  - POA tylko jako "waga mapy".
+- **MP4 maks. 3 min:** w checkliście (AI Michała). Regulamin Smart City wymienia tylko PDF, więc trzeba sprawdzić formularz.
+- **`start.sh`:** jak w wariancie DEFENCE v3.
+
+Artefakt (kolejne wersje publikujemy pod tym samym URL-em): https://claude.ai/artifact/HTwbEYqcivNfNybhygotL3
