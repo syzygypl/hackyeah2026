@@ -452,18 +452,19 @@
   const short = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
   /* ---------- label decluttering (shared by both views) ---------- */
-  const chipPri = (cls) => (/\btop1\b/.test(cls) ? 0 : /\btop2\b/.test(cls) ? 1 : /\btop3\b/.test(cls) ? 2 : /\bping\b/.test(cls) ? 3 : /\bipp\b/.test(cls) ? 4 : /\blive\b/.test(cls) ? 5 : /\bseg\b/.test(cls) ? 6 : 7);
+  // qa-wieczor #11: clue (witness), 112 sector, car and ring chips take part too (they used to be skipped and the top 3 sat on them)
+  const chipPri = (cls) => (/\btop1\b/.test(cls) ? 0 : /\btop2\b/.test(cls) ? 1 : /\btop3\b/.test(cls) ? 2 : /\bping\b/.test(cls) ? 3 : /\btruth\b/.test(cls) ? 3.5 : /\bipp\b/.test(cls) ? 4 : /\bcw\b/.test(cls) ? 4.5 : /\blive\b/.test(cls) ? 5 : /\bseg\b/.test(cls) ? 6 : /\b(bts|car)\b/.test(cls) ? 6.5 : 7);
   // items: {x, y (anchor px incl. base offset), w, h, pri, apply(dx, dy, dim)}
   // W = frame width (optional): a chip that would cross the left / right edge is shifted inside (qa-mobile 7: callouts and
   // the "Auto" chip were cut at the edges of a 330 px frame)
-  function declutter(items, W) {
-    const placed = [], hit = (a, b) => a.x < b.x + b.w + 2 && b.x < a.x + a.w + 2 && a.y < b.y + b.h + 2 && b.y < a.y + a.h + 2;
+  // obst = fixed rects (legend, map controls) nothing may sit on; a chip that finds no free spot is hidden (pri > 4)
+  function declutter(items, W, obst) {
+    const placed = (obst || []).slice(), hit = (a, b) => a.x < b.x + b.w + 2 && b.x < a.x + a.w + 2 && a.y < b.y + b.h + 2 && b.y < a.y + a.h + 2;
     const M = 6, inside = (it) => { if (!W) return 0; const l = it.x - it.w / 2, r = l + it.w; return it.w > W - 2 * M ? M - l : l < M ? M - l : r > W - M ? W - M - r : 0; };
     items.sort((a, b) => a.pri - b.pri);
     for (const it of items) {
       const dx = inside(it);
-      if (it.pri === 7) { it.apply(dx, 0, false); continue; }
-      const step = it.h + 3, cands = it.cands ? it.cands(step) : [0, step, -step, 2 * step, -2 * step].map((dy) => [0, dy]);
+      const step = it.h + 3, sx = Math.round(it.w / 2 + 6), cands = it.cands ? it.cands(step) : [[0, 0], [0, step], [0, -step], [sx, 0], [-sx, 0], [0, 2 * step], [0, -2 * step]];
       let done = false;
       for (const [cx, dy] of cands) {
         const r = { x: it.x + dx + cx - it.w / 2, y: it.y + dy - it.h / 2, w: it.w, h: it.h };
@@ -615,22 +616,35 @@
         m.setLngLat(c.at);
       }
       for (const [k, m] of markers) if (!seen.has(k)) { m.remove(); markers.delete(k); }
-      tidy();
+      tidy(); clearTimeout(tidy.t); tidy.t = setTimeout(tidy, 600);
     };
+    // the legend and the map controls float over the map: labels keep off them (qa-wieczor #11 "2D legend covers S18")
+    // (MapLibre resets a marker's style.opacity on every frame, so the old 0.25 dim never showed: no room = hidden)
+    function obstacles() {
+      const c = container.getBoundingClientRect(), out = [];
+      for (const e of document.querySelectorAll('#legend, #tllegend, .maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right')) {
+        const r = e.getBoundingClientRect(); if (r.width < 2 || r.height < 2 || getComputedStyle(e).visibility === 'hidden') continue;
+        out.push({ x: r.left - c.left, y: r.top - c.top, w: r.width, h: r.height });
+      }
+      return out;
+    }
     function tidy() {
       declutter([...markers.values()].map((m) => {
         const el = m.getElement(), p = map.project(m.getLngLat()), b = m.__base || [0, 0];
         return { x: p.x + b[0], y: p.y + b[1], w: el.offsetWidth, h: el.offsetHeight, pri: chipPri(el.className),
-          apply: (dx, dy, dim) => { m.setOffset([b[0] + dx, b[1] + dy]); el.style.opacity = dim ? '0.25' : ''; } };
+          apply: (dx, dy, dim) => { m.setOffset([b[0] + dx, b[1] + dy]); el.style.visibility = dim ? 'hidden' : ''; } };
       }).concat([...tlLabels.values()].map((m) => {   // unit labels (anchor left, 10 px right of the dot): below top 3 / IPP / live
         const el = m.getElement(), p = map.project(m.getLngLat()), w = el.offsetWidth;
         const L = -(w + 20);   // mirrored: the label left of the dot
         return { x: p.x + 10 + w / 2, y: p.y, w, h: el.offsetHeight, pri: 5.5,
           cands: (s) => [[0, 0], [L, 0], [0, -s], [0, s], [L, -s], [L, s], [0, -2 * s], [0, 2 * s]],
-          apply: (dx, dy, dim) => { m.setOffset([10 + dx, dy]); el.style.opacity = dim ? '0.25' : ''; } };
-      })), container.clientWidth);
+          apply: (dx, dy, dim) => { m.setOffset([10 + dx, dy]); el.style.visibility = dim ? 'hidden' : ''; } };
+      })), container.clientWidth, obstacles());
     }
     map.on('zoomend', tidy); map.on('moveend', tidy); map.on('resize', tidy);
+    // the legend is filled / moved (insets, embed classes) after the first tidy: again when it resizes and once the map settles
+    try { const lg = document.getElementById('legend'); if (lg && window.ResizeObserver) new ResizeObserver(() => tidy()).observe(lg); } catch (e) {}
+    map.on('idle', () => { if (!tidy.idle) { tidy.idle = 1; tidy(); setTimeout(tidy, 1500); } });
     this.fitAll = () => map.fitBounds([[west, south], [east, north]], { padding: 24, duration: 500 });
     this.fitSeg = (g) => { if (g.bounds) map.fitBounds(g.bounds, { padding: 90, maxZoom: 15, duration: 600 }); };
     this.layerCount = () => map.getStyle().layers.length;
