@@ -1194,6 +1194,107 @@ const buildings = (() => {
   return m;
 })();
 await yieldMain();
+// ---------- traffic: cars driving along the OSM roads (data/<sc>-osm3d.json roads; decorative, not engine data) ----------
+// Ways sharing an end point form a network: at the end of a way a car turns into a random other way leaving that node
+// (or turns back at a dead end). Right-hand traffic: each car is offset into its lane from the way's centre line. Density
+// and speed by class (major 50 km/h, 5 cars/km; minor 30 km/h, 1.6/km; service 20 km/h, 0.6/km), at most MAX cars over the
+// cut. One InstancedMesh for the bodies and one for the lights (head white, tail red), plus a glow point per lamp pair
+// (additive, a few px at any zoom); the lights show at dusk and night (the mood's uNight). Cars are drawn 1.5x (they sit next to stylised, oversized trees) and grow up to 4x when the camera is far, so the flow still reads in the overview. No shadows: the
+// shadow map is rendered only when the view settles. Button "Ruch" / ?traffic=0 hides them (and stops the per-frame update).
+const traffic = (() => {
+  if (!OSM || Q.get('traffic') === '0') return null;
+  const CLS = { major: [50, 5, 0.0018], minor: [30, 1.6, 0.0014], service: [20, 0.6, 0.0012] }; // km/h, cars per km, lane offset (km)
+  const ways = [], nodes = new Map(), key = (la, lo) => Math.round(la * 1e5) + ',' + Math.round(lo * 1e5);
+  for (const r of OSM.roads) {
+    const cl = CLS[r.c]; if (!cl || r.l.length < 4) continue;
+    const xz = [], cum = [0];
+    for (let i = 0; i < r.l.length; i += 2) {
+      const la = r.l[i], lo = r.l[i + 1];
+      if (!inside([la, lo]) || isWater(la, lo)) { xz.length = 0; break; } // ways leaving the cut or over water: skipped whole
+      const x = toX(lo), z = toZ(la);
+      if (xz.length) { const d = Math.hypot(x - xz[xz.length - 2], z - xz[xz.length - 1]); if (d < 1e-6) continue; cum.push(cum[cum.length - 1] + d); }
+      xz.push(x, z);
+    }
+    if (xz.length < 4) continue;
+    const w = { xz, cum, len: cum[cum.length - 1], cl, a: key(r.l[0], r.l[1]), b: key(r.l[r.l.length - 2], r.l[r.l.length - 1]) };
+    ways.push(w);
+    for (const k of [w.a, w.b]) { if (!nodes.has(k)) nodes.set(k, []); nodes.get(k).push(w); }
+  }
+  if (!ways.length) return null;
+  let seed = 777; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const MAX = 1500, want = ways.reduce((s, w) => s + w.len * w.cl[1], 0), keep = Math.min(1, MAX / Math.max(want, 1));
+  const cars = [];
+  for (const w of ways) {
+    let n = w.len * w.cl[1] * keep; n = Math.floor(n) + (rnd() < n % 1 ? 1 : 0);
+    for (let i = 0; i < n; i++) cars.push({ w, s: rnd() * w.len, dir: rnd() < 0.5 ? 1 : -1, seg: 0, v: (w.cl[0] / 3600) * (0.8 + rnd() * 0.35) });
+  }
+  if (!cars.length) return null;
+  // low-poly car, 4.4 x 1.8 m, unit height ~1.5 m; front = +x
+  const part = (g, col, x, y) => { g.translate(x, y, 0); const c = new THREE.Color(col), n = g.attributes.position.count, a = new Float32Array(n * 3); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b], i * 3); g.setAttribute('color', new THREE.BufferAttribute(a, 3)); return g.toNonIndexed(); };
+  const merge = (gs) => { const p = [], c = []; for (const g of gs) { const G = g.index ? g.toNonIndexed() : g; p.push(...G.attributes.position.array); c.push(...G.attributes.color.array); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(c, 3)); g.computeVertexNormals(); return g; };
+  const body = merge([part(new THREE.BoxGeometry(0.0044, 0.0007, 0.0018), '#ffffff', 0, 0.00055), part(new THREE.BoxGeometry(0.0024, 0.00055, 0.00158), '#ffffff', -0.0003, 0.00118),
+    part(new THREE.BoxGeometry(0.0006, 0.0003, 0.0019), '#222222', 0, 0.0002).translate(0.0013, 0, 0), part(new THREE.BoxGeometry(0.0006, 0.0003, 0.0019), '#222222', 0, 0.0002).translate(-0.0013, 0, 0)]);
+  const lights = merge([part(new THREE.BoxGeometry(0.0002, 0.00025, 0.0005), '#fff6d8', 0.0022, 0.0007).translate(0, 0, 0.00055), part(new THREE.BoxGeometry(0.0002, 0.00025, 0.0005), '#fff6d8', 0.0022, 0.0007).translate(0, 0, -0.00055),
+    part(new THREE.BoxGeometry(0.0002, 0.00022, 0.0005), '#ff1a10', -0.0022, 0.0007).translate(0, 0, 0.00055), part(new THREE.BoxGeometry(0.0002, 0.00022, 0.0005), '#ff1a10', -0.0022, 0.0007).translate(0, 0, -0.00055)]);
+  const PAL = ['#f2f2f0', '#f2f2f0', '#b9bec4', '#b9bec4', '#2b2d31', '#2b2d31', '#8c1d1d', '#1f3f78', '#5b6066', '#c9b48a', '#2f5a3a'].map((x) => new THREE.Color(x));
+  const N = cars.length, mBody = new THREE.InstancedMesh(body, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.3 }), N);
+  const mLight = new THREE.InstancedMesh(lights, new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }), N);
+  cars.forEach((c, i) => mBody.setColorAt(i, PAL[Math.floor(rnd() * PAL.length)]));
+  for (const m of [mBody, mLight]) { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; m.receiveShadow = true; m.name = 'traffic'; }
+  mLight.visible = false;
+  // night glow: one soft additive point per head (warm white) and tail light pair (red), a few px at any zoom
+  const spr = document.createElement('canvas'); spr.width = spr.height = 32;
+  { const c = spr.getContext('2d'), gr = c.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, 32, 32); }
+  const gPos = new Float32Array(N * 6), gCol = new Float32Array(N * 6);
+  for (let i = 0; i < N; i++) gCol.set([1, 0.93, 0.75, 1, 0.12, 0.06], i * 6);
+  const glowGeo = new THREE.BufferGeometry(); glowGeo.setAttribute('position', new THREE.BufferAttribute(gPos, 3).setUsage(THREE.DynamicDrawUsage)); glowGeo.setAttribute('color', new THREE.BufferAttribute(gCol, 3));
+  const glow = new THREE.Points(glowGeo, new THREE.PointsMaterial({ size: 7 * renderer.getPixelRatio(), sizeAttenuation: false, vertexColors: true, map: new THREE.CanvasTexture(spr), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false }));
+  glow.frustumCulled = false; glow.visible = false; glow.name = 'traffic';
+  const g = new THREE.Group(); g.add(mBody, mLight, glow); scene.add(g);
+  const E = mBody.instanceMatrix.array, L = mLight.instanceMatrix.array;
+  const next = (c) => { // end of the way: another way from this node, or back along the same one
+    const at = c.dir > 0 ? c.w.b : c.w.a, opts = (nodes.get(at) || []).filter((w) => w !== c.w);
+    if (!opts.length) { c.dir = -c.dir; c.s = c.dir > 0 ? 0 : c.w.len; return; }
+    const w = opts[Math.floor(rnd() * opts.length)];
+    c.w = w; c.dir = w.a === at ? 1 : -1; c.s = c.dir > 0 ? 0 : w.len; c.seg = c.dir > 0 ? 0 : w.cum.length - 2; c.v = (w.cl[0] / 3600) * (0.8 + rnd() * 0.35);
+  };
+  let on = true;
+  function tick(dt) {
+    if (!on) return;
+    const k = clamp(0.8 + camera.position.distanceTo(controls.target) * 2, 1.5, 4); // 1.5x close (next to the stylised trees), up to 4x in the overview
+    for (let i = 0; i < N; i++) {
+      const c = cars[i];
+      c.s += c.dir * c.v * dt;
+      if (c.s < 0 || c.s > c.w.len) next(c);
+      const { xz, cum } = c.w;
+      while (c.seg < cum.length - 2 && cum[c.seg + 1] < c.s) c.seg++;
+      while (c.seg > 0 && cum[c.seg] > c.s) c.seg--;
+      const j = c.seg, f = (c.s - cum[j]) / Math.max(cum[j + 1] - cum[j], 1e-9);
+      let dx = xz[2 * j + 2] - xz[2 * j], dz = xz[2 * j + 3] - xz[2 * j + 1]; const dl = Math.hypot(dx, dz) || 1; dx = (dx / dl) * c.dir; dz = (dz / dl) * c.dir;
+      const off = c.w.cl[2] * Math.min(k, 1.6), x = xz[2 * j] + (xz[2 * j + 2] - xz[2 * j]) * f - dz * off, z = xz[2 * j + 1] + (xz[2 * j + 3] - xz[2 * j + 1]) * f + dx * off; // right of travel
+      const y = meshHeightAt(toLat(z), toLon(x)) + 0.0001;
+      // rotation about y so that local +x points along (dx, dz), uniform scale k
+      const o = i * 16;
+      E[o] = dx * k; E[o + 1] = 0; E[o + 2] = dz * k; E[o + 3] = 0;
+      E[o + 4] = 0; E[o + 5] = k; E[o + 6] = 0; E[o + 7] = 0;
+      E[o + 8] = -dz * k; E[o + 9] = 0; E[o + 10] = dx * k; E[o + 11] = 0;
+      E[o + 12] = x; E[o + 13] = y; E[o + 14] = z; E[o + 15] = 1;
+    }
+    mBody.instanceMatrix.needsUpdate = true;
+    mLight.visible = glow.visible = heatU.uNight.value > 0.15;
+    if (mLight.visible) {
+      L.set(E); mLight.instanceMatrix.needsUpdate = true;
+      for (let i = 0, o = 0; i < N; i++, o += 16) { // lamp centres: local (+-0.0022, 0.0007, 0) through the car's matrix
+        const ax = E[o] * 0.0023, az = E[o + 2] * 0.0023, y = E[o + 13] + E[o + 5] * 0.0007, q = i * 6;
+        gPos[q] = E[o + 12] + ax; gPos[q + 1] = y; gPos[q + 2] = E[o + 14] + az; gPos[q + 3] = E[o + 12] - ax; gPos[q + 4] = y; gPos[q + 5] = E[o + 14] - az;
+      }
+      glowGeo.attributes.position.needsUpdate = true;
+    }
+  }
+  return { tick, cars, group: g, set: (v) => { on = v; g.visible = v; } };
+})();
+await yieldMain();
 // ---------- water reflection: the mountains mirrored in the lakes and the sea (fx3d.waterReflect) ----------
 // One planar mirror at a time: the water body nearest the orbit target that is on screen sets the plane y. The terrain
 // and buildings (layer 1, with the lights: no trees, lines, labels or sky; the sky stays the environment map's) are
@@ -1668,16 +1769,17 @@ if (EMB === 'scene') {
   // control box like 2D #mapctl: segmented group, checkbox row, full-width button; it drives the regular HUD buttons
   const ctl = document.createElement('div'); ctl.id = 'sceneCtl'; ctl.className = 'floating';
   ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button><button data-b="btn-walk" title="Spacer: kliknij w teren i idź z widokiem z oczu (Esc kończy)">Spacer</button></div>
-    <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label><label class="chk" hidden><input type="checkbox" data-b="btn-ortho"> zdjęcie</label></div>
+    <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-traffic" checked> ruch</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label><label class="chk" hidden><input type="checkbox" data-b="btn-ortho"> zdjęcie</label></div>
     <button class="full" data-b="btn-all">Cały obszar</button><button class="full" data-b="btn-game">Test na ślepo</button>`;
   document.body.appendChild(ctl);
   ctl.addEventListener('click', (e) => { const t = e.target.closest('[data-b]'); if (!t) return; $(t.dataset.b).click(); syncCtl(); });
   if ($('btn-diff').hidden) ctl.querySelector('[data-b="btn-diff"]').closest('label').hidden = true;
+  if ($('btn-traffic').hidden) ctl.querySelector('[data-b="btn-traffic"]').closest('label').hidden = true;
   const syncCtl = () => {
     ctl.querySelector('[data-b="btn-cine"]').classList.toggle('on', $('btn-cine').classList.contains('on'));
     ctl.querySelector('[data-b="btn-rot"]').classList.toggle('on', $('btn-rot').classList.contains('on'));
     ctl.querySelector('[data-b="btn-walk"]').classList.toggle('on', !!(WALK?.on || WALK?.armed));
-    for (const id of ['btn-diff', 'btn-trees', 'btn-fog', 'btn-ortho']) ctl.querySelector(`input[data-b="${id}"]`).checked = $(id).classList.contains('on');
+    for (const id of ['btn-diff', 'btn-trees', 'btn-traffic', 'btn-fog', 'btn-ortho']) ctl.querySelector(`input[data-b="${id}"]`).checked = $(id).classList.contains('on');
     ctl.querySelector('input[data-b="btn-ortho"]').closest('label').hidden = $('btn-ortho').hidden; // shown once the aerial photo has loaded
   };
   setInterval(syncCtl, 1000); // Kino ends on its own; keep the box honest
@@ -1815,6 +1917,8 @@ $('btn-diff').addEventListener('click', () => {
   $('sceneLegend').innerHTML = SHOW_DIFF ? LEGEND_DIFF : LEGEND_HEAT;
 });
 $('btn-trees').addEventListener('click', () => { forest.visible = !forest.visible; $('btn-trees').classList.toggle('on', forest.visible); });
+if (!traffic) $('btn-traffic').hidden = true;
+$('btn-traffic').addEventListener('click', () => { const v = !$('btn-traffic').classList.contains('on'); traffic?.set(v); $('btn-traffic').classList.toggle('on', v); wake(); });
 
 // ---------- cinematic mode: letterbox, subtitles, scripted shots through the timeline ----------
 // Every step is a shot with a pose(tau) -> camera position + look-at point: a slow orbit with a gentle dolly-in around the
@@ -2359,6 +2463,7 @@ function frame() {
   for (const m of flowMats) m.dashOffset -= dt * 0.05; // streams run downstream
   forestLod?.(); // trees: near / far LOD split, re-done only after the camera moved far
   nearGrass?.(dt); // near grass: fade with the zoom, re-placed in slices when the target moved far
+  traffic?.tick(dt); // cars along the roads
   if (precip.visible) {
     const u = precipMat.uniforms; u.uCenter.value.copy(controls.target);
     u.uBox.value = clamp(camera.position.distanceTo(controls.target) * 0.9, 0.8, 8);
@@ -2391,7 +2496,7 @@ function frame() {
 
 await yieldMain();
 // ---------- start ----------
-if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, coverage: POD3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt }; // diagnostics only (?stats=1): frame shots from the console
+if (statsEl) window.__r3d = { THREE, camera, controls, v3, flyTo, setStep, TER, terrain, timeline: TL3D, coverage: POD3D, renderer, REFL, heatU, WATER, hAt, toX, toZ, halos, buildings, CINE, foundAt, traffic }; // diagnostics only (?stats=1): frame shots from the console
 setStep(Q.has('step') ? +Q.get('step') : R.value?.beforePing ?? 0, false);
 stepMood(0.1, true); updateEnv(); // start in the step's light, no fade-in
 camera.position.copy(center).add(new THREE.Vector3(SPAN * 0.2, SPAN * 2.2, SPAN * 1.6));
