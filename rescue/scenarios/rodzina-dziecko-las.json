@@ -33,7 +33,7 @@
  "segments": [
   {
    "id": "R1",
-   "name": "R1 Jeleni Potok",
+   "name": "Jeleni Potok",
    "seed": [
     50.78175,
     15.713
@@ -41,7 +41,7 @@
   },
   {
    "id": "R2",
-   "name": "R2 Dziki Potok - zach.",
+   "name": "Dziki Potok - zach.",
    "seed": [
     50.78175,
     15.729
@@ -49,7 +49,7 @@
   },
   {
    "id": "R3",
-   "name": "R3 Dziki Potok - wsch.",
+   "name": "Dziki Potok - wsch.",
    "seed": [
     50.78175,
     15.745
@@ -57,7 +57,7 @@
   },
   {
    "id": "R4",
-   "name": "R4 Łomniczka - płn.",
+   "name": "Łomniczka - płn.",
    "seed": [
     50.78175,
     15.761
@@ -65,7 +65,7 @@
   },
   {
    "id": "R5",
-   "name": "R5 Skałka - płn.",
+   "name": "Skałka - płn.",
    "seed": [
     50.78175,
     15.777
@@ -73,7 +73,7 @@
   },
   {
    "id": "R6",
-   "name": "R6 Wapniak",
+   "name": "Wapniak",
    "seed": [
     50.77125,
     15.713
@@ -81,7 +81,7 @@
   },
   {
    "id": "R7",
-   "name": "R7 Łomnica - płn.",
+   "name": "Łomnica - płn.",
    "seed": [
     50.77125,
     15.729
@@ -89,7 +89,7 @@
   },
   {
    "id": "R8",
-   "name": "R8 Bystrzyk - płn.",
+   "name": "Bystrzyk - płn.",
    "seed": [
     50.77125,
     15.745
@@ -97,7 +97,7 @@
   },
   {
    "id": "R9",
-   "name": "R9 Łomniczka - środek 1",
+   "name": "Łomniczka - środek 1",
    "seed": [
     50.77125,
     15.761
@@ -105,7 +105,7 @@
   },
   {
    "id": "R10",
-   "name": "R10 Skałka - płd.",
+   "name": "Skałka - płd.",
    "seed": [
     50.77125,
     15.777
@@ -113,7 +113,7 @@
   },
   {
    "id": "R11",
-   "name": "R11 Łomnica - płd.",
+   "name": "Łomnica - płd.",
    "seed": [
     50.76075,
     15.713
@@ -121,7 +121,7 @@
   },
   {
    "id": "R12",
-   "name": "R12 Złoty Potok - płn.",
+   "name": "Złoty Potok - płn.",
    "seed": [
     50.76075,
     15.729
@@ -129,7 +129,7 @@
   },
   {
    "id": "R13",
-   "name": "R13 Wilczy Potok",
+   "name": "Wilczy Potok",
    "seed": [
     50.76075,
     15.745
@@ -137,7 +137,7 @@
   },
   {
    "id": "R14",
-   "name": "R14 Łomniczka - środek 2",
+   "name": "Łomniczka - środek 2",
    "seed": [
     50.76075,
     15.761
@@ -145,7 +145,7 @@
   },
   {
    "id": "R15",
-   "name": "R15 Płomnica - płn.",
+   "name": "Płomnica - płn.",
    "seed": [
     50.76075,
     15.777
@@ -153,7 +153,7 @@
   },
   {
    "id": "R16",
-   "name": "R16 Złoty Potok - płd.",
+   "name": "Złoty Potok - płd.",
    "seed": [
     50.75025,
     15.713
@@ -161,7 +161,7 @@
   },
   {
    "id": "R17",
-   "name": "R17 Bystrzyk - płd.",
+   "name": "Bystrzyk - płd.",
    "seed": [
     50.75025,
     15.729
@@ -169,7 +169,7 @@
   },
   {
    "id": "R18",
-   "name": "R18 Łomniczka - płd.",
+   "name": "Łomniczka - płd.",
    "seed": [
     50.75025,
     15.745
@@ -177,7 +177,7 @@
   },
   {
    "id": "R19",
-   "name": "R19 Czerniawka",
+   "name": "Czerniawka",
    "seed": [
     50.75025,
     15.761
@@ -185,7 +185,7 @@
   },
   {
    "id": "R20",
-   "name": "R20 Płomnica - płd.",
+   "name": "Płomnica - płd.",
    "seed": [
     50.75025,
     15.777

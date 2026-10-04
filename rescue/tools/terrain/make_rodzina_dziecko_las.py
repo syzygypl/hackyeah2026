@@ -95,7 +95,7 @@ def main():
             segments.append({"id": f"R{n}", "name": "", "seed": seed})
     names = unique_names(segments, terrain)
     for sg in segments:
-        sg["name"] = f"{sg['id']} {names[sg['id']]}"
+        sg["name"] = names[sg['id']]   # the UI shows the id next to the name (no "R9 R9 ...")
     near_ipp = min(segments, key=lambda s: dist(s["seed"], IPP))["id"]
 
     sc = {
