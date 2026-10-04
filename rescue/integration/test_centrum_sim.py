@@ -185,7 +185,7 @@ def main():
         vd = c.js("[document.querySelectorAll('.lftoast').length, document.querySelectorAll('#simCards .card.esc').length, document.querySelectorAll('#simCards .card').length]")
         check("vd_calm_start", bool(vd) and vd[0] <= 1 and vd[1] <= 2, f"toasts, red cards, cards = {vd}")
         c.js("document.querySelector('.lfbell').click()")
-        vi = c.until("(()=>{const i=[...document.querySelectorAll('.lfpanel .lfi.acked')].find(x=>/wirtualny/.test(x.innerText));const k=document.querySelector('.lfpanel .lfkpi');return i&&k&&!k.hidden&&/Symulacja/.test(k.innerText)?k.innerText:''})()", 10)
+        vi = c.until("(()=>{const i=[...document.querySelectorAll('.lfpanel .lfi.acked')].find(x=>/potwierdził: dyżurny wirtualny \\(symulacja\\)/.test(x.innerText));const k=document.querySelector('.lfpanel .lfkpi');return i&&k&&!k.hidden&&/Symulacja/.test(k.innerText)?k.innerText:''})()", 10)
         check("vd_acks_labelled", bool(vi), vi or "")
         errs_desktop = list(c.errors)
         # phone

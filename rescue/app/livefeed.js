@@ -279,7 +279,7 @@ export function mountBell(host, opts = {}) {
     return `<div class="${cls} t-${n.type}${a ? " acked" : ""}${late ? " late" : ""}" data-key="${esc(n.key)}">`
       + `<span class="lft"><span class="lfic" title="${TYPE_LABEL[n.type]}">${ICON[n.type]}</span><span class="mono">${hm(n.ms)}</span></span>`
       + `<span class="lfn"><span class="lfty">${TYPE_LABEL[n.type]}</span><b>${esc(head)}</b><span class="lfp">${esc(path)}</span>`
-      + `<span class="lfst">${esc(st)}${a ? ` · potwierdzone ${hm(Date.parse(a.at))}${a.by && a.by !== "operator" ? " (" + esc(a.by) + ")" : ""}` : late ? ` · bez potwierdzenia od ${Math.floor((now - n.ms) / 60000)} min` : ""}</span></span>`
+      + `<span class="lfst">${esc(st)}${a && a.virtual ? ` · potwierdził: ${esc(VD_BY)}, ${hm(Date.parse(a.at))}` : a ? ` · potwierdzone ${hm(Date.parse(a.at))}${a.by && a.by !== "operator" ? " (" + esc(a.by) + ")" : ""}` : late ? ` · bez potwierdzenia od ${Math.floor((now - n.ms) / 60000)} min` : ""}</span></span>`
       + `<span class="lfb"><button type="button" class="lfopen">Otwórz</button>${a ? "" : `<button type="button" class="lfack">Potwierdź</button>`}</span></div>`;
   }
   function wire(root) {
