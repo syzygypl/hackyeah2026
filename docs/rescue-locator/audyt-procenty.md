@@ -68,6 +68,47 @@ Rozbieżność do rozstrzygnięcia: AI Andrzeja pisze "UI nigdy nie pokazuje POA
 
 Obie strony mogą mieć rację co do głównego ekranu: panele `/app`, Centrum, Odprawa i Czat pokazują ranking i "% obszaru", nie POA (`app/app.js:231` komentarz "no POA % on screen"). Wyjątkami są tekst powodu z silnika, 2D standalone i dymek komórki.
 
+### Część 1 w szczegółach (AI Andrzeja)
+
+Odczyt kodu `origin/main` @ c5fa412 (silnik bez zmian od 2bd6542). Rust `rescue/rs/src/kit` = produkcja, Swift `rescue/Sources/RescueKit` = wzorzec.
+
+**Kolejność obliczeń.** Każda wskazówka to jedna warstwa (mnożnik na komórkę), dodawana w kolejności czasu (`probability_grid.rs:239-243`). `poa(up_to, disabled, at)` mnoży pierwsze `up_to` warstw, pomija odznaczone w Sygnałach (`disabled`) i dzieli przez sumę po wszystkich komórkach prostokąta (`:443-460`; Swift `ProbabilityGrid.swift:225-238`). Wagi wskazówek liczone są w minucie `at`, domyślnie w minucie ostatniej warstwy kroku, więc zanik widać krok po kroku.
+
+**Warstwy i ich mnożniki** (wszystkie w `probability_grid.rs:265-427`):
+
+| warstwa | mnożnik komórki | linia (Rust / Swift) |
+|---|---|---|
+| Pierścienie Koestera | gęstość na m²: masa pasma / pole pierścienia, masy 25/25/25/20% między kwantylami (zawrat 1,1 / 3,0 / 5,8 / 11,5 km); poza r95 stała 0,05 / (3·π·r95²) | `:246-263` / `:110-117` |
+| Ostatni znany punkt | iloraz (1 - w)·pierścienie(IPP) + w·pierścienie(LKP) przez poprzednią mieszankę: zastępuje pierścienie, nie mnoży ich drugi raz | `:271-286` |
+| Teren (cechy) | 1 + 2,5·e^(-dSzlak/120) + 1,5·e^(-dPotok/120) + 1,0·e^(-dSchronisko/150); woda poza szlakiem x0,15; razem do ok. 6x | `:287-296` / `:139` |
+| Koszt terenu | 0,35 przy grani (< 250 m) i z dala od szlaku (> 120 m), inaczej 1 | `:297` / `:144` |
+| Trudność | szlak i hala 1, kosodrzewina 0,8, piarg 0,9, płyty 0,5, ściana 0,2, woda 1; x1,5 w żlebie (potok < 120 m i grań < 600 m) | `:411-417` |
+| Plan trasy | 0,25 + e^(-d²/2σ²) | `:298-307` |
+| Korytarz | podłoga + (1 - podłoga)·e^(-d²/2σ²) | `:360-369` |
+| Zgubiony szlak | max po punktach: 1 + siła·e^(-d/300) x (w dół 1 / w górę 0,3) x (żleb 1,5), do 800 m, tylko poza szlakiem | `:330-359` |
+| Pogoda (mgła, noc) | 1 + boost·e^(-min(dSzlak, dPotok)/150) | `:408-410` |
+| Sektor BTS | 0,1 + e^(-d²/2(0,6r)²) | `:370-379` |
+| Punkt GPS / AML | 0,002 + e^(-d²/2s²), s = max(dokładność, 0,6 komórki) | `:380-389` |
+| ZNALEZIONO | 1e-9 + e^(-d²/2s²), s = max(dokładność, 0,5 komórki) | `:390-399` |
+| Wykluczenie | stały mnożnik w promieniu od linii | `:405-407` |
+| Przeszukano, nic | 1 - POD w komórkach podanych segmentów, 1 poza nimi | `:400-404` / `:204` |
+| Warunki (pogoda dla zespołów) | 1 (bez wpływu na POA, tylko na POD planera) | `:418` |
+
+**Bayes po pustym przeszukaniu.** Po normalizacji: POA_s' = POA_s·(1 - POD) / (1 - POA_s·POD), pozostałe segmenty: POA' = POA / (1 - POA_s·POD). To dokładnie P(i | nic nie znaleziono). Domyślny POD: SegmentSearched 0,7, DronePassEmpty 0,6 (`providers/segment_searched_provider.rs:23`, `drone_pass_empty_provider.rs:23`); zawrat ma w zdarzeniach 0,7 / 0,8 / 0,75 / 0,75.
+
+**Wagi wskazówek (clue_weights).** Ważone są tylko: wskazówki `Clue` z sektorem, `Cell112Fix`, `RatunekPing` oraz negatywne `SegmentSearched` / `DronePassEmpty` (`clue_weights.rs:349-392`). Pierścienie, teren, plan trasy, korytarz i pogoda nie mają wagi.
+
+- waga = wiarygodność źródła x dokładność typu x świeżość x potwierdzenie, obcięta do 0..1 (`:418-494`; Swift `ClueWeights.swift:175-207`).
+- dokładność = clamp((100 m / dokładność typu)^0,35, 0,4, 1); świeżość = 0,5^(wiek_h / półokres) (podłoga 0) (`:418-431`).
+- potwierdzenie: x1,25 za każdą zgodną wskazówkę (niezależne źródło, do 500 m albo 0,8 x większy promień, w oknie czasu = krótszy półokres), maks. x1,5; x0,7 za każdą silniejszą sprzeczną (za daleko na 3 km/h); x0,8, jeśli segment przeszukano później bez wyniku (`:446-488`).
+- źródła (`scenarios/weights/clue-weights.json`): operator 1,0, GPS 0,95, ratownik 0,9, AML 0,9, BTS 0,8, pies terenowy 0,7, świadek 0,6, dron 0,5, pies 0,5, obywatel niezweryfikowany 0,3.
+- kiedy działa: `applied = ręczna waga || na żywo || force_all` (`:490-493`), `force_all = applyToScripted || features: clueWeights` (`:305`); "na żywo" = opis zaczyna się od "Meldunek: " (`:341`). Warstwa wchodzi jako f^waga, gdy waga < 0,9995 (`probability_grid.rs:430-439`; Swift `:230-233`).
+- Korekta do mojego INFO z 13:39: negatywne meldunki na żywo TEŻ są ważone (typ "przeszukanie", źródło ratownik 0,9 albo operator 1,0, półokres 6 h), więc działa efektywny POD = 1 - (1 - POD)^waga, tak jak opisano wyżej w części 1. Nieważone są tylko przeszukania ze skryptu (zawrat).
+
+**Rust a Swift.** Te same wzory linia w linię (Rust to port; `rescue/rs/parity.py`: 103 ze 105 odpowiedzi bajt w bajt, dwie różnią się kolejnością kluczy). Rust dodaje tylko `poa_without_each` (`probability_grid.rs:469-517`: wspólne iloczyny prefiksowe dla "co wnosiła ta wskazówka", ta sama kolejność działań).
+
+**Ogon Koestera.** 5% poza r95 ma gęstość liczoną dla umownego pola 3·π·r95², więc po normalizacji to nie jest dokładnie 5%. W zawrat bez znaczenia: prostokąt kończy się przed r95 (punkt H: w prostokącie jest 53% masy pierścieni).
+
 ### K. Wagi wskazówek: skrypt vs na żywo (mylące, za AI Andrzeja)
 
 Zastrzeżenie AI Andrzeja: wskazówki ze scenariusza (skrypt, nagranie) wchodzą z pełną wagą 1, chyba że scenariusz ma `features: clueWeights` albo `applyToScripted: true`; wskazówki na żywo są ważone źródłem (operator 1,0, ratownik 0,9, GPS 0,95, BTS 0,8, świadek 0,6, pies 0,5, obywatel niezweryfikowany 0,3), dokładnością i świeżością. Kod: `clue_weights.rs:493` (`applied = override || live || force_all`), Swift `ClueWeights.swift`. Przykład z zawrat: sektor BTS ma wyliczoną wagę 0,083 (źródło 0,8 x dokładność 0,4 x świeżość 0,26), a w mapie działa z wagą 1 (`applied: false`, dopisek "waga informacyjna, mapa bez zmian"). Ten sam meldunek wpisany na żywo przesunąłby mapę dużo słabiej niż w nagraniu, więc Historia i Na żywo nie są porównywalne 1:1. Poprawka (silnik, AI Andrzeja): albo włączyć wagi dla skryptów w scenariuszach demo (`applyToScripted`), albo w UI przy wskazówce nagranej pokazywać "waga 1 (nagranie), na żywo byłoby 0,08".
