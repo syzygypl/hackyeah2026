@@ -340,6 +340,7 @@ function paintMarker(x, m) {
   el.title = `${short(x)}: ${longText(x)} - ${mode === "pre" ? "jeszcze nie zgłoszona" : BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
   el.querySelector(".lbl").textContent = short(x);
   el.style.zIndex = mode === "live" ? 3 : 1;
+  el._mm = mode;   // timeline: tlApply repaints only the dots whose mode changed
 }
 // Labels that would overlap on screen (Tatra and Bieszczady incidents sit a few km apart) move down one row at a time
 // until they are free; dots stay on their IPP. Recomputed after every zoom, since overlaps depend on the scale.
@@ -403,7 +404,7 @@ async function advTick() {
     const a = await api("/api/advisor");
     const sig = JSON.stringify((a.hypotheses || []).map((h) => [h.id, h.score, h.incidents, h.evidence.map((e) => e.text)]));
     if (sig !== advSig) { advSig = sig; if (advSel >= (a.hypotheses || []).length) advSel = 0; }
-    adv = a; advRender(); if (PICK) renderPick();
+    adv = a; advRender(); if (PICK) renderPick(); else { tlBuild(); tlApply(); }   // timeline: hypothesis brackets
     if ((a.hypotheses || []).length && !advLlmAsked && !PICK) advLlm();   // the model's version: once per page load, in the background
   } catch (e) { if (e.status === 404) advMiss = Date.now() + 60000; console.warn("advisor", e); }
   advBusy = false;
@@ -511,10 +512,30 @@ advTick();
 const PROV_KIND = { Found: "found", SegmentSearched: "searched", DronePassEmpty: "searched", Weather: "weather", WeatherConditions: "conditions",
   Terrain: "terrain", TerrainDifficulty: "difficulty", KoesterRings: "rings", TripPlan: "route", WaterDrift: "route", TrailheadCar: "containment", Cell112Fix: "sector", RatunekPing: "fix", Clue: "clue" };
 const toMin = (c) => { const m = /^(\d{1,2}):(\d{2})/.exec(c || ""); return m ? +m[1] * 60 + +m[2] : null; };
-const TL_SPEEDS = [1, 2, 5, 10, 30];
+const TL_SPEEDS = [1, 2, 5, 10, 30, 60];
 const tl = { mode: null, auto: true, cur: null, speed: 1, play: 0, items: [], by: {}, off: new Set(), day: null, lo: 0, hi: 60, built: "" };
 try { const v = +localStorage.getItem("rescue-centrum-tl-speed"); if (TL_SPEEDS.includes(v)) tl.speed = v; } catch (e) {}
-const tlBase = (it) => tl.mode === "abs" ? it.t0 : 0;
+// axis value of an incident's report: "abs" = real date + clock, "day" = its slot on the show day (tlDaySlots), "rel" = T0 for all.
+// Everything else (state at the cursor, #1's Historia clock tlClockAt) works on v - tlBase(it) = minutes since the REAL report.
+const tlBase = (it) => tl.mode === "abs" ? it.t0 : tl.mode === "day" ? (it.d ?? 0) : 0;
+const TL_DAY_NOTE = "układ pokazowy - godziny przesunięte, czasy zdarzeń w akcjach bez zmian";
+// "Dzień w Centrum": every incident on ONE synthetic day. Units = a Doradca hypothesis or the same first word of the id
+// (zapora-*, mazury-burza-*, dywersja-poprad*) within 24 h of real time; a unit keeps its members' REAL relative offsets, so the
+// hypotheses still line up. Units sorted by the real report, starts spread over 06:00-20:00 (overlapping like a busy day).
+// Durations and the events inside each incident stay as they are; only the report moves.
+function tlDaySlots(its, hyps) {
+  const key = {};
+  for (const it of its) key[it.sc] = it.sc.split("-")[0];
+  for (const h of hyps) { const k = h.scs.map((sc) => key[sc]).find(Boolean); if (k) { const old = new Set(h.scs.map((sc) => key[sc])); for (const sc in key) if (old.has(key[sc])) key[sc] = k; } }
+  const by = {}; for (const it of its) (by[key[it.sc]] ||= []).push(it);
+  const units = [];
+  for (const g of Object.values(by)) {
+    g.sort((a, b) => a.t0 - b.t0 || a.sc.localeCompare(b.sc));
+    let u = null; for (const it of g) { if (!u || it.t0 - u[0].t0 > 1440) units.push(u = []); u.push(it); }
+  }
+  units.sort((a, b) => a[0].t0 - b[0].t0 || a[0].sc.localeCompare(b[0].sc));
+  units.forEach((u, i) => { const s = units.length > 1 ? 360 + Math.round(i * 840 / (units.length - 1)) : 600; for (const it of u) it.d = s + (it.t0 - u[0].t0); });
+}
 function tlItem(x) {
   // start / end: /api/incidents startedAt / endedAt (server, Europe/Warsaw offset). Without them (fallback list, older server)
   // the same rule from the scenario file: start = date + startClock, end = the live find (at), else the file's find event.
@@ -540,7 +561,9 @@ function tlItem(x) {
   else if (f) { end = f.m; endKind = "found"; }                       // the scenario file ends with a find: znaleziono
   // last contact (subject.lastContact) comes before the report: a faint lead-in on the bar and "ostatni kontakt" in the feed
   let lc = toMin(md.lastContact); if (lc != null) { lc -= s0; if (lc > 0) lc -= 1440; if (lc < -1440 || lc === 0) lc = null; }
-  return { sc: x.sc, x, t0, end, endKind, last: Math.max(last, end ?? 0), evs, start: md.startClock, date: md.date, lastContact: md.lastContact, lc };
+  // the incident's own teams (scenario file): on site from readyAt (or the report), for the team pool at the cursor
+  const res = (md.resources || []).map((r) => ({ id: r.id, m: r.readyAt ? Math.max(0, off(r.readyAt) ?? 0) : 0 }));
+  return { sc: x.sc, x, t0, end, endKind, last: Math.max(last, end ?? 0), evs, start: md.startClock, date: md.date, lastContact: md.lastContact, lc, res };
 }
 function tlState(it, v) { const o = v - tlBase(it); return o < 0 ? "pre" : it.end != null && o >= it.end ? it.endKind : "live"; }
 function markMode(x) {
@@ -551,15 +574,24 @@ function markMode(x) {
 const pad2 = (n) => String(n).padStart(2, "0");
 function tlFmt(v, axis) {
   if (tl.mode === "rel") { const a = Math.round(Math.abs(v)); return (v < 0 ? "T-" : "T+") + Math.floor(a / 60) + ":" + pad2(a % 60); }
+  if (tl.mode === "day") { const m = ((Math.floor(v) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
   const d = new Date(v * 60000), hm = pad2(d.getHours()) + ":" + pad2(d.getMinutes()), dm = d.getDate() + "." + pad2(d.getMonth() + 1);
   return axis === "day" ? dm : axis === "hm" ? hm : dm + " " + hm;
 }
 const TL_STATE = { pre: "jeszcze nie zgłoszona", live: "trwa", found: "znaleziono", ended: "zakończona" };
+// story at the cursor (#2): a short feed of what happened in Centrum, the active-incident count, the team pool, Doradca's
+// hypotheses bracketing their incidents' rows. Setup events of a file (terrain, rings, start weather) are not news.
+const TL_SETUP = new Set(["Terrain", "TerrainDifficulty", "KoesterRings", "Weather"]);
+function tlHyps() {   // Doradca hypotheses (GET /api/advisor), best first: their incidents share one source
+  return ((adv && adv.hypotheses) || []).map((h) => ({ id: h.id, level: h.level, title: h.title, kind: h.kindLabel, scs: h.incidents || [] }));
+}
 function tlBuild() {
   let its = incidents.map(tlItem).filter(Boolean).sort((a, b) => a.t0 - b.t0 || a.sc.localeCompare(b.sc));
   tl.items = its; tl.by = Object.fromEntries(its.map((i) => [i.sc, i]));
-  if (tl.auto) { const t = its.map((i) => i.t0); tl.mode = t.length && Math.max(...t) - Math.min(...t) <= 1440 ? "abs" : "rel"; }
-  const sig = JSON.stringify([tl.mode, its.map((i) => [i.sc, i.t0, i.end, i.endKind, i.last, i.evs.length, short(i.x)])]);
+  if (tl.auto) tl.mode = "day";   // default: Dzień w Centrum (Mateusz: bars spread like a busy day, not at T0 or across months)
+  const hyps = PICK ? [] : tlHyps();
+  tlDaySlots(its, hyps);
+  const sig = JSON.stringify([tl.mode, its.map((i) => [i.sc, i.t0, i.end, i.endKind, i.last, i.lc, i.evs.length, short(i.x)]), hyps.map((h) => [h.id, h.level, h.title, h.scs])]);
   const el = $("tl"); if (!el) return;
   el.hidden = !its.length;
   if (sig === tl.built) return; tl.built = sig;
@@ -573,75 +605,174 @@ function tlBuild() {
   tl.off = new Set(its.filter((it) => !focus.includes(it)).map((it) => it.sc));
   if (tl.off.size) { tl.items = its = [...focus, ...its.filter((it) => tl.off.has(it.sc))]; }
   if (its.length) {
-    const lo = Math.min(...focus.map(tlBase)), hi = Math.max(...focus.map((it) => tlBase(it) + it.last)), pad = Math.max(10, (hi - lo) * 0.03);
+    const r0 = Math.min(...focus.map(tlBase)), lo = Math.max(r0 - 60, Math.min(...focus.map((it) => tlBase(it) + Math.min(0, it.lc ?? 0)))), hi = Math.max(...focus.map((it) => tlBase(it) + it.last)), pad = Math.max(10, (hi - lo) * 0.03);
     tl.lo = lo - pad / 2; tl.hi = hi + pad;
     if (tl.cur != null) tl.cur = Math.min(tl.hi, Math.max(tl.lo, tl.cur));
   }
+  // a hypothesis' incidents sit together (at the place of its first one) under a bracket with the hypothesis label; it lights up
+  // once the second of them has been reported (from then on Doradca could see the pattern). "od zgłoszenia": from T0.
+  const hOf = {};
+  for (const h of hyps) for (const sc of h.scs) if (!(sc in hOf) && tl.by[sc] && !tl.off.has(sc)) hOf[sc] = h;
+  const groups = [], seen = new Set();
+  for (const it of focus) {
+    if (seen.has(it.sc)) continue;
+    const h = hOf[it.sc], g = h ? focus.filter((f) => hOf[f.sc] === h) : [it];
+    g.forEach((f) => seen.add(f.sc));
+    groups.push({ h: g.length >= 2 ? h : null, its: g, since: g.length >= 2 ? g.map(tlBase).sort((a, b) => a - b)[1] : null, rep: g.length >= 2 ? g.slice().sort((a, b) => tlBase(a) - tlBase(b))[1] : null });
+  }
   const P = (v) => (v - tl.lo) / (tl.hi - tl.lo) * 100, pc = (v) => P(v).toFixed(3) + "%";
-  const rows = its.map((it) => {
+  const row = (it) => {
     const b = tlBase(it), to = b + (it.end ?? it.last), cls = it.endKind || "open";
     const tip = `${short(it.x)}: zgłoszenie ${it.date || ""} ${it.start}${it.lastContact ? ` (ostatni kontakt ${it.lastContact})` : ""}${it.end != null ? ` · ${TL_STATE[it.endKind]} po ${tlFmtDur(it.end)}` : " · trwa (brak końca w danych)"}`;
     const mk = it.evs.map((e) => `<i class="tlk k-${e.k}" data-v="${b + e.m}" data-sc="${esc(it.sc)}" data-at="${esc(e.at)}" data-tip="${esc(e.k === "zespol" ? e.title : shortEv(e.title, e.k))}" style="left:${pc(b + e.m)}${e.k !== "found" && EV_COL[e.kind] ? `;--c:var(${EV_COL[e.kind]})` : ""}"></i>`).join("");   // tooltip + click: #1 block below tlInit()
     if (tl.off.has(it.sc)) return `<div class="tlr off" data-sc="${esc(it.sc)}"><a class="tln" href="${openURL(it.sc)}" title="${esc(tip)}">${esc(short(it.x))}</a><div class="trk" title="${esc(tip)}"><span class="offd">inny dzień: ${esc(tlFmt(it.t0))}</span></div></div>`;
+    const pre = it.lc != null ? `<i class="tlpre" style="left:${pc(b + it.lc)};width:${(P(b) - P(b + it.lc)).toFixed(3)}%" title="Od ostatniego kontaktu (${esc(it.lastContact)}) do zgłoszenia"></i>` : "";
     return `<div class="tlr" data-sc="${esc(it.sc)}"><a class="tln" href="${openURL(it.sc)}" title="${esc(tip)}">${esc(short(it.x))}</a><div class="trk" title="${esc(tip)}">`
-      + `<i class="tlb ${cls}" style="left:${pc(b)};width:${Math.max(0.4, P(to) - P(b)).toFixed(3)}%"></i>${it.end == null ? `<i class="tlt" style="left:${pc(to)};right:0"></i>` : ""}${mk}</div></div>`;
-  }).join("");
+      + `${pre}<i class="tlb ${cls}" style="left:${pc(b)};width:${Math.max(0.4, P(to) - P(b)).toFixed(3)}%"></i>${it.end == null ? `<i class="tlt" style="left:${pc(to)};width:${Math.max(0, Math.min(100, P(to + 90)) - P(to)).toFixed(3)}%"></i>` : ""}${mk}</div></div>`;   // open end: a 90 min fading tail, not across the whole day
+  };
+  const rows = groups.map((g) => {
+    if (!g.h) return g.its.map(row).join("");
+    const p = P(g.since), lab = `${esc(g.h.title)} · ${g.its.length} akcji`;
+    return `<div class="tlhg ${esc(g.h.level)}" data-h="${esc(g.h.id)}" data-since="${g.since}"><div class="tlhl"><span class="tln" title="Doradca: hipoteza ${esc(g.h.id)} (${esc(g.h.kind || "")}). Świeci od chwili, gdy zgłoszono drugą z tych akcji.">Doradca ${esc(g.h.id)}</span>`
+      + `<div class="trk"><span class="hyx" style="${p > 55 ? `left:0;right:${(100 - p).toFixed(3)}%;text-align:right` : `left:${p.toFixed(3)}%`}" title="${esc(g.h.kind || "")}: ${esc(g.h.title)}">${p > 55 ? lab + " ◆" : "◆ " + lab}</span></div></div>${g.its.map(row).join("")}</div>`;
+  }).join("") + its.filter((it) => tl.off.has(it.sc)).map(row).join("");
   const mini = focus.map((it) => { const b = tlBase(it); return `<i class="ms" style="left:${pc(b)}"></i>${it.end != null ? `<i class="me ${it.endKind}" style="left:${pc(b + it.end)}"></i>` : ""}`; }).join("");
   // axis ticks: a round step giving at most ~7 labels; real time aligned to the local clock
   const span = tl.hi - tl.lo, step = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080, 20160, 43200, 86400].find((s) => span / s <= 7) || 172800;
   const tz = tl.mode === "abs" ? new Date(tl.lo * 60000).getTimezoneOffset() : 0, ticks = [];
   for (let v = Math.ceil((tl.lo - tz) / step) * step + tz; v <= tl.hi && ticks.length < 12; v += step) ticks.push(v);
   const fmtTick = (v) => tl.mode === "rel" ? tlFmt(v) : step >= 1440 ? tlFmt(v, "day") : tlFmt(v, new Date(v * 60000).getHours() === 0 && new Date(v * 60000).getMinutes() === 0 ? "day" : "hm");
-  $("tlRows").innerHTML = `<div class="tllg"><span><i class="sw live"></i>trwa</span><span><i class="sw found"></i>znaleziono</span><span><i class="sw ended"></i>zakończona</span><span><i class="sw open"></i>brak końca w danych</span>`
-    + `<span><i class="tlk k-zespol"></i>zespół na miejscu</span><span><i class="tlk k-nic"></i>przeszukano, nic</span><span><i class="tlk k-found"></i>ZNALEZIONO</span>${tl.day ? `<span>Czas rzeczywisty: dzień ${esc(tl.day.label)} (${tl.day.n} akcji), pozostałe ${tl.day.other} w innych dniach</span>` : ""}</div>` + rows;
-  $("tlMini").innerHTML = `<span class="tln">${tl.day ? `Dzień ${esc(tl.day.label)} <b>${tl.day.n}</b>` : `Wszystkie <b>${its.length}</b>`}</span><div class="trk">${mini}</div>`;
+  $("tlRows").innerHTML = `<div class="tllg"><span><i class="sw live"></i>trwa</span><span><i class="sw found"></i>znaleziono</span><span><i class="sw ended"></i>zakończona</span><span><i class="sw open"></i>brak końca w danych</span><span><i class="sw pre"></i>od ostatniego kontaktu do zgłoszenia</span>`
+    + `<span><i class="tlk k-zespol"></i>zespół na miejscu</span><span><i class="tlk k-nic"></i>przeszukano, nic</span><span><i class="tlk k-found"></i>ZNALEZIONO</span>${groups.some((g) => g.h) ? `<span><i class="sw hyp"></i>Doradca: wspólne źródło</span>` : ""}${tl.day ? `<span>Czas rzeczywisty: dzień ${esc(tl.day.label)} (${tl.day.n} akcji), pozostałe ${tl.day.other} w innych dniach</span>` : ""}${tl.mode === "day" ? `<span class="daynote"><b>Dzień w Centrum:</b> ${TL_DAY_NOTE}. Klik otwiera akcję w Historii o jej prawdziwej godzinie.</span>` : ""}`
+    + `<span class="keys">Klawisze: ← → krok, Shift = duży krok, spacja = odtwórz, Home / End, Esc = na żywo</span></div>` + rows;
+  $("tlMini").innerHTML = `<span class="tln"${tl.mode === "day" ? ` title="Dzień w Centrum: ${TL_DAY_NOTE}"` : ""}>${tl.day ? `Dzień ${esc(tl.day.label)} <b>${tl.day.n}</b>` : `Wszystkie <b>${its.length}</b>`}</span><div class="trk">${mini}</div>`;
   $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${fmtTick(v)}</span>`).join("")}</div>`;
   $("tl").querySelectorAll(".tlr").forEach((r) => { r.onmouseenter = () => setHl(r.dataset.sc); r.onmouseleave = () => setHl(null); });
   for (const b of $("tl").querySelectorAll("[data-mode]")) b.classList.toggle("on", b.dataset.mode === tl.mode);
+  // element caches for tlApply (every animation frame while playing touches only what changed)
+  tl.rowEls = [...$("tlRows").querySelectorAll(".tlr")];
+  tl.kEls = [...$("tlRows").querySelectorAll(".tlr .tlk")]; for (const k of tl.kEls) k._v = +k.dataset.v;
+  tl.hEls = [...$("tlRows").querySelectorAll(".tlhg")]; for (const g of tl.hEls) g._since = +g.dataset.since;
+  // the feed: every incident's last contact, report, scripted events (not the setup), teams on site, end; Doradca's hypotheses
+  const feed = [];
+  for (const it of focus) {
+    const b = tlBase(it), name = short(it.x);
+    if (it.lc != null) feed.push({ v: b + it.lc, clock: it.lastContact, sc: it.sc, name, k: "lc", text: "ostatni kontakt z osobą" });
+    feed.push({ v: b, clock: it.start, sc: it.sc, name, k: "rep", text: "zgłoszenie" + (it.x.title ? ": " + it.x.title : "") });
+    let fe = false;
+    for (const e of it.evs) {
+      if (TL_SETUP.has(e.prov) || (e.m === 0 && e.k === "pogoda")) continue;
+      fe ||= e.k === "found";
+      feed.push({ v: b + e.m, clock: e.at, sc: it.sc, name, k: e.k, text: e.title });
+    }
+    if (it.end != null && !fe) feed.push({ v: b + it.end, clock: tlClockAt(it, b + it.end), sc: it.sc, name, k: "found", text: it.endKind === "ended" ? "akcja zakończona: osoba odnaleziona" : "ZNALEZIONO" });
+  }
+  for (const g of groups) if (g.h) feed.push({ v: g.since, clock: g.rep.start, sc: null, name: "Doradca", k: "hyp", text: `${g.h.title} (${g.its.length} akcji, ${(g.h.kind || "").toLowerCase()})`, h: g.h.id });
+  tl.feed = feed.map((f, i) => ({ ...f, i })).sort((a, b) => a.v - b.v || a.i - b.i);
+  tl.feedKey = null;
 }
 function tlFmtDur(m) { m = Math.round(m); return m >= 1440 ? `${Math.floor(m / 1440)} d ${Math.floor(m % 1440 / 60)} h` : `${Math.floor(m / 60)} h ${pad2(m % 60)} min`; }
+const setTxt = (el, t) => { if (el && el.textContent !== t) el.textContent = t; };
+const setHtml = (el, h) => { if (el && el._h !== h) { el._h = h; el.innerHTML = h; } };
+// team pool at the cursor: teams of the incidents running then, on site (readyAt passed) or on the way; free = roster minus both
+function tlPool(c, st) {
+  let on = 0, way = 0;
+  for (const it of tl.items) {
+    if (st[it.sc] !== "live") continue;
+    const o = c - tlBase(it);
+    for (const r of it.res || []) r.m <= o ? on++ : way++;
+  }
+  const n = teams.length;
+  if (tl.mode === "rel") return `zespoły przy trwających: <b>${on}</b>${way ? ` + ${way} w drodze` : ""}`;
+  return `zespoły: <b>${on}</b> na miejscu${way ? ` · ${way} w drodze` : ""}${n ? ` · wolne <b>${Math.max(0, n - on - way)}</b>/${n}` : ""}`;
+}
+function tlFeedApply(c) {
+  const box = $("tlFeed"); if (!box) return;
+  if (c == null) { if (!box.hidden) { box.hidden = true; tl.feedKey = null; } return; }
+  let i = -1; for (let j = 0; j < (tl.feed || []).length && tl.feed[j].v <= c; j++) i = j;
+  const fresh = i >= 0 && c - tl.feed[i].v <= Math.max(5, (tl.hi - tl.lo) / 40), key = i + "|" + fresh;
+  if (box.hidden) box.hidden = false;
+  if (key === tl.feedKey) return; tl.feedKey = key;
+  const show = i < 0 ? [] : tl.feed.slice(Math.max(0, i - 2), i + 1).reverse();
+  box.innerHTML = show.length ? show.map((f, j) => `<div class="fe k-${f.k}${j === 0 && fresh ? " new" : ""}"${f.sc ? ` data-sc="${esc(f.sc)}" data-at="${esc(f.clock || "")}" title="Kliknij: Historia tej akcji o ${esc(f.clock || "")}${tl.mode === "day" ? " (godzina w akcji)" : ""}"` : ""}><span class="ft mono">${esc(tl.mode === "day" ? tlFmt(f.v) : f.clock || "")}</span><b>${esc(f.name)}</b><span class="fx">${esc(f.text)}</span></div>`).join("")
+    : `<div class="fe"><span class="fx mute">Nic się jeszcze nie wydarzyło.</span></div>`;
+}
+// top 3 at the cursor on the cards of running incidents: one frame per incident and 5 minutes (GET /api/run/<sc>?t=HH:MM),
+// cached, at most 2 requests at once, one new request per 1.5 s while playing. Until it lands the last answer stays up.
+const t3 = { cache: {}, busy: 0, last: 0 };
+function tl3Clock(it, c) { const s0 = toMin(it.start), o = Math.max(0, Math.min(it.end ?? it.last, Math.round((c - tlBase(it)) / 5) * 5)), m = (s0 + o) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
+function tl3Fetch(sc, clk, key) {
+  if (t3.busy >= 2 || (tl.play && performance.now() - t3.last < 1500)) return;
+  t3.busy++; t3.last = performance.now(); t3.cache[key] = null;
+  api(`/api/run/${encodeURIComponent(sc)}?t=${encodeURIComponent(clk)}`)
+    .then((f) => { t3.cache[key] = (f.segments || []).slice().sort((a, b) => (b.poa || 0) - (a.poa || 0)).slice(0, 3).map((s) => ({ id: s.id, name: s.name })); })
+    .catch(() => { t3.cache[key] = "err"; })
+    .finally(() => { t3.busy--; if (!tl.play) tlApply(); });
+}
+function tl3Apply(card, it, c, s) {
+  let box = card.querySelector(".tl3");
+  if (c == null || !it || s !== "live") { if (box) box.remove(); card.classList.remove("tl3on"); card._t3 = null; return; }
+  const clk = tl3Clock(it, c), key = it.sc + "|" + clk, v = t3.cache[key];
+  if (v === undefined) tl3Fetch(it.sc, clk, key);
+  if (Array.isArray(v)) card._t3 = { clk, segs: v };
+  const d = card._t3;
+  const html = d ? `<div class="lbl">Gdzie szukać najpierw o ${esc(d.clk)}</div>${d.segs.map((x, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(x.id)} ${esc(x.name)}</span></div>`).join("")}`
+    : `<div class="lbl">Gdzie szukać najpierw o ${esc(clk)}</div><div class="loading">Liczę mapę na ${esc(clk)}...</div>`;
+  if (!box) { box = document.createElement("div"); box.className = "top3 tl3"; const ref = card.querySelector(".top3, .loading"); ref ? ref.after(box) : card.querySelector(".cteams").before(box); }
+  setHtml(box, html); card.classList.add("tl3on");
+}
 function tlApply() {
-  const el = $("tl"); if (!el || el.hidden) return;
+  const el = $("tl"); if (PICK || !el || el.hidden) return;
   const c = tl.cur, P = (v) => (v - tl.lo) / (tl.hi - tl.lo);
-  if (!el.classList.contains("peek") && innerWidth > 900) document.documentElement.style.setProperty("--tl-h", el.offsetHeight + 12 + "px");   // Doradca sits above the strip
   el.classList.toggle("scrub", c != null);
+  document.body.classList.toggle("tlplaying", !!tl.play);   // no backdrop blur while playing: re-blurring the map every frame halved the frame rate
   $("tlLive").classList.toggle("on", c == null);
-  $("tlPlay").textContent = tl.play ? "❚❚" : "▶"; $("tlPlay").title = tl.play ? "Pauza" : "Odtwórz osie wszystkich akcji (1× = 1 minuta na sekundę)";
-  $("tlSpeed").textContent = tl.speed + "×";
-  const cur = $("tlCur"); cur.hidden = c == null;
-  if (c != null) cur.style.setProperty("--p", Math.min(1, Math.max(0, P(c))));
-  let n = { pre: 0, live: 0, found: 0, ended: 0 };
-  for (const it of tl.items) if (!tl.off.has(it.sc)) n[tlState(it, c ?? tl.hi)]++;
-  $("tlNow").innerHTML = c == null ? `<b>Na żywo</b> <span class="mute">przesuń kursor, aby cofnąć się w czasie</span>`
-    : `<b class="mono">${tlFmt(c)}</b> <span class="mute">trwa ${n.live} · znaleziono ${n.found + n.ended}${n.pre ? ` · jeszcze nie zgłoszone ${n.pre}` : ""}</span>`;
-  el.querySelectorAll(".tlr").forEach((r) => { const it = tl.by[r.dataset.sc]; r.dataset.s = c == null || !it ? "" : tlState(it, c); });
-  el.querySelectorAll(".tlr .tlk").forEach((k) => k.classList.toggle("fut", c != null && +k.dataset.v > c));
-  for (const [k, m] of markers) { const x = incidents.find((i) => i.sc === k); if (x) paintMarker(x, m); }
+  setTxt($("tlPlay"), tl.play ? "❚❚" : "▶"); const pt = tl.play ? "Pauza (spacja)" : "Odtwórz wszystkie akcje (spacja; 1× = 1 minuta na sekundę)"; if ($("tlPlay").title !== pt) $("tlPlay").title = pt;
+  setTxt($("tlSpeed"), tl.speed + "×");
+  const cur = $("tlCur"); if (cur.hidden !== (c == null)) cur.hidden = c == null;
+  if (c != null) cur.style.setProperty("--p", Math.min(1, Math.max(0, P(c))).toFixed(5));
+  const n = { pre: 0, live: 0, found: 0, ended: 0 }, st = {};
+  for (const it of tl.items) if (!tl.off.has(it.sc)) { const s = tlState(it, c ?? tl.hi); st[it.sc] = s; n[s]++; }
+  const tag = tl.mode === "day" ? ` <span class="tlday" title="Dzień w Centrum: ${TL_DAY_NOTE}">układ pokazowy</span>` : "";
+  setHtml($("tlNow"), c == null ? `<b>Na żywo</b>${tag} <span class="mute">przesuń kursor albo naciśnij ▶, aby zobaczyć, jak toczyły się akcje</span>`
+    : `<b class="mono">${tlFmt(c)}</b>${tag} <span class="tlc">trwa <b>${n.live}</b>${n.found + n.ended ? ` · znaleziono ${n.found + n.ended}` : ""}${n.pre ? ` · jeszcze nie zgłoszone ${n.pre}` : ""}</span> <span class="tlp">${tlPool(c, st)}</span>`);
+  for (const r of tl.rowEls || []) { const s = c == null ? "" : st[r.dataset.sc] || ""; if (r.dataset.s !== s) r.dataset.s = s; }
+  for (const k of tl.kEls || []) { const f = c != null && k._v > c; if (k._f !== f) { k._f = f; k.classList.toggle("fut", f); } }
+  for (const g of tl.hEls || []) g.classList.toggle("on", c == null || g._since <= c);
+  for (const [k, m] of markers) { const x = incidents.find((i) => i.sc === k); if (x && m.getElement()._mm !== markMode(x)) paintMarker(x, m); }
+  tlFeedApply(c);
   document.querySelectorAll("#cards .card").forEach((card) => {
-    const it = !tl.off.has(card.dataset.sc) && tl.by[card.dataset.sc], s = c != null && it ? tlState(it, c) : null;
+    const sc = card.dataset.sc, it = !tl.off.has(sc) && tl.by[sc], s = c != null && it ? st[sc] : null;
     card.classList.toggle("tl-pre", s === "pre");
+    tl3Apply(card, it, c, s);
     let b = card.querySelector(".tlst");
     if (!s) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement("span"); b.className = "tlst"; card.querySelector(".ctop").appendChild(b); }
-    b.className = "tlst " + s; b.textContent = `${tlFmt(c)}: ${TL_STATE[s]}`;
+    const bc = "tlst " + s; if (b.className !== bc) b.className = bc; // day mode: the incident's own (real) clock at the cursor, as in Historia
+    setTxt(b, s === "pre" && tl.mode === "day" ? "przed zgłoszeniem" : `${tl.mode === "abs" ? tlFmt(c, "hm") : tl.mode === "day" ? tlClockAt(it, c) : tlFmt(c)}: ${s === "pre" ? "przed zgłoszeniem" : TL_STATE[s]}`);
   });
 }
 function tlSet(v) { tl.cur = v == null ? null : Math.min(tl.hi, Math.max(tl.lo, v)); tlApply(); }
-function tlStop() { if (tl.play) clearInterval(tl.play); tl.play = 0; }
+function tlStop() { if (tl.play) cancelAnimationFrame(tl.play); tl.play = 0; }
+// playback on requestAnimationFrame: the cursor moves every frame, tlApply writes only what changed
 function tlPlay() {
   if (tl.play) { tlStop(); tlApply(); return; }
   if (tl.cur == null || tl.cur >= tl.hi) tl.cur = tl.lo;
   let t = performance.now();
-  tl.play = setInterval(() => {
-    const now = performance.now(), dt = Math.min(0.5, (now - t) / 1000); t = now;
-    tl.cur = Math.min(tl.hi, tl.cur + dt * tl.speed); if (tl.cur >= tl.hi) tlStop(); tlApply();
-  }, 50);
+  const step = (now) => {
+    const dt = Math.min(0.25, Math.max(0, now - t) / 1000); t = now;
+    tl.cur = Math.min(tl.hi, tl.cur + dt * tl.speed);
+    tl.play = tl.cur >= tl.hi ? 0 : requestAnimationFrame(step);
+    tlApply();
+  };
+  tl.play = requestAnimationFrame(step);
   tlApply();
 }
+function tlSpeed(d) { const i = TL_SPEEDS.indexOf(tl.speed); tl.speed = TL_SPEEDS[d > 0 ? (i + 1) % TL_SPEEDS.length : Math.max(0, i - 1)]; try { localStorage.setItem("rescue-centrum-tl-speed", String(tl.speed)); } catch (e) {} tlApply(); }
 function tlInit() {
   const el = $("tl"); if (!el) return;
   $("tlPlay").onclick = tlPlay;
-  $("tlSpeed").onclick = () => { tl.speed = TL_SPEEDS[(TL_SPEEDS.indexOf(tl.speed) + 1) % TL_SPEEDS.length]; try { localStorage.setItem("rescue-centrum-tl-speed", String(tl.speed)); } catch (e) {} tlApply(); };
+  $("tlSpeed").onclick = () => tlSpeed(1);
   $("tlLive").onclick = () => { tlStop(); tlSet(null); };
   el.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => { if (tl.mode === b.dataset.mode) return; tl.auto = false; tl.mode = b.dataset.mode; tlStop(); tl.cur = null; tlBuild(); tlApply(); });
   // scrub: press / drag anywhere over the tracks column (the mini strip, the axis or the Gantt rows)
@@ -654,11 +785,29 @@ function tlInit() {
   });
   body.addEventListener("pointermove", (e) => { if (drag) tlSet(vAt(e)); });
   for (const t of ["pointerup", "pointercancel"]) body.addEventListener(t, () => drag = false);
-  el.addEventListener("keydown", (e) => {
-    if (e.target.closest("button,a")) return;
-    const st = (tl.hi - tl.lo) / 100;
-    if (e.key === "ArrowRight" || e.key === "ArrowLeft") { tlStop(); tlSet((tl.cur ?? tl.hi) + (e.key === "ArrowRight" ? st : -st)); e.preventDefault(); }
+  // keyboard, while nothing else has the focus (or the focus is in the timeline): ← → step, Shift = 10x, space play / pause,
+  // Home / End, Esc back to Na żywo, + / - speed
+  document.addEventListener("keydown", (e) => {
+    if (PICK || el.hidden || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    const t = e.target, inTl = el.contains(t);
+    if (!inTl && t !== document.body && t !== document.documentElement && t !== document) return;
+    const onBtn = t.closest && t.closest("button,a"), span = tl.hi - tl.lo;
+    const go = (v) => { tlStop(); tlSet(v); e.preventDefault(); };
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") go((tl.cur ?? tl.hi) + (e.key === "ArrowRight" ? 1 : -1) * (e.shiftKey ? span / 10 : Math.max(1, span / 100)));
+    else if (e.key === "Home") go(tl.lo);
+    else if (e.key === "End") go(tl.hi);
+    else if ((e.key === " " || e.key === "k") && !onBtn) { e.preventDefault(); tlPlay(); }
+    else if (e.key === "Escape" && tl.cur != null) { e.preventDefault(); tlStop(); tlSet(null); }
+    else if (e.key === "+" || e.key === "=") { e.preventDefault(); tlSpeed(1); }
+    else if (e.key === "-") { e.preventDefault(); tlSpeed(-1); }
   });
+  // feed: hover marks the incident, a click opens it in Historia at that moment (histURL from the #1 block)
+  const feed = $("tlFeed");
+  if (feed) {
+    feed.addEventListener("mouseover", (e) => { const f = e.target.closest(".fe[data-sc]"); setHl(f ? f.dataset.sc : null); });
+    feed.addEventListener("mouseleave", () => setHl(null));
+    feed.addEventListener("click", (e) => { const f = e.target.closest(".fe[data-sc]"); if (f) location.href = histURL(f.dataset.sc, f.dataset.at); });
+  }
   const narrow = matchMedia("(max-width:900px)");
   if (!narrow.matches) hoverHold(el, { holdMs: 3000 });
   $("tlMore").onclick = () => { const on = el.classList.toggle("peek"); $("tlMore").textContent = on ? "Zwiń oś" : "Oś czasu"; $("tlMore").setAttribute("aria-expanded", on); };

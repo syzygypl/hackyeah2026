@@ -294,6 +294,48 @@ body.pick .mk:focus-visible .dot{box-shadow:0 0 0 4px var(--rl-accent)}
   .pk{grid-template-columns:96px 40px 1fr auto;min-height:56px}
 }
 @media (max-width:420px){ .pk{grid-template-columns:auto 1fr;grid-template-rows:auto auto} .pk .pkt{justify-self:end} .pk .pkn{grid-column:1/-1} .pk .pkc{display:none} }
+/* --- #2 story (AI Mateusza #2): feed at the cursor, counts and team pool, Doradca brackets, lead-in, top 3 at the cursor */
+#tl .tlc b,#tl .tlp b{font-weight:700;color:var(--rl-ink)}
+#tl.scrub #tlNow{white-space:normal;overflow:visible}
+#tl .tlp{white-space:nowrap}
+#tl.scrub .tlp{display:block}
+body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #bar,body.tlplaying #advisor{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--rl-panel-solid)}
+@media (max-width:1200px){#tl .tllg .keys{display:none}}
+#tl .tlp{color:var(--rl-mute)}
+#tlFeed{margin-top:4px;display:flex;flex-direction:column;gap:1px;font-size:var(--rl-fs-xs)}
+#tlFeed[hidden]{display:none}
+#tlFeed .fe{display:flex;gap:6px;align-items:baseline;min-width:0;padding:1px 4px;border-radius:4px;color:var(--rl-ink-2);opacity:.72}
+#tlFeed .fe:first-child{opacity:1}
+#tlFeed .fe[data-sc]{cursor:pointer}
+#tlFeed .fe[data-sc]:hover{background:color-mix(in srgb,var(--rl-accent) 10%,transparent)}
+#tlFeed .fe.new{background:color-mix(in srgb,var(--rl-accent) 12%,transparent)}
+#tlFeed .ft{flex:none;color:var(--rl-mute)}
+#tlFeed .fe b{flex:none;color:var(--rl-ink)}
+#tlFeed .fx{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tlFeed .k-found b,#tlFeed .k-found .fx{color:var(--rl-ok);font-weight:700}
+#tlFeed .k-rep .fx{color:var(--rl-danger)}
+#tlFeed .k-hyp b,#tlFeed .k-hyp .fx{color:var(--rl-warn-ink);font-weight:700}
+#tlBody .tlpre{position:absolute;top:50%;height:2px;margin-top:-1px;border-top:2px dotted color-mix(in srgb,var(--rl-danger) 55%,transparent)}
+#tl .sw.pre{height:0;border-top:2px dotted color-mix(in srgb,var(--rl-danger) 55%,transparent);border-radius:0;background:none}
+#tl .sw.hyp{width:4px;height:12px;border-radius:1px;background:var(--rl-warn)}
+#tl .tllg .keys{flex-basis:100%;font-size:10.5px}
+#tl .tllg .daynote{flex-basis:100%;display:block;color:var(--rl-ink-2)}
+#tlBody .tlt{-webkit-mask-image:linear-gradient(90deg,#000,transparent);mask-image:linear-gradient(90deg,#000,transparent)}
+#tl .tlday{font-size:10.5px;font-weight:700;padding:0 5px;border-radius:5px;border:1px dashed var(--rl-line-strong);color:var(--rl-ink-2);cursor:help}
+.tlhg{position:relative}
+.tlhg::before{content:"";position:absolute;left:0;top:16px;bottom:2px;width:3px;border-radius:2px;background:var(--rl-line-strong);transition:background .2s}
+.tlhg .tlr .tln{padding-left:8px}
+#tlBody .tlhl{display:flex;align-items:center;height:16px}
+#tlBody .tlhl .tln{color:var(--rl-mute);font-weight:700;cursor:default}
+#tlBody .tlhl .hyx{position:absolute;top:1px;white-space:nowrap;font-size:10.5px;font-weight:700;color:var(--rl-mute);max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.tlhg.on::before{background:var(--rl-warn)}
+.tlhg.alarm.on::before{background:var(--rl-danger)}
+.tlhg.on .tlhl .tln,.tlhg.on .hyx{color:var(--rl-warn-ink)}
+.tlhg.alarm.on .tlhl .tln,.tlhg.alarm.on .hyx{color:var(--rl-danger)}
+.card.tl3on .top3:not(.tl3),.card.tl3on > .loading{display:none}
+.top3.tl3 .lbl{color:var(--rl-accent)}
+@media (prefers-reduced-motion:reduce){.tlhg::before{transition:none}}
+@media (max-width:900px){#tlFeed .fe:nth-child(3){display:none}}
 /* #1 (AI Mateusza #1): timeline markers open Historia at that moment */
 #tl .tlr .tlk[data-at]{cursor:pointer}
 #tl .tlr .tlk[data-at]:hover{transform:scale(1.5)}
