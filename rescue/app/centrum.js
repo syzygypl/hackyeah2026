@@ -992,3 +992,34 @@ setInterval(tick, POLL_MS);
 tick();
 window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, get map() { return map; }, tl, tlSet };   // tests
 initMap().catch((e) => console.warn("[centrum] map", e));
+
+// ---------- Symulacja 24/7 (AI Mateusza #2, livefeed.js, docs/rescue-locator/live-feed.md): a fictional daily schedule of
+// incident starts (>= 100 a day, looping); the bell in the header announces each new one (toast), operators open or ACK it.
+const sim = { on: false, entries: [], source: null, insts: [], bell: null, lf: null };
+async function simInit() {
+  if (PICK) return;
+  const lf = sim.lf = await import("./livefeed.js");
+  const host = document.createElement("span"); host.id = "simBox";
+  host.innerHTML = `<button id="simTog" type="button" aria-pressed="false" title="Symulacja 24/7: fikcyjne zgłoszenia według dobowego grafiku (ponad 100 na dobę, w pętli). Kliknij, aby włączyć / wyłączyć.">Symulacja 24/7</button><span id="simNote">${esc(lf.SIM_NOTE)}</span>`;
+  $("clock").before(host);
+  $("simTog").onclick = () => { lf.setSimEnabled(!sim.on); simApply(); };
+  try { const s = await lf.loadSchedule(); sim.entries = s.entries; sim.source = s.source; } catch (e) { console.warn("[centrum] schedule", e); }
+  sim.bell = lf.mountBell(host, { openURL: (i, clock) => histURL(i.sc, clock) });
+  simApply();
+  setInterval(simTick, 5000);
+  setInterval(() => lf.acks.sync(), 15000); lf.acks.sync();
+}
+function simApply() {
+  sim.on = sim.lf.simEnabled();
+  $("simTog").setAttribute("aria-pressed", sim.on); $("simTog").classList.toggle("on", sim.on);
+  $("simBox").classList.toggle("on", sim.on);
+  const w = $("simBox").querySelector(".lfw"); if (w) w.hidden = !sim.on;
+  simTick();
+}
+function simTick() {
+  if (!sim.lf) return;
+  sim.insts = sim.on ? sim.lf.instancesAt(sim.entries, sim.lf.nowMs(), { pastMin: 120 }) : [];
+  if (sim.bell) sim.bell.update(sim.insts);
+}
+simInit().catch((e) => console.warn("[centrum] sim", e));
+window.rescueSim = sim;   // tests

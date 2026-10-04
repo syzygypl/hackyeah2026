@@ -351,3 +351,10 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 #advisor .advrow.on{border-color:var(--rl-line-strong);background:var(--rl-card)}
 #advisor .advrow .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 #advisor .advrow .lvl{font-size:var(--rl-fs-xs)}
+/* Symulacja 24/7 (livefeed.js): switch + note + bell in the header */
+#simBox{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+#simTog{min-height:36px;padding:0 10px;border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius);background:var(--rl-panel-2);color:var(--rl-ink-2);font:inherit;font-size:var(--rl-fs-s);cursor:pointer}
+#simTog.on{background:var(--rl-warn);border-color:var(--rl-warn-ink);color:var(--rl-ink);font-weight:700}
+#simNote{font-size:var(--rl-fs-xs);color:var(--rl-warn-ink);max-width:16em;line-height:1.2}
+#simBox:not(.on) #simNote{display:none}
+@media (max-width:900px){#simTog{min-height:44px}#simNote{max-width:none}}
