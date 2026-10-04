@@ -15,6 +15,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 | Operator, Historia od początku | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=hist&step=0 |
 | Operator, Na żywo | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=live |
 | Centrum | https://rescue-locator.vercel.app/app/centrum.html |
+| Centrum, oś całej doby i Dzień w Centrum (Tryb pokazu) | https://rescue-locator.vercel.app/app/centrum.html?demo=1 (albo przycisk **Tryb pokazu** obok Na żywo; bez niego oś pokazuje dobę tylko do teraz) |
 | Ratownik (bez klucza, tylko podgląd) | https://rescue-locator.vercel.app/app/?role=ratownik |
 | Widziałem (mieszkańcy, Kraków) | https://rescue-locator.vercel.app/web/seen/ |
 | Porównanie (jedna relacja zmienia top 3) | https://rescue-locator.vercel.app/app/porownanie.html |
