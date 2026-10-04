@@ -46,7 +46,7 @@
   var q = new URLSearchParams(location.search), sc = q.get('sc') || 'zawrat';
   if (!/^[a-z0-9-]{1,40}$/.test(sc) || /blind/.test(sc) || q.has('dem') || q.has('scenario') || q.has('terrain') || q.get('wide') === '0') return;
   var pre = window.__pre3d = {};
-  ['data/' + sc + '-dem-wide.json', 'data/' + sc + '-osm3d.json', '../../scenarios/' + sc + '.json', '../../scenarios/' + sc + '-terrain.json'].forEach(function (u) {
+  ['data/' + sc + '-dem-wide.json', 'data/' + sc + '-osm3d.json', 'data/' + sc + '-traffic.json', '../../scenarios/' + sc + '.json', '../../scenarios/' + sc + '-terrain.json'].forEach(function (u) {
     var url = new URL(u, location.href).href;
     pre[url] = fetch(url, { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); });
     pre[url].catch(function () {}); // a missing optional file is handled by getJSON

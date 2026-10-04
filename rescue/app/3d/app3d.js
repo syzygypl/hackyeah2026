@@ -136,12 +136,13 @@ const loadRun = async () => {
     throw e;
   }
 };
-let R, SCN, TER, DEM, REV, DEM_FULL, FLAT = false, WIDE = false, OSM3D = null;
+let R, SCN, TER, DEM, REV, DEM_FULL, FLAT = false, WIDE = false, OSM3D = null, TRAF = null;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
-  [R, SCN, TER, DEM, REV, OSM3D] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
+  [R, SCN, TER, DEM, REV, OSM3D, TRAF] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
     (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => { WIDE = !!d; return d || getJSON(P.dem, true); }), P.reveal ? getJSON(P.reveal, true) : null,
-    getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-osm3d.json`, true)]); // buildings, roads, land cover (make_osm3d.py)
+    getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-osm3d.json`, true), // buildings, roads, land cover (make_osm3d.py)
+    getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-traffic.json`, true)]); // roads open to motor traffic, for the cars (make_traffic.py)
   if (!R && SCN) R = synthRun(SCN);
   // no elevation model for this scenario (e.g. a new one from the Studio): flat ground at 1000 m over the run's bbox, so
   // the probability map, signals, teams and the blind test still work; a note says the relief is missing
@@ -1195,19 +1196,21 @@ const buildings = (() => {
   return m;
 })();
 await yieldMain();
-// ---------- traffic: cars driving along the OSM roads (data/<sc>-osm3d.json roads; decorative, not engine data) ----------
-// Ways sharing an end point form a network: at the end of a way a car turns into a random other way leaving that node
+// ---------- traffic: cars driving along the OSM roads (data/<sc>-traffic.json; decorative, not engine data) ----------
+// Only roads open to public motor traffic (make_traffic.py: no service roads, pedestrian zones, tracks or trails, no
+// access=no/private/..., no dead-end roads inside a national park such as the Morskie Oko road above Palenica). The
+// painted roads of <sc>-osm3d.json are not used: without a traffic file there are no cars. Ways sharing an end point form a network: at the end of a way a car turns into a random other way leaving that node
 // (or turns back at a dead end). Right-hand traffic: each car is offset into its lane from the way's centre line. Density
-// and speed by class (major 50 km/h, 5 cars/km; minor 30 km/h, 1.6/km; service 20 km/h, 0.6/km), at most MAX cars over the
+// and speed by class (major 50 km/h, 5 cars/km; minor 30 km/h, 1.6/km), at most MAX cars over the
 // cut. One InstancedMesh for the bodies and one for the lights (head white, tail red), plus a glow point per lamp pair
 // (additive, a few px at any zoom); the lights show at dusk and night (the mood's uNight). Cars are drawn 1.5x (they sit next to stylised, oversized trees) and grow up to 4x when the camera is far, so the flow still reads in the overview. No shadows: the
 // shadow map is rendered only when the view settles. Button "Ruch" / ?traffic=0 hides them (and stops the per-frame update).
 const traffic = (() => {
-  if (!OSM || Q.get('traffic') === '0') return null;
-  const CLS = { major: [50, 5, 0.0018], minor: [30, 1.6, 0.0014], service: [20, 0.6, 0.0012] }; // km/h, cars per km, lane offset (km)
+  if (!TRAF?.r?.length || Q.get('traffic') === '0') return null;
+  const CLS = { major: [50, 5, 0.0018], minor: [30, 1.6, 0.0014] }; // km/h, cars per km, lane offset (km)
   const ways = [], nodes = new Map(), key = (la, lo) => Math.round(la * 1e5) + ',' + Math.round(lo * 1e5);
-  for (const r of OSM.roads) {
-    const cl = CLS[r.c]; if (!cl || r.l.length < 4) continue;
+  for (const [c, l] of TRAF.r) {
+    const cl = CLS[c], r = { l: dec(l) }; if (!cl || r.l.length < 4) continue;
     const xz = [], cum = [0];
     for (let i = 0; i < r.l.length; i += 2) {
       const la = r.l[i], lo = r.l[i + 1];
