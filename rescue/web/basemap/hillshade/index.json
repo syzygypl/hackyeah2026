@@ -25,6 +25,19 @@
    ]
   ]
  },
+ "kajak-pieniny": {
+  "file": "hillshade/kajak-pieniny.png",
+  "bounds": [
+   [
+    20.374166666666667,
+    49.37638888888889
+   ],
+   [
+    20.490833333333335,
+    49.45861111111111
+   ]
+  ]
+ },
  "karkonosze-sniezka": {
   "file": "hillshade/karkonosze-sniezka.png",
   "bounds": [

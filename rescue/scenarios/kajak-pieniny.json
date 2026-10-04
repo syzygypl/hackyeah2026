@@ -1,0 +1,164 @@
+{
+  "incident": "Kajakarz porwany przez wezbrany Dunajec - Pieniny, Przełom Dunajca pod Sokolicą (scenariusz fikcyjny)",
+  "date": "2026-07-18",
+  "startClock": "16:35",
+  "subject": {
+    "name": "Tomasz K. (osoba fikcyjna)",
+    "age": 31,
+    "category": "boater",
+    "note": "Grupa czterech kajakarzy z Krakowa wypłynęła o 15:40 z przystani w Sromowcach Niżnych. Po burzy w górnej części zlewni (Podhale) ok. 16:10 przyszło nagłe wezbranie Dunajca: szybki przybór wody, mętny nurt, płynące gałęzie i pnie. O 16:20 pod Sokolicą kajak Tomasza uderzył w zaczepiony pień i się wywrócił, nurt zabrał go w dół rzeki. Pozostali trzej dobili do prawego brzegu przy Drodze Pienińskiej. Kamizelka asekuracyjna tak, kask nie. Telefon w wodoszczelnym etui. Woda 14°C. Zgłoszenie na 112 od uczestnika spływu o 16:35.",
+    "lastContact": "16:20"
+  },
+  "bbox": { "south": 49.39, "west": 20.395, "north": 49.445, "east": 20.47 },
+  "cellM": 100,
+  "ipp": {
+    "name": "LKP: wywrotka kajaka pod Sokolicą (ostatnie pewne miejsce, 16:20)",
+    "at": [49.4164, 20.4373]
+  },
+  "terrain": { "trails": [], "streams": [], "ridges": [], "lakes": [], "huts": [] },
+  "segments": [
+    { "id": "D1", "name": "Dunajec: przystań Sromowce Niżne - Czerwony Klasztor", "seed": [49.3998, 20.4148] },
+    { "id": "D2", "name": "Dunajec: zakole pod Łysiną (Hajducka Zahrada)", "seed": [49.4048, 20.4198] },
+    { "id": "D3", "name": "Dunajec: zakole południowe pod Klejową", "seed": [49.3975, 20.4330] },
+    { "id": "D4", "name": "Dunajec: pod Facimiechem", "seed": [49.4075, 20.4345] },
+    { "id": "D5", "name": "Dunajec: pod Trzema Koronami (Grota)", "seed": [49.4120, 20.4296] },
+    { "id": "D6", "name": "Dunajec: pod Sokolicą (miejsce wywrotki)", "seed": [49.4168, 20.4362] },
+    { "id": "D7", "name": "Dunajec: zakole pod Przechodnim Wierchem", "seed": [49.4128, 20.4460] },
+    { "id": "D8", "name": "Łachy żwirowe pod Białą Skałą (wierzby)", "seed": [49.4168, 20.4478] },
+    { "id": "D9", "name": "Dunajec: Kače - wejście do Szczawnicy", "seed": [49.4185, 20.4545] },
+    { "id": "D10", "name": "Przystań Flisacka Szczawnica (koniec spływu)", "seed": [49.4228, 20.4592] },
+    { "id": "D11", "name": "Dunajec: Piaski - Szczawnica Niżna (łacha)", "seed": [49.4256, 20.4480] },
+    { "id": "D12", "name": "Dunajec: Krościenko, przystań flisacka", "seed": [49.4370, 20.4380] },
+    { "id": "D13", "name": "Stoki Sokolicy i Czertezika (PL, strome)", "seed": [49.4215, 20.4385] },
+    { "id": "D14", "name": "Prawy brzeg: Droga Pienińska i stoki Holicy (SK)", "seed": [49.4085, 20.4450] },
+    { "id": "D15", "name": "Masyw Trzech Koron (PL)", "seed": [49.4140, 20.4150] },
+    { "id": "D16", "name": "Szczawnica - zabudowa", "seed": [49.4300, 20.4620] },
+    { "id": "D17", "name": "Krościenko nad Dunajcem - zabudowa", "seed": [49.4400, 20.4240] },
+    { "id": "D18", "name": "Czerwony Klasztor - Majerské Lúky (SK)", "seed": [49.3925, 20.4100] }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): łacha żwirowa z wierzbami pod Białą Skałą",
+    "at": [49.4169, 20.4476]
+  },
+  "events": [
+    {
+      "provider": "Terrain",
+      "at": "16:35",
+      "title": "Teren: przełom Dunajca, wąskie koryto między skałami, łachy żwirowe i wierzby",
+      "detail": "Rzeka po nagłym wezbraniu: szybki nurt, mętna woda, dużo naniesionego drewna. Lewy brzeg (PL) stromy, prawy (SK) z Drogą Pienińską.",
+      "factor": 1
+    },
+    {
+      "provider": "TerrainDifficulty",
+      "at": "16:35",
+      "title": "Trudność: wezbrana rzeka w przełomie, strome brzegi",
+      "detail": "Do koryta tylko łodzie WOPR / PSP. Patrole piesze z Drogi Pienińskiej i ze ścieżek nad brzegiem, na łachy tylko z asekuracją."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "16:35",
+      "title": "Warunki: po burzy, słaby deszcz, 17°C, wiatr 4 m/s z W",
+      "detail": "Burza nad Podhalem 15:10-15:50. Woda w Dunajcu nadal przybiera. Zachód słońca ok. 20:45. Widzialność 3 km.",
+      "visibilityM": 3000,
+      "windMs": 4,
+      "windFromDeg": 260,
+      "tempC": 17,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "16:35",
+      "title": "Pierścienie od miejsca wywrotki (osoba w wodzie, przybliżenie)",
+      "detail": "Bez kierunku: 0.5 / 1.2 / 2.5 / 4.5 km. Nurt niesie w dół rzeki, patrz ślady.",
+      "point": [49.4164, 20.4373],
+      "quantilesKm": [0.5, 1.2, 2.5, 4.5]
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "16:45",
+      "title": "CPR Kraków: telefon zaginionego aktywny, BTS Szczawnica",
+      "detail": "Telefon w etui loguje się do sieci, ale nie odbiera. Sektor obejmuje przełom od Sokolicy do Szczawnicy, promień 1.5 km.",
+      "point": [49.4185, 20.4470],
+      "radiusM": 1500
+    },
+    {
+      "provider": "Clue",
+      "at": "16:55",
+      "title": "Flisacy: pusty niebieski kajak minął przystań w Szczawnicy ok. 16:40",
+      "detail": "Flisacy z przystani końcowej: kajak dnem do góry, bez wiosła, płynął szybko z wezbraną wodą. Nikogo przy nim nie widzieli.",
+      "point": [49.4228, 20.4592],
+      "radiusM": 300,
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "Clue",
+      "at": "17:05",
+      "title": "Ślad: kajak zatrzymany na łasze przy Piaskach (Szczawnica), pusty",
+      "detail": "Policja Szczawnica: kajak wbity w gałęzie na łasze, kamizelki brak. Kajak płynie dalej niż człowiek, który chwyta się brzegu.",
+      "point": [49.4266, 20.4415],
+      "radiusM": 300
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "17:20",
+      "title": "Łódź PSP: koryto od Sokolicy do przystani w Szczawnicy, nic",
+      "detail": "Szybki przepływ i mętna woda po wezbraniu: przejście z nurtem, bez zatrzymywania. POD 45%.",
+      "segments": ["D6", "D9", "D10"],
+      "pod": 0.45
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "17:30",
+      "title": "Warunki: deszcz ustał, wiatr 3 m/s, 16°C",
+      "detail": "Poziom wody stabilizuje się, nurt nadal szybki. Widzialność 5 km.",
+      "visibilityM": 5000,
+      "windMs": 3,
+      "tempC": 16,
+      "precip": "none"
+    },
+    {
+      "provider": "Clue",
+      "at": "17:35",
+      "title": "Świadek z Drogi Pienińskiej: ok. 16:25 ktoś chwytał się gałęzi przy łachach pod Białą Skałą",
+      "detail": "Rowerzystka zadzwoniła po komunikacie w radiu: widziała głowę w wodzie i rękę na wierzbie przy łasze żwirowej, potem straciła go z oczu.",
+      "point": [49.4166, 20.4470],
+      "radiusM": 400,
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "17:40",
+      "title": "Dron termowizyjny PSP: łachy przy Piaskach i odcinek do Krościenka, nic",
+      "detail": "Termowizja po deszczu działa dobrze na brzegu, słabo w wodzie. POD 70%.",
+      "segments": ["D11", "D12"],
+      "pod": 0.7
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "17:50",
+      "title": "Policja + GOPR: lewy brzeg pod Trzema Koronami i stoki Sokolicy, nic",
+      "detail": "Ścieżki nad brzegiem i piargi pod ścianami. POD 60%.",
+      "segments": ["D5", "D13"],
+      "pod": 0.6
+    },
+    {
+      "provider": "Clue",
+      "at": "18:05",
+      "title": "ZNALEZIONO: załoga łodzi WOPR na łasze żwirowej pod Białą Skałą",
+      "detail": "Wychłodzony, przytomny, trzymał się wierzb na łasze w połowie koryta. Przekazany ZRM na przystani w Szczawnicy. Meldunek załogi, nie GPS.",
+      "point": [49.4169, 20.4476],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "resources": [
+    { "id": "wopr-pieniny", "name": "Łódź WOPR Pieniny (Czorsztyn)", "type": "boat", "base": [49.3988, 20.4143], "readyAt": "17:10" },
+    { "id": "psp-lodz-szczawnica", "name": "Łódź PSP JRG Nowy Targ z OSP Szczawnica", "type": "boat", "base": [49.4228, 20.4592], "readyAt": "16:55" },
+    { "id": "policja-szczawnica", "name": "Policja Szczawnica - patrol brzegowy", "type": "ground", "base": [49.4313, 20.4679], "readyAt": "16:50" },
+    { "id": "gopr-pieniny", "name": "GOPR Podhale - patrol Krościenko (Pieniny)", "type": "ground", "base": [49.4400, 20.4290], "readyAt": "17:00" },
+    { "id": "dron-psp-nowy-targ", "name": "Dron termowizyjny PSP Nowy Targ", "type": "drone", "base": [49.4228, 20.4592], "readyAt": "17:25" },
+    { "id": "nurkowie-psp-nowy-sacz", "name": "Nurkowie PSP (SGRW Nowy Sącz)", "type": "diver", "base": [49.4228, 20.4592], "readyAt": "17:55" },
+    { "id": "lpr-krakow", "name": "Śmigłowiec LPR (Kraków), ZRM w gotowości w Szczawnicy", "type": "heli", "base": [50.0777, 19.7848], "readyAt": "17:15" }
+  ]
+}

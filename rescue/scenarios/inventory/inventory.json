@@ -513,6 +513,77 @@
    "fictional": true
   },
   {
+   "id": "dron-psp-nowy-targ",
+   "kind": "dron",
+   "name": "Dron termowizyjny PSP Nowy Targ",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-727",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 139.2,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 118.4,
+    "lastMaintenance": "2026-09-06"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-15",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-01",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-PSP-NOWY-TARG-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-PSP-NOWY-TARG-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "Dron termowizyjny PSP Nowy Targ",
+     "readyAt": "17:25",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "DRON-PSP-NOWY-TARG-1 (fikcyjny)",
+       "role": "operator drona (PSP)"
+      },
+      {
+       "name": "DRON-PSP-NOWY-TARG-2 (fikcyjny)",
+       "role": "obserwator (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "drone",
    "kind": "dron",
    "name": "Dron termowizyjny GOPR",
@@ -1347,6 +1418,77 @@
    "fictional": true
   },
   {
+   "id": "gopr-pieniny",
+   "kind": "pieszy",
+   "name": "GOPR Podhale - patrol Krościenko (Pieniny)",
+   "base": "Pieniny",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-584",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-10",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-PIENINY-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-PIENINY-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-PIENINY-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-PIENINY-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "GOPR Podhale - patrol Krościenko (Pieniny)",
+     "readyAt": "17:00",
+     "base": "Pieniny",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-PIENINY-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-PIENINY-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-PIENINY-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-PIENINY-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "heli",
    "kind": "smiglowiec",
    "name": "Śmigłowiec Policji (Rzeszów)",
@@ -1747,6 +1889,154 @@
       {
        "name": "HELI-LPR-SANOK-3 (fikcyjny)",
        "role": "ratownik (LPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "lpr-krakow",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Kraków), ZRM w gotowości w Szczawnicy",
+   "base": "Kraków",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "LPR-746",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 2621.8,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 2591.0,
+    "lastMaintenance": "2026-09-13"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-26",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "LPR-KRAKOW-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "LPR-KRAKOW-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "LPR-KRAKOW-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "Śmigłowiec LPR (Kraków), ZRM w gotowości w Szczawnicy",
+     "readyAt": "17:15",
+     "base": "Kraków",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "LPR-KRAKOW-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "LPR-KRAKOW-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "LPR-KRAKOW-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "nurkowie-psp-nowy-sacz",
+   "kind": "nurkowie",
+   "name": "Nurkowie PSP (SGRW Nowy Sącz)",
+   "base": "SGRW Nowy Sącz",
+   "model": "grupa ratownictwa wodnego, nurkowie (fikcyjna)",
+   "callsign": "NURKOWIE-540",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "butla 12 l (pełna)",
+     "qty": 6
+    },
+    {
+     "item": "skafander suchy",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-12",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "NURKOWIE-PSP-NOWY-SACZ-1 (fikcyjny)",
+     "role": "nurek kierujący"
+    },
+    {
+     "name": "NURKOWIE-PSP-NOWY-SACZ-2 (fikcyjny)",
+     "role": "nurek roboczy"
+    },
+    {
+     "name": "NURKOWIE-PSP-NOWY-SACZ-3 (fikcyjny)",
+     "role": "nurek asekuracyjny"
+    },
+    {
+     "name": "NURKOWIE-PSP-NOWY-SACZ-4 (fikcyjny)",
+     "role": "sygnalista"
+    },
+    {
+     "name": "NURKOWIE-PSP-NOWY-SACZ-5 (fikcyjny)",
+     "role": "sprzętowiec"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "Nurkowie PSP (SGRW Nowy Sącz)",
+     "readyAt": "17:55",
+     "base": "SGRW Nowy Sącz",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "NURKOWIE-PSP-NOWY-SACZ-1 (fikcyjny)",
+       "role": "nurek kierujący (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-NOWY-SACZ-2 (fikcyjny)",
+       "role": "nurek roboczy (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-NOWY-SACZ-3 (fikcyjny)",
+       "role": "nurek asekuracyjny (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-NOWY-SACZ-4 (fikcyjny)",
+       "role": "sygnalista (PSP)"
+      },
+      {
+       "name": "NURKOWIE-PSP-NOWY-SACZ-5 (fikcyjny)",
+       "role": "sprzętowiec (PSP)"
       }
      ]
     }
@@ -2234,6 +2524,61 @@
    "fictional": true
   },
   {
+   "id": "policja-szczawnica",
+   "kind": "pieszy",
+   "name": "Policja Szczawnica - patrol brzegowy",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POLICJA-763",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-04",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POLICJA-SZCZAWNICA-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POLICJA-SZCZAWNICA-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "Policja Szczawnica - patrol brzegowy",
+     "readyAt": "16:50",
+     "base": "baza wg scenariusza",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POLICJA-SZCZAWNICA-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POLICJA-SZCZAWNICA-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
    "id": "psp-boat",
    "kind": "lodz",
    "name": "Łódź PSP JRG Pisz",
@@ -2507,6 +2852,75 @@
       },
       {
        "name": "PSP-LODZ-SANOK-3 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-lodz-szczawnica",
+   "kind": "lodz",
+   "name": "Łódź PSP JRG Nowy Targ z OSP Szczawnica",
+   "base": "baza wg scenariusza",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "PSP-356",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 648.0,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 599.3,
+    "lastMaintenance": "2026-09-14"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-21",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-LODZ-SZCZAWNICA-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "PSP-LODZ-SZCZAWNICA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-LODZ-SZCZAWNICA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "Łódź PSP JRG Nowy Targ z OSP Szczawnica",
+     "readyAt": "16:55",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LODZ-SZCZAWNICA-1 (fikcyjny)",
+       "role": "sternik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SZCZAWNICA-2 (fikcyjny)",
+       "role": "ratownik (PSP)"
+      },
+      {
+       "name": "PSP-LODZ-SZCZAWNICA-3 (fikcyjny)",
        "role": "ratownik (PSP)"
       }
      ]
@@ -2943,6 +3357,67 @@
       },
       {
        "name": "WOPR-JETSKI-2 (fikcyjny)",
+       "role": "ratownik (WOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "wopr-pieniny",
+   "kind": "lodz",
+   "name": "Łódź WOPR Pieniny (Czorsztyn)",
+   "base": "Czorsztyn",
+   "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
+   "callsign": "WOPR-932",
+   "equipment": {
+    "enduranceMin": 240,
+    "hoursTotal": 411.6,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 399.8,
+    "lastMaintenance": "2026-09-12"
+   },
+   "spares": [
+    {
+     "item": "kanister paliwa 20 l",
+     "qty": 2
+    },
+    {
+     "item": "kamizelki ratunkowe",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-05",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "WOPR-PIENINY-1 (fikcyjny)",
+     "role": "sternik"
+    },
+    {
+     "name": "WOPR-PIENINY-2 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "kajak-pieniny": {
+     "name": "Łódź WOPR Pieniny (Czorsztyn)",
+     "readyAt": "17:10",
+     "base": "Czorsztyn",
+     "operator": "WOPR",
+     "crew": [
+      {
+       "name": "WOPR-PIENINY-1 (fikcyjny)",
+       "role": "sternik (WOPR)"
+      },
+      {
+       "name": "WOPR-PIENINY-2 (fikcyjny)",
        "role": "ratownik (WOPR)"
       }
      ]
