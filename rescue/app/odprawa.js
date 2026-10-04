@@ -79,21 +79,22 @@
     $("topNote").textContent = `· top 3 to ${pct(area)} obszaru`;
     // who covers the sector: new assignments, plus teams already working there (busy, not re-planned)
     const asg = (id) => st.assignments.filter((a) => a.segmentId === id).map((a) => short(resName(st, a.resourceId)))
-      .concat((st.resources || []).filter((r) => r.currentSegment === id && !r.available && /przeszuk/.test(r.reason || "") && !st.assignments.some((a) => a.resourceId === r.id)).map((r) => short(r.name) + " (już tam)"));
+      .concat((st.resources || []).filter((r) => r.currentSegment === id && !r.available && !done(st, r) && /przeszuk/.test(r.reason || "") && !st.assignments.some((a) => a.resourceId === r.id)).map((r) => short(r.name) + " (już tam)"));
     $("top3").innerHTML = top.map((x, i) => `<li><span class="rk">${i + 1}</span><b>${esc(x.id)}</b> ${esc(x.name)}<span class="ar">${pct(+x.areaPct)} obszaru</span><span class="who">${asg(x.id).length ? "→ " + esc(asg(x.id).join(", ")) : "<i>bez zespołu</i>"}</span></li>`).join("");
 
     const warns = {}; for (const u of (inv && inv.units) || []) warns[u.id] = u.warnings || [];
     const rows = [], seen = new Set();
     for (const a of st.assignments) {
       seen.add(a.resourceId);
-      const flags = (a.safety || []).map((x) => `<span class="flag red">${esc(x)}</span>`).concat((warns[a.resourceId] || []).map((x) => `<span class="flag ${x.level === "red" ? "red" : ""}">${esc(x.text)}</span>`));
+      const flags = notes(st, a.resourceId, a.safety, warns).map((x) => `<span class="flag ${x.red ? "red" : ""}">${esc(x.t)}</span>`);
       const pod = a.pod != null ? ` · POD ok. ${Math.round(a.pod * 100)}%` : "";
-      rows.push(`<tr><td><b>${esc(short(resName(st, a.resourceId)))}</b></td><td><b>${esc(a.segmentId)}</b> ${esc(a.segmentName)}</td><td>przeszukać: dojście ${Math.round(a.travelMin ?? a.etaMin)} min · przeszukanie ${Math.max(1, Math.round(a.sweepMin || 0))} min${pod}</td><td>${flags.join(" ") || '<span class="mute">-</span>'}</td></tr>`);
+      rows.push(`<tr><td><b>${esc(short(resName(st, a.resourceId)))}</b></td><td><b>${esc(a.segmentId)}</b> ${esc(a.segmentName)}</td><td>przeszukać: dojście ${Math.round(a.travelMin ?? a.etaMin)} min · ${sweepTxt(a)}${pod}</td><td>${flags.join(" ") || '<span class="mute">-</span>'}</td></tr>`);
     }
     for (const r of st.resources || []) {
       if (seen.has(r.id)) continue;
-      const flags = (warns[r.id] || []).map((x) => `<span class="flag ${x.level === "red" ? "red" : ""}">${esc(x.text)}</span>`);
-      rows.push(`<tr class="busy"><td><b>${esc(short(r.name))}</b></td><td>${r.currentSegment ? `<b>${esc(r.currentSegment)}</b>` : "-"}</td><td>${esc(r.reason || (r.available ? "w odwodzie" : "niedostępny"))}</td><td>${flags.join(" ") || '<span class="mute">-</span>'}</td></tr>`);
+      const flags = notes(st, r.id, [], warns).map((x) => `<span class="flag ${x.red ? "red" : ""}">${esc(x.t)}</span>`);
+      const what = done(st, r) ? `zakończone (${esc(r.currentSegment || "")} do ${esc(r.busyUntil)}), wolny` : esc(r.reason || (r.available ? "w odwodzie" : "niedostępny"));
+      rows.push(`<tr class="busy"><td><b>${esc(short(r.name))}</b></td><td>${r.currentSegment && !done(st, r) ? `<b>${esc(r.currentSegment)}</b>` : "-"}</td><td>${what}</td><td>${flags.join(" ") || '<span class="mute">-</span>'}</td></tr>`);
     }
     $("teams").innerHTML = rows.join("") || `<tr><td colspan="4" class="mute">Brak zespołów w tej akcji.</td></tr>`;
 
@@ -116,9 +117,9 @@
     el.innerHTML = st.assignments.map((a, i) => {
       const seg = st.segments.find((x) => x.id === a.segmentId) || {}, poly = (seg.polygon || []).slice(0, -1);
       const lat = poly.reduce((s2, q) => s2 + q[1], 0) / (poly.length || 1), lon = poly.reduce((s2, q) => s2 + q[0], 0) / (poly.length || 1);
-      const u = units[a.resourceId] || {}, tr = Math.round(a.travelMin ?? a.etaMin), sw = Math.max(1, Math.round(a.sweepMin || 0));
+      const u = units[a.resourceId] || {}, tr = Math.round(a.travelMin ?? a.etaMin), sw = sweepEnd(a);
       const rank = top.findIndex((x) => x.id === a.segmentId) + 1;
-      const flags = (a.safety || []).map((x) => `<li class="red">${esc(x)}</li>`).concat((warns[a.resourceId] || []).map((x) => `<li class="${x.level === "red" ? "red" : ""}">${esc(x.text)}</li>`));
+      const flags = notes(st, a.resourceId, a.safety, warns).map((x) => `<li class="${x.red ? "red" : ""}">${esc(x.t)}</li>`);
       return `<article class="tcard">
         <header><span class="od-kicker">Karta zadania ${i + 1}/${st.assignments.length}</span><h2>${esc(short(resName(st, a.resourceId)))}${u.callsign ? ` <span class="cs">${esc(u.callsign)}</span>` : ""}</h2>
           <div class="mute">${esc(title)} · ${esc(run.date || "")} ${esc(st.t)} · ${live ? "na żywo" : "nagranie"}</div></header>
@@ -129,12 +130,12 @@
             <p class="mono">środek sektora: ${lat.toFixed(5)} N, ${lon.toFixed(5)} E</p>
             <p>Sektor: ${(+seg.areaPct || 0).toFixed(1).replace(".", ",")}% obszaru</p>
             <table class="tc-t"><tr><th>Wyjście</th><td>${esc(st.t)}</td></tr><tr><th>Na miejscu ok.</th><td>${hm(now + tr)} (dojście ${tr} min)</td></tr>
-              <tr><th>Koniec przeszukania ok.</th><td>${hm(now + tr + sw)} (${sw} min)</td></tr><tr><th>Skuteczność (POD)</th><td>${a.pod != null ? "ok. " + Math.round(a.pod * 100) + "%" : "-"}</td></tr>
-              <tr><th>Meldunek co</th><td>30 min i po sektorze</td></tr><tr><th>Kanał</th><td></td></tr></table>
+              <tr><th>Koniec przeszukania ok.</th><td>${hm(now + tr + sw)} (${sweepTxt(a)})</td></tr><tr><th>Skuteczność (POD)</th><td>${a.pod != null ? "ok. " + Math.round(a.pod * 100) + "%" : "-"}</td></tr>
+              <tr><th>Meldunek co</th><td>30 min i po sektorze</td></tr><tr><th>Kanał</th><td class="write"></td></tr></table>
             ${u.crew && u.crew.length ? `<p class="small">Skład: ${esc(u.crew.map((c) => c.name).join(", "))}</p>` : ""}
           </div>
         </div>
-        <div class="tc-safety"><h3>Bezpieczeństwo</h3>${flags.length ? `<ul>${flags.join("")}</ul>` : `<p class="mute">Brak uwag silnika i sprzętu. Zasady ogólne obowiązują.</p>`}</div>
+        ${flags.length ? `<div class="tc-safety"><h3>Bezpieczeństwo i warunki</h3><ul>${flags.join("")}</ul></div>` : ""}
         <div class="tc-report"><h3>Meldunek zwrotny</h3><span>☐ przeszukane, nic</span><span>☐ częściowo</span><span>☐ ślad / znaleziono</span><span>godz. ______</span><span>uwagi: ____________________________</span></div>
         <footer>Dane fikcyjne / narzędzie pomocnicze - decyzję podejmuje kierownik akcji.</footer>
       </article>`;
@@ -157,6 +158,21 @@
     if (need() > a4) s.classList.add("dense");
     if (need() > a4) s.classList.add("dense2");
   }
+  // notes for a team: engine safety gates, inventory warnings, and the engine's condition in brackets ("dostępny (lot nocny z NVG)")
+  // plus, for aircraft, the step's weather note (wind / NVG limits); empty list = the line is left out
+  function notes(st, id, safety, warns) {
+    const r = (st.resources || []).find((x) => x.id === id) || {}, out = [];
+    for (const x of safety || []) out.push({ t: x, red: true });
+    for (const w of warns[id] || []) out.push({ t: w.text, red: w.level === "red" });
+    const m = /\(([^)]+)\)/.exec(r.reason || ""); if (m && !/doszedł|dyżurk|przekierow/.test(m[1])) out.push({ t: "warunki: " + m[1] });
+    const wn = st.weather && st.weather.note; if (wn && (r.type === "heli" || r.type === "drone") && /dron|śmigłow|lot|NVG/i.test(wn)) out.push({ t: wn.replace(/^Widzialność \d+ m\.\s*/, "") });
+    return out;
+  }
+  // sweep: the engine's minutes; a sub-5-minute value is an aircraft pass over a small sector, so say that instead of "1 min"
+  const sweepTxt = (a) => (a.sweepMin || 0) < 5 ? "przelot nad sektorem, poniżej 5 min" : `przeszukanie ${Math.round(a.sweepMin)} min`;
+  const sweepEnd = (a) => Math.max(5, Math.round(a.sweepMin || 0));
+  // a busy team whose task already ended at this moment (busyUntilMinute <= step minute) is listed as finished, not as working
+  const done = (st, r) => r.busyUntilMinute != null && r.busyUntilMinute <= st.minute;
   const resName = (st, id) => ((st.resources || []).find((r) => r.id === id) || {}).name || id;
   const catPL = (c) => ({ hiker: "turysta pieszy", child: "dziecko", dementia: "osoba z demencją", hunter: "grzybiarz / myśliwy", water: "na wodzie", skier: "narciarz" })[c] || c;
   const precipPL = (p) => ({ rain: "deszcz", snow: "śnieg", drizzle: "mżawka" })[p] || p;
