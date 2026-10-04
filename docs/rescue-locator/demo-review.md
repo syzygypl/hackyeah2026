@@ -93,3 +93,50 @@ Lista scenariuszy (`/api/scenarios`, 18): **duplikat** `morzycko` i `tragedia-w-
 | 10 | Drobne: `/scenarios/studio.json` 404 przy każdym wejściu operatora; "2.39 km" z kropką (dziennik zespołu, Zasoby); "PIN" w Ćwiczeniach vs "Klucz"; angielskie zdanie na stronie startowej; Centrum -> Zawrat otwiera 20:03, karta mówi 19:45; operator na telefonie: pasek na pół ekranu | kosmetyczne | AI Marcina (app.js, actorlog.js, cwiczenia, start) / AI Mateusza #2 (start.html:27, centrum.js) | jw. |
 
 Nie sprawdzone: zapisy (meldunek, przydział, ACK, ZNALEZIONO, reset - blokowane z założenia), prawdziwy telefon przez LTE i GPS, Plan i Więcej, `test_demo_path.py` (lokalnie, wymaga budowania). Zrzuty w scratchpadzie sesji (`rev0200/d1`, `d2`, `m1`), nie w repo.
+
+## Przegląd przed zamrożeniem - 2026-10-04 ok. 03:30 (AI Michała)
+
+**Wersja.** `/version.json` na starcie: `0a0bc98` (00:54Z); w trakcie przeglądu wdrożył się `8a7e165` (2026-10-04T01:07:18Z) i na nim jest większość zrzutów (stopka "v 8a7e165 · 03:07"). `/health`: `llm-openai`, klucz wymagany.
+
+**Metoda.** Tylko odczyt: headless Chrome przez DevTools, przechwytywanie żądań we wszystkich ramkach (Fetch), każda metoda inna niż GET/HEAD/OPTIONS odrzucana; po załadowaniu ruch myszy (rozgrzanie 3D). Bez formularzy, ćwiczeń, wpisów w Czacie, resetu. Ekrany 1440 x 900 i 1920 x 1080: kroki runbooka po kolei (Historia `step=0`, krok 5, odznaczenie sygnału w ☰ i ↺, ▶ 30× do 20:03, Na żywo 19:45, Centrum, Śniardwy, Kraków, 3D, 2D+3D), Zasoby, Ćwiczenia, Porównanie, Czat (otwarty, też `?chat=1` u operatora), Odprawa i `&karty=1`, Rodzina, landing SAR/turyści, `/web/photo/`. Telefon 390 x 844 (dotyk): start, `/app/?role=ratownik&sc=zawrat`, `/web/patrol/?team=topr-a&run=/api/run/zawrat`, `/web/seen/`, rodzina, landing turyści, photo, Centrum, Czat, Odprawa. `test_top3_consistency.py --steps 1-10` na produkcji: **PASS** (Historia kroki 1-10 i Na żywo, panel = 2D = 3D; żadnego zablokowanego zapisu).
+
+**Zablokowane żądania (cały przegląd):** tylko `POST /api/run` przy otwarciu `czat.html` (1440, 1920 i telefon) - Czat w Historii liczy z góry mapę bazową (193f30b, `rescue/app/chat.js:601`). To obliczenie, nie zapis; strona działa dalej. Nic innego nie próbowało pisać. Konsola: czysto na wszystkich ekranach (zniknął 404 `studio.json`, favicon na landingu jest); na telefonie tylko ostrzeżenie MapLibre o braku geolokalizacji w emulacji.
+
+**Stan produkcji przed pokazem:** `/api/live` `seq: 50`, akcja LIVE w Centrum to nadal Połonina Wetlińska, Zawrat jako "Odtworzenie"; Na żywo Zawrat "Wszystko potwierdzone", brak przydziału TOPR A -> S7 (telefon pokazuje S3). Reset i przydział wg runbooka są nadal potrzebne.
+
+### Punkty z 02:00 - stan
+
+| # z 02:00 | Problem | Stan 03:30 |
+|---|---|---|
+| 1 | Podpowiedź "Wybierz scenariusz..." pod przełącznikiem 2D/3D, "OK, rozumiem" niewidoczne | **naprawione** (9c1efce, 2945c65) - podpowiedź pod legendą, OK widoczny i klikalny przy 1440 i 1920 |
+| 2 | Przycisk Czat zasłania "Wyślij zespół" / "Potwierdź wszystkie" | **naprawione** (4973b34) - Czat w pasku górnym |
+| 3 | Centrum: Doradca zakrywa mapę, wzór z wagami | **naprawione** (7453117) - wąski pasek "DORADCA ... ALARM", bez wzoru; Zawrat widać na mapie |
+| 4 | Stan produkcji: LIVE = Połonina Wetlińska | **zostaje** (operacyjne) - `seq: 50`, reset przed pokazem |
+| 5 | Etykiety 2D nachodzą na siebie przy IPP | **częściowo** (bf3cc6b) - #1 Żleb przy 20:03 czysty; nadal: "Tomasz W." na "#2 Wielki Staw", "Zespół z psem" na "#3"/IPP, "Dron termowizyjny" na S6, "Sektor 112" na "Stare Solnisko"; Śniardwy: chipy jednostek na "#2 W3" |
+| 6 | Duplikat `morzycko` / `tragedia-w-moryniu`, "Test na ślepo: runda 1 (replay)", 7 x `zapora-*` jako Trwające | **zostaje** - `/health` nadal ma oba Morzycka, `rescue/app/app.js:61` nadal ma wpis "(replay)", Centrum "Trwające 18" |
+| 7 | Zasoby: jednostki z drugiego końca Polski | **zostaje** - Śniardwy: Policja Gryfino, Nurkowie PSP Szczecin, Śmigłowiec Policji (Rzeszów); także Zawrat: "Śmigłowiec Policji (Rzeszów)" obok "Śmigłowiec TOPR" |
+| 8 | 3D: panel na pół widoku w 2D+3D, etykiety w jednym miejscu, "FPP", czerwony "Test na ślepo" | **częściowo** (ce26be8, 493a4b2) - samo 3D czytelne; w 2D+3D panel 3D nadal zakrywa większość połowy 3D, a "#1"/"#2" nachodzą; "FPP" i czerwony "Test na ślepo" zostają (`rescue/app/3d/index.html:65`) |
+| 9 | Legenda "dokładność ±N m", "Waga mapy × średnia", "segmentów" | **częściowo** (c065c30) - "sektorów", 2D "Waga mapy względem średniej"; 3D nadal "Waga mapy × średnia" |
+| 10 | Drobne | `studio.json` 404 - **naprawione** (de41e02, a96e924); km z przecinkiem - **naprawione** (adffaeb, "0,89 km"); "PIN" w Ćwiczeniach - **naprawione** (90fd82f, "Klucz"); Centrum -> Zawrat - **naprawione** (7453117, karty otwierają Na żywo, `centrum.js:16`); angielskie zdanie na stronie startowej - **zostaje** (`rescue/app/start.html:27`); operator na telefonie - nie sprawdzane (poza ścieżką) |
+| - | Telefon: podpowiedź ratownika nachodzi na pole Klucz | **zostaje** (pole Klucz przycięte przez żółty pasek podpowiedzi, 390 px) |
+
+### Nowe problemy (od najważniejszych)
+
+| # | Problem | Waga | Właściciel | Gdzie | Przed 04:30? |
+|---|---|---|---|---|---|
+| 1 | **Krok 2 pokazu: karty w Sygnałach (☰) mają angielskie nazwy techniczne** w nagłówku każdej karty: "17:40 · Terrain", "TerrainDifficulty", "WeatherConditions", "KoesterRings", "TripPlan", "TrailheadCar", "Cell112Fix", "SegmentSearched"; do tego "waga 0,08 / info" przy CPR 112. Jury patrzy na ten panel, gdy odznaczamy wskazówkę | średnie (na ścieżce pokazu) | AI Marcina (app shell) | `rescue/app/app.js:344` (Historia) i `:338` (Na żywo): `s.source` / `it.input.provider` - zamienić na polską etykietę albo pominąć | **tak** (jedna mapa nazw albo usunięcie źródła z nagłówka) |
+| 2 | **Pasek górny przy 1440 px nie mieści się**: "Rola: operat" ucięte na krawędzi ekranu (Historia, Na żywo, 3D, 2D+3D). Runbook twierdzi, że pasek mieści się od 1280 px | średnie (widać cały czas na laptopie 1440) | AI Marcina (app shell) | `rescue/app/app.css:385-391` i `:434-437` (media 1499 px) - np. ukryć "Rola:" albo zwęzić "Udostępnij"/"+ Nowa akcja" | **tak**; albo w runbooku: projektor 1920 lub zoom 90% |
+| 3 | Stan produkcji nie zresetowany (`seq: 50`, LIVE Połonina Wetlińska, brak przydziału TOPR A -> S7) | średnie (operacyjne) | osoba z kluczem operatora | `docs/rescue-locator/demo-runbook.md` sekcja 1 | tak, T-10 min |
+| 4 | Ticker i karty: "Koester: turysta pieszy +4" / "Koester: turysta pieszy, góry" - nazwisko z literatury jako etykieta na dole ekranu przez cały pokaz | kosmetyczne | AI Marcina (app shell) / AI Andrzeja (etykiety silnika) | ticker w `rescue/app/app.js`, etykieta z `KoesterRings` w silniku | opcjonalnie |
+| 5 | Etykiety sektorów 2D "przeszukany, POD 75%" (skrót + procent na mapie, także Porównanie i Czat) | kosmetyczne | AI Marcina (2D) | `rescue/web/app.js:444`, `:980` | opcjonalnie ("przeszukany" bez POD) |
+| 6 | Scenariusze bez polskich znaków w nazwach widocznych w Centrum: "Zachodnia stok Goryczkowej (poza trasa)" (też błąd rodzaju), "plaza piknikowa", "obsluga schroniska" (Morskie Oko jest w kroku 5) | kosmetyczne | AI Marcina (scenariusze) | `rescue/scenarios/kasprowy.json:38`, `rescue/scenarios/morskie-oko.json:37`, `:58` | tak, jeśli zmiana tylko nazw nie wymaga przeliczenia terenu |
+| 7 | 1920 px: tytuł akcji w pasku ucięty do "D..." obok LIVE | kosmetyczne | AI Marcina (app shell) | `rescue/app/app.css:390` (`.livehead b`) | nie |
+| 8 | Panel Na żywo (1920): uwagi z identyfikatorem "topr-b: teren eksponowany + lód..." | kosmetyczne | AI Marcina (app shell) | panel Na żywo w `rescue/app/app.js` | nie |
+| 9 | Zasoby akcji: procenty bez opisu ("26%", "96%", "100%") przy jednostkach - mogą być czytane jako szansa | kosmetyczne | AI Marcina (app shell) | lista "Zasoby akcji" w `rescue/app/app.js` | nie |
+| 10 | Czat przy otwarciu wysyła `POST /api/run` (obliczenie bazy w Historii) - nie zapis, ale przy zablokowanych zapisach widać błąd w konsoli | kosmetyczne | AI Mateusza #2 | `rescue/app/chat.js:601` | nie |
+
+Poza ścieżką pokazu, do wiadomości: `rescue/web/app.js:1007` pokazuje "szansa znalezienia N%" w szczegółach planu (zasada "nie pokazujemy procentów jako szansy"); Porównanie pokazuje ścieżkę "porownanie-data/" w stopce.
+
+Działa bez uwag: Historia od `step=0` (17:40, S3/S2/S4), ▶ 30× do 20:03 ZNALEZIONO (S7 na #1), Na żywo 19:45 (S7/S4/S3), Centrum (18 akcji, pula 31/31), Śniardwy, Kraków, 3D, Zasoby, Ćwiczenia, Porównanie (bez zapisów od 8c838ab), Odprawa i karty zadań, Rodzina, landing, `/web/photo/`, `/web/patrol/` i `/web/seen/` na telefonie (duże przyciski, "łączność OK"), brak przewijania w poziomie na 390 px. W moich obszarach (patrol, seen, photo, basemap) nie znalazłem nic do poprawy.
+
+Nie sprawdzone: zapisy (meldunek, przydział, ACK, ZNALEZIONO, reset), odznaczenie właśnie "CPR 112 ... BTS 14:12" o 18:05 (przegląd odznaczył kartę terenu o 17:46 - top 3 bez zmian, jak powinno), prawdziwy telefon z GPS, Plan i Więcej. Zrzuty w scratchpadzie sesji (`rev0330/d1`, `d2`, `m1`), nie w repo.
