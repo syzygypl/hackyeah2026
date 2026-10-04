@@ -5,7 +5,7 @@ Fixed right away: #3 and #8 (7ec0f2a). The rest goes to the owners.
 
 | # | Sev | Where / steps | What happens vs expected | Owner (likely file) | Status |
 |---|---|---|---|---|---|
-| 1 | major | /app?role=operator&sc=zawrat: Na żywo -> Plan -> Akcja | Plan replaces the live action with "Studio - nowa historia"; back in Akcja the action does not return and Na żywo stays disabled until Zmień scenariusz / reload | shell (app.js setMode / edycja) | open |
+| 1 | major | /app?role=operator&sc=zawrat: Na żywo -> Plan -> Akcja | Plan replaces the live action with "Studio - nowa historia"; back in Akcja the action does not return and Na żywo stays disabled until Zmień scenariusz / reload | #1 (app.js setMode) | fixed 3c9ef55 |
 | 2 | major | Plan mode at 1440 px | Header overflows: Czat, Udostępnij, ? and Rola off screen; the "Historia o ..." banner sits under the Mapa / Mapa+3D toggle | shell (app.css, edycja header) | open |
 | 3 | major | /app fresh load | Up to 3 simulation toasts cover "Gdzie szukać najpierw"; on a phone half the map | #1 (appbell.js, livefeed toastSince) | fixed 7ec0f2a |
 | 4 | major | Zmień scenariusz or bell Otwórz while 3D boots in the background | Panel switches at once, 2D map shows the old scenario for 10-15 s with no loading cue (~5 s without 3D booting) | AI Andrzeja (app.js syncFrame / warmOther double buffer) | open |
