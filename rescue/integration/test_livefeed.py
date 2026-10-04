@@ -73,7 +73,7 @@ def main():
     try:
         c = Cdp(port)
         c.call("Runtime.enable")
-        base = f"{srv.base}/app/?role=operator&mode=akcja&time=hist&sc=zawrat"
+        base = f"{srv.base}/app/?role=operator&mode=akcja&time=hist&sc=zawrat&dyzurny=0"
         url = f"{base}&simAt={at}"
         open_page(c, url, 1440, 900, False)
         c.js("localStorage.removeItem('rescue-live-acks');localStorage.removeItem('rescue-sim247');localStorage.removeItem('rescue-app-time')")

@@ -113,7 +113,7 @@ def main():
     try:
         c = Cdp(port)
         c.call("Runtime.enable")
-        url = f"{srv.base}/app/centrum.html?simAt={at}"
+        url = f"{srv.base}/app/centrum.html?dyzurny=0&simAt={at}"
         open_page(c, url, 1440, 900, False)
         c.js("localStorage.removeItem('rescue-live-acks');localStorage.removeItem('rescue-sim247')")
         open_page(c, url, 1440, 900, False)
@@ -143,7 +143,7 @@ def main():
         check("ack_persists_after_reload", again is False and "acked" in (still or ""), f"toast again={again} item={still}")
         # escalation: the same entry 7 min after its start, not acked
         c.js("localStorage.removeItem('rescue-live-acks')")
-        open_page(c, f"{srv.base}/app/centrum.html?simAt={hhmm(mins(e['start']) + 7)}", 1440, 900, False)
+        open_page(c, f"{srv.base}/app/centrum.html?dyzurny=0&simAt={hhmm(mins(e['start']) + 7)}", 1440, 900, False)
         late = c.until(f"(()=>{{const t=document.querySelector('.lftoast [data-key^=\"{key}\"]');return t&&t.classList.contains('late')&&document.querySelector('.lfbell.late')?1:0}})()", 30)
         check("escalation_after_5_min", late == 1)
         # virtual-live: the entry is a live card (one card per occurrence), Grafik 24/7 is the default timeline mode
@@ -162,13 +162,23 @@ def main():
         c.js("document.getElementById('tlLive').click()")
         # calls: an incoming call inside a running occurrence is its own note (Zgłoszenie), filter works
         zw = next(x for x in es if x["sc"] == "zawrat" and 30 < mins(x["start"]) < 1380)
-        open_page(c, f"{srv.base}/app/centrum.html?simAt={hhmm(mins(zw['start']) + 26)}", 1440, 900, False)
+        open_page(c, f"{srv.base}/app/centrum.html?dyzurny=0&simAt={hhmm(mins(zw['start']) + 26)}", 1440, 900, False)
         c.until("document.querySelector('.lfbell')?1:0", 30)
         c.js("document.querySelector('.lfbell').click();document.querySelector('.lffil [data-f=call]').click()")
         call = c.until(f"(()=>{{const i=document.querySelector('.lfi.t-call[data-key^=\"{zw['id']}#1805\"]');return i?i.innerText:''}})()", 20)
         check("call_note", bool(call) and "CPR" in call and "Zgłoszenie".upper() in call.upper(), (call or "").replace("\n", " | ")[:120])
         only = c.js("[...document.querySelectorAll('.lflist .lfi')].every(x=>x.classList.contains('t-call'))")
         check("filter_calls_only", only is True)
+        # virtual dispatcher (sens-funkcji #5, default): sim notes acked after 1-3 min, at most 1 toast on load, almost no red cards
+        c.js("localStorage.removeItem('rescue-live-acks')")
+        open_page(c, f"{srv.base}/app/centrum.html?simAt={hhmm(mins(e['start']) + 4)}", 1440, 900, False)
+        c.until("document.querySelector('#simCards .card')?1:0", 30)
+        time.sleep(4)
+        vd = c.js("[document.querySelectorAll('.lftoast').length, document.querySelectorAll('#simCards .card.esc').length, document.querySelectorAll('#simCards .card').length]")
+        check("vd_calm_start", bool(vd) and vd[0] <= 1 and vd[1] <= 2, f"toasts, red cards, cards = {vd}")
+        c.js("document.querySelector('.lfbell').click()")
+        vi = c.until("(()=>{const i=[...document.querySelectorAll('.lfpanel .lfi.acked')].find(x=>/wirtualny/.test(x.innerText));const k=document.querySelector('.lfpanel .lfkpi');return i&&k&&!k.hidden&&/Symulacja/.test(k.innerText)?k.innerText:''})()", 10)
+        check("vd_acks_labelled", bool(vi), vi or "")
         errs_desktop = list(c.errors)
         # phone
         c.errors.clear()

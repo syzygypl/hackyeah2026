@@ -94,6 +94,7 @@ export function instancesAt(entries, ms, { pastMin = 1440 } = {}) {
       const startMs = base + s * 60000, endMs = startMs + (e.durationMin || 30) * 60000;
       if (startMs > ms) continue;
       if (ms - startMs > pastMin * 60000 && endMs <= ms) continue;
+      vdMs.set(e.id + "|" + day, { ms: startMs, type: "new" });
       out.push({ key: e.id + "|" + day, id: e.id, sc: e.sc, day, start: e.start, startMs, endMs, durationMin: e.durationMin, kind: e.kind, group: e.group || null,
         elapsedMin: Math.min(e.durationMin, (ms - startMs) / 60000), state: ms < endMs ? "live" : "ended" });
     }
@@ -120,10 +121,28 @@ const ackLocal = (() => { try { return JSON.parse(ls.get("rescue-live-acks") || 
 let ackServer = null;   // null = not probed, true / false
 let ackSince = 0;
 const ackListeners = new Set();
+// virtual dispatcher (sens-funkcji #5): in Symulacja 24/7 nobody sits at the desk, so every schedule note (a new incident or a
+// call) is acknowledged by a simulated dispatcher 1-3 min after it arrives (deterministic from its key); about 1 new incident in 16
+// (~one every 3 h, also deterministic) is left unacknowledged on purpose: that one escalates. Doradca notes (adv:) and anything
+// not from the schedule keep the human ACK. ?dyzurny=0 switches it off (tests of the human ACK / escalation path).
+const VD_Q = new URLSearchParams(location.search).get("dyzurny");
+export const virtualDispatcher = () => VD_Q !== "0" && simEnabled();
+export const VD_BY = "dyżurny wirtualny (symulacja)";
+const vdMs = new Map();   // key -> { ms, type } of schedule notes (filled by instancesAt / notesFor)
+const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
+export const vdEscalates = (key) => !key.includes("#") && hash("esc" + key) % 16 === 0;
+function vdAck(key) {
+  if (!virtualDispatcher()) return null;
+  const v = vdMs.get(key); if (!v) return null;
+  const head = key.split("#")[0].split("|")[0] + "|" + key.split("|")[1];
+  if (vdEscalates(head)) return null;   // the incident left for the human, with all its calls
+  const at = v.ms + (60 + hash(key) % 121) * 1000;
+  return nowMs() >= at ? { at: new Date(at).toISOString(), by: VD_BY, virtual: true } : null;
+}
 export const acks = {
   get shared() { return ackServer === true; },
-  isAcked: (key) => !!ackLocal[key],
-  get: (key) => ackLocal[key] || null,
+  isAcked: (key) => !!(ackLocal[key] || vdAck(key)),
+  get: (key) => ackLocal[key] || vdAck(key),
   async ack(key, by = "operator") {
     const [id, day] = key.split("|");
     ackLocal[key] = { at: new Date(nowMs()).toISOString(), by };
@@ -186,7 +205,7 @@ export function notesFor(insts, infoOf, ms) {
       if (off === 0 || off > i.durationMin || t > ms) continue;   // the report itself is the "new" note
       if (g && t - g.last <= 2 * 60000) { g.n++; g.last = t; g.title += " · " + c.title; continue; }
       g = { key: `${i.id}#${c.at.replace(":", "")}|${i.day}`, type: "call", inst: i, ms: t, last: t, clock: c.at, title: c.title, n: 1 };
-      out.push(g);
+      out.push(g); vdMs.set(g.key, { ms: t, type: "call" });
     }
   }
   return out.sort((a, b) => b.ms - a.ms || (a.type === "new") - (b.type === "new"));
@@ -308,7 +327,7 @@ export function mountBell(host, opts = {}) {
     }
     wire(stack);
     const k = kpi(); const ke = wrap.querySelector(".lfkpi");
-    if (ke) { ke.hidden = !k.n; ke.textContent = k.n ? `Czas do potwierdzenia: mediana ${k.med} min, najdłużej ${k.max} min (${k.n} potw.)` : ""; }
+    if (ke) { ke.hidden = !k.n; ke.textContent = k.n ? `${notes.some((n) => (acks.get(n.key) || {}).virtual) ? "Symulacja (dyżurny wirtualny) - " : ""}Czas do potwierdzenia: mediana ${k.med} min, najdłużej ${k.max} min (${k.n} potw.)` : ""; }
     wrap.querySelector(".lfstore").textContent = acks.shared ? "potwierdzenia wspólne (serwer)" : "potwierdzenia tylko w tej przeglądarce";
     if (panel.hidden) return;
     const shown = rec.filter((n) => filter === "all" || n.type === filter);

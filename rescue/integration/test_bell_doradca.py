@@ -68,7 +68,7 @@ def main():
         c = Cdp(port)
         c.call("Runtime.enable")
         c.call("Emulation.setDeviceMetricsOverride", {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False})
-        base = f"{srv.base}/app/centrum.html?sim=1"
+        base = f"{srv.base}/app/centrum.html?sim=1&dyzurny=0"
         open_page(c, base)
         c.js("localStorage.removeItem('rescue-live-acks');localStorage.setItem('rescue-advisor-open','0')")
         # before the 2nd start: no Doradca note

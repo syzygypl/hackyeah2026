@@ -1249,7 +1249,7 @@ async function simInit() {
   const box = document.createElement("div"); box.id = "simCards"; $("cards").before(box);
   $("simTog").onclick = () => { lf.setSimEnabled(!sim.on); if (new URLSearchParams(location.search).has("sim")) { const u = new URL(location.href); u.searchParams.delete("sim"); history.replaceState(null, "", u); location.reload(); return; } simApply(); };
   try { const s = await lf.loadSchedule(); sim.entries = s.entries; sim.source = s.source; } catch (e) { console.warn("[centrum] schedule", e); }
-  sim.bell = lf.mountBell(host, { openURL: (i, clock) => histURL(i.sc, clock), extraNotes: advNotes });   // advNotes: Doradca ALARM in the bell (#1)
+  sim.bell = lf.mountBell(host, { openURL: (i, clock) => histURL(i.sc, clock), extraNotes: advNotes, toastSince: lf.virtualDispatcher() ? lf.nowMs() - 60000 : undefined });   // sens-funkcji #5: no backlog toasts on load (the virtual dispatcher acks the rest); advNotes: Doradca ALARM in the bell (#1)
   simApply();
   setInterval(simTick, 5000);
   setInterval(() => lf.acks.sync(), 15000); lf.acks.sync();
