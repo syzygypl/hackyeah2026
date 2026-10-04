@@ -102,6 +102,8 @@ def main():
             {"id": "sgrw-bialystok", "name": "Nurkowie PSP (SGRW Białystok)", "type": "diver", "base": BRIDGE_W, "readyAt": "20:50"},
             {"id": "pies-pol-bialystok", "name": "Przewodnik z psem tropiącym (Policja Białystok)", "type": "dog", "base": BRIDGE_W, "readyAt": "21:00"},
         ],
+        # 3D story objects (display only, CONTRACT "Scenario props")
+        "props": [{"kind": "car-in-river", "at": CRASH, "heading": 205, "from": "19:10", "label": "Auto w Narwi (19:10)"}],
         "truth": {"name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): łąka na prawym brzegu Narwi, ok. 1,9 km poniżej mostu", "at": TRUTH},
         "events": [
             {"provider": "Terrain", "at": "19:25", "title": "Teren: dolina Narwi, łąki zalewowe, starorzecza, wał i nasyp DK64",
