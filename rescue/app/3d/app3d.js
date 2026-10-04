@@ -67,6 +67,8 @@ const SIG = {
   Found: ['!', '#2d6a4f', 'Znalezienie'],
 };
 const sigOf = (e) => (/świadek/i.test(e.title || '') ? ['Ś', '#e76f51', 'Świadek'] : /ZNALEZIONO/i.test(e.title || '') ? ['!', '#2d6a4f', 'Znalezienie'] : null) || SIG[e.provider] || [e.provider?.[0] || '•', /świadek|witness/i.test(e.title + e.provider) ? '#e76f51' : '#6b6f72', e.provider || 'Sygnał'];
+// sens-funkcji #19: a past signal pin reads "Auto 17:58", not "17:58 A" (a letter without a legend)
+const SIG_SHORT = { Terrain: 'Teren', TerrainDifficulty: 'Trudność', KoesterRings: 'Koester', WeatherConditions: 'Warunki', Weather: 'Pogoda', TripPlan: 'Plan wycieczki', TrailheadCar: 'Auto', Cell112Fix: 'BTS 112', Witness: 'Świadek', SegmentSearched: 'Patrol: nic', DronePassEmpty: 'Dron: nic', Clue: 'Ślad', RatunekPing: 'Ping GPS', Found: 'Znalezienie' };
 const TEAM_COL = { heli: '#1f4e79', ground: '#b8860b', dog: '#8d5524', drone: '#6c4ab6' };
 
 const $ = (id) => document.getElementById(id);
@@ -1781,7 +1783,7 @@ function drawSignal(e, isCur) {
   if (e.point && e.radiusM >= 100) drapeRuns(circleLL(e.point, e.radiusM), 0.022, { color: col, width: 1.8, opacity: 0.85 * op, dashed: true, dash: 0.06, gap: 0.04 }, G);
   const a = anchorOf(e); if (!a) return;
   const short = e.title.length > 40 ? e.title.slice(0, 38) + '…' : e.title;
-  G.add(pin(a[0], a[1], col, isCur ? 0.34 : 0.2, `<span class="d" style="background:${col}"></span><b>${esc(e.at)}</b> ${esc(isCur ? short : badge)}`, 'sig' + (isCur ? ' cur' : ''), isCur ? 0.022 : 0.015));
+  G.add(pin(a[0], a[1], col, isCur ? 0.34 : 0.2, isCur ? `<span class="d" style="background:${col}"></span><b>${esc(e.at)}</b> ${esc(short)}` : `<span class="d" style="background:${col}"></span>${esc(badge === 'Ś' ? 'Świadek' : /ZNALEZIONO/i.test(e.title || '') ? 'Znalezienie' : SIG_SHORT[e.provider] || sigOf(e)[2] || badge)} <b>${esc(e.at)}</b>`, 'sig' + (isCur ? ' cur' : ''), isCur ? 0.022 : 0.015));
 }
 
 // ---------- step state ----------
