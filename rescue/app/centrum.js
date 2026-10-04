@@ -251,23 +251,27 @@ function setHl(sc) {
   for (const [k, m] of markers) m.getElement().classList.toggle("hl", k === sc);
 }
 
-// ---------- map: paper ground + rough outline of Poland; regional offline basemaps (web/basemap) load when zoomed in
-const POLAND = [[14.22,53.93],[15.0,54.2],[16.2,54.45],[17.0,54.7],[18.3,54.83],[18.6,54.43],[19.6,54.45],[20.8,54.35],[22.8,54.36],[23.5,54.0],[23.9,53.2],[23.6,52.6],[23.2,52.3],[23.6,52.08],[23.7,51.6],[24.1,50.8],[23.5,50.4],[22.7,49.6],[22.9,49.1],[22.0,49.2],[21.0,49.4],[20.4,49.38],[20.0,49.18],[19.6,49.4],[19.2,49.45],[18.85,49.5],[18.6,49.9],[18.0,50.05],[17.6,50.27],[16.9,50.45],[16.7,50.2],[16.2,50.6],[15.8,50.74],[15.5,50.8],[14.8,50.85],[14.95,51.4],[14.7,52.1],[14.55,52.6],[14.15,52.85],[14.4,53.3],[14.25,53.7],[14.22,53.93]];
+// ---------- map: paper ground + outline of Poland; regional offline basemaps (web/basemap) load when zoomed in
+// real border: Natural Earth 10m admin-0 (public domain), simplified to <=0.4 km (poland.json). The old hand-drawn 42-point outline
+// was up to 25 km off and drew Śnieżka, Morskie Oko and Tarnica outside Poland.
+const POLAND_URL = new URL("poland.json", import.meta.url).href;
 let mapReady = false, map = null;
 async function initMap() {
-  const [m, b] = await Promise.all([import("../web/vendor/maplibre-gl.mjs"), import("../web/basemap/basemap.js")]);
+  const [m, b, pl] = await Promise.all([import("../web/vendor/maplibre-gl.mjs"), import("../web/basemap/basemap.js"),
+    fetch(POLAND_URL).then((r) => r.json()).catch(() => ({ type: "FeatureCollection", features: [] }))]);   // 12 kB, in parallel with MapLibre
   maplibregl = m; ({ offlineStyle, loadBasemap, REGIONS } = b);
   const base = offlineStyle();
   map = new maplibregl.Map({
-    container: "map", attributionControl: { compact: true }, center: [19.4, 52.0], zoom: 5.3, minZoom: 4,
+    container: "map", attributionControl: { compact: true, customAttribution: "Granica: Natural Earth" }, center: [19.4, 52.0], zoom: 5.3, minZoom: 4,
     style: { version: 8, glyphs: base.glyphs, sprite: base.sprite,
-      sources: { pl: { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [POLAND] } } } },
+      sources: { pl: { type: "geojson", data: pl } },
       layers: [{ id: "bg", type: "background", paint: { "background-color": css("--rl-bg") } },
         { id: "pl-fill", type: "fill", source: "pl", maxzoom: 8, paint: { "fill-color": css("--rl-panel-solid"), "fill-opacity": 0.75 } },
         { id: "pl-line", type: "line", source: "pl", maxzoom: 8, paint: { "line-color": css("--rl-line-strong"), "line-width": 1.5 } }] },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
-  map.on("load", () => { mapReady = true; renderMarkers(); fitAll(); loadRegions(); stackLabels(); advMap(); });
+  map.on("load", () => { mapReady = true; renderMarkers(); fitAll(); loadRegions(); stackLabels(); advMap();
+    map.getContainer().querySelector(".maplibregl-compact-show")?.classList.remove("maplibregl-compact-show"); });   // attribution as the (i) button: open, it covered Śniardwy on a phone
   map.on("moveend", loadRegions);
   map.on("zoom", () => document.body.classList.toggle("zin", map.getZoom() >= 9));   // zoomed in: labels next to their own dots
   map.on("zoomend", stackLabels);
@@ -297,7 +301,7 @@ function renderMarkers() {
     let m = markers.get(x.sc);
     if (!m) {
       const el = document.createElement("div");
-      el.innerHTML = `<span class="dot"></span><span class="lbl"></span>`;
+      el.innerHTML = `<span class="ld"></span><span class="dot"></span><span class="lbl"></span>`;
       el.onclick = () => location.href = openURL(x.sc);
       el.onmouseenter = () => setHl(x.sc); el.onmouseleave = () => setHl(null);
       el.dataset.drop = x.sc;
@@ -338,6 +342,10 @@ function stackLabels() {
     if (lbl) lbl.style.visibility = k === undefined ? "hidden" : "";   // no free row: dot only (name in the tooltip, shown again when zoomed in)
     if (k !== undefined) boxes.push({ x, y: p.y - 11 + k * ROW, w, h });
     el.style.setProperty("--k", k ?? 0);
+    // a label moved off its row gets a line from its own dot (centre 8,8) to the start of its 8 px tick (14, row middle):
+    // without it a label 1-2 rows away read as the neighbour's name (Huzele next to Kraków, Zawrat under Morskie Oko)
+    const ld = el.querySelector(".ld");
+    if (ld) { const dy = (k ?? 0) * ROW + 1, len = Math.hypot(6, dy); ld.style.display = k ? "block" : "none"; ld.style.width = len + "px"; ld.style.transform = `rotate(${Math.atan2(dy, 6)}rad)`; }
   }
 }
 function fitAll() {
@@ -456,7 +464,7 @@ function advMap() {
   for (const t of (h && h.predicted && h.predicted.towns) || []) pins.push({ cls: t.kind === "town" ? "town" : "", at: t.at, text: `${t.name} ~${t.eta}` });
   for (const p of pins) {
     const el = document.createElement("div"); el.className = "advpin " + p.cls; el.innerHTML = `<span class="d"></span><span class="t">${esc(p.text)}</span>`;
-    advTowns.push(new maplibregl.Marker({ element: el, anchor: "left" }).setLngLat([p.at[1], p.at[0]]).addTo(map));
+    advTowns.push(new maplibregl.Marker({ element: el, anchor: "left", offset: [p.cls === "src" ? -6 : -4, 0] }).setLngLat([p.at[1], p.at[0]]).addTo(map));
   }
 }
 function advFit() {

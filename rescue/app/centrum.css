@@ -74,6 +74,7 @@ body.dragging .grp{border-color:var(--rl-line-strong)}
 .mk .lbl{position:absolute;left:22px;top:calc(var(--k,0) * 24px - 2px)}
 /* zoomed in: labels still follow --k from stackLabels() so neighbours never cover each other */
 .mk .lbl::before{content:"";position:absolute;right:100%;top:50%;width:8px;border-top:1px solid var(--rl-line-strong)}
+.mk .ld{display:none;position:absolute;left:8px;top:8px;height:0;border-top:1px solid var(--rl-line-strong);transform-origin:0 0;pointer-events:none}   /* leader dot -> shifted label (stackLabels) */
 .mk .dot{position:absolute;inset:0;width:16px;height:16px;border-radius:50%;background:var(--rl-card);border:3px solid var(--rl-ink-2);box-shadow:var(--rl-shadow)}
 .mk .lbl{font-size:12px;font-weight:600;background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:6px;padding:1px 6px;white-space:nowrap;color:var(--rl-ink)}
 .mk.live .dot{background:var(--rl-danger);border-color:var(--rl-panel-solid)}
