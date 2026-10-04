@@ -173,7 +173,8 @@ function busyScs() {
   for (const x of incidents) if (x.live && !x.found) s.add(x.sc);
   return s;
 }
-const busyOf = (t, b) => t.sc || (t.home || []).find((h) => b.has(h)) || null;
+const simLocal = {};   // team id -> sc: dropped on a 24/7 simulation card (virtual, never POSTed, gone on reload)
+const busyOf = (t, b) => t.sc || (simLocal[t.id] && b.has(simLocal[t.id]) ? simLocal[t.id] : null) || (t.home || []).find((h) => b.has(h)) || null;
 const kindLabel = (k) => ({ pieszy: "pieszy", pies: "pies", dron: "dron", smiglowiec: "śmigłowiec", lodz: "łódź", nurkowie: "nurkowie" }[k] || k || "zespół");
 const ICON = {
   pieszy: '<circle cx="12" cy="4.5" r="2"/><path d="M12 7v7m0 0-3 7m3-7 3 7M7 11l5-3 5 3"/>',
@@ -214,7 +215,7 @@ function sortIncidents(a) {
 let shown = "";   // what the cards / roster / markers were last built from: a poll that brings nothing new touches no DOM
 function render() {
   const bz = busyScs();
-  const sig = JSON.stringify([incidents, teams, [...bz].sort(), sel, Object.keys(meta).filter((k) => meta[k]).length, has.incidents, has.teams]);
+  const sig = JSON.stringify([incidents, teams, [...bz].sort(), sel, simLocal, Object.keys(meta).filter((k) => meta[k]).length, has.incidents, has.teams]);
   if (sig === shown) return;
   const selectOpen = $("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT";   // renderTeams skips then: build again next poll
   if (!dragging) { renderCards(); renderTeams(); if (!selectOpen) shown = sig; }
@@ -298,6 +299,13 @@ function wireDrops(root) {
 }
 async function doAssign(team, sc) {
   const t = teams.find((x) => x.id === team);
+  if (t && sc && sc.startsWith("sim:")) {   // a simulation card: local only, the server roster is not touched
+    if (t.sc) { toast(`${t.name} pracuje w akcji ${short({ sc: t.sc, place: t.sc })} - najpierw zwolnij`); return; }
+    simLocal[team] = sc.slice(4);
+    toast(`${t.name} -> ${short({ sc: simLocal[team], place: simLocal[team] })} (symulacja: przydział tylko w tej przeglądarce, nie zapisany)`, 4500);
+    dragging = false; document.body.classList.remove("dragging"); sim.cardSig = ""; simPaint(); render(); return;
+  }
+  if (t && !sc && simLocal[team]) { delete simLocal[team]; sim.cardSig = ""; simPaint(); render(); return; }
   if (!t || (t.sc || null) === (sc || null)) return;
   try {
     const r = await assignTeam(team, sc); teams = Array.isArray(r) ? r : r.teams || teams;
@@ -1321,7 +1329,7 @@ function simPaint() {
     if (meta[r.i.sc]) simFetch(r.i.sc, r.c5);
     else if (!sim.mwait?.[r.i.sc]) { (sim.mwait ||= {})[r.i.sc] = 1; loadMeta(r.i.sc).then((md) => { if (md) { sim.cardSig = ""; simPaint(); } else simFetch(r.i.sc, r.c5); }); }
   }
-  const sig = JSON.stringify([rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d, !!meta[r.i.sc]]), tl.cur == null, teams.length]);   // #7: meta (state line) and the roster (team count) repaint too
+  const sig = JSON.stringify([rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d, !!meta[r.i.sc]]), tl.cur == null, teams.length, simLocal]);   // #7: meta (state line) and the roster (team count) repaint too
   if (sig === sim.cardSig) return; sim.cardSig = sig;
   countsPaint();   // sens-funkcji #7: header "N trwa" follows the sim cards
   const live = rows.filter((r) => r.i.state === "live"), ended = rows.filter((r) => r.i.state !== "live");
@@ -1349,12 +1357,15 @@ function simPaint() {
     const { i, d, clk, f } = r, x = incidents.find((y) => y.sc === i.sc) || { sc: i.sc, place: (d && d.place) || i.sc, title: "" };
     const t3 = Array.isArray(f) ? f : f === "err" ? x.top3 || [] : null;
     const el = Math.floor((Math.min(simNowAt(), i.endMs) - i.startMs) / 60000);
-    return `<article class="card simc ${i.state === "live" ? "live" : "found ended"}" data-sc="${esc(i.sc)}" data-key="${esc(i.key)}">
+    const loc = i.state === "live" ? Object.keys(simLocal).filter((id) => simLocal[id] === i.sc) : [];
+    return `<article class="card simc ${i.state === "live" ? "live" : "found ended"}" data-sc="${esc(i.sc)}" data-key="${esc(i.key)}"${i.state === "live" ? ` data-drop="sim:${esc(i.sc)}"` : ""}>
       <div class="ctop"><span class="badge ${i.state === "live" ? "live" : "found"}" title="${esc(sim.lf.SIM_NOTE)}">${i.state === "live" ? "SYMULACJA" : "ZAKOŃCZONA"}</span>${i.state === "live" ? "" : `<span class="simtag" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span>`}<span class="when mono">zgł. ${hm(i.startMs)}</span></div>
       ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${esc(histURL(i.sc, clk))}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(d ? d.name : i.sc)}${d && d.place ? " - " + esc(d.place) : ""}</div>
       <div class="simt" title="${i.state === "live" && clk ? `W scenariuszu ${esc(clk)} (mapa liczona na ${esc(r.c5 || "")})` : ""}">${i.state === "live" ? stateLine(r, el) : `zakończona ${hm(i.endMs)} · po ${i.durationMin} min`}</div>
       ${i.state !== "live" ? "" : t3 ? (t3.length ? `<div class="top3"><div class="seg" title="${esc(t3.slice(0, 3).map((s, k) => `#${k + 1} ${s.id || s.segmentId} ${s.name}`).join("\n"))}"><span class="lbl">Szukać najpierw:</span><span class="nm">#1 ${esc(t3[0].id || t3[0].segmentId)} ${esc(t3[0].name)}</span></div></div>` : `<div class="loading">Brak mapy dla tej chwili.</div>`)
-        : `<div class="loading">Liczę mapę...</div>`}</article>`;
+        : `<div class="loading">Liczę mapę...</div>`}
+      ${loc.length ? `<div class="cteams">Dosłane: ${loc.map((id) => `<span class="chip" title="${esc((teams.find((t) => t.id === id) || {}).name || id)} · przydział tylko w symulacji, nie zapisany">${esc(id)}</span>`).join("")}<span class="simtag">symulacja</span></div>` : ""}
+      ${i.state === "live" ? `<div class="drophint">Upuść tutaj: symulacja, przydział nie jest zapisywany</div>` : ""}</article>`;
   };
   box.innerHTML = `<h2 class="cgrp sim">${tl.mode === "sim" && tl.cur != null ? "Trwają o " + esc(tlFmt(tl.cur)) : "Trwają teraz"} <span class="cnt">${live.length}</span><span class="simh">${esc(sim.lf.SIM_NOTE)}</span></h2>`
     + (live.map(card).join("") || `<div class="help">Teraz nic nie trwa. Następne zgłoszenie: ${esc(simNext())}.</div>`) + ended.map(card).join("")
@@ -1364,6 +1375,7 @@ function simPaint() {
     el.classList.toggle("sel", el.dataset.sc === sel);
     el.onmouseenter = () => setHl(el.dataset.sc); el.onmouseleave = () => setHl(null);
   });
+  wireDrops(box);
   simEscPaint();
 }
 function simNext() {
