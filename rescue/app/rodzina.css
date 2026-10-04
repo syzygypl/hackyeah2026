@@ -23,8 +23,13 @@ a{color:var(--rl-accent)}
 .rz-more{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
 .rz-more a{min-height:48px;display:flex;align-items:center;gap:10px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.55);text-decoration:none;font-size:15px}
 .rz-more b{font-size:18px;min-width:6.5em}
+/* sens-funkcji #22: 985 and 601 100 300 reach the same GOPR/TOPR alarm line - one mountain tile with two numbers, not two look-alike tiles */
+.rz-more .rz-mtn{display:flex;flex-wrap:wrap;align-items:center;gap:0 10px;padding:4px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.55);font-size:15px}
+.rz-more .rz-mtn a{min-height:44px;border:0;padding:0;flex-direction:row;align-items:center}
+.rz-more .rz-mtn b{min-width:0}
+.rz-more .rz-mtn small{flex-basis:100%;font-size:14px;padding-bottom:4px}
 .rz-src{font-size:13.5px;margin:12px 0 0}
-@media (min-width:640px){.rz-more{grid-template-columns:repeat(3,1fr)}.rz-more a{flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:6px 14px}.rz-more b{min-width:0}}
+@media (min-width:640px){.rz-more{grid-template-columns:2fr 1fr}.rz-more a{flex-direction:column;align-items:flex-start;justify-content:center;gap:0;padding:6px 14px}.rz-more b{min-width:0}}
 
 .rz-card{background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);padding:18px 16px;box-shadow:var(--rl-shadow)}
 .rz-card h2{font-size:22px;line-height:1.2;margin:0 0 8px;display:flex;align-items:center;gap:10px}
