@@ -65,7 +65,7 @@ async function detect() {
   const [a, m, blindOk] = await Promise.all([tryJSON("/api/scenarios"), tryJSON("/modules"), blindP]);
   store.hasApi = !!a; store.hasStudio = !!(m && m.modules); store.mods = m ? m.modules : [];
   let list = [];
-  if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id)) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
+  if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id) && !(id === "morzycko" && new URLSearchParams(location.search).get("sc") !== "morzycko")) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
   if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
   // blind test round 1 replay (the 3D view shows the hider's story and the true spot at the end); only when its run is there
   // not on the demo list (demo review d1510b2 pt 6); still reachable with ?sc=blind-01-replay (3D README, blind test reveal)

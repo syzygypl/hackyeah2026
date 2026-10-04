@@ -42,7 +42,7 @@ function splitIncident(txt, sc) {
 }
 async function loadIncidents() {
   if (tryReal("incidents")) {
-    try { const a = await api("/api/incidents?fast=1"); has.incidents = true; return (Array.isArray(a) ? a : a.incidents || []).filter((x) => !/blind/i.test(x.sc)).map(normIncident); }
+    try { const a = await api("/api/incidents?fast=1"); has.incidents = true; return (Array.isArray(a) ? a : a.incidents || []).filter((x) => !/blind|^morzycko$/i.test(x.sc)).map(normIncident); }
     catch (e) { if (e.status === 404) missing("incidents"); else throw e; }
   }
   return fallbackIncidents();
@@ -60,7 +60,7 @@ let liveSeq = 0, runQueue = [], runBusy = null;   // runBusy = sc being computed
 async function fallbackIncidents() {
   if (!scenCache || Date.now() - scenAt > 60000) {
     const a = await api("/api/scenarios"); scenAt = Date.now();
-    scenCache = (Array.isArray(a) ? a : a.scenarios || []).map((s) => typeof s === "string" ? { name: s } : s).filter((s) => s.name && !/blind/i.test(s.name));
+    scenCache = (Array.isArray(a) ? a : a.scenarios || []).map((s) => typeof s === "string" ? { name: s } : s).filter((s) => s.name && !/blind|^morzycko$/i.test(s.name));
   }
   await pollLive();
   const out = scenCache.map((s) => {
@@ -496,7 +496,7 @@ async function tick() {
 async function skeleton(teamP) {
   try {
     const a = await api("/api/scenarios");
-    const list = (Array.isArray(a) ? a : a.scenarios || []).map((s) => typeof s === "string" ? { name: s } : s).filter((s) => s.name && !/blind/i.test(s.name));
+    const list = (Array.isArray(a) ? a : a.scenarios || []).map((s) => typeof s === "string" ? { name: s } : s).filter((s) => s.name && !/blind|^morzycko$/i.test(s.name));
     if (incidents.length) return;   // /api/incidents was faster
     incidents = list.map((s) => ({ sc: s.name, ...splitIncident(s.incident, s.name), live: false, found: false, replayFound: false, mode: null, lastEventAt: null,
       lastClock: s.startClock || null, top3: [], teams: null, pending: true }));
