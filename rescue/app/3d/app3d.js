@@ -18,6 +18,7 @@ import { createTimeline3D } from './timeline3d.js';
 import { createCoverage3D } from './coverage3d.js';
 import { createWalk3D } from './walk3d.js';
 import { createLivePos3D } from './livepos3d.js'; // live team positions (GET /api/positions), Na żywo only
+import { waterRaster } from './water3d.js'; // rivers as continuous ribbons, lakes as polygons (high-res water mask)
 import { createMachine, createVehicle, vehicleKind, operatorPaint, createRailcar, createDamagedTrack, createProp } from './machines3d.js'; // unit models: aircraft, boats, ground vehicles   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
@@ -139,13 +140,14 @@ const loadRun = async () => {
     throw e;
   }
 };
-let R, SCN, TER, DEM, REV, DEM_FULL, FLAT = false, WIDE = false, OSM3D = null, TRAF = null;
+let R, SCN, TER, DEM, REV, DEM_FULL, FLAT = false, WIDE = false, OSM3D = null, TRAF = null, W3D = null;
 try {
   const wide = !Q.get('dem') && Q.get('wide') !== '0' && SCENS[SC].demWide;
-  [R, SCN, TER, DEM, REV, OSM3D, TRAF] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
+  [R, SCN, TER, DEM, REV, OSM3D, TRAF, W3D] = await Promise.all([inlineRun ? Promise.resolve(inlineRun) : loadRun(), getJSON(P.scenario, true), getJSON(P.terrain, true),
     (wide ? getJSON(wide, true) : Promise.resolve(null)).then((d) => { WIDE = !!d; return d || getJSON(P.dem, true); }), P.reveal ? getJSON(P.reveal, true) : null,
     getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-osm3d.json`, true), // buildings, roads, land cover (make_osm3d.py)
-    getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-traffic.json`, true)]); // roads open to motor traffic, for the cars (make_traffic.py)
+    getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-traffic.json`, true), // roads open to motor traffic, for the cars (make_traffic.py)
+    getJSON(`data/${SC === 'blind-01' ? 'zawrat' : SC}-water3d.json`, true)]); // waterway lines + water polygons (make_water3d.py)
   if (!R && SCN) R = synthRun(SCN);
   // no elevation model for this scenario (e.g. a new one from the Studio): flat ground at 1000 m over the run's bbox, so
   // the probability map, signals, teams and the blind test still work; a note says the relief is missing
@@ -191,7 +193,8 @@ function elevM(lat, lon) {
 // pixels in regions; the Tatra cuts keep their lake circles only. LOW = a lowland region (no Tatra vegetation belts).
 const LOW = !!SCENS[SC].region && zMax < 600; // coast, lakes, city; mountain regions (Karkonosze, Bieszczady) keep the vegetation belts
 const WM = TER?.waterMask && TER.slopeGrid && SCN?.bbox ? { m: TER.waterMask, rows: TER.slopeGrid.rows, cols: TER.slopeGrid.cols, b: SCN.bbox } : null;
-function isWater(la, lo) {
+// the coarse test only feeds the sea part of the high-res mask (water3d.js), which then answers isWater
+function waterCoarse(la, lo) {
   if (WM && la <= WM.b.north && la >= WM.b.south && lo >= WM.b.west && lo <= WM.b.east) {
     const r = Math.min(WM.rows - 1, Math.floor(((WM.b.north - la) / (WM.b.north - WM.b.south)) * WM.rows)), c = Math.min(WM.cols - 1, Math.floor(((lo - WM.b.west) / (WM.b.east - WM.b.west)) * WM.cols));
     return !!WM.m[r * WM.cols + c];
@@ -199,6 +202,9 @@ function isWater(la, lo) {
   return LOW && elevM(la, lo) <= 0.3;
 }
 const hAt = (lat, lon) => ((elevM(lat, lon) - zMin) * EX) / 1000;
+const WR = WM || LOW ? waterRaster({ latN, latS, lonW, lonE, WKM, HKM, W3D, TER, wm: WM, coarse: waterCoarse,
+  coarseRad: Math.max(2, Math.round((WM ? Math.max((512 / WM.cols) * ((WM.b.east - WM.b.west) / (lonE - lonW)), 1) : 2) * 0.6)) }) : null;
+function isWater(la, lo) { return WR ? WR.at(la, lo) : waterCoarse(la, lo); }
 
 // ---------- OSM land cover (data/<sc>-osm3d.json from make_osm3d.py; (c) OpenStreetMap contributors, ODbL) ----------
 // rings are delta-encoded 1e-5 degree integers; land classes are rasterised once (1024 px) for landAt / leafAt, which the
@@ -558,27 +564,19 @@ const terrain = new THREE.Mesh(terrainGeo, terrainMat);
 terrain.castShadow = true; terrain.receiveShadow = true;
 scene.add(terrain);
 // sea and lakes outside the Tatras as a real water surface (fx3d.seaWaves): the terrain mesh itself, lifted 3 m, shows
-// only where isWater says water, so the coast and lake shapes match the 2D map; the mask is blurred so its edge is a
-// smooth shore line (the scenario waterMask is a coarse grid) and the 0.5..0.9 band carries the surf
+// only where isWater says water: water3d.js's ~4 m mask (rivers as ribbons at their OSM width, lake polygons, the sea
+// from the scenario waterMask), softened so its edge is a smooth shore line and the 0.5..0.9 band carries the surf
 let seaMesh = null;
 const WATER = []; // water bodies for the reflection plane: { x, z, r, y (surface without waves), sea }
-if (WM || LOW) {
-  const C = 512, Rw = Math.max(2, Math.round((C * HKM) / WKM)), m = new Float32Array(C * Rw); let n = 0;
-  for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { if (isWater(latN - ((r + 0.5) / Rw) * (latN - latS), lonW + ((c + 0.5) / C) * (lonE - lonW))) { m[r * C + c] = 1; n++; } }
-  if (n > 20) {
-    const cellPx = WM ? Math.max((C / WM.cols) * ((WM.b.east - WM.b.west) / (lonE - lonW)), 1) : 2, rad = Math.max(2, Math.round(cellPx * 0.6));
-    const blur = (src, dx, dy) => { const out = new Float32Array(src.length); for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { let a = 0, k = 0; for (let t = -rad; t <= rad; t++) { const rr = r + t * dy, cc = c + t * dx; if (rr >= 0 && rr < Rw && cc >= 0 && cc < C) { a += src[rr * C + cc]; k++; } } out[r * C + c] = a / k; } return out; };
-    const mb = blur(blur(m, 1, 0), 0, 1), data = new Uint8Array(C * Rw * 4);
-    for (let r = 0; r < Rw; r++) for (let c = 0; c < C; c++) { const o = ((Rw - 1 - r) * C + c) * 4; data[o] = data[o + 1] = data[o + 2] = mb[r * C + c] * 255; data[o + 3] = 255; } // row 0 = south
-    const tex = new THREE.DataTexture(data, C, Rw, THREE.RGBAFormat); tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
-    const seaMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
-    applyFx(seaMat, [FX.seaWaves(heatU, tex, new THREE.Vector4(-WKM / 2, HKM / 2, WKM, HKM)), FX.waterReflect(heatU, 'sea')]);
-    seaMesh = new THREE.Mesh(terrainGeo, seaMat); seaMesh.position.y = 0.003; seaMesh.receiveShadow = true; seaMesh.renderOrder = 1; scene.add(seaMesh);
-    const st = Math.max(1, Math.round(Math.sqrt(n / 1500))); // ~1500 samples of open water (blurred mask > 0.9) with their surface height
-    for (let r = 0; r < Rw; r += st) for (let c = 0; c < C; c += st) if (mb[r * C + c] > 0.9) {
-      const la = latN - ((r + 0.5) / Rw) * (latN - latS), lo = lonW + ((c + 0.5) / C) * (lonE - lonW);
-      WATER.push({ x: toX(lo), z: toZ(la), r: (st * WKM) / C, y: hAt(la, lo) + 0.003, sea: true });
-    }
+if (WR && WR.n > 20) { // the mask is water3d.js's high-res raster (row 0 = south), one byte per pixel
+  const tex = new THREE.DataTexture(WR.tex, WR.W, WR.H, THREE.RedFormat); tex.unpackAlignment = 1; tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+  const seaMat = new THREE.MeshStandardMaterial({ color: 0x14606f, emissive: 0x020c10, roughness: 0.07, metalness: 0.05, envMapIntensity: 1.25 });
+  applyFx(seaMat, [FX.seaWaves(heatU, tex, new THREE.Vector4(-WKM / 2, HKM / 2, WKM, HKM)), FX.waterReflect(heatU, 'sea')]);
+  seaMesh = new THREE.Mesh(terrainGeo, seaMat); seaMesh.position.y = 0.003; seaMesh.receiveShadow = true; seaMesh.renderOrder = 1; scene.add(seaMesh);
+  const st = Math.max(1, Math.round(Math.sqrt(WR.n / 1500))); // ~1500 samples of open water with their surface height (reflection plane)
+  for (let r = 0; r < WR.H; r += st) for (let c = 0; c < WR.W; c += st) if (WR.tex[r * WR.W + c] > 230) {
+    const la = latS + ((r + 0.5) / WR.H) * (latN - latS), lo = lonW + ((c + 0.5) / WR.W) * (lonE - lonW);
+    WATER.push({ x: toX(lo), z: toZ(la), r: (st * WKM) / WR.W, y: hAt(la, lo) + 0.003, sea: true });
   }
 }
 {

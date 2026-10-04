@@ -12,6 +12,7 @@ python3 -m http.server 8000
 
 ## What is on the screen
 - **Terrain:** Copernicus DEM (`tools/terrain/data/<sc>-dem.json`), 1.5x vertical exaggeration (`?exag=`), topo tint, hillshade, 50/250 m contours; OSM trails (marked colours), streams, lakes and huts from `scenarios/<sc>-terrain.json`.
+- **Water:** outside the Tatra cuts, sea, lakes and rivers are one water surface (fx3d `seaWaves`) cut out by a ~4 m mask built at load by `water3d.js` (about 0.1 s): OSM rivers, streams and canals as continuous ribbons at their `width` tag (else river 20 m, canal 8 m, stream 4 m; at least ~10 m so they never break up), water polygons (lakes, reservoirs, riverbanks) and the sea from the scenario's `waterMask`. Source: `data/<sc>-water3d.json` from `data/make_water3d.py <sc>` (waterway lines + water polygons over the 3D cut; culverts, ditches and drains left out); without it the scenario terrain's `lakePolygons` and `streams` are used. Before this, water came only from the 100 m `waterMask` over the scenario bbox, so narrow rivers showed as separate blobs.
 - **Probability:** the engine's `poaGrid` for the selected step, draped on the terrain; top 3 segments outlined and labelled; searched segments dashed.
 - **Source signals:** every scenario event pinned where it happened (the list itself is in the shell). On the map: Koester rings, trip route, car corridor, BTS circle, witness, patrol pins, find.
 - **Weather:** fog and dusk follow the step's `weather` (button "Pogoda" turns it off).
