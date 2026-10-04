@@ -319,6 +319,16 @@
  ],
  "resources": [
   {
+   "id": "gopr-krynica-b",
+   "name": "GOPR Krynica - patrol B (Piwniczna)",
+   "type": "ground",
+   "base": [
+    49.4405,
+    20.7142
+   ],
+   "readyAt": "06:45"
+  },
+  {
    "id": "pol-krynica",
    "name": "Patrol Policji (KPP Krynica-Zdrój)",
    "type": "ground",
@@ -347,16 +357,6 @@
     20.7177
    ],
    "readyAt": "06:15"
-  },
-  {
-   "id": "gopr-krynica-b",
-   "name": "GOPR Krynica - patrol B (Piwniczna)",
-   "type": "ground",
-   "base": [
-    49.4405,
-    20.7142
-   ],
-   "readyAt": "06:45"
   },
   {
    "id": "dron-pol-ns",
