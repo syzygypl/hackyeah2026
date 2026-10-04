@@ -321,7 +321,7 @@ async function pollAlerts() {
   if (!alertBase) alertBase = { ...rej };
   for (const [k, v] of Object.entries(rej)) { const d = v - (alertBase[k] || 0); if (d > 0) A.push([d > 5 ? "bad" : "", `${k === "pin" ? "Próby zmian bez klucza akcji" : "Odrzucone żądania (" + k + ")"}: ${d} od otwarcia strony`]); }
   if (M.some((m) => m.n === "rescue_llm_up" && m.v === 0)) A.push(["", "Model AI jest wyłączony - meldunki są odczytywane regułami"]);
-  const S = curStep(); (S?.assignments || []).forEach((a) => (a.safety || []).forEach((f) => A.push(["", `${a.resourceId}: ${f}`])));
+  const S = curStep(); (S?.assignments || []).forEach((a) => { const nm = ((S.resources || []).find((r) => r.id === a.resourceId) || {}).name || a.resourceName || a.resourceId; (a.safety || []).forEach((f) => A.push(["", `${nm}: ${f}`])); });
   if (own === null) A.push(["ok", "Brak połączenia z serwerem akcji - nie widać zespołów w terenie"]);
   $("alerts").innerHTML = (A.length ? A : [["ok", "Wszystko w porządku - brak alertów"]]).map(([c, t]) => `<div class="alert ${c}">${esc(t)}</div>`).join("");
 }
@@ -1572,10 +1572,10 @@ subs.push((why) => {
   const chip = (u) => {
     const h = u.health || {}, lv = (codes) => { const w = (u.warnings || []).filter((x) => codes.includes(x.code)); return w.some((x) => x.level === "red") ? "red" : w.length ? "amber" : ""; };
     if (h.fault) return ["usterka", "red", "Usterka: " + h.fault];
-    if (h.batteryPct != null) return [h.batteryPct + "%", lv(["battery", "spares"]), `Bateria ${h.batteryPct}% (~${h.flightMinLeft} min lotu, szacunek)`];
-    if (h.fuelPct != null) return [h.fuelPct + "%", lv(["fuel", "duty"]), `Paliwo ${h.fuelPct}% (~${h.enduranceMinLeft} min, szacunek)`];
+    if (h.batteryPct != null) return ["bateria " + h.batteryPct + "%", lv(["battery", "spares"]), `Bateria ${h.batteryPct}% (~${h.flightMinLeft} min lotu, szacunek)`];
+    if (h.fuelPct != null) return ["paliwo " + h.fuelPct + "%", lv(["fuel", "duty"]), `Paliwo ${h.fuelPct}% (~${h.enduranceMinLeft} min, szacunek)`];
     if (h.workMin != null) return [`${h.workMin}/${h.workLimitMin} min`, lv(["dogwork", "duty"]), `Pies pracuje ${h.workMin} min bez przerwy (limit ${h.workLimitMin})`];
-    if (h.fatiguePct != null) return [h.fatiguePct + "%", lv(["fatigue", "duty"]), `Zmęczenie ${h.fatiguePct}% (szacunek z trasy i czasu służby)`];
+    if (h.fatiguePct != null) return ["zmęczenie " + h.fatiguePct + "%", lv(["fatigue", "duty"]), `Zmęczenie ${h.fatiguePct}% (szacunek z trasy i czasu służby)`];
     return ["-", u.level === "ok" ? "" : u.level, "brak danych o stanie"];
   };
   let assetsKey = "", assetsAt = 0, assetsBusy = false;
