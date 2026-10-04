@@ -1897,6 +1897,21 @@ if (EMB === 'scene') {
     ctl.querySelector('input[data-b="btn-ortho"]').closest('label').hidden = $('btn-ortho').hidden; // shown once the aerial photo has loaded
   };
   setInterval(syncCtl, 1000); // Kino ends on its own; keep the box honest
+  // collapsible box (Mateusz, AI Mateusza #2): a strip "Sterowanie 3D" + the active mode until hover / focus / tap
+  // (hoverHold from ../dock.js, held 3 s, Esc closes); the pin keeps it open (localStorage). The width stays the same in both
+  // states, so frameScene's reserved right margin (it reads only the box width) does not change. Kino keeps its own look.
+  if (innerWidth > 600) {
+    const head = document.createElement('div'); head.className = 'ctl-head';
+    head.innerHTML = `<span class="ctl-ttl">Sterowanie 3D</span><span class="ctl-mode"></span><button type="button" class="ctl-pin" aria-pressed="false" title="Przypnij panel (zostaje rozwinięty)" aria-label="Przypnij panel sterowania 3D"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 1.5h4l-.6 4.2 2.6 2.3v1.2H8.6V15h-1.2V9.2H4V8l2.6-2.3z" fill="currentColor"/></svg></button>`;
+    ctl.prepend(head); ctl.classList.add('cc'); ctl.tabIndex = 0;
+    const pin = head.querySelector('.ctl-pin'), mode = head.querySelector('.ctl-mode');
+    const setPin = (v) => { ctl.classList.toggle('pinned', v); pin.setAttribute('aria-pressed', String(v)); try { localStorage.setItem('rl3dCtlPin', v ? '1' : '0'); } catch {} };
+    try { if (localStorage.getItem('rl3dCtlPin') === '1') setPin(true); } catch {}
+    pin.addEventListener('click', (e) => { e.stopPropagation(); setPin(!ctl.classList.contains('pinned')); });
+    const syncMode = () => { mode.textContent = document.body.classList.contains('cinema') ? 'Kino' : (WALK?.on || WALK?.armed) ? 'Spacer' : document.querySelector('#timeline3dCtl button.on') ? 'FPP' : $('btn-rot').classList.contains('on') ? 'Obrót' : 'Swobodny'; };
+    syncMode(); setInterval(syncMode, 500); ctl.addEventListener('click', () => setTimeout(syncMode, 0));
+    import('../dock.js').then((m) => m.hoverHold(ctl, { holdMs: 3000 })).catch(() => { ctl.classList.remove('cc'); head.remove(); });
+  }
 }
 
 // ---------- camera ----------

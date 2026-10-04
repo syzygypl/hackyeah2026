@@ -349,6 +349,21 @@ body.embed #sceneCtl .chk input { width: 16px; height: 16px; accent-color: var(-
 body.embed #sceneCtl .full { min-height: 34px; background: var(--rl-card, #fff); color: var(--rl-ink, #23272a); border: 1px solid var(--rl-line-strong, rgba(35,39,42,.22)); border-radius: 8px; font-size: 13px; font-weight: 600; }
 body.embed #sceneCtl .full:hover { border-color: var(--rl-ink, #23272a); }
 body.embed #sceneCtl [data-b="btn-game"] { background: var(--rl-danger, #b8322a); color: var(--rl-on-danger, #fff); border-color: var(--rl-danger, #b8322a); }
+/* collapsible box (app3d.js #sceneCtl.cc, hoverHold .peek, .pinned): a one-line strip until hover / focus / tap, same width, so
+   the camera framing (frameScene reads the box width) and the insets do not move. Kino keeps its own look (shot switch only). */
+#sceneCtl .ctl-head { display: flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 0 0 4px; font-size: 12px; cursor: default; }
+#sceneCtl .ctl-ttl { font-weight: 700; white-space: nowrap; }
+#sceneCtl .ctl-mode { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; text-align: center;
+  background: color-mix(in srgb, var(--rl-ink, #23272a) 8%, transparent); color: var(--rl-ink-2, #4a5054); }
+#sceneCtl .ctl-pin { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--rl-ink-2, #4a5054); cursor: pointer; opacity: .55; }
+#sceneCtl .ctl-pin:hover, #sceneCtl .ctl-pin:focus-visible { opacity: 1; border-color: var(--rl-line-strong, rgba(35,39,42,.22)); }
+#sceneCtl.pinned .ctl-pin { opacity: 1; color: var(--rl-accent, #1f4e79); background: color-mix(in srgb, var(--rl-accent, #1f4e79) 12%, transparent); }
+#sceneCtl.cc:focus-visible { outline: 2px solid var(--rl-accent, #1f4e79); outline-offset: 2px; }
+body:not(.cinema) #sceneCtl.cc:not(.peek):not(.pinned) > :not(.ctl-head) { display: none; }
+body:not(.cinema) #sceneCtl.cc:not(.peek):not(.pinned) { padding-top: 4px; padding-bottom: 4px; }
+body:not(.cinema) #sceneCtl.cc.peek:not(.pinned) { animation: ctl-unfold .15s ease both; }
+@keyframes ctl-unfold { from { opacity: .7; } }
+@media (prefers-reduced-motion: reduce) { #sceneCtl.cc.peek { animation: none !important; } }
 body.embed .lbl3d { background: color-mix(in srgb, var(--rl-panel-solid, #faf8f3) 94%, transparent); color: var(--rl-ink, #23272a); border-color: var(--rl-line, rgba(35,39,42,.12)); font-family: var(--rl-font); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
 body.embed .lbl3d.top3 .rk { color: var(--rl-danger, #b8322a); }
 body.embed .tip, body.embed .toast { background: var(--rl-panel-solid, #faf8f3); color: var(--rl-ink, #23272a); border: 1px solid var(--rl-line, rgba(35,39,42,.12)); border-radius: 10px; box-shadow: var(--rl-shadow); }
