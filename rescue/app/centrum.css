@@ -394,3 +394,15 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 .advpin.notext .t{display:none}
 /* ?simAt: header clock = the virtual clock (qa-wieczor #9) */
 #clock .symb{font-size:10.5px;font-weight:700;padding:1px 5px;border-radius:6px;background:var(--rl-warn);color:var(--rl-ink);vertical-align:1px}
+/* Panel overlap (AI Mateusza #1, Mateusz: nothing on top of another at 1440 / 1100 / 390): the bar holds the bell, its list must open
+   over Zespoły and Doradca (same z 5 / 6, later in the page); toasts sit in the map column, not over Zespoły; one toast at a time
+   when there is no height for more (the rest stays in the bell); on a phone one compact toast */
+#bar{z-index:7}
+@media (min-width:901px){
+  body .lftoasts{top:calc(var(--gap) * 2 + var(--bar-h) + 8px);right:calc(var(--roster-w) + var(--gap) * 2 + 8px);width:min(380px,calc(100vw - var(--list-w) - var(--roster-w) - var(--gap) * 4 - 16px))}
+}
+@media (min-width:901px) and (max-height:860px){body .lftoasts .lftoast:nth-child(n+2){display:none}}
+@media (max-width:900px){body .lftoasts .lftoast:nth-child(n+2){display:none}body .lftoast .lfp{display:none}}
+/* 901-1250 px: the bar's last item (clock) wrapped under the list; the sim note goes (cards, toasts and the bell list say "symulacja") */
+@media (min-width:901px) and (max-width:1250px){#simNote{display:none}}
+@media (min-width:901px){body:has(#advisor:not(.closed):not([hidden])) .lftoasts .lftoast:nth-child(n+2),body:has(#advisor:not(.closed):not([hidden])) .lftoast .lfp{display:none}}   /* open Doradca fills the map column: one compact toast above it */
