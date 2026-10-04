@@ -14,6 +14,13 @@
   if (q.get('step')) a.set('step', q.get('step'));
   location.replace('../app/?' + a);
 })();
+/* embedded in /app: the shell's tokens before first paint, so the frame never shows its dark standalone ground (app.js boot() adds the same classes) */
+(function () {
+  var e = new URLSearchParams(location.search).get('embed');
+  if (['1', 'bare', 'scene'].indexOf(e) < 0) return;
+  document.write('<link rel="stylesheet" href="../app/tokens.css">');
+  window.__embedClass = e === '1' ? ['embed'] : ['embed', 'embed-' + e];
+})();
 </script>
 <title>Rescue Locator - mapa prawdopodobieństwa</title>
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
@@ -21,6 +28,7 @@
 <link rel="icon" href="data:,">
 </head>
 <body data-state="loading">
+<script>if (window.__embedClass) document.body.classList.add.apply(document.body.classList, window.__embedClass);</script>
 <div id="app">
   <header id="top">
     <div class="brand">
