@@ -8,12 +8,16 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 function toast(t, ms = 3000) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = "none", ms); }
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}
-if (!LOOPBACK) { $("pinbox").hidden = false; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} }; }
-addEventListener("storage", (e) => { if (e.key === "rescue-pin" || e.key === null) { PIN = ((e.key ? e.newValue : null) || "").replace(/^"(.*)"$/, "$1").trim(); if (!LOOPBACK) $("pin").value = PIN; } });   // a key typed in /app or another tab
+if (!LOOPBACK) { $("keyLock").hidden = false; $("keyLock").onclick = () => { const b = $("pinbox"); b.hidden = !b.hidden; $("keyLock").setAttribute("aria-expanded", String(!b.hidden)); if (!b.hidden) $("pin").focus(); }; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} keyProbe(); }; }
+// sens-funkcji #15: no key field in the bar - a lock (open = this device may change, colour = role from GET /api/key, like /app) opens a small key box
+const KEY_TXT = { operator: "Klucz kierownika akcji: możesz zmieniać.", field: "Klucz ratownika: tylko meldunki i ślady.", wrong: "Nieprawidłowy klucz: tylko podgląd.", none: "Brak klucza: tylko podgląd." };
+async function keyProbe() { if (LOOPBACK) return; const sent = PIN; let role = null; try { const r = await fetch("/api/key", { headers: sent ? { "X-Rescue-Pin": sent } : {}, cache: "no-store" }); if (r.ok) role = (await r.json()).role; } catch (e) {} if (sent !== PIN) return; const B = document.body.classList; B.remove("key-operator", "key-field", "key-wrong", "key-none"); if (!KEY_TXT[role]) return; B.add("key-" + role); $("keyLock").title = KEY_TXT[role] + " Kliknij, aby wpisać klucz."; $("pinbox").querySelector(".kstate").textContent = KEY_TXT[role]; }
+keyProbe();
+addEventListener("storage", (e) => { if (e.key === "rescue-pin" || e.key === null) { PIN = ((e.key ? e.newValue : null) || "").replace(/^"(.*)"$/, "$1").trim(); if (!LOOPBACK) { $("pin").value = PIN; keyProbe(); } } });   // a key typed in /app or another tab
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
   const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
-  if (!r.ok) { const e = new Error(r.status === 401 ? (PIN ? "Klucz akcji jest nieprawidłowy: wpisz klucz kierownika akcji w polu Klucz." : "Podaj klucz akcji (pole Klucz u góry).") : r.status === 403 ? "To klucz ratownika: ta zmiana wymaga klucza kierownika akcji (pole Klucz u góry)." : "HTTP " + r.status); e.status = r.status; throw e; }
+  if (!r.ok) { const e = new Error(r.status === 401 ? (PIN ? "Klucz akcji jest nieprawidłowy: kliknij kłódkę u góry i wpisz klucz kierownika akcji." : "Podaj klucz akcji: kliknij kłódkę u góry.") : r.status === 403 ? "To klucz ratownika: ta zmiana wymaga klucza kierownika akcji (pole Klucz u góry)." : "HTTP " + r.status); e.status = r.status; throw e; }
   return r.json();
 }
 const Q = new URLSearchParams(location.search);
