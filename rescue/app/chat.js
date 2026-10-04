@@ -514,17 +514,20 @@ export function createChat(root, host, opts = {}) {
   let llmDown = 0;
   async function llmParse(t, c, prev) {
     if (Date.now() < llmDown) return null;
-    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
+    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000), t0 = performance.now();
+    const note = (r) => { try { (window.__chatLLM = window.__chatLLM || []).push({ ms: Math.round(performance.now() - t0), r }); } catch (e) {} };
     try {
       const seen = new Set(), places = [];
       for (const g of c.G) if (g.prio > 0 && g.kind !== "IPP" && !seen.has(g.name)) { seen.add(g.name); places.push(g.name); }
       const r = await fetch("/api/parse", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ac.signal,
         body: JSON.stringify({ text: t, clock: c.clock, prev, places, segments: c.segs.map((s) => ({ id: s.id, name: s.name })), teams: (c.resources || []).map((x) => ({ id: x.id, name: x.name, type: x.type || "" })) }) });
       const o = r.ok ? await r.json() : null;
-      if (!o || !Array.isArray(o.events)) { if (!r.ok || (o && o.error)) llmDown = Date.now() + 60000; return null; }
+      // the model is off or failing (503, {error}): skip it for a minute; a slow answer or a lost request only costs this message
+      if (!o || !Array.isArray(o.events)) { if (r.status === 503 || (o && o.error)) llmDown = Date.now() + 60000; note(o && o.error ? "error" : "http " + r.status); return null; }
       const evs = o.events.map((x) => fromLLM(x, t, c)).filter((e) => e.kind);
+      note(evs.length ? "ok" : "none");
       return evs.length ? evs : null;
-    } catch (e) { llmDown = Date.now() + 30000; return null; }
+    } catch (e) { note(e.name === "AbortError" ? "timeout" : "net"); return null; }
     finally { clearTimeout(to); }
   }
   // safe failure: whatever the parser or the card does with a message, the run and the action view stay as they were
