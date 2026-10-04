@@ -349,7 +349,7 @@ body.embed-scene .lg-keys { gap: 10px; margin-top: 3px; font-size: 11px; }
 .tllegend .sw.fov { height: 9px; border: 1.4px solid #64b5f6; background: rgba(100, 181, 246, .2); border-radius: 2px; }
 .tllegend .sw.cov { height: 9px; border: 0; background: rgba(127, 224, 212, .5); }
 .tllegend .sw.acc { height: 9px; width: 9px; border: 1px dashed #ffb74d; border-radius: 50%; }
-.tl-lab { pointer-events: none; padding: 1px 6px; border-radius: 6px; background: rgba(11, 16, 20, .78); color: #e8eef2; font: 11px/1.3 system-ui, sans-serif; white-space: nowrap; border-left: 3px solid var(--c, #ffb74d); }
+.tl-lab { pointer-events: auto; cursor: default; /* hover: GPS / estimate and accuracy (title) */ padding: 1px 6px; border-radius: 6px; background: rgba(11, 16, 20, .78); color: #e8eef2; font: 11px/1.3 system-ui, sans-serif; white-space: nowrap; border-left: 3px solid var(--c, #ffb74d); }
 .tl-lab span { opacity: .75; }
 /* clue weights (wagi śladów): the dot grows and brightens with the clue's weight */
 .chip.cw { background: rgba(58, 47, 12, 0.92); border-color: #f2b134; color: #ffe6a3; display: inline-flex; align-items: center; gap: 5px; }

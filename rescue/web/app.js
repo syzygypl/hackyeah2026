@@ -588,9 +588,10 @@
         let m = tlLabels.get(l.id);
         if (!m) { const el = document.createElement('div'); el.className = 'tl-lab'; m = new maplibregl.Marker({ element: el, anchor: 'left', offset: [10, 0] }).setLngLat(l.at).addTo(map); tlLabels.set(l.id, m); }
         const el = m.getElement(); if (el.dataset.html !== l.html) { el.innerHTML = l.html; el.dataset.html = l.html; }
-        el.style.setProperty('--c', l.color); m.setLngLat(l.at);
+        el.style.setProperty('--c', l.color); el.title = l.title || ''; m.setLngLat(l.at);
       }
       for (const [k, m] of tlLabels) if (!seen.has(k)) { m.remove(); tlLabels.delete(k); }
+      tidy();
     };
     const tlLabels = new Map();
     this.setSegments = (fc) => map.getSource('segs').setData(fc);
@@ -619,7 +620,11 @@
         const el = m.getElement(), p = map.project(m.getLngLat()), b = m.__base || [0, 0];
         return { x: p.x + b[0], y: p.y + b[1], w: el.offsetWidth, h: el.offsetHeight, pri: chipPri(el.className),
           apply: (dx, dy, dim) => { m.setOffset([b[0] + dx, b[1] + dy]); el.style.opacity = dim ? '0.25' : ''; } };
-      }), container.clientWidth);
+      }).concat([...tlLabels.values()].map((m) => {   // unit labels (anchor left, 10 px right of the dot): below top 3 / IPP / live
+        const el = m.getElement(), p = map.project(m.getLngLat()), w = el.offsetWidth;
+        return { x: p.x + 10 + w / 2, y: p.y, w, h: el.offsetHeight, pri: 5.5,
+          apply: (dx, dy, dim) => { m.setOffset([10 + dx, dy]); el.style.opacity = dim ? '0.25' : ''; } };
+      })), container.clientWidth);
     }
     map.on('zoomend', tidy); map.on('moveend', tidy); map.on('resize', tidy);
     this.fitAll = () => map.fitBounds([[west, south], [east, north]], { padding: 24, duration: 500 });
@@ -854,8 +859,10 @@
         feats.push(poly(fa.fov.map((q) => [q[0] + dLon, q[1] + dLat]), { k: 'fov', color: col }));
       }
       feats.push(pt([cur.lon, cur.lat], { k: 'pos', color: col }));
-      labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col,
-        html: `<b>${esc(String(a.name || a.id).split(' (')[0])}</b> <span>${cur.est ? 'szac.' : 'GPS'} · dokładność ±${Math.round(cur.acc)} m</span>` });
+      // demo review 5: name only on the map (labels covered #1-#3 and IPP); GPS / estimate and the accuracy in the tooltip, the
+      // accuracy circle and the legend show it on the map
+      labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col, html: `<b>${esc(String(a.name || a.id).split(' (')[0])}</b>`,
+        title: `${String(a.name || a.id)}: ${cur.est ? 'pozycja szacowana' : 'GPS'}, dokładność ±${Math.round(cur.acc)} m` });
     }
     S.view.setTimeline(FC(feats), labels);
     const lg = $('#tllegend');
