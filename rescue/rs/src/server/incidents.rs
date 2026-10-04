@@ -166,7 +166,7 @@ fn clock_min(c: &str) -> Option<i64> {
 
 /// Europe/Warsaw UTC offset in hours for a local wall time: CEST (+2) from the last Sunday of March 02:00 to the last Sunday
 /// of October 03:00, CET (+1) otherwise (EU rule; no tz database in the binary)
-fn warsaw_offset_h(t: &chrono::NaiveDateTime) -> i64 {
+pub(crate) fn warsaw_offset_h(t: &chrono::NaiveDateTime) -> i64 {
     use chrono::{Datelike, NaiveDate};
     let last_sun = |month: u32| {
         let mut d = NaiveDate::from_ymd_opt(t.year(), month, 31).unwrap_or_default();
@@ -179,7 +179,7 @@ fn warsaw_offset_h(t: &chrono::NaiveDateTime) -> i64 {
     let end = last_sun(10).and_hms_opt(3, 0, 0).unwrap_or_default();
     if *t >= start && *t < end { 2 } else { 1 }
 }
-fn warsaw_iso(t: &chrono::NaiveDateTime) -> String { format!("{}+0{}:00", t.format("%Y-%m-%dT%H:%M:%S"), warsaw_offset_h(t)) }
+pub(crate) fn warsaw_iso(t: &chrono::NaiveDateTime) -> String { format!("{}+0{}:00", t.format("%Y-%m-%dT%H:%M:%S"), warsaw_offset_h(t)) }
 
 /// startedAt / endedAt of one incident, ISO 8601 with the Europe/Warsaw offset, as Centrum's timeline (centrum.js tlItem) derives
 /// them: start = scenario date + startClock (the report); end = the live moment `at` when a live ZNALEZIONO ended it, else the

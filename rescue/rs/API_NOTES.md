@@ -22,3 +22,4 @@
 - Server note: Swift's server timeline cache builds its grid WITHOUT clue weights (unlike StoryPipeline.run) - mirror it.
 - Known non-byte-identical by Swift's own nondeterminism: steps[].assignments[].reason terrain-class tie (miedzyzdroje, morzycko, rodzina-dziecko-las, tragedia-w-moryniu). GET /modules: Swift writes it unsorted in per-dictionary hash order; StoryPipeline::modules_data replays the order the Swift server served (golden/modules.json).
 - Rust-only routes (no Swift counterpart, not in parity.py): POST/GET /api/positions/<sc> (live team positions, app/CONTRACT.md "Live team positions").
+- Rust-only routes: GET /api/schedule, POST /api/notifications/<id>/ack, GET /api/notifications (Symulacja 24/7, app/CONTRACT.md).

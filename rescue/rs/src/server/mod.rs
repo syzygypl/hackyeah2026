@@ -11,6 +11,7 @@ mod inventory;
 mod live;
 mod parse;
 mod positions;
+mod schedule;
 mod state;
 mod store;
 

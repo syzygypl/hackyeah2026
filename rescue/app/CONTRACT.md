@@ -614,3 +614,12 @@ Rust server only (`rescue/rs/src/server/positions.rs`); the Swift rescue-server 
 - Operator 2D (`web/livepos.js`, loaded by `web/app.js` through `window.__rescue2d`): polls every 5 s; marker in the unit's colour with its name and the age of the position, trail of the last 10 min; stale = grey dot, dashed grey trail, "brak sygnału N min". Hidden in Historia (`?live=0` runs).
 - Operator 3D (`app/3d/livepos3d.js`, 2 lines in `app3d.js`): same polling, colours and stale rule as 2D, in its own group under `dyn.live` (hidden in FPP). A unit without a timeline actor gets a pin; a timeline actor (its machines3d model is already on the map) gets only the trail and a label with the age of the fix. Label class `team patrol livepos` (declutter priority above the estimated unit chips). Na żywo only.
 - Test: `python3 rescue/integration/test_positions.py` (own server) or `--server <url> --pin <key>`.
+
+## Symulacja 24/7 server API (schedule + shared notification ACKs) - v1
+
+Rust server only (`rescue/rs/src/server/schedule.rs`, no Swift counterpart). Contract and client: `docs/rescue-locator/live-feed.md` section 4, `app/livefeed.js` (switches from its file / localStorage fallback to these routes by itself).
+
+- `GET /api/schedule` -> `{ schema: "rescue-schedule/1", tz: "Europe/Warsaw", now, day, note, entries, active }`. `entries` = `scenarios/schedule/schedule-24h.json` as is; `now` = server Warsaw time, ISO with offset (every operator sees the same "now"); `active` = occurrences running now, from today and yesterday (crossing midnight): `{ key: "<id>|<day>", id, sc, startedAt, endsAt, minute, clock }` (`clock` = the scenario's own clock at `minute`). Public read.
+- `POST /api/notifications/<id>/ack { day?, by? }` -> `{ ok, id, day, ackedAt, by }`. `id` = an entry id or entry id + `#HHMM` (a call; URL-encode `#`); `day` = today or yesterday (Warsaw), default today; first ACK wins (a later one answers the stored ACK with `already: true`). 404 unknown entry or a bad `#HHMM`, 400 another day. Field key allowed, like `/api/positions`.
+- `GET /api/notifications?since=<ms>` -> `{ now, acks: [{ id, day, ackedAt, by }] }`: ACKs of today and yesterday newer than `since` (ms since epoch; the client passes the previous `now`).
+- Storage: shared store doc `acks:<day>` on Vercel (Neon), memory locally; cleared by `/api/reset`. Test: `python3 rescue/integration/test_schedule_api.py` (own server) or `--server <url> --read-only`.
