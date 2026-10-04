@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""One app: "Zmień scenariusz" in /app opens the embedded Centrum pick (one iframe, kept) and switches the scenario in place.
+"""One app: "Zmień akcję" in /app opens the embedded Centrum pick (one iframe, kept) and switches the scenario in place.
 
     python3 rescue/integration/test_scenario_switch.py                 # own rescue-server on a free port
     python3 rescue/integration/test_scenario_switch.py --base https://rescue-locator.vercel.app
 
 Checks (headless Chrome over CDP, stdlib only; CHROME env = browser path):
-1. /app?sc=zawrat&view=3d: 2D and 3D ready. 2. "Zmień scenariusz" -> overlay with the pick iframe (centrum.html?pick=1&embed=1).
+1. /app?sc=zawrat&view=3d: 2D and 3D ready. 2. "Zmień akcję" -> overlay with the pick iframe (centrum.html?pick=1&embed=1).
 3. a click on another scenario in the list -> no page load (window marker and timeOrigin survive), URL ?sc= and #scen follow,
    the overlay closes, 3D and 2D become ready on the new scenario, and the 3D view is never blank meanwhile (double buffer).
 4. browser Back -> the previous scenario in place, Forward -> the picked one again, still no page load.

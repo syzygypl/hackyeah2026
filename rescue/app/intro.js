@@ -196,7 +196,7 @@ help.innerHTML = `<div class="hp-head"><h2>Instrukcja</h2><span style="flex:1"><
     <li><b>Mapa</b> (2D lub 3D): mapa ciepła na prawdziwym terenie, podzielona na sektory.</li>
     <li><b>Gdzie szukać najpierw</b> (prawy panel): trzy pierwsze sektory, jaka to część obszaru i który zespół tam idzie. Pod „Szczegóły”: plan zespołów i postęp akcji.</li>
     <li><b>Oś czasu</b> (na dole): godzina i kolejne zdarzenia. „Sygnały” otwiera listę wskazówek.</li>
-    <li><b>Góra</b>: Na żywo / Historia, scenariusz, tryby Akcja, Plan, Więcej, „Udostępnij” i „Centrum”.</li>
+    <li><b>Góra</b>: Na żywo / Historia, zmiana akcji, tryby Akcja, Plan, Więcej, „Udostępnij” i „Centrum”.</li>
   </ul>
   <h3>Jak czytać wagę mapy</h3>
   <p>Cieplejszy kolor to większa waga. Legenda mówi, ile razy dane miejsce waży więcej niż średnia komórka (od 0,5x do 25x i więcej). Waga mapy służy do ustalenia kolejności przeszukiwania; nie czytaj jej jako szansy znalezienia. Patrz na kolejność sektorów i na to, jaką część obszaru zajmują.</p>

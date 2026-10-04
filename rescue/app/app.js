@@ -251,7 +251,7 @@ function renderPanels() {
   const t3 = SEGS.slice(0, 3), tp = t3.reduce((a, s) => a + s.poa, 0), ta = t3.reduce((a, s) => a + s.areaPct, 0);
   // no POA % on screen (najmocniejsze-funkcje.md "Czego NIE pokazywać"): a juror reads "45%" as a chance, it holds ~19%; show rank and area
   $("vbig").innerHTML = `<b>${Math.round(ta)}%</b><span>obszaru to top 3<br><em>tu szukać najpierw</em></span>`;
-  $("vsub").textContent = tlDoc() && store.minute != null && SEGS !== S.segments ? `Top 3 z ${SEGS.length} sektorów · ${tlClock(tlDoc(), store.minute)} (z pokryciem)` : `Top 3 z ${S.segments.length} sektorów · krok ${store.step}/${R.steps.length} (${S.t})`;
+  $("vsub").textContent = tlDoc() && store.minute != null && SEGS !== S.segments ? `Top 3 z ${SEGS.length} sektorów · ${tlClock(tlDoc(), store.minute)} (z pokryciem)` : `Top 3 z ${S.segments.length} sektorów · stan na ${S.t}`;
   const segRows = [...t3]; const sel = SEGS.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
   $("segs").innerHTML = segRows.map((s) => { const k = SEGS.indexOf(s);
     const a = segTeam(S, s.id);
@@ -869,7 +869,7 @@ function setRole(r) {
 }
 // first-run hint: one line, dismissible, remembered per role
 const HINTS = {
-  operator: "Wybierz scenariusz u góry. Akcja pokazuje mapę i plan, Plan pozwala dodawać dowody przeciągając je na mapę.",
+  operator: "Wybierz akcję u góry. Akcja pokazuje mapę i plan, Plan pozwala dodawać dowody przeciągając je na mapę.",
   ratownik: "Wybierz swój zespół. Zadanie i mapa są u góry, meldunki wysyłasz dużymi przyciskami na dole.",
 };
 function showFirstRun(role) {
@@ -1269,7 +1269,7 @@ const pickPost = (m) => { try { PICK.fr.contentWindow.postMessage(m, location.or
 function pickOpen() {
   if (!PICK.el) {
     const el = PICK.el = document.createElement("div"); el.id = "pickLayer"; el.hidden = true;
-    el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Wybierz scenariusz");
+    el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Wybierz akcję");
     const fr = PICK.fr = document.createElement("iframe"); fr.title = "Wybór scenariusza: mapa Polski i lista akcji";
     fr.src = "centrum.html?pick=1&embed=1&sc=" + encodeURIComponent(store.scenario || "");
     const slow = document.createElement("div"); slow.className = "pickslow"; slow.hidden = true;
