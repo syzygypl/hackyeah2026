@@ -435,6 +435,14 @@ EXAMPLES["auto-w-rzece-wizna"] = [
   "Dron przeleciał nad N1 i N2, nic",
   "Ciemno od 19:40, 11 stopni, woda 17",
 ];
+EXAMPLES["grzybiarz-puszcza-notecka"] = [
+  "Leśniczy widział starszego pana z koszykiem o 17:30 przy Łysej Górze, szedł na zachód",
+  "Straż Leśna przeszła linie przy Kazimierzu, nic",
+  "Znaleziono zieloną czapkę przy Drodze Szostackiej",
+  "Pies podjął trop przy Francuskich Górach",
+  "Dron przeleciał nad N12, nic",
+  "Mgła w obniżeniach, +3 stopnie",
+];
 EXAMPLES.sniardwy = [
   "Rybak widział żeglarza w wodzie o 17:10 przy Nowych Gutach",
   "Łódź WOPR przeszukała toń na wschód od LKP, nic",
