@@ -1,4 +1,17 @@
 {
+ "auto-w-rzece-wizna": {
+  "file": "hillshade/auto-w-rzece-wizna.png",
+  "bounds": [
+   [
+    22.32249999999999,
+    53.136388888888895
+   ],
+   [
+    22.44749999999999,
+    53.22555555555556
+   ]
+  ]
+ },
  "bieszczady-wetlinska": {
   "file": "hillshade/bieszczady-wetlinska.png",
   "bounds": [

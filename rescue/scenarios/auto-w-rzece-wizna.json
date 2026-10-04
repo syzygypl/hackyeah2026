@@ -1,0 +1,479 @@
+{
+ "incident": "Auto w rzece - Wizna, nasyp DK64 przy moście na Narwi, kierowca zaginiony (scenariusz fikcyjny)",
+ "date": "2026-09-12",
+ "startClock": "19:25",
+ "subject": {
+  "name": "Krzysztof M., 44 lata (osoba fikcyjna)",
+  "age": 44,
+  "category": "swimmer",
+  "note": "Kierowca srebrnego kombi jechał od Białegostoku do Łomży. Ok. 19:10, o zmierzchu, za mostem na Narwi auto zjechało z nasypu DK64 i dachowało do rzeki. Pasażer (kolega z pracy) wyszedł przez okno, dopłynął do brzegu przy moście i z telefonu przejeżdżającego kierowcy zadzwonił na 112 o 19:25. Twierdzi, że kierowca krzyczał, że wychodzi drzwiami, potem go nie widział. Kierowca: szara bluza, dżinsy, umie pływać, prawdopodobnie uderzył głową w słupek. Telefon kierowcy został w aucie. Woda 17°C, powietrze po zmroku 11°C.",
+  "lastContact": "19:10"
+ },
+ "bbox": {
+  "south": 53.15,
+  "west": 22.345,
+  "north": 53.212,
+  "east": 22.425
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: auto w Narwi pod nasypem DK64, ok. 40 m poniżej mostu w Wiźnie (wypadek ok. 19:10)",
+  "at": [
+   53.20005,
+   22.40805
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "N1",
+   "name": "Narew 0,2 km poniżej mostu",
+   "seed": [
+    53.19915,
+    22.40773
+   ]
+  },
+  {
+   "id": "N2",
+   "name": "Narew 1,0 km poniżej mostu",
+   "seed": [
+    53.19692,
+    22.39962
+   ]
+  },
+  {
+   "id": "N3",
+   "name": "Narew 1,8 km poniżej mostu",
+   "seed": [
+    53.19213,
+    22.3908
+   ]
+  },
+  {
+   "id": "N4",
+   "name": "Narew 2,6 km poniżej mostu",
+   "seed": [
+    53.18625,
+    22.3841
+   ]
+  },
+  {
+   "id": "N5",
+   "name": "Narew 3,4 km poniżej mostu",
+   "seed": [
+    53.18061,
+    22.38348
+   ]
+  },
+  {
+   "id": "N6",
+   "name": "Narew 4,2 km poniżej mostu",
+   "seed": [
+    53.17692,
+    22.38434
+   ]
+  },
+  {
+   "id": "N7",
+   "name": "Narew 5,8 km poniżej mostu",
+   "seed": [
+    53.17128,
+    22.38062
+   ]
+  },
+  {
+   "id": "N8",
+   "name": "Narew 7,4 km poniżej mostu",
+   "seed": [
+    53.15784,
+    22.37533
+   ]
+  },
+  {
+   "id": "N9",
+   "name": "Narew 9,0 km poniżej mostu",
+   "seed": [
+    53.15096,
+    22.36054
+   ]
+  },
+  {
+   "id": "N10",
+   "name": "Wizna",
+   "seed": [
+    53.19438,
+    22.38409
+   ]
+  },
+  {
+   "id": "N11",
+   "name": "Włochówka",
+   "seed": [
+    53.18947,
+    22.4221
+   ]
+  },
+  {
+   "id": "N12",
+   "name": "Sulin-Strumiłowo",
+   "seed": [
+    53.20081,
+    22.42101
+   ]
+  },
+  {
+   "id": "N13",
+   "name": "Łęg",
+   "seed": [
+    53.16452,
+    22.37476
+   ]
+  },
+  {
+   "id": "N14",
+   "name": "Niwkowo",
+   "seed": [
+    53.15618,
+    22.36056
+   ]
+  },
+  {
+   "id": "N15",
+   "name": "Łąki nad Wizną",
+   "seed": [
+    53.2075,
+    22.37
+   ]
+  },
+  {
+   "id": "N16",
+   "name": "Łąki pod Rutkami",
+   "seed": [
+    53.2085,
+    22.395
+   ]
+  },
+  {
+   "id": "N17",
+   "name": "Łąki na płn. od Sulina",
+   "seed": [
+    53.208,
+    22.417
+   ]
+  },
+  {
+   "id": "N18",
+   "name": "Łąki na wsch. od Kopcia",
+   "seed": [
+    53.178,
+    22.405
+   ]
+  },
+  {
+   "id": "N19",
+   "name": "Łąki na płn. od Grądów-Wonieckich",
+   "seed": [
+    53.16,
+    22.405
+   ]
+  },
+  {
+   "id": "N20",
+   "name": "Łąki na płd. od Kramkowa",
+   "seed": [
+    53.165,
+    22.35
+   ]
+  },
+  {
+   "id": "N21",
+   "name": "Łąki przy Jedwabiance",
+   "seed": [
+    53.195,
+    22.355
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "osp-wizna",
+   "name": "OSP Wizna - patrol brzegu",
+   "type": "ground",
+   "base": [
+    53.1946,
+    22.3846
+   ],
+   "readyAt": "19:40"
+  },
+  {
+   "id": "pol-lomza",
+   "name": "Patrol Policji (KMP Łomża)",
+   "type": "ground",
+   "base": [
+    53.2003,
+    22.4068
+   ],
+   "readyAt": "19:45"
+  },
+  {
+   "id": "psp-lomza-lodz",
+   "name": "Łódź PSP JRG Łomża",
+   "type": "boat",
+   "base": [
+    53.2003,
+    22.4068
+   ],
+   "readyAt": "19:50"
+  },
+  {
+   "id": "prm-lomza",
+   "name": "Zespół PRM Łomża (po przekazaniu pasażera: brzeg przy moście)",
+   "type": "ground",
+   "base": [
+    53.2016,
+    22.4112
+   ],
+   "readyAt": "20:10"
+  },
+  {
+   "id": "wopr-lomza",
+   "name": "Łódź WOPR Łomża",
+   "type": "boat",
+   "base": [
+    53.2003,
+    22.4068
+   ],
+   "readyAt": "20:20"
+  },
+  {
+   "id": "dron-psp-lomza",
+   "name": "Dron termowizyjny PSP Łomża",
+   "type": "drone",
+   "base": [
+    53.2003,
+    22.4068
+   ],
+   "readyAt": "20:35"
+  },
+  {
+   "id": "sgrw-bialystok",
+   "name": "Nurkowie PSP (SGRW Białystok)",
+   "type": "diver",
+   "base": [
+    53.2003,
+    22.4068
+   ],
+   "readyAt": "20:50"
+  },
+  {
+   "id": "pies-pol-bialystok",
+   "name": "Przewodnik z psem tropiącym (Policja Białystok)",
+   "type": "dog",
+   "base": [
+    53.2003,
+    22.4068
+   ],
+   "readyAt": "21:00"
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): łąka na prawym brzegu Narwi, ok. 1,9 km poniżej mostu",
+  "at": [
+   53.19035,
+   22.38575
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "19:25",
+   "title": "Teren: dolina Narwi, łąki zalewowe, starorzecza, wał i nasyp DK64",
+   "detail": "OSM. Narew ma tu 60-90 m szerokości, płynie na południe, meandruje. Brzegi w wierzbach i trzcinach.",
+   "factor": 1
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "19:25",
+   "title": "Trudność: nurt, trzciny i podmokłe łąki",
+   "detail": "Patrole piesze wzdłuż brzegów i wałów; koryto tylko łodzie PSP/WOPR i nurkowie."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "19:25",
+   "title": "Warunki: zmierzch, 12°C, wiatr 3 m/s z W, bez opadów",
+   "detail": "Zachód słońca 19:01, od ok. 19:40 ciemno. Woda 17°C. Prąd Narwi ok. 0,4 m/s.",
+   "visibilityM": 3000,
+   "windMs": 3,
+   "windFromDeg": 270,
+   "tempC": 12,
+   "precip": "none",
+   "dark": true
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "19:25",
+   "title": "Pierścienie od miejsca wypadku (osoba w wodzie, przybliżenie)",
+   "detail": "Bez kierunku: 0.4 / 1.0 / 2.0 / 4.0 km. Woda niesie w dół rzeki - patrz korytarz nurtu.",
+   "point": [
+    53.20005,
+    22.40805
+   ],
+   "quantilesKm": [
+    0.4,
+    1.0,
+    2.0,
+    4.0
+   ]
+  },
+  {
+   "provider": "TripPlan",
+   "at": "19:30",
+   "title": "Nurt Narwi: korytarz w dół rzeki od mostu",
+   "detail": "Prąd ok. 0,4 m/s: przez 20 minut do 0,5 km, przez 2 h do ok. 3 km. Osoba w wodzie płynie z nurtem albo wychodzi na brzeg niżej.",
+   "points": [
+    [
+     53.20085,
+     22.40866
+    ],
+    [
+     53.19669,
+     22.40621
+    ],
+    [
+     53.19692,
+     22.39962
+    ],
+    [
+     53.19416,
+     22.39375
+    ],
+    [
+     53.1907,
+     22.38898
+    ],
+    [
+     53.1871,
+     22.3846
+    ],
+    [
+     53.18293,
+     22.38569
+    ],
+    [
+     53.18067,
+     22.38199
+    ],
+    [
+     53.17784,
+     22.38177
+    ],
+    [
+     53.17513,
+     22.38753
+    ],
+    [
+     53.17494,
+     22.38355
+    ]
+   ],
+   "radiusM": 200
+  },
+  {
+   "provider": "Clue",
+   "at": "19:45",
+   "title": "PSP: auto na dachu w Narwi, drzwi kierowcy otwarte, w środku nikogo",
+   "detail": "Łódź PSP JRG Łomża przy aucie 40 m poniżej mostu. Pas kierowcy odpięty, telefon kierowcy w aucie.",
+   "point": [
+    53.20005,
+    22.40805
+   ],
+   "radiusM": 150,
+   "clueKind": "trace"
+  },
+  {
+   "provider": "Clue",
+   "at": "20:05",
+   "title": "Świadek: wędkarz z Kalenia słyszał wołanie z wody ok. 19:20",
+   "detail": "Meldunek: Mieszkaniec - wędkarz na prawym brzegu ok. 1 km poniżej mostu: 'ktoś wołał z wody, chyba płynął z prądem'. Nic nie widział, było już szaro.",
+   "point": [
+    53.1956,
+    22.399
+   ],
+   "radiusM": 400,
+   "seenAt": "19:20",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "20:25",
+   "title": "OSP Wizna i Policja: nasyp, wał i lewy brzeg przy moście, nic",
+   "detail": "Latarki, wołanie, 500 m w obie strony od mostu po lewym brzegu. POD 50%.",
+   "segments": [
+    "N1"
+   ],
+   "pod": 0.5
+  },
+  {
+   "provider": "Clue",
+   "at": "20:45",
+   "title": "Łódź WOPR: but kierowcy w zaczepie przy prawym brzegu, ok. 1,5 km poniżej mostu",
+   "detail": "Pasażer potwierdza: but kierowcy. Zaczepiony o zatopioną gałąź przy trzcinach.",
+   "point": [
+    53.19416,
+    22.39375
+   ],
+   "radiusM": 250
+  },
+  {
+   "provider": "DronePassEmpty",
+   "at": "21:05",
+   "title": "Dron termowizyjny PSP: koryto i brzegi od mostu do 1 km w dół, nic",
+   "detail": "Noc: termowizja dobrze widzi człowieka na brzegu i na wodzie, słabo pod wierzbami. POD 70%.",
+   "segments": [
+    "N1",
+    "N2"
+   ],
+   "pod": 0.7
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "21:20",
+   "title": "Nurkowie SGRW: auto i 100 m koryta poniżej, sonar, nic",
+   "detail": "Kierowcy nie ma w aucie ani przy dnie pod mostem. POD 60%.",
+   "segments": [
+    "N1"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "Clue",
+   "at": "21:25",
+   "title": "Pies Policji: trop od trzcin na prawym brzegu w stronę łąki",
+   "detail": "Przewodnik: pies podjął trop przy wydeptanych trzcinach ok. 1,9 km poniżej mostu, prowadzi od wody w górę skarpy.",
+   "point": [
+    53.1908,
+    22.3874
+   ],
+   "radiusM": 200,
+   "clueKind": "trace"
+  },
+  {
+   "provider": "Clue",
+   "at": "21:40",
+   "title": "ZNALEZIONO: dron termowizyjny - kierowca na łące przy prawym brzegu",
+   "detail": "Leżał ok. 100 m od wody, wychłodzony, z raną głowy, splątany. Wyszedł z rzeki sam i szedł w stronę świateł Kopcia. Przekazany ZRM.",
+   "point": [
+    53.19035,
+    22.38575
+   ],
+   "radiusM": 30,
+   "found": true
+  }
+ ]
+}
