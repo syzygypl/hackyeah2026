@@ -1,0 +1,394 @@
+{
+ "incident": "Drugie uszkodzenie toru (dywersja) - linia 96 Głębokie, zaginiony toromistrz (scenariusz fikcyjny)",
+ "date": "2026-10-17",
+ "startClock": "06:10",
+ "subject": {
+  "name": "Józef P., toromistrz (osoba fikcyjna)",
+  "age": 58,
+  "category": "hiker",
+  "note": "Po wykolejeniu pociągu pod Rytrem (04:52) dyżurny ruchu wysłał toromistrza z Piwnicznej na obchód linii kolejowej 96. O 05:42 meldował przez radio: 'przy Głębokim drugie uszkodzenie torów, ktoś z latarką uciekał z nasypu w las, w stronę Młodowskiego Potoku, idę zobaczyć'. Potem cisza - radio i telefon nie odpowiadają. Pomarańczowa kamizelka, latarka czołowa, dobrze zna teren. Ruch pociągów na linii wstrzymany.",
+  "lastContact": "05:42"
+ },
+ "bbox": {
+  "south": 49.448,
+  "west": 20.645,
+  "north": 49.503,
+  "east": 20.727
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: drugie uszkodzenie toru przy Głębokim (ostatni meldunek radiowy 05:42)",
+  "at": [
+   49.4541,
+   20.6965
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "wreck": {
+  "kind": "sabotage",
+  "sabotage": [
+   {
+    "at": [
+     49.4541,
+     20.6965
+    ],
+    "label": "Drugie uszkodzenie toru (dywersja)"
+   }
+  ]
+ },
+ "segments": [
+  {
+   "id": "R1",
+   "name": "Tor i nasyp - miejsce wykolejenia",
+   "seed": [
+    49.479,
+    20.6818
+   ]
+  },
+  {
+   "id": "R2",
+   "name": "Tor w stronę Rytra",
+   "seed": [
+    49.485,
+    20.6797
+   ]
+  },
+  {
+   "id": "R3",
+   "name": "Tor w stronę Młodowa",
+   "seed": [
+    49.4712,
+    20.6898
+   ]
+  },
+  {
+   "id": "R4",
+   "name": "Poprad - brzeg pod składem",
+   "seed": [
+    49.4765,
+    20.6865
+   ]
+  },
+  {
+   "id": "R5",
+   "name": "Poprad - w dół rzeki do Rytra",
+   "seed": [
+    49.488,
+    20.684
+   ]
+  },
+  {
+   "id": "R6",
+   "name": "Poprad - w górę rzeki do Młodowa",
+   "seed": [
+    49.468,
+    20.6975
+   ]
+  },
+  {
+   "id": "R7",
+   "name": "Jar potoku nad torem (las)",
+   "seed": [
+    49.4715,
+    20.68
+   ]
+  },
+  {
+   "id": "R8",
+   "name": "Obłazy Ryterskie - las i polany",
+   "seed": [
+    49.473,
+    20.671
+   ]
+  },
+  {
+   "id": "R9",
+   "name": "Kordowiec - dolina potoku",
+   "seed": [
+    49.4795,
+    20.6735
+   ]
+  },
+  {
+   "id": "R10",
+   "name": "Rytro - zabudowa i stacja",
+   "seed": [
+    49.4882,
+    20.6758
+   ]
+  },
+  {
+   "id": "R11",
+   "name": "Młodów - przystanek i zabudowa",
+   "seed": [
+    49.4688,
+    20.6935
+   ]
+  },
+  {
+   "id": "R12",
+   "name": "Głęboczanka - dolina (drugi brzeg)",
+   "seed": [
+    49.4745,
+    20.7085
+   ]
+  },
+  {
+   "id": "R13",
+   "name": "Stok nad Popradem - drugi brzeg (Czerteż)",
+   "seed": [
+    49.4795,
+    20.6985
+   ]
+  },
+  {
+   "id": "R14",
+   "name": "Wielochówka / Kamienny Groń - las",
+   "seed": [
+    49.464,
+    20.668
+   ]
+  },
+  {
+   "id": "R15",
+   "name": "Roztoka Ryterska",
+   "seed": [
+    49.4855,
+    20.658
+   ]
+  },
+  {
+   "id": "R16",
+   "name": "Makowica / Cyrla - las",
+   "seed": [
+    49.4905,
+    20.713
+   ]
+  },
+  {
+   "id": "R17",
+   "name": "Głębokie - tor, drugie miejsce dywersji",
+   "seed": [
+    49.456,
+    20.696
+   ]
+  },
+  {
+   "id": "R18",
+   "name": "Piwniczna - Kokuszka (południe)",
+   "seed": [
+    49.453,
+    20.715
+   ]
+  },
+  {
+   "id": "R19",
+   "name": "Młodowski Potok - las na zachód",
+   "seed": [
+    49.457,
+    20.68
+   ]
+  },
+  {
+   "id": "R20",
+   "name": "Brzezowica / północ",
+   "seed": [
+    49.499,
+    20.67
+   ]
+  },
+  {
+   "id": "R21",
+   "name": "Jar Młodowskiego Potoku (pod Głębokim)",
+   "seed": [
+    49.459,
+    20.6885
+   ]
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): jar Młodowskiego Potoku pod skarpą",
+  "at": [
+   49.4578,
+   20.6886
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "06:10",
+   "title": "Teren: dolina Popradu, linia 96, jary potoków pod Głębokim",
+   "detail": "OSM. Osoba znająca teren idzie ścieżką lub potokiem; w ciemności częste upadki ze skarp.",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "06:10",
+   "title": "Koester: dorosły w terenie leśnym (zna teren)",
+   "detail": "Pierścienie ISRID od IPP (wartości przybliżone).",
+   "point": [
+    49.4541,
+    20.6965
+   ],
+   "quantilesKm": [
+    1.1,
+    3.0,
+    5.8,
+    11.5
+   ]
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "06:10",
+   "title": "Trudność terenu",
+   "detail": "Klasy terenu z nachylenia DEM: strome skarpy jarów nad torem."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "06:10",
+   "title": "Warunki: ciemno, mgła w dolinie, +5°C, wiatr 2 m/s",
+   "detail": "Świt ok. 06:50, mgła do ok. 07:00.",
+   "visibilityM": 300,
+   "windMs": 2,
+   "tempC": 5,
+   "precip": "none",
+   "dark": true,
+   "ice": false
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "06:20",
+   "title": "SOK i Policja: tor i nasyp przy uszkodzeniu, nic",
+   "detail": "Miejsce uszkodzenia torów zabezpieczone do oględzin. Toromistrza nie ma przy torach.",
+   "segments": [
+    "R17"
+   ],
+   "pod": 0.6
+  },
+  {
+   "provider": "Clue",
+   "at": "06:35",
+   "title": "SOK: latarka czołowa toromistrza na skarpie nad jarem",
+   "detail": "Leżała zapalona 60 m od toru, w stronę Młodowskiego Potoku.",
+   "point": [
+    49.4547,
+    20.6948
+   ],
+   "radiusM": 100
+  },
+  {
+   "provider": "DronePassEmpty",
+   "at": "07:00",
+   "title": "Dron Policji: zbocze na południe od Głębokiego, nic",
+   "detail": "Mgła się podnosi, termowizja w lesie słaba. POD 40%.",
+   "segments": [
+    "R18"
+   ],
+   "pod": 0.4
+  },
+  {
+   "provider": "Clue",
+   "at": "07:20",
+   "title": "Mieszkaniec Głębokiego (meldunek): ok. 05:50 krzyk w jarze Młodowskiego Potoku",
+   "detail": "Meldunek: mieszkaniec (telefon z GPS): słyszałem krótki krzyk w dole jaru, potem nic. GPS mojego telefonu przy domu.",
+   "point": [
+    49.4563,
+    20.6905
+   ],
+   "radiusM": 300,
+   "seenAt": "05:50",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "Clue",
+   "at": "07:55",
+   "title": "Pies GOPR podjął trop w dół jaru Młodowskiego Potoku",
+   "detail": "Przewodnik: wyraźny trop od skarpy w dół, wzdłuż potoku.",
+   "point": [
+    49.457,
+    20.6898
+   ],
+   "radiusM": 150
+  },
+  {
+   "provider": "Clue",
+   "at": "08:30",
+   "title": "ZNALEZIONO: GOPR - toromistrz pod skarpą w jarze Młodowskiego Potoku",
+   "detail": "Spadł ze skarpy w ciemności, uraz nogi, wychłodzony, przytomny. Radio rozbite przy upadku. Ewakuacja noszami do drogi w Młodowie, przekazany ZRM.",
+   "point": [
+    49.4578,
+    20.6886
+   ],
+   "radiusM": 30,
+   "found": true
+  }
+ ],
+ "resources": [
+  {
+   "id": "pol-krynica",
+   "name": "Patrol Policji (KPP Krynica-Zdrój)",
+   "type": "ground",
+   "base": [
+    49.4405,
+    20.7142
+   ],
+   "readyAt": "06:15"
+  },
+  {
+   "id": "osp-piwniczna",
+   "name": "OSP Piwniczna-Zdrój",
+   "type": "ground",
+   "base": [
+    49.4395,
+    20.7155
+   ],
+   "readyAt": "06:20"
+  },
+  {
+   "id": "sok-krynica",
+   "name": "SOK - patrol Straży Ochrony Kolei (Krynica)",
+   "type": "ground",
+   "base": [
+    49.4317,
+    20.7177
+   ],
+   "readyAt": "06:15"
+  },
+  {
+   "id": "gopr-krynica-b",
+   "name": "GOPR Krynica - patrol B (Piwniczna)",
+   "type": "ground",
+   "base": [
+    49.4405,
+    20.7142
+   ],
+   "readyAt": "06:45"
+  },
+  {
+   "id": "dron-pol-ns",
+   "name": "Dron Policji z termowizją (KMP Nowy Sącz)",
+   "type": "drone",
+   "base": [
+    49.6215,
+    20.6905
+   ],
+   "readyAt": "06:50"
+  },
+  {
+   "id": "pies-gopr-krynica",
+   "name": "Przewodnik z psem tropiącym GOPR Krynica",
+   "type": "dog",
+   "base": [
+    49.4405,
+    20.7142
+   ],
+   "readyAt": "07:30"
+  }
+ ]
+}

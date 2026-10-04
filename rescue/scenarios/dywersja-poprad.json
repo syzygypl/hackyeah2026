@@ -1,0 +1,499 @@
+{
+ "incident": "Wykolejenie pociągu po dywersji na torach - linia 96 Rytro - Młodów, zaginiony konduktor (scenariusz fikcyjny)",
+ "date": "2026-10-17",
+ "startClock": "05:10",
+ "subject": {
+  "name": "Marek K., konduktor (osoba fikcyjna)",
+  "age": 52,
+  "category": "dementia",
+  "note": "Pociąg osobowy Krynica-Zdrój - Nowy Sącz (lokomotywa i 4 wagony, 63 osoby) wykoleił się o 04:52 na celowo uszkodzonym odcinku toru między Młodowem a Rytrem (dywersja na torach). Lokomotywa i dwa wagony zjechały z nasypu, jeden wagon leży na boku. Konduktor pomagał pasażerom wyjść, ok. 04:56 widziany z rozciętą głową - mówił niezbornie, że 'idzie po pomoc', i odszedł w ciemność bez latarki i telefonu. Z listy pasażerów brakuje też jednej osoby. Granatowy mundur kolejarski, odblaskowa kamizelka, czapka. Dyżurny ruchu zgłasza zdarzenie na 112 o 05:01.",
+  "lastContact": "04:56"
+ },
+ "bbox": {
+  "south": 49.448,
+  "west": 20.645,
+  "north": 49.503,
+  "east": 20.727
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: wykolejony skład na linii 96 między Rytrem a Młodowem (konduktor ostatnio widziany 04:56)",
+  "at": [
+   49.479,
+   20.6818
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "wreck": {
+  "kind": "train",
+  "at": [
+   49.479,
+   20.6818
+  ],
+  "cars": 4,
+  "label": "Wykolejony pociąg osobowy (lokomotywa + 4 wagony)",
+  "sabotage": [
+   {
+    "at": [
+     49.479,
+     20.6818
+    ],
+    "label": "Uszkodzony tor (dywersja)"
+   },
+   {
+    "at": [
+     49.4541,
+     20.6965
+    ],
+    "label": "Drugie uszkodzenie toru (ładunek nie zadziałał)"
+   }
+  ]
+ },
+ "segments": [
+  {
+   "id": "R1",
+   "name": "Tor i nasyp - miejsce wykolejenia",
+   "seed": [
+    49.479,
+    20.6818
+   ]
+  },
+  {
+   "id": "R2",
+   "name": "Tor w stronę Rytra",
+   "seed": [
+    49.485,
+    20.6797
+   ]
+  },
+  {
+   "id": "R3",
+   "name": "Tor w stronę Młodowa",
+   "seed": [
+    49.4712,
+    20.6898
+   ]
+  },
+  {
+   "id": "R4",
+   "name": "Poprad - brzeg pod składem",
+   "seed": [
+    49.4765,
+    20.6865
+   ]
+  },
+  {
+   "id": "R5",
+   "name": "Poprad - w dół rzeki do Rytra",
+   "seed": [
+    49.488,
+    20.684
+   ]
+  },
+  {
+   "id": "R6",
+   "name": "Poprad - w górę rzeki do Młodowa",
+   "seed": [
+    49.468,
+    20.6975
+   ]
+  },
+  {
+   "id": "R7",
+   "name": "Jar potoku nad torem (las)",
+   "seed": [
+    49.4715,
+    20.68
+   ]
+  },
+  {
+   "id": "R8",
+   "name": "Obłazy Ryterskie - las i polany",
+   "seed": [
+    49.473,
+    20.671
+   ]
+  },
+  {
+   "id": "R9",
+   "name": "Kordowiec - dolina potoku",
+   "seed": [
+    49.4795,
+    20.6735
+   ]
+  },
+  {
+   "id": "R10",
+   "name": "Rytro - zabudowa i stacja",
+   "seed": [
+    49.4882,
+    20.6758
+   ]
+  },
+  {
+   "id": "R11",
+   "name": "Młodów - przystanek i zabudowa",
+   "seed": [
+    49.4688,
+    20.6935
+   ]
+  },
+  {
+   "id": "R12",
+   "name": "Głęboczanka - dolina (drugi brzeg)",
+   "seed": [
+    49.4745,
+    20.7085
+   ]
+  },
+  {
+   "id": "R13",
+   "name": "Stok nad Popradem - drugi brzeg (Czerteż)",
+   "seed": [
+    49.4795,
+    20.6985
+   ]
+  },
+  {
+   "id": "R14",
+   "name": "Wielochówka / Kamienny Groń - las",
+   "seed": [
+    49.464,
+    20.668
+   ]
+  },
+  {
+   "id": "R15",
+   "name": "Roztoka Ryterska",
+   "seed": [
+    49.4855,
+    20.658
+   ]
+  },
+  {
+   "id": "R16",
+   "name": "Makowica / Cyrla - las",
+   "seed": [
+    49.4905,
+    20.713
+   ]
+  },
+  {
+   "id": "R17",
+   "name": "Głębokie - tor, drugie miejsce dywersji",
+   "seed": [
+    49.456,
+    20.696
+   ]
+  },
+  {
+   "id": "R18",
+   "name": "Piwniczna - Kokuszka (południe)",
+   "seed": [
+    49.453,
+    20.715
+   ]
+  },
+  {
+   "id": "R19",
+   "name": "Młodowski Potok - las na zachód",
+   "seed": [
+    49.457,
+    20.68
+   ]
+  },
+  {
+   "id": "R20",
+   "name": "Brzezowica / północ",
+   "seed": [
+    49.499,
+    20.67
+   ]
+  },
+  {
+   "id": "R21",
+   "name": "Jar Młodowskiego Potoku (pod Głębokim)",
+   "seed": [
+    49.459,
+    20.6885
+   ]
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): jar potoku bez nazwy, ok. 1 km od składu",
+  "at": [
+   49.4709,
+   20.681
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "05:10",
+   "title": "Teren: dolina Popradu, linia 96 na nasypie, strome zalesione stoki",
+   "detail": "OSM. Osoba zdezorientowana po urazie głowy zwykle idzie wzdłuż torów albo drogi, czasem w dół do wody lub w górę potoku, i zostaje w pobliżu (Koester).",
+   "factor": 1
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "05:10",
+   "title": "Koester: osoba zdezorientowana (uraz głowy, wstrząs), teren leśny",
+   "detail": "Pierścienie ISRID od IPP (wartości przybliżone, profil 'zdezorientowany').",
+   "point": [
+    49.479,
+    20.6818
+   ],
+   "quantilesKm": [
+    0.3,
+    0.8,
+    1.6,
+    3.2
+   ]
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "05:10",
+   "title": "Trudność terenu",
+   "detail": "Klasy terenu z nachylenia DEM: strome jary potoków nad torem, rzeka po deszczach."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "05:10",
+   "title": "Warunki: ciemno, mgła w dolinie, +5°C, wiatr 2 m/s",
+   "detail": "Świt ok. 06:50. Mgła do ok. 07:00 - śmigłowiec nie poleci przed jej podniesieniem. Konduktor bez kurtki: wychłodzenie.",
+   "visibilityM": 300,
+   "windMs": 2,
+   "tempC": 5,
+   "precip": "none",
+   "dark": true,
+   "ice": false
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "05:12",
+   "title": "Pasażerowie i maszynista: wokół składu 100 m, nic",
+   "detail": "Wołanie i latarki telefonów przy wagonach i na nasypie, bez planu. Niski POD.",
+   "segments": [
+    "R1"
+   ],
+   "pod": 0.2
+  },
+  {
+   "provider": "Clue",
+   "at": "05:18",
+   "title": "Pasażer (meldunek): konduktor szedł torem w stronę Młodowa",
+   "detail": "Meldunek: pasażer z pierwszego wagonu (telefon z GPS): ok. 05:00 widziałem konduktora z latarką kogoś innego, szedł po torze na południe, potem zgasła.",
+   "point": [
+    49.4762,
+    20.6834
+   ],
+   "radiusM": 200,
+   "seenAt": "05:00",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "05:30",
+   "title": "SOK: drugie uszkodzenie toru przy Głębokim (dywersja, ładunek nie zadziałał), nikogo",
+   "detail": "Patrol Straży Ochrony Kolei sprawdził linię 3 km na południe: drugie miejsce uszkodzenia toru z tym samym śladem działania. Ruch na linii wstrzymany, teren zabezpiecza Policja. Nikogo z pociągu w tym rejonie.",
+   "segments": [
+    "R17"
+   ],
+   "pod": 0.5
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "05:40",
+   "title": "PSP + OSP Rytro: wagony, nasyp i tor 300 m w obie strony, nic",
+   "detail": "Wszyscy z wagonów policzeni poza konduktorem i jedną pasażerką. Ranni przekazani ZRM.",
+   "segments": [
+    "R1",
+    "R2"
+   ],
+   "pod": 0.7
+  },
+  {
+   "provider": "Clue",
+   "at": "05:50",
+   "title": "ZRM: odnaleziona pasażerka w szoku nad Popradem - mówi, że konduktor poszedł w górę potoku",
+   "detail": "Pasażerka (osoba fikcyjna) siedziała na brzegu 300 m poniżej składu, wychłodzona. 'Pan konduktor powiedział, że zna drogę lasem do wsi, i poszedł w górę potoku, ok. 05:05.'",
+   "point": [
+    49.4741,
+    20.6846
+   ],
+   "radiusM": 250,
+   "seenAt": "05:05",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "06:10",
+   "title": "Policja + OSP: brzeg Popradu pod składem i w górę rzeki, nic",
+   "detail": "Latarki i szperacz z brzegu, mgła. POD 40%.",
+   "segments": [
+    "R4",
+    "R6"
+   ],
+   "pod": 0.4
+  },
+  {
+   "provider": "DronePassEmpty",
+   "at": "06:25",
+   "title": "Dron PSP: drugi brzeg Popradu (Czerteż), nic",
+   "detail": "Termowizja w mgle słabo widzi. POD 40%.",
+   "segments": [
+    "R13"
+   ],
+   "pod": 0.4
+  },
+  {
+   "provider": "Clue",
+   "at": "06:40",
+   "title": "Pies tropiący podjął trop od składu na zachód, w górę jaru potoku",
+   "detail": "Przewodnik: pies prowadzi od nasypu do jaru, wyraźnie, pierwsze 300 m.",
+   "point": [
+    49.4732,
+    20.6838
+   ],
+   "radiusM": 150
+  },
+  {
+   "provider": "Weather",
+   "at": "06:55",
+   "title": "Świt, mgła się podnosi - śmigłowiec LPR może lecieć od 07:00",
+   "detail": "Konduktor ponad 2 godziny w mundurze bez kurtki przy +5°C: ryzyko hipotermii.",
+   "factor": 1.0
+  },
+  {
+   "provider": "Clue",
+   "at": "07:10",
+   "title": "OSP: czapka konduktorska na ścieżce w jarze",
+   "detail": "Leżała przy ścieżce nad potokiem, ok. 800 m od składu.",
+   "point": [
+    49.472,
+    20.6822
+   ],
+   "radiusM": 100
+  },
+  {
+   "provider": "Clue",
+   "at": "07:35",
+   "title": "ZNALEZIONO: pies i GOPR - konduktor w jarze potoku, ok. 1 km od składu",
+   "detail": "Siedział pod skarpą przy potoku, wychłodzony, z urazem głowy, przytomny, nie pamięta drogi. Zniesiony do ZRM przy przejeździe kolejowym.",
+   "point": [
+    49.4709,
+    20.681
+   ],
+   "radiusM": 30,
+   "found": true
+  }
+ ],
+ "resources": [
+  {
+   "id": "osp-rytro",
+   "name": "OSP Rytro",
+   "type": "ground",
+   "base": [
+    49.4888,
+    20.6771
+   ],
+   "readyAt": "05:15"
+  },
+  {
+   "id": "pol-piwniczna",
+   "name": "Patrol Policji (KP Piwniczna-Zdrój)",
+   "type": "ground",
+   "base": [
+    49.4405,
+    20.7142
+   ],
+   "readyAt": "05:22"
+  },
+  {
+   "id": "sok-ns",
+   "name": "SOK - patrol Straży Ochrony Kolei (Nowy Sącz)",
+   "type": "ground",
+   "base": [
+    49.4864,
+    20.6802
+   ],
+   "readyAt": "05:25"
+  },
+  {
+   "id": "psp-ns",
+   "name": "PSP JRG Nowy Sącz - zastęp",
+   "type": "ground",
+   "base": [
+    49.6185,
+    20.6971
+   ],
+   "readyAt": "05:35"
+  },
+  {
+   "id": "zrm-ns",
+   "name": "ZRM (PRM Nowy Sącz) - ratownicy medyczni",
+   "type": "ground",
+   "base": [
+    49.4866,
+    20.679
+   ],
+   "readyAt": "05:30"
+  },
+  {
+   "id": "gopr-krynica",
+   "name": "GOPR Krynica - patrol (Rytro)",
+   "type": "ground",
+   "base": [
+    49.4895,
+    20.6745
+   ],
+   "readyAt": "05:55"
+  },
+  {
+   "id": "dron-psp-ns",
+   "name": "Dron termowizyjny PSP Nowy Sącz",
+   "type": "drone",
+   "base": [
+    49.6185,
+    20.6971
+   ],
+   "readyAt": "06:05"
+  },
+  {
+   "id": "pies-pol",
+   "name": "Policyjny pies tropiący (KMP Nowy Sącz)",
+   "type": "dog",
+   "base": [
+    49.6215,
+    20.6905
+   ],
+   "readyAt": "06:20"
+  },
+  {
+   "id": "heli-lpr-krk",
+   "name": "Śmigłowiec LPR (Kraków)",
+   "type": "heli",
+   "base": [
+    50.0775,
+    19.7848
+   ],
+   "readyAt": "07:00"
+  },
+  {
+   "id": "pol-ns",
+   "name": "Patrol Policji B (KMP Nowy Sącz)",
+   "type": "ground",
+   "base": [
+    49.6215,
+    20.6905
+   ],
+   "readyAt": "05:50"
+  }
+ ]
+}

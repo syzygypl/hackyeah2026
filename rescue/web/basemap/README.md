@@ -34,6 +34,7 @@ One file per region, cut with `--bbox` (no scenario needed): `bieszczady.pmtiles
 ```sh
 python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.40,49.03,22.80,49.20 --pad 0 --out rescue/web/basemap/bieszczady.pmtiles
 python3 rescue/web/basemap/extract_pmtiles.py --bbox 22.24,49.40,22.50,49.56 --pad 0 --out rescue/web/basemap/solina.pmtiles
+python3 rescue/web/basemap/extract_pmtiles.py --bbox 20.60,49.42,20.78,49.53 --pad 0 --out rescue/web/basemap/poprad.pmtiles
 ```
 
 ## What is here
