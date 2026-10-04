@@ -359,6 +359,8 @@ pub struct TrackActor {
 pub struct TrackSet {
     pub actors: Vec<TrackActor>,
     pub search_events: String, // replace | keep
+    /// legs[kind = search | flight] of every unit: (from minute, segment id) - what "replace" may stand in for
+    pub search_legs: Vec<(i64, String)>,
 }
 
 impl TrackSet {
@@ -538,7 +540,14 @@ impl TrackSet {
         if actors.is_empty() {
             return None;
         }
-        Some(TrackSet { actors, search_events: o.get("searchEvents").and_then(|x| x.as_str()).unwrap_or("replace").to_string() })
+        let search_legs: Vec<(i64, String)> = list
+            .iter()
+            .filter_map(|a| a.get("legs").and_then(|l| l.as_array()))
+            .flatten()
+            .filter(|l| matches!(l.get("kind").and_then(|k| k.as_str()), Some("search") | Some("flight")))
+            .filter_map(|l| Some((minute(l.get("from"))?, l.get("segmentId")?.as_str()?.to_string())))
+            .collect();
+        Some(TrackSet { actors, search_events: o.get("searchEvents").and_then(|x| x.as_str()).unwrap_or("replace").to_string(), search_legs })
     }
 }
 

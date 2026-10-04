@@ -34,6 +34,8 @@ pub struct TimelineEngine {
     pub contrib: Vec<(i64, usize, f64)>,
     step_poa_cache: Mutex<HashMap<i64, Arc<Vec<f64>>>>,
     pub searched_ids: HashSet<String>,
+    /// "replace": a "searched, nothing" report counting only for its segments no track covered: (layer index, hint id, segments, POD)
+    pub partial_searched: Vec<(usize, String, HashSet<usize>, f64)>,
 }
 
 /// Swift `Double(String(format: "%.4g", x)) ?? 0`: 4 significant digits, correctly rounded.
@@ -100,11 +102,36 @@ impl TimelineEngine {
         let last_fix = tracks.actors.iter().filter_map(|a| a.fixes.last().map(|f| f.minute)).max().unwrap_or(0);
         let start_minute = first_fix;
         let end_minute = last_fix.max(hints.last().map(|h| h.minute).unwrap_or(last_fix)) + 30;
-        let searched_ids: HashSet<String> = if tracks.search_events == "keep" {
-            HashSet::new()
-        } else {
-            hints.iter().filter(|h| h.kind() == "searched").map(|h| h.id.clone()).collect()
-        };
+        // "replace": the tracks stand in for a "searched, nothing" report only in the segments a searcher's fix reached at or before
+        // the report (up to 6 h back); a report no track covers stays as it is, a partly covered one keeps its uncovered segments
+        let mut searched_ids: HashSet<String> = HashSet::new();
+        let mut partial_searched: Vec<(usize, String, HashSet<usize>, f64)> = vec![];
+        if tracks.search_events != "keep" {
+            // where the tracks searched: the units' search / flight legs (segment, start); a file without legs: the fixes of a unit
+            // on the move (> 60 m since its previous fix), since a team waiting at a hut has searched nothing
+            let fix_segs: Vec<(i64, usize)> = if !tracks.search_legs.is_empty() {
+                tracks.search_legs.iter().filter_map(|(m, id)| Some((*m, scenario.segments.iter().position(|g| &g.id == id)?))).collect()
+            } else {
+                tracks.actors.iter().filter(|a| a.kind != "osoba")
+                    .flat_map(|a| a.fixes.windows(2).filter(|w| Geo::meters(Coord::new(w[0].lat, w[0].lon), Coord::new(w[1].lat, w[1].lon)) > 60.0)
+                        .map(|w| (w[1].minute, grid.segment_of[grid.cell_index(Coord::new(w[1].lat, w[1].lon))])))
+                    .collect()
+            };
+            for h in hints.iter() {
+                let LocationHintEvidence::Searched { segments, pod } = &h.evidence else { continue };
+                let segs: HashSet<usize> = segments.iter().filter_map(|id| scenario.segments.iter().position(|g| &g.id == id)).collect();
+                let covered: HashSet<usize> =
+                    segs.iter().copied().filter(|k| fix_segs.iter().any(|(m, sg)| sg == k && *m <= h.minute && *m >= h.minute - 360)).collect();
+                if covered.is_empty() {
+                    continue;
+                }
+                searched_ids.insert(h.id.clone());
+                let rest: HashSet<usize> = segs.difference(&covered).copied().collect();
+                if let (false, Some(li)) = (rest.is_empty(), grid.layers.iter().position(|l| l.hint.id == h.id)) {
+                    partial_searched.push((li, h.id.clone(), rest, *pod));
+                }
+            }
+        }
         let est = TrackEstimator::new(&scenario, dem.as_deref().cloned());
         let per_actor: Vec<(String, Vec<TrackSample>)> = tracks.actors.par_iter().map(|a| (a.id.clone(), est.estimate(a, end_minute))).collect();
         let mut samples: HashMap<String, Vec<TrackSample>> = HashMap::new();
@@ -123,6 +150,7 @@ impl TimelineEngine {
             contrib: vec![],
             step_poa_cache: Mutex::new(HashMap::new()),
             searched_ids,
+            partial_searched,
         };
         e.sweep();
         e
@@ -244,7 +272,26 @@ impl TimelineEngine {
         if let Some(p) = self.step_poa_cache.lock().get(&key) {
             return p.clone();
         }
-        let p = Arc::new(self.grid.poa(Some((step + 1).max(0) as usize), &self.searched_ids, if cw { minute } else { None }));
+        let mut p = self.grid.poa(Some((step + 1).max(0) as usize), &self.searched_ids, if cw { minute } else { None });
+        // the uncovered segments of a partly tracked report keep their (1 - POD), weighted like the layer itself
+        let part: Vec<&(usize, String, HashSet<usize>, f64)> = self.partial_searched.iter().filter(|x| (x.0 as i64) <= step).collect();
+        if !part.is_empty() {
+            let m = minute.or_else(|| self.grid.layers.get((step.max(0) as usize).min(self.grid.layers.len().saturating_sub(1))).map(|l| l.hint.minute)).unwrap_or(0);
+            for (_, id, segs, pod) in part {
+                let w = self.grid.clue_weights.as_ref().and_then(|c| c.exponent(id, m)).filter(|w| *w < 0.9995).unwrap_or(1.0);
+                let f = (1.0 - pod).max(0.0).powf(w);
+                for (i, v) in p.iter_mut().enumerate() {
+                    if segs.contains(&self.grid.segment_of[i]) {
+                        *v *= f;
+                    }
+                }
+            }
+            let sum: f64 = p.iter().sum();
+            if sum > 0.0 {
+                p.iter_mut().for_each(|v| *v /= sum);
+            }
+        }
+        let p = Arc::new(p);
         self.step_poa_cache.lock().insert(key, p.clone());
         p
     }

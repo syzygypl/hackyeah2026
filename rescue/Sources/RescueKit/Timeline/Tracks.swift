@@ -174,7 +174,9 @@ public struct TrackActor: Sendable {
 public struct TrackSet: Sendable {
     public var actors: [TrackActor]
     public var searchEvents: String   // replace | keep
-    public init(actors: [TrackActor], searchEvents: String = "replace") { self.actors = actors; self.searchEvents = searchEvents }
+    /// legs[kind = search | flight] of every unit: (from minute, segment id) - what "replace" may stand in for
+    public var searchLegs: [(from: Int, seg: String)] = []
+    public init(actors: [TrackActor], searchEvents: String = "replace", searchLegs: [(from: Int, seg: String)] = []) { self.actors = actors; self.searchEvents = searchEvents; self.searchLegs = searchLegs }
 
     public static let kindOfType = ["ground": "pieszy", "dog": "pies", "drone": "dron", "heli": "smiglowiec", "boat": "lodz",
                                     "diver": "nurkowie", "person": "osoba", "subject": "osoba"]
@@ -255,7 +257,10 @@ public struct TrackSet: Sendable {
             }
         }
         guard !actors.isEmpty else { return nil }
-        return TrackSet(actors: actors, searchEvents: (o["searchEvents"] as? String) ?? "replace")
+        let legs: [(from: Int, seg: String)] = list.compactMap { ($0 as? [String: Any])?["legs"] as? [[String: Any]] }.joined()
+            .filter { ["search", "flight"].contains($0["kind"] as? String ?? "") }
+            .compactMap { l in guard let f = minute(l["from"]), let g = l["segmentId"] as? String else { return nil }; return (from: f, seg: g) }
+        return TrackSet(actors: actors, searchEvents: (o["searchEvents"] as? String) ?? "replace", searchLegs: legs)
     }
 }
 

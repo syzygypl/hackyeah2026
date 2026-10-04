@@ -14,6 +14,8 @@ public final class TimelineEngine {
     var contrib: [(minute: Int, cell: Int, h: Double)] = []
     var stepPOACache: [Int: [Double]] = [:]
     let searchedIds: Set<String>
+    /// "replace": a "searched, nothing" report counting only for its segments no track covered
+    let partialSearched: [(layer: Int, id: String, segs: Set<Int>, pod: Double)]
 
     /// Input files as loose JSON: tracks (rescue-tracks/1), dem (<sc>-dem.json), fovParams (rescue-fov/1).
     public struct Input: Sendable {
@@ -58,7 +60,35 @@ public final class TimelineEngine {
         let lastFix = tracks.actors.compactMap { $0.fixes.last?.minute }.max() ?? 0
         startMinute = firstFix
         endMinute = max(lastFix, hints.last?.minute ?? lastFix) + 30
-        searchedIds = tracks.searchEvents == "keep" ? [] : Set(hints.filter { $0.kind == "searched" }.map(\.id))
+        // "replace": the tracks stand in for a "searched, nothing" report only in the segments of a unit's search / flight leg that
+        // started at or before the report (up to 6 h back; a file without legs: fixes of a unit on the move, > 60 m since the last
+        // one); a report no track covers stays as it is, a partly covered one keeps its uncovered segments
+        var ids = Set<String>(), partial: [(layer: Int, id: String, segs: Set<Int>, pod: Double)] = []
+        if tracks.searchEvents != "keep" {
+            let segIdx = { (id: String) in scenario.segments.firstIndex { $0.id == id } }
+            var fixSegs: [(m: Int, seg: Int)] = []
+            if !tracks.searchLegs.isEmpty {
+                fixSegs = tracks.searchLegs.compactMap { l in segIdx(l.seg).map { (m: l.from, seg: $0) } }
+            } else {
+                for a in tracks.actors where a.kind != "osoba" && a.fixes.count > 1 {
+                    for k in 1..<a.fixes.count {
+                        let p0 = a.fixes[k - 1], p1 = a.fixes[k], c1 = Coord(p1.lat, p1.lon)
+                        if Geo.meters(Coord(p0.lat, p0.lon), c1) > 60 { fixSegs.append((m: p1.minute, seg: grid.segmentOf[grid.cellIndex(c1)])) }
+                    }
+                }
+            }
+            for h in hints {
+                guard case .searched(let segments, let pod) = h.evidence else { continue }
+                let segs = Set(segments.compactMap(segIdx))
+                let covered = segs.filter { k in fixSegs.contains { $0.seg == k && $0.m <= h.minute && $0.m >= h.minute - 360 } }
+                if covered.isEmpty { continue }
+                ids.insert(h.id)
+                let rest = segs.subtracting(covered)
+                if !rest.isEmpty, let li = grid.layers.firstIndex(where: { $0.hint.id == h.id }) { partial.append((layer: li, id: h.id, segs: rest, pod: pod)) }
+            }
+        }
+        searchedIds = ids
+        partialSearched = partial
         let est = TrackEstimator(scenario: scenario, dem: dem)
         for a in tracks.actors { samples[a.id] = est.estimate(a, until: endMinute) }
         sweep()
@@ -118,7 +148,20 @@ public final class TimelineEngine {
     func stepPOA(_ step: Int, minute: Int? = nil) -> [Double] {
         let key = grid.clueWeights == nil ? step : step * 100_000 + (minute ?? 0)
         if let p = stepPOACache[key] { return p }
-        let p = grid.poa(upTo: step + 1, disabled: searchedIds, at: grid.clueWeights == nil ? nil : minute)
+        var p = grid.poa(upTo: step + 1, disabled: searchedIds, at: grid.clueWeights == nil ? nil : minute)
+        // the uncovered segments of a partly tracked report keep their (1 - POD), weighted like the layer itself
+        let part = partialSearched.filter { $0.layer <= step }
+        if !part.isEmpty {
+            let m = minute ?? (grid.layers.isEmpty ? 0 : grid.layers[min(max(step, 0), grid.layers.count - 1)].hint.minute)
+            for x in part {
+                var w = 1.0
+                if let cw = grid.clueWeights?.exponent(x.id, at: m), cw < 0.9995 { w = cw }
+                let f = pow(max(0, 1 - x.pod), w)
+                for i in 0..<p.count where x.segs.contains(grid.segmentOf[i]) { p[i] *= f }
+            }
+            let sum = p.reduce(0, +)
+            if sum > 0 { p = p.map { $0 / sum } }
+        }
         stepPOACache[key] = p
         return p
     }
