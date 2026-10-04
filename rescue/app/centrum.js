@@ -14,7 +14,12 @@ const areaTxt = (a) => (+a || 0).toFixed(1).replace(".", ",") + "%";
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const POLL_MS = 10000;   // 10 s: /api/incidents + /api/teams per tick (perf round 3, wydajnosc.md)
 // the card shows the live run (cursor time, e.g. "scenariusz 19:45"), so open Na żywo: the same moment and top 3 (demo review 2)
-const openURL = (sc) => `./?role=operator&mode=akcja&time=live&sc=${encodeURIComponent(sc)}`;
+// pick mode (/app "Zmień scenariusz"): centrum.html?pick=1&return=<app url>; every link / dot then returns there with the chosen sc
+// (the other params of /app, mode / view / role / time, stay as they were). Teams, Doradca panel and the timeline are hidden.
+const PICK = new URLSearchParams(location.search).get("pick") === "1";
+const PICK_BACK = (() => { try { const u = new URL(new URLSearchParams(location.search).get("return") || "./", location.href); if (u.origin === location.origin) return u; } catch (e) {} return new URL("./?role=operator", location.href); })();
+const pickURL = (sc) => { const u = new URL(PICK_BACK); u.searchParams.set("sc", sc); return u.pathname + u.search + u.hash; };
+const openURL = (sc) => PICK ? pickURL(sc) : `./?role=operator&mode=akcja&time=live&sc=${encodeURIComponent(sc)}`;
 function toast(t, ms = 3000) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = "none", ms); }
 
 // ---------- transport (PIN like app.js: loopback needs none)
@@ -129,6 +134,7 @@ function seedMock(scs) {
   return [...by.values()];
 }
 async function loadTeams(scsP) {   // scsP: promise of incident ids, needed only by the mock
+  if (PICK) return [];   // pick mode: no roster, no /api/teams
   if (tryReal("teams")) {
     try { const a = await api("/api/teams"); has.teams = true; return Array.isArray(a) ? a : a.teams || []; }
     catch (e) { if (e.status === 404) missing("teams"); else throw e; }
@@ -185,6 +191,7 @@ function render() {
   $("counts").title = "Źródło danych: " + (has.incidents ? "GET /api/incidents" : "GET /api/scenarios + /api/run/<sc> (zapas)") + " · zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce");
 }
 function renderCards() {
+  if (PICK) return renderPick();
   // current incidents first, ended ones (person found) below under their own heading
   const all = sortIncidents(incidents), cur = all.filter((x) => !x.found), done = all.filter((x) => x.found);
   const card = (x) => {
@@ -254,7 +261,7 @@ async function doAssign(team, sc) {
 }
 function setHl(sc) {
   hl = sc;
-  document.querySelectorAll(".card").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
+  document.querySelectorAll(".card, .pk").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
   for (const [k, m] of markers) m.getElement().classList.toggle("hl", k === sc);
   document.querySelectorAll("#tl .tlr").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
 }
@@ -366,7 +373,7 @@ function fitAll() {
   if (!pts.length || pts.length < Math.min(incidents.length, 2)) return;
   const lons = pts.map((p) => p[1]), lats = pts.map((p) => p[0]);
   // narrow: labels sit right of their dot, so keep room on the right or the eastern names (Bieszczady, Kraków) are cut off
-  const wide = innerWidth > 900, pad = wide ? { left: 400 + 40, right: 300 + 160, top: 100, bottom: 130 } : { left: 24, right: Math.min(150, innerWidth * 0.35), top: 30, bottom: 30 };
+  const wide = innerWidth > 900, pad = wide ? { left: 400 + 40 + (PICK ? 40 : 0), right: PICK ? 160 : 300 + 160, top: 100, bottom: 130 } : { left: 24, right: Math.min(150, innerWidth * 0.35), top: 30, bottom: 30 };
   map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: pad, maxZoom: 9, duration: 0 });
   fitted = pts.length >= incidents.length;
 }
@@ -395,8 +402,8 @@ async function advTick() {
     const a = await api("/api/advisor");
     const sig = JSON.stringify((a.hypotheses || []).map((h) => [h.id, h.score, h.incidents, h.evidence.map((e) => e.text)]));
     if (sig !== advSig) { advSig = sig; if (advSel >= (a.hypotheses || []).length) advSel = 0; }
-    adv = a; advRender();
-    if ((a.hypotheses || []).length && !advLlmAsked) advLlm();   // the model's version: once per page load, in the background
+    adv = a; advRender(); if (PICK) renderPick();
+    if ((a.hypotheses || []).length && !advLlmAsked && !PICK) advLlm();   // the model's version: once per page load, in the background
   } catch (e) { if (e.status === 404) advMiss = Date.now() + 60000; console.warn("advisor", e); }
   advBusy = false;
 }
@@ -448,11 +455,12 @@ function advRender() {
   el.querySelector(".advt").onclick = () => { advOpen = !advOpen; try { localStorage.setItem("rescue-advisor-open", advOpen ? "1" : "0"); } catch (e) {} advRender(); };
   advApply(); advMap();
 }
-function advLinked() { const h = adv && (adv.hypotheses || [])[advSel]; return h ? new Set(h.incidents) : new Set(); }
+function advLinked() { if (PICK) return new Set(((adv && adv.hypotheses) || []).flatMap((h) => h.incidents)); const h = adv && (adv.hypotheses || [])[advSel]; return h ? new Set(h.incidents) : new Set(); }
 function advApply() {
   const s = advLinked();
   document.querySelectorAll("#cards .card").forEach((c) => c.classList.toggle("adv", s.has(c.dataset.sc)));
   for (const [k, m] of markers) m.getElement().classList.toggle("adv", s.has(k));
+  if (PICK) pickMarkers();
 }
 const advEmpty = { type: "FeatureCollection", features: [] };
 const line = (pts) => ({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: pts.map((p) => [p[1], p[0]]) } });
@@ -649,6 +657,65 @@ function tlInit() {
   ro.observe(el);
 }
 tlInit();
+
+// ---------- pick mode (/app "Zmień scenariusz", see PICK at the top): compact list next to the same map. Plain list first (from
+// /api/scenarios, then /api/incidents); when /api/advisor answers, incidents linked by a hypothesis move to the top as one group
+// (alarm first), ringed on the map like "linked" in Doradca. Advisor down = the plain list keeps working. Esc / Wróć = no change.
+const PK_ST = { live: "LIVE", ended: "ZAKOŃCZONA", replay: "ODTWORZENIE" };
+let pickStudio = false, pickFocused = false;
+function renderPick() {
+  if (!incidents.length) return;
+  const pos = (adv && adv.positions) || {}, cur = PICK_BACK.searchParams.get("sc");
+  const stOf = (x) => x.found ? "ended" : x.live ? "live" : (pos[x.sc] && PK_ST[pos[x.sc].status] && pos[x.sc].status) || "replay";   // incidents first (fresher), advisor positions.status as fallback
+  const timeOf = (x) => (pos[x.sc] && pos[x.sc].time) || (x.lastEventAt ? hhmm(x.lastEventAt) : x.lastClock || "");
+  const linked = advLinked();
+  const item = (x) => { const st = stOf(x), me = x.sc === cur;
+    return `<a class="pk ${st}${linked.has(x.sc) ? " adv" : ""}${hl === x.sc ? " hl" : ""}${me ? " cur" : ""}" href="${esc(openURL(x.sc))}" data-sc="${esc(x.sc)}"${me ? ' aria-current="true"' : ""}>
+      <span class="badge ${st === "ended" ? "found" : st}">${PK_ST[st]}</span><span class="pkt mono" title="Czas zdarzenia">${esc(timeOf(x))}</span>
+      <span class="pkn"><b>${esc(short(x))}</b><span>${esc(longText(x))}</span></span>${me ? '<span class="pkc">obecny</span>' : ""}</a>`; };
+  const all = sortIncidents(incidents), used = new Set();
+  const hs = ((adv && adv.hypotheses) || []).slice().sort((a, b) => (b.level === "alarm") - (a.level === "alarm") || b.score - a.score);
+  let html = "";
+  for (const h of hs) {
+    const xs = h.incidents.map((sc) => all.find((x) => x.sc === sc)).filter(Boolean); if (!xs.length) continue;
+    xs.forEach((x) => used.add(x.sc));
+    html += `<section class="pkg ${esc(h.level)}" aria-label="${esc(h.kindLabel)}"><h3><span class="lvl ${esc(h.level)}">${LEVEL[h.level] || esc(h.level)}</span>${esc(h.kindLabel)}
+      <span class="mute mono" title="Wynik hipotezy Doradcy (0-1)">${num2(h.score)}</span></h3><div class="pkh">${esc(h.title)} · ${xs.length} akcji</div>${xs.map(item).join("")}</section>`;
+  }
+  const rest = all.filter((x) => !used.has(x.sc));
+  html += (used.size ? `<h3 class="pkr">Pozostałe <span class="cnt">${rest.length}</span></h3>` : "") + rest.map(item).join("");
+  if (pickStudio) html += `<h3 class="pkr">Inne</h3><a class="pk" href="${esc(pickURL("studio"))}" data-sc="studio"><span class="badge plan">PLAN</span><span class="pkt"></span><span class="pkn"><b>Studio</b><span>edycja na żywo</span></span></a>`;
+  const f = document.activeElement && document.activeElement.closest && document.activeElement.closest("#cards .pk"), fsc = f && f.dataset.sc;
+  $("cards").innerHTML = html;
+  $("cards").querySelectorAll(".pk").forEach((el) => {
+    el.onmouseenter = el.onfocus = () => setHl(el.dataset.sc); el.onmouseleave = el.onblur = () => setHl(null);
+  });
+  const again = fsc && $("cards").querySelector(`.pk[data-sc="${CSS.escape(fsc)}"]`);
+  if (again) again.focus({ preventScroll: true });
+  else if (!pickFocused) { pickFocused = true; const c = $("cards").querySelector(".pk.cur") || $("cards").querySelector(".pk"); if (c) c.focus(); }
+}
+function pickMarkers() {   // dots reachable with Tab, Enter opens like a click
+  for (const [k, m] of markers) {
+    const el = m.getElement(); if (el.dataset.pick) continue;
+    el.dataset.pick = "1"; el.tabIndex = 0; el.setAttribute("role", "link");
+    el.setAttribute("aria-label", "Wybierz: " + (el.querySelector(".lbl").textContent || k));
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); location.href = openURL(k); } };
+    el.onfocus = () => setHl(k); el.onblur = () => setHl(null);
+  }
+}
+if (PICK) {
+  const back = PICK_BACK.pathname + PICK_BACK.search + PICK_BACK.hash;
+  document.body.classList.add("pick");
+  document.title = "Wybierz scenariusz - Rescue Locator";
+  $("bar").querySelector("h1").textContent = "Wybierz scenariusz";
+  $("bar").querySelector(".brand").href = back;
+  $("list").setAttribute("aria-label", "Scenariusze");
+  $("list").querySelector("h2").innerHTML = 'Scenariusze <span class="mute">kliknij, aby otworzyć · Esc wraca</span>';
+  const b = document.createElement("a"); b.id = "pickBack"; b.href = back; b.textContent = "Wróć"; b.title = "Wróć bez zmiany scenariusza (Esc)";
+  $("bar").querySelector("h1").after(b);
+  addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented) location.href = back; });
+  fetch("/modules", { cache: "no-cache" }).then((r) => r.ok ? r.json() : null).then((m) => { if (m && m.modules) { pickStudio = true; renderPick(); } }).catch(() => {});   // Studio, as on the old dropdown
+}
 
 // ---------- loop: every 5 s, never overlapping
 let busy = false;
