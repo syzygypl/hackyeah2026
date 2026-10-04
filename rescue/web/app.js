@@ -858,7 +858,11 @@
       S.tlHeatAt = fr.minute;
     }
     else if (!fr && S.tlHeatAt != null && S.lastP) { S.view.setHeat(S.lastP); S.tlHeatAt = null; }   // before the first frame: the step heat
+    // sens-funkcji #4: the missing person ('osoba') is an estimate (±2 km), not a GPS fix: hidden unless the legend switch is on
+    let estOn = false; try { estOn = localStorage.getItem('rescue-est-osoba') === '1'; } catch (e) { /* storage blocked */ }
+    const hasEst = T.actors.some((a) => a.kind === 'osoba');
     for (const a of T.actors) {
+      if (a.kind === 'osoba' && !estOn) continue;
       const path = a.path || [], col = TLC[a.kind] || '#ffd54f', cur = tlPos(path, mf);
       if (!cur) continue;
       let run = [], est = null;
@@ -881,7 +885,7 @@
       feats.push(pt([cur.lon, cur.lat], { k: 'pos', color: col, id: a.id }));
       // demo review 5: name only on the map (labels covered #1-#3 and IPP); GPS / estimate and the accuracy in the tooltip, the
       // accuracy circle and the legend show it on the map
-      labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col, html: `<b>${esc(String(a.name || a.id).split(' (')[0])}</b>`,
+      labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col, html: `<b>${esc(String(a.name || a.id).split(' (')[0])}</b>${a.kind === 'osoba' ? ` szacunek ±${nf(cur.acc / 1000, 1)} km` : ''}`,
         title: `${String(a.name || a.id)}: ${cur.est ? 'pozycja szacowana' : 'GPS'}, dokładność ±${Math.round(cur.acc)} m` });
     }
     S.view.setTimeline(FC(feats), labels);
@@ -890,7 +894,10 @@
       lg.hidden = false;
       // area share (cells with POD >= 0.1, like coverageFinal.areaPct), not a probability: no POA / POS % on screen
       const covPct = fr ? ` · przeszukano ${nf((fr.cov || []).filter((c) => c[1] >= 0.1).length / S.M.N * 100, 1)}% obszaru` : '';
-      lg.innerHTML = `<b>${esc(T.start ? tlClock(T, mf) : '')}</b>${covPct}<div><i class="sw solid"></i>ślad GPS <i class="sw dash"></i>ślad szacowany</div><div><i class="sw fov"></i>pole widzenia <i class="sw cov"></i>pokrycie (POD) <i class="sw acc"></i>dokładność pozycji</div>`;
+      const h = `<b>${esc(T.start ? tlClock(T, mf) : '')}</b>${covPct}<div><i class="sw solid"></i>ślad GPS <i class="sw dash"></i>ślad szacowany</div><div><i class="sw fov"></i>pole widzenia <i class="sw cov"></i>pokrycie (POD) <i class="sw acc"></i>dokładność pozycji</div>`
+        + (hasEst ? `<div><label style="pointer-events:auto;cursor:pointer" title="Szacunek silnika (dokładność do 2 km), nie pozycja GPS; symulacja"><input type="checkbox" class="estosoba"${estOn ? ' checked' : ''}> Szacowana pozycja zaginionego</label></div>` : '');
+      if (lg._h !== h) { lg._h = h; lg.innerHTML = h; }
+      lg.onchange = (e) => { if (!e.target.classList.contains('estosoba')) return; try { localStorage.setItem('rescue-est-osoba', e.target.checked ? '1' : '0'); } catch (err) { /* ignore */ } tlDraw(S.tlMf != null ? S.tlMf : mf); };
     }
   }
   function tlClock(T, mf) {

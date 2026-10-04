@@ -37,7 +37,10 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
   let labelDown = null;
   const group = new THREE.Group(), trail = new THREE.Group(), area = new THREE.Group();
   scene.add(group, trail, area);
-  const actors = timeline.actors.map((a) => {
+  // sens-funkcji #4: the missing person ('osoba') is the engine's estimate (accuracy up to 2 km), not a GPS fix: not drawn unless the
+  // 2D legend switch "Szacowana pozycja zaginionego" is on (localStorage rescue-est-osoba = 1, read when the 3D view loads)
+  let estOn = false; try { estOn = localStorage.getItem('rescue-est-osoba') === '1'; } catch (e) { /* storage blocked */ }
+  const actors = timeline.actors.filter((a) => a.kind !== 'osoba' || estOn).map((a) => {
     const g = new THREE.Group(), dot = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 8),
       new THREE.MeshStandardMaterial({ color: colors[a.kind] || '#555' }));
     const tag = label('', 'team', new THREE.Vector3()); tag.position.y = 0.035;
