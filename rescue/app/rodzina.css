@@ -68,3 +68,6 @@ form input:focus,form select:focus,form textarea:focus{outline:3px solid color-m
 /* phone: the header takes two rows, so it scrolls away instead of covering a third of the screen */
 @media (max-width:560px){.rz-top{position:static;padding:4px 10px}.rz-top nav{margin-left:0;width:100%;justify-content:space-between}.rz-top nav a{padding:0 6px;font-size:14.5px}html{scroll-padding-top:8px}}
 .rz-out pre{font:16px/1.5 var(--rl-font)}
+/* keyboard (mobile QA): the default focus ring vanished on the red 112 block - a white ring there, the accent ring elsewhere */
+.rz-alarm a:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.rz-call.small:focus-visible{outline:3px solid var(--rl-accent);outline-offset:3px}
