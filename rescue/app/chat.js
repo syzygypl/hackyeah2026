@@ -640,7 +640,9 @@ export function createChat(root, host, opts = {}) {
     const m = host.mode();
     say(`Opisz zwykłym zdaniem, co się stało - zrozumiem i pokażę na mapie przed dodaniem. ${m === "live" ? "<b>Na żywo</b>: zmiany zobaczą wszyscy w akcji." : m === "hist" ? "<b>Historia</b>: dodaję do osi czasu jako symulację tylko u Ciebie." : ""}<br><span class="mute">Kliknij przykład poniżej albo napisz własny.</span>`);
   }
-  ensureCtx().then(renderChips).catch(() => renderChips());
+  // before the shell has a run its scenario is still the store default ("studio"): no context fetch then (it asked /story/scenario on every
+  // /app load, a /scenarios/studio.json 404 before de41e02); the first prefetch / message after the run loads builds it
+  (host.run() && host.run().steps ? ensureCtx() : Promise.resolve()).then(renderChips).catch(() => renderChips());
   hello();
   // a short plain-text summary of what was added and where to search now (czat.html "Udostępnij podsumowanie")
   function summaryText() {
