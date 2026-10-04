@@ -14,6 +14,12 @@ delivery/military/emergency/official/... ; and, inside a national park (boundary
 another kept road shares its node, or it lies outside the cut). Closed park roads are often untagged (the Morskie Oko
 road above Palenica Bialczanska has no access tag on its first 1.2 km); public roads through a park (Zakopane - Lysa
 Polana, the Slovak 3078) are through routes and stay, and so does a public road up to a car park loop.
+Forest and fire-access roads (T3, "Dojazd pożarowy L-8" at Ostre): in Polish OSM they are often highway=unclassified with no
+access tag. Dropped: any minor road named dojazd pożarowy / droga pożarowa / ppoż; an unclassified road named leśn... (a
+residential "Leśna" street stays public) or numbered L-n (forest-service fire roads); and an unclassified road with no name and
+no ref that runs at least half
+its points through forest (the forest polygons of <sc>-osm3d.json) when it is unpaved (surface / tracktype) or a dead end
+(pruned repeatedly, like the park dead ends). Named or numbered through roads in a forest stay.
 Check: a kept way that runs along a marked trail of scenarios/<sc>-terrain.json (within 25 m for more than 100 m) is
 reported as WARN, so a person can look at it; the summary line gives kept/dropped counts per reason.
 
@@ -21,7 +27,7 @@ Output: {"v":1, "bounds":[s,w,n,e], "r":[[cls, line], ...], "dropped":{reason: n
 in make_osm3d.py. Raw Overpass answers are cached in $OSM3D_CACHE (default /tmp/osm3d-cache). (c) OpenStreetMap
 contributors, ODbL.
 """
-import json, math, os, sys, time, urllib.error, urllib.parse, urllib.request
+import json, math, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RESCUE = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
@@ -125,6 +131,38 @@ def inside(rings, la, lo):
     return c
 
 
+FIRE = re.compile(r"dojazd\s+po[zż]arow|drog[aię]\s+po[zż]arow|\bppo[zż]", re.I)
+FORESTNAME = re.compile(r"le[sś]n", re.I)
+FIREREF = re.compile(r"^L-?\d+[a-z]?$", re.I)   # forest-service numbering of fire-access roads (L-4, L-8 at Ostre)
+UNPAVED = {"unpaved", "gravel", "fine_gravel", "ground", "dirt", "earth", "grass", "compacted", "sand", "mud", "pebblestone", "woodchips"}
+
+
+def forests_of(sc):
+    """forest / wood polygons (outer rings, holes) from <sc>-osm3d.json (make_osm3d.py), [] when there is none"""
+    try:
+        L = json.load(open(os.path.join(HERE, f"{sc}-osm3d.json"))).get("l", [])
+    except (FileNotFoundError, ValueError):
+        return []
+    def dec(a):
+        out, la, lo = [], 0, 0
+        for i in range(0, len(a) - 1, 2):
+            la += a[i]; lo += a[i + 1]; out.append((la / 1e5, lo / 1e5))
+        return out
+    return [[dec(r) for r in l[2]] for l in L if l and l[0] in ("forest", "wood")]
+
+
+def in_forest(F, la, lo):
+    def pip(poly):
+        c, j = False, len(poly) - 1
+        for i in range(len(poly)):
+            yi, xi = poly[i]; yj, xj = poly[j]
+            if (yi > la) != (yj > la) and lo < (xj - xi) * (la - yi) / ((yj - yi) or 1e-12) + xi:
+                c = not c
+            j = i
+        return c
+    return any(f and pip(f[0]) and not any(pip(h) for h in f[1:]) for f in F)
+
+
 def access(t):
     for k in ("motorcar", "motor_vehicle", "vehicle", "access"):
         if k in t:
@@ -180,6 +218,7 @@ for sc in sys.argv[1:]:
         return None
 
     R, dropped, warn, ways = [], {}, [], []
+    F = forests_of(sc)
     for el in els:
         t = el.get("tags", {})
         if el["type"] != "way" or t.get("highway") not in CLS:
@@ -191,8 +230,18 @@ for sc in sys.argv[1:]:
         if a in CLOSED:
             dropped[f"access={a}"] = dropped.get(f"access={a}", 0) + 1; continue
         cls = CLS[t["highway"]]
-        ways.append({"el": el, "t": t, "p": p, "cls": cls, "park": cls == "minor" and bool(park) and 2 * sum(inside(park, *q) for q in p) > len(p)})
-    # park dead ends: prune minor park roads with an unconnected end until nothing changes
+        nm = t.get("name", "")
+        if cls == "minor" and (FIRE.search(nm) or (t["highway"] == "unclassified" and (FORESTNAME.search(nm) or FIREREF.match(t.get("ref", ""))))):
+            dropped["forest road (name)"] = dropped.get("forest road (name)", 0) + 1; continue
+        forest = False
+        if F and t["highway"] == "unclassified" and not nm and not t.get("ref"):
+            smp = p[::max(1, len(p) // 12)]
+            forest = sum(in_forest(F, *q) for q in smp) >= 0.5 * len(smp)
+            if forest and (t.get("surface") in UNPAVED or "tracktype" in t):
+                dropped["forest road (unpaved)"] = dropped.get("forest road (unpaved)", 0) + 1; continue
+        ways.append({"el": el, "t": t, "p": p, "cls": cls, "forest": forest,
+                     "park": cls == "minor" and bool(park) and 2 * sum(inside(park, *q) for q in p) > len(p)})
+    # park and unnamed forest dead ends: prune those roads with an unconnected end until nothing changes
     deg = {}
     for wy in ways:
         for nd in set(wy["el"]["nodes"]):
@@ -202,7 +251,7 @@ for sc in sys.argv[1:]:
     while changed:
         changed = False
         for wy in ways:
-            if not wy["park"] or wy.get("cut"):
+            if not (wy["park"] or wy["forest"]) or wy.get("cut"):
                 continue
             nd = wy["el"]["nodes"]
             if all(deg[nd[i]] >= 2 or out_cut(wy["p"][i]) for i in (0, -1)):
@@ -210,7 +259,8 @@ for sc in sys.argv[1:]:
             wy["cut"] = changed = True
             for x in set(nd):
                 deg[x] -= 1
-            dropped["national park dead end"] = dropped.get("national park dead end", 0) + 1
+            why = "national park dead end" if wy["park"] else "forest road (dead end)"
+            dropped[why] = dropped.get(why, 0) + 1
     for wy in ways:
         if wy.get("cut"):
             continue
