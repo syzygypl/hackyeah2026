@@ -1368,3 +1368,57 @@ function simTlApply(c) {
 }
 simInit().catch((e) => console.warn("[centrum] sim", e));
 window.rescueSim = sim;   // tests
+
+// ---------- Ruch zespołów (AI Mateusza #2): teams of every running 24/7 occurrence move on the map, replayed from the scenario's
+// track estimate (GET /api/tracks/<sc>?live=0 = the whole timeline, path [lat, lon, minute, accM, est], minute = minutes from the
+// scenario's startClock = the occurrence's elapsed minute) on the virtual clock (simNowAt: ?simAt, the Grafik 24/7 cursor).
+// One GeoJSON source (dots + 15-min trails), 1 Hz, from regional zoom (TM_Z) up; the national view stays clean.
+// Only scenarios with track data (rescue/scenarios/tracks/) are asked, so no 404s.
+const TM_SCS = new Set("auto-w-rzece-wizna bieszczady-wetlinska grzybiarz-puszcza-notecka kajak-pieniny karkonosze-sniezka kasprowy krakow-nowa-huta lawina-wolowiec los-augustow mazury-burza-beldany mazury-burza-mikolajki mazury-burza-sniardwy mazury-burza-talty miedzyzdroje morskie-oko morzycko paralotniarz-beskidy pozar-biebrza rodzina-dziecko-las senior-demencja-lodz sniardwy tragedia-w-moryniu zawrat".split(" "));
+const TM_Z = 8, TM_TRAIL = 15, TM_COL = { pieszy: "#e76f51", pies: "#f4a261", dron: "#4cc9f0", smiglowiec: "#b5179e", lodz: "#2a9d8f", nurkowie: "#3a86ff" };
+const tm = { data: {}, busy: 0, added: false, sig: "" };
+function tmLoad(sc) {
+  if (sc in tm.data || tm.busy >= 2) return;
+  tm.data[sc] = undefined; tm.busy++;
+  api(`/api/tracks/${encodeURIComponent(sc)}?live=0`)
+    .then((d) => { tm.data[sc] = (d.actors || []).filter((a) => a.kind !== "osoba" && (a.path || []).length).map((a) => ({ id: a.id, name: a.name, kind: a.kind, path: a.path })); })
+    .catch(() => { tm.data[sc] = null; })
+    .finally(() => { tm.busy--; });
+}
+function tmAt(p, m) {   // [lon, lat] at fractional minute m, null before the first sample; after the last one it stays
+  if (m < p[0][2]) return null;
+  let k = 0; while (k < p.length - 1 && p[k + 1][2] <= m) k++;
+  const a = p[k], b = p[k + 1]; if (!b) return [a[1], a[0]];
+  const u = Math.min(1, (m - a[2]) / Math.max(1e-6, b[2] - a[2]));
+  return [a[1] + (b[1] - a[1]) * u, a[0] + (b[0] - a[0]) * u];
+}
+function tmTick() {
+  if (!mapReady || PICK) return;
+  if (!tm.added) {
+    tm.added = true;
+    map.addSource("tm", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+    map.addLayer({ id: "tm-trail", type: "line", source: "tm", minzoom: TM_Z, filter: ["==", ["geometry-type"], "LineString"], layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": ["get", "c"], "line-width": 2, "line-opacity": 0.55 } });
+    map.addLayer({ id: "tm-dot", type: "circle", source: "tm", minzoom: TM_Z, filter: ["==", ["geometry-type"], "Point"],
+      paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], TM_Z, 3.5, 13, 6], "circle-color": ["get", "c"], "circle-stroke-color": "#fff", "circle-stroke-width": 1.2 } });
+  }
+  const f = [];
+  const live = simMarks() ? simView().filter((i) => i.state === "live" && TM_SCS.has(i.sc)) : [];
+  for (const i of live) if (!(i.sc in tm.data)) tmLoad(i.sc);   // prefetched at any zoom, so zooming in shows them at once
+  if (map.getZoom() >= TM_Z - 0.5) for (const i of live) {
+    const acts = tm.data[i.sc]; if (!acts) continue;
+    const m = Math.max(0, (Math.min(simNowAt(), i.endMs) - i.startMs) / 60000);
+    for (const a of acts) {
+      const pos = tmAt(a.path, m); if (!pos) continue;
+      const c = TM_COL[a.kind] || "#e76f51";
+      const tr = a.path.filter((q) => q[2] > m - TM_TRAIL && q[2] < m).map((q) => [q[1], q[0]]).concat([pos]);
+      if (tr.length > 1) f.push({ type: "Feature", properties: { c }, geometry: { type: "LineString", coordinates: tr } });
+      f.push({ type: "Feature", properties: { c, id: a.id, n: a.name, sc: i.sc }, geometry: { type: "Point", coordinates: pos } });
+    }
+  }
+  const sig = JSON.stringify(f.map((x) => x.geometry.coordinates.at(-1)));
+  if (sig === tm.sig) return; tm.sig = sig;
+  map.getSource("tm").setData({ type: "FeatureCollection", features: f });
+}
+setInterval(tmTick, 1000);
+window.rescueTm = tm;   // tests
