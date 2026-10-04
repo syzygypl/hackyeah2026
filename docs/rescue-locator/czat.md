@@ -32,12 +32,13 @@ previous one. Historia computes all of them in one what-if run.
 
 ## Map refresh and timeline
 
-- No blank 2D: a chat change marks the shell's 2D frame dirty, so the shell's own double buffer (old map until the new one says
-  "ready", then a 200 ms crossfade) is used instead of `{type:"run"}` (which reloads the view in place, blank ~1-2 s). czat.html
-  has its own double buffer. The test samples the visible 2D every 40 ms: 0 blank samples in 4 changes.
-- Time to the new map: the server run (0.7 s on production, Historia baseline prefetched when the chat opens) + the 2D boot
-  (~2 s headless). The hidden warm 3D view now reloads only after the 2D swap (app.js, 8d943e4); booting both at once took the 2D
-  from 2 s to 16 s. Under 300 ms needs an in-place run update inside `web/app.js` (rebuild the model without a reload), owner of web/.
+- No blank 2D, in place: the shell posts `{type:"run", url}` to its ready 2D view and `web/app.js runInPlace` (3218de4) rebuilds the
+  model from the new run on the same grid without reloading the frame (map, camera, base, selection kept; another grid or any
+  error reloads as before). Production, "Dodaj" -> new heat: ~0.9 s, of which the server run ~0.9 s and the 2D update ~2-10 ms.
+  czat.html posts the same message (its double buffer stays only as the fallback). 0 blank samples in 4 changes.
+- Chips per scenario: hand-tuned for zawrat, morskie-oko, rodzina-dziecko-las, sniardwy, krakow-nowa-huta; generated from the
+  scenario's sectors, teams and kind (water / city / mountain) elsewhere. Sector ids of any scenario (M7, W3, N9, R6) are read.
+- /app drawer opens on the left below the top bar (top 3 panel and header buttons stay visible).
 - Dock: in Historia the chat events are steps of the what-if run, so they are on the timeline; their markers get a red ring
   (`.tlk.chat`, groups from `dock.js` `evGroups`, dock.js unchanged).
 
