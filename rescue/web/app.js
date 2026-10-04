@@ -441,9 +441,9 @@
       // no POA % on the map (as the app panels, 7a56e92): a juror reads it as a chance - rank for the top 3, the name/id for the rest
       const nm = top || S.fullNames || g.id === S.selected ? esc(g.name) : esc(g.id);
       const asg = (M.R.steps[step].assignments || []).filter((a) => a.segmentId === g.id).map((a) => { const r = (M.R.steps[step].resources || []).find((x) => x.id === a.resourceId); return resLabel(r) || a.resourceId; });
-      const extra = (sr ? `<span class="srch">przeszukany${sr.pod != null ? ', POD ' + pct(sr.pod) : ''}</span>` : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');
+      const extra = (sr ? '<span class="srch">przeszukany</span>' : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');   // POD in the tooltip (review b0858be)
       chips.push({ key: 'seg:' + g.id, at: g.center, cls: 'chip seg' + (top ? ' top top' + r : '') + (sr ? ' searched' : '') + (g.id === S.selected ? ' sel' : ''),
-        html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}${r ? `: #${r} z ${M.segList.length} w rankingu` : ''}, obszar ${nf(g.areaPct, 1)}%`, seg: g.id });
+        html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}${r ? `: #${r} z ${M.segList.length} w rankingu` : ''}, obszar ${nf(g.areaPct, 1)}%${sr ? `, przeszukany${sr.pod != null ? ' (POD ' + pct(sr.pod) + ')' : ''}` : ''}`, seg: g.id });
     }
     return { fc: FC(f), chips, weather };
   }
@@ -461,11 +461,11 @@
     for (const it of items) {
       const dx = inside(it);
       if (it.pri === 7) { it.apply(dx, 0, false); continue; }
-      const step = it.h + 3, cands = [0, step, -step, 2 * step, -2 * step];
+      const step = it.h + 3, cands = it.cands ? it.cands(step) : [0, step, -step, 2 * step, -2 * step].map((dy) => [0, dy]);
       let done = false;
-      for (const dy of cands) {
-        const r = { x: it.x + dx - it.w / 2, y: it.y + dy - it.h / 2, w: it.w, h: it.h };
-        if (!placed.some((q) => hit(q, r))) { placed.push(r); it.apply(dx, dy, false); done = true; break; }
+      for (const [cx, dy] of cands) {
+        const r = { x: it.x + dx + cx - it.w / 2, y: it.y + dy - it.h / 2, w: it.w, h: it.h };
+        if (!placed.some((q) => hit(q, r))) { placed.push(r); it.apply(dx + cx, dy, false); done = true; break; }
       }
       if (!done) { it.apply(dx, 0, it.pri > 4); if (it.pri <= 4) placed.push({ x: it.x + dx - it.w / 2, y: it.y - it.h / 2, w: it.w, h: it.h }); }
     }
@@ -622,7 +622,9 @@
           apply: (dx, dy, dim) => { m.setOffset([b[0] + dx, b[1] + dy]); el.style.opacity = dim ? '0.25' : ''; } };
       }).concat([...tlLabels.values()].map((m) => {   // unit labels (anchor left, 10 px right of the dot): below top 3 / IPP / live
         const el = m.getElement(), p = map.project(m.getLngLat()), w = el.offsetWidth;
+        const L = -(w + 20);   // mirrored: the label left of the dot
         return { x: p.x + 10 + w / 2, y: p.y, w, h: el.offsetHeight, pri: 5.5,
+          cands: (s) => [[0, 0], [L, 0], [0, -s], [0, s], [L, -s], [L, s], [0, -2 * s], [0, 2 * s]],
           apply: (dx, dy, dim) => { m.setOffset([10 + dx, dy]); el.style.opacity = dim ? '0.25' : ''; } };
       })), container.clientWidth);
     }
@@ -977,7 +979,7 @@
     $('#rankmode').textContent = S.disabled.size && M.hints.some((h) => h.k <= S.step && S.disabled.has(h.id)) ? 'przeliczony w przeglądarce' : 'silnik, krok ' + (S.step + 1);
     $('#ranking tbody').innerHTML = st.map((s, j) => {
       const top = j < 3, sr = searched[s.id];
-      const tags = (sr ? `<span class="tag-s">przeszukany${sr.pod != null ? ' POD ' + pct(sr.pod) : ''}</span>` : '') + (S.showTruth && s.id === truth ? '<span class="tag-t">odnaleziony</span>' : '');
+      const tags = (sr ? `<span class="tag-s"${sr.pod != null ? ` title="POD ${pct(sr.pod)}"` : ''}>przeszukany</span>` : '') + (S.showTruth && s.id === truth ? '<span class="tag-t">odnaleziony</span>' : '');
       const task = top ? `<div class="task">${esc(taskFor(s.name))}</div>` : '';
       return `<tr class="${top ? 'top' : ''}${s.id === S.selected ? ' sel' : ''}" data-seg="${esc(s.id)}">
         <td class="rk">${top ? `<span class="badge">${j + 1}</span>` : j + 1}</td>
