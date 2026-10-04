@@ -388,6 +388,7 @@ body.role-ratownik #newActionBtn{display:none}
   #centrumLink::after{content:"Centrum";font-size:14px}
   #scen{max-width:150px}
   header .livehead b{max-width:18vw}
+  #roleBtn .rl-pre{display:none}   /* demo review b0858be pt 2 (rest at the end of the file) */
 }
 
 /* Udostępnij: join links + QR */
@@ -522,3 +523,10 @@ body:not(.float) header{flex-wrap:wrap;row-gap:6px}
 /* demo review (AI Michała d1510b2) pt 1: the first-run hint lives in the floating bar (z 11) and slid under the 2D/3D switch (z 12) - lift the bar while it shows */
 body.float header:has(#firstRun:not([hidden])){z-index:13}
 @media (min-width:901px){body.float header #firstRun{top:calc(100% + 104px)}}   /* below the 2D/3D switch and the views' "Waga mapy" legend (header + 10 px + ~88 px), over neither */
+/* demo review b0858be pt 2: with the key box shown (production) the Akcja bar overflowed 1280 / 1440 and cut "Rola: operat" -
+   under 1500 px the key box is its input only (placeholder "klucz", title says what it is) and "Rola:" goes */
+@media (max-width:1499px){
+  header #pinbox{font-size:0;gap:0}
+  header #pinbox input{font-size:13px;width:60px;min-width:0}
+}
+@media (max-width:1349px){ body.float header{column-gap:4px!important} #scen{max-width:120px} }   /* 1280 px (runbook minimum) still one row */

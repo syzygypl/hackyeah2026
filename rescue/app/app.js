@@ -335,17 +335,22 @@ function renderEvents() {
     const items = R.story.items || [], items0 = items;
     $("events").innerHTML = items0.map((it, k) => { const ev = it.events[0] || {};
       const hid = (R.steps.find((st) => st.label === ev.title) || {}).hintId;
-      return `<div class="ev ${rel(ev.at) > rel(S.t) ? "future" : ""} ${it.id === store.selEv ? "cur" : ""} ${hid && evOff.has(hid) ? "evoff" : ""}" data-id="${esc(it.id)}"><div class="src">${hid ? evToggle(hid) : ""}${esc(ev.at)} · ${esc(it.input.provider)}${it.parsedBy ? " · " + esc(it.parsedBy) : ""}</div>
-        <div class="t">${esc(ev.title || it.input.provider)}${it.events.length > 1 ? ` <span class="mute">(+${it.events.length - 1})</span>` : ""}</div>
+      return `<div class="ev ${rel(ev.at) > rel(S.t) ? "future" : ""} ${it.id === store.selEv ? "cur" : ""} ${hid && evOff.has(hid) ? "evoff" : ""}" data-id="${esc(it.id)}"><div class="src">${hid ? evToggle(hid) : ""}${esc(ev.at)} · ${esc(srcPl(it.input.provider))}${it.parsedBy ? " · " + esc(it.parsedBy) : ""}</div>
+        <div class="t">${esc(ev.title || srcPl(it.input.provider))}${it.events.length > 1 ? ` <span class="mute">(+${it.events.length - 1})</span>` : ""}</div>
         ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
         <div class="ops"><button data-op="up" ${k === 0 ? "disabled" : ""}>&lt;</button><button data-op="down" ${k === items.length - 1 ? "disabled" : ""}>&gt;</button><button data-op="delete">usuń</button></div></div>`; }).join("") || `<div class="help">Historia jest pusta. ${store.mode === "edycja" ? "Przeciągnij dowód z lewej strony na mapę." : "Dodaj zdarzenia w trybie Edycja."}</div>`;
     wireEvents();
   } else {
-    $("events").innerHTML = R.steps.map((s, k) => `<div class="ev ${k + 1 === store.step ? "cur" : k + 1 > store.step ? "future" : ""} ${s.hintId && evOff.has(s.hintId) ? "evoff" : ""}" data-step="${k + 1}"><div class="src">${s.hintId ? evToggle(s.hintId) : ""}${esc(s.t)} · ${esc(s.source || "")}</div><div class="t">${esc(s.label)}</div></div>`).join("");
+    $("events").innerHTML = R.steps.map((s, k) => `<div class="ev ${k + 1 === store.step ? "cur" : k + 1 > store.step ? "future" : ""} ${s.hintId && evOff.has(s.hintId) ? "evoff" : ""}" data-step="${k + 1}"><div class="src">${s.hintId ? evToggle(s.hintId) : ""}${esc(s.t)} · ${esc(srcPl(s.source))}</div><div class="t">${esc(s.label)}</div></div>`).join("");
   }
 }
 // evidence on/off ("uwzględnij"): the embedded views recompute the map in the browser (contract: {type:'evidence', id, on}, '*' = all)
 const evOff = new Set();
+// Sygnały cards: the engine's provider names in plain Polish (demo review b0858be pt 1 - the jury watches this panel in step 2)
+const SRC_PL = { Terrain: "Teren", TerrainDifficulty: "Trudność terenu", WeatherConditions: "Pogoda", Weather: "Pogoda", KoesterRings: "Statystyka zaginięć",
+  TripPlan: "Plan wycieczki", TrailheadCar: "Auto na parkingu", Cell112Fix: "Lokalizacja 112", SegmentSearched: "Przeszukany sektor", DronePassEmpty: "Przelot drona bez wyniku",
+  Clue: "Poszlaka", WaterDrift: "Dryf na wodzie", RatunekPing: "Aplikacja Ratunek", Found: "Odnaleziony" };
+const srcPl = (x) => SRC_PL[x] || x || "";
 const evToggle = (id) => `<input type="checkbox" class="evt" data-hint="${esc(id)}" ${evOff.has(id) ? "" : "checked"} title="Uwzględnij ten sygnał (przelicza 2D analizę i 3D)"> `;
 function setEvidence(id, on, from) {
   if (id === "*") { if (on) evOff.clear(); } else if (on) evOff.delete(id); else evOff.add(id);
@@ -815,7 +820,7 @@ function setRole(r) {
   if (r === "ratownik" && store.time !== "live") setTime("live");
   store.role = r; try { localStorage.setItem("rescue-app-role", r); } catch (e) {}
   document.body.classList.toggle("role-ratownik", r === "ratownik"); document.body.classList.toggle("role-operator", r === "operator");
-  $("roleBtn").textContent = r === "ratownik" ? "Rola: ratownik" : "Rola: operator";
+  $("roleBtn").innerHTML = '<span class="rl-pre">Rola: </span>' + (r === "ratownik" ? "ratownik" : "operator");   // the prefix hides under 1500 px (app.css)
   $("rolePick").hidden = true;
   showFirstRun(r);
   if (r === "ratownik") {
