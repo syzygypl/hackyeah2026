@@ -316,6 +316,17 @@ body.has-version #timeline { padding-bottom: 14px; }
 /* insets (plumbing): inside /app the shell's floating panels cover the frame edges; overlays keep clear (--inset-* set by app.js) */
 body.embed-scene #mapctl { top: calc(var(--inset-t, 0px) + 10px); right: calc(var(--inset-r, 0px) + 10px); }
 body.embed-scene #legend { top: calc(var(--inset-t, 0px) + 10px); left: calc(var(--inset-l, 0px) + 10px); }
+/* hover-hold legend inside /app (body.lg-hover, hoverHold from ../app/dock.js): compact until hover / tap / focus (title + ramp),
+   the full legend for 3 s after; anchored top-left, so it grows right and down over the map without moving anything */
+@media (min-width: 601px) {
+  body.lg-hover #legend:not(.peek) { width: auto; padding: 4px 7px; font-size: 10px; }
+  body.lg-hover #legend:not(.peek) .lg-title { font-size: 10.5px; margin-bottom: 1px; }
+  body.lg-hover #legend:not(.peek) .lg-ramp { width: 150px; height: 6px; margin-bottom: 0; }
+  body.lg-hover #legend:not(.peek) :is(.lg-sub, .lg-stops, .lg-keys, .lg-note) { display: none; }
+  body.lg-hover #legend.peek { animation: lg-unfold .15s ease both; }
+}
+@keyframes lg-unfold { from { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { body.lg-hover #legend.peek { animation: none; } }
 body.embed-scene .maplibregl-ctrl-bottom-right { right: var(--inset-r, 0px); bottom: var(--inset-b, 0px); }
 body.embed-scene .maplibregl-ctrl-bottom-left { left: var(--inset-l, 0px); bottom: var(--inset-b, 0px); }
 
