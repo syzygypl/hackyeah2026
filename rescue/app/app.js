@@ -895,7 +895,8 @@ function setMode(m, v) {
   const views = MODES[m].views;
   $("views").innerHTML = views.map(([k, l]) => `<button data-view="${k}" role="tab">${l}</button>`).join("");
   $("views").style.display = views.length ? "" : "none";
-  if (m === "edycja" && store.backend !== "studio" && store.hasStudio) loadScenario("studio").catch((e) => toast(plErr(e)));
+  if (m === "edycja" && store.backend !== "studio" && store.hasStudio) { setMode.back = store.scenario; loadScenario("studio").catch((e) => toast(plErr(e))); }
+  else if (m !== "edycja" && store.backend === "studio" && setMode.back) { const b = setMode.back; setMode.back = null; loadScenario(b).then(renderLiveHead).catch((e) => toast(plErr(e))); }   // QA #1 (AI Mateusza #1): leaving Plan brings back the incident it replaced (Na żywo again)
   try { localStorage.setItem("rescue-app-mode", m); } catch (e) {}
   setFloat(); // before setView: the frames are created with the floating insets
   setTimeout(pushInsets, 260);   // the dock height animates (app.css): scene padding once more at the end
