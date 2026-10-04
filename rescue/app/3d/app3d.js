@@ -1203,7 +1203,8 @@ await yieldMain();
 // (or turns back at a dead end). Right-hand traffic: each car is offset into its lane from the way's centre line. Density
 // and speed by class (major 50 km/h, 5 cars/km; minor 30 km/h, 1.6/km), at most MAX cars over the
 // cut. One InstancedMesh for the bodies and one for the lights (head white, tail red), plus a glow point per lamp pair
-// (additive, a few px at any zoom); the lights show at dusk and night (the mood's uNight). Cars are drawn 1.5x (they sit next to stylised, oversized trees) and grow up to 4x when the camera is far, so the flow still reads in the overview. No shadows: the
+// (additive, a few px at any zoom); the lights show at dusk and night (the mood's uNight). Cars are true size (4.4 x 1.8 m) at every zoom, like the
+// OSM buildings: in the overview they shrink below a pixel and only the night glow shows the flow. No shadows: the
 // shadow map is rendered only when the view settles. Button "Ruch" / ?traffic=0 hides them (and stops the per-frame update).
 const traffic = (() => {
   if (!TRAF?.r?.length || Q.get('traffic') === '0') return null;
@@ -1266,7 +1267,6 @@ const traffic = (() => {
   let on = true;
   function tick(dt) {
     if (!on) return;
-    const k = clamp(0.8 + camera.position.distanceTo(controls.target) * 2, 1.5, 4); // 1.5x close (next to the stylised trees), up to 4x in the overview
     for (let i = 0; i < N; i++) {
       const c = cars[i];
       c.s += c.dir * c.v * dt;
@@ -1276,13 +1276,13 @@ const traffic = (() => {
       while (c.seg > 0 && cum[c.seg] > c.s) c.seg--;
       const j = c.seg, f = (c.s - cum[j]) / Math.max(cum[j + 1] - cum[j], 1e-9);
       let dx = xz[2 * j + 2] - xz[2 * j], dz = xz[2 * j + 3] - xz[2 * j + 1]; const dl = Math.hypot(dx, dz) || 1; dx = (dx / dl) * c.dir; dz = (dz / dl) * c.dir;
-      const off = c.w.cl[2] * Math.min(k, 1.6), x = xz[2 * j] + (xz[2 * j + 2] - xz[2 * j]) * f - dz * off, z = xz[2 * j + 1] + (xz[2 * j + 3] - xz[2 * j + 1]) * f + dx * off; // right of travel
+      const off = c.w.cl[2], x = xz[2 * j] + (xz[2 * j + 2] - xz[2 * j]) * f - dz * off, z = xz[2 * j + 1] + (xz[2 * j + 3] - xz[2 * j + 1]) * f + dx * off; // right of travel
       const y = meshHeightAt(toLat(z), toLon(x)) + 0.0001;
-      // rotation about y so that local +x points along (dx, dz), uniform scale k
+      // rotation about y so that local +x points along (dx, dz), true scale (1)
       const o = i * 16;
-      E[o] = dx * k; E[o + 1] = 0; E[o + 2] = dz * k; E[o + 3] = 0;
-      E[o + 4] = 0; E[o + 5] = k; E[o + 6] = 0; E[o + 7] = 0;
-      E[o + 8] = -dz * k; E[o + 9] = 0; E[o + 10] = dx * k; E[o + 11] = 0;
+      E[o] = dx; E[o + 1] = 0; E[o + 2] = dz; E[o + 3] = 0;
+      E[o + 4] = 0; E[o + 5] = 1; E[o + 6] = 0; E[o + 7] = 0;
+      E[o + 8] = -dz; E[o + 9] = 0; E[o + 10] = dx; E[o + 11] = 0;
       E[o + 12] = x; E[o + 13] = y; E[o + 14] = z; E[o + 15] = 1;
     }
     mBody.instanceMatrix.needsUpdate = true;
@@ -1303,8 +1303,8 @@ const traffic = (() => {
 // at its base, on the nearest road open to traffic (data/<sc>-traffic.json) within 300 m (its road access: a beach or
 // village station sits off the street), along the road, on the right shoulder; units sharing a base park one behind
 // the other. A base at a mountain hut or station without a road nearby gets none; so does a base outside the cut.
-// Blue lights flash while the unit has an assignment in the shown step (drawTeams -> setActive). Drawn 2.5x like the
-// other unit markers.
+// Blue lights flash while the unit has an assignment in the shown step (drawTeams -> setActive). True size (a car 4.6 m,
+// a fire engine 8 m), like the traffic and the OSM buildings.
 const unitCars = (() => {
   if (!TRAF?.r?.length) return null;
   const roads = TRAF.r.map(([, l]) => { const d = dec(l), xz = []; for (let i = 0; i < d.length; i += 2) xz.push(toX(d[i + 1]), toZ(d[i])); return xz; });
@@ -1318,9 +1318,9 @@ const unitCars = (() => {
       if (d < bd) { bd = d; const l = Math.sqrt(L2); best = { x: px, z: pz, dx: dx / l, dz: dz / l }; }
     }
     if (!best) continue;
-    const S = 2.5, k = list.filter((c) => Math.hypot(c.at.x - best.x, c.at.z - best.z) < 0.02).length, back = k * 0.0075 * S; // queue behind a car already there
-    const v = createVehicle(THREE, vk), x = best.x - best.dz * 0.004 * S - best.dx * back, z = best.z + best.dx * 0.004 * S - best.dz * back; // right shoulder
-    v.obj.scale.setScalar(S); v.obj.position.set(x, meshHeightAt(toLat(z), toLon(x)), z); v.setHeading(best.dx, best.dz);
+    const k = list.filter((c) => Math.hypot(c.at.x - best.x, c.at.z - best.z) < 0.02).length, back = k * 0.01; // queue behind a car already there, 10 m apart
+    const v = createVehicle(THREE, vk), x = best.x - best.dz * 0.004 - best.dx * back, z = best.z + best.dx * 0.004 - best.dz * back; // right shoulder, 4 m off the centre line
+    v.obj.position.set(x, meshHeightAt(toLat(z), toLon(x)), z); v.setHeading(best.dx, best.dz);
     v.obj.name = 'unitCar'; scene.add(v.obj); list.push({ id: r.id, v, at: best });
   }
   if (!list.length) return null;

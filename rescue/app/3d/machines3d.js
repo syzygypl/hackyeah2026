@@ -172,7 +172,7 @@ function sharedV(THREE) {
   const box = (x, y, z, ty = 0, tx = 0) => new THREE.BoxGeometry(x, y, z).translate(tx, ty, 0);
   const mat = (c, r = 0.45) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: 0.2 });
   V = {
-    // real size in km (a car 4.6 m, a fire engine 8 m); the caller scales the group like the other markers
+    // real size in km (a car 4.6 m, a fire engine 8 m), drawn at scale 1 like the traffic and the OSM buildings
     carBody: box(0.0046, 0.0008, 0.0018, 0.0006), carCab: box(0.0026, 0.0006, 0.0016, 0.0013, -0.0003),
     suvBody: box(0.0047, 0.001, 0.0019, 0.0007), suvCab: box(0.0029, 0.00075, 0.0017, 0.00155, -0.0004),
     truckCab: box(0.0022, 0.0017, 0.0024, 0.0013, 0.0029), truckBody: box(0.0056, 0.0021, 0.0024, 0.00145, -0.0011),
