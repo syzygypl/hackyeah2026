@@ -1382,7 +1382,7 @@ function simPaint() {
   const live = rows.filter((r) => r.i.state === "live"), ended = rows.filter((r) => r.i.state !== "live");
   const hm = (ms) => { const m = Math.floor(sim.lf.warsaw(ms).min); return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); };
   // sens-funkcji #7: the card tells the state, one clock (wall, Europe/Warsaw): "trwa 0:07 · zespoły 3 · ostatnie: <event> 01:01 ·
-  // brakuje: dron do 01:20" (teams = scenario resources ready by now, missing = the next one not there yet); the scenario clock only
+  // w drodze: dron (01:20)" (teams = scenario resources ready by now, w drodze = the next one not there yet); the scenario clock only
   // in title; badge SYMULACJA (LIVE is for the real feed only); of the top 3 one line "#1 R17 Głębokie - tor"
   const RT = { drone: "dron", dog: "pies", heli: "śmigłowiec", ground: "patrol", boat: "łódź", diver: "nurkowie", horse: "konni" };
   const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t, bz = busyScs();
@@ -1396,7 +1396,9 @@ function simPaint() {
       const ev = (md.events || []).filter((e) => toMin(e.at) != null && off(e.at) > 0 && off(e.at) <= now).sort((a, b) => off(a.at) - off(b.at)).pop();
       if (ev) out.push(`ostatnie: ${esc(cut(ev.title || ev.provider || "", 46))} ${wall(ev.at)}`);
       const miss = res.filter((x) => x.readyAt && off(x.readyAt) > now).sort((a, b) => off(a.readyAt) - off(b.readyAt))[0];
-      if (miss) out.push(`brakuje: ${esc(RT[miss.type] || cut(miss.name || miss.id || "", 24))} do ${wall(miss.readyAt)}`);
+      if (miss) out.push(`w drodze: ${esc(RT[miss.type] || cut(miss.name || miss.id || "", 24))} (${wall(miss.readyAt)})`);   // critic re-check: a team on the way is not "brakuje"
+      // "brakuje" only for a real gap: a water incident with no boat / divers in the plan at all
+      if (/\brzek|jezior|kajak|zalew|tonie|utonię|Narw|Wisł|Śniardw|Bełdan|Tałt/i.test(`${md.incident || ""} ${d.name || ""} ${d.place || ""}`) && !res.some((x) => x.type === "boat" || x.type === "diver")) out.push("brakuje: łódź");
     }
     return out.join(" · ");
   };
