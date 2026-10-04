@@ -409,13 +409,30 @@ const advTowns = [];
 const num2 = (v) => (Math.round((v || 0) * 100) / 100).toFixed(2).replace(".", ",");
 const LEVEL = { alarm: "ALARM", ostrzezenie: "OSTRZEŻENIE", obserwacja: "DO OBSERWACJI" };
 try { advOpen = localStorage.getItem("rescue-advisor-open") === "1"; } catch (e) { advOpen = false; }   // demo review 3: starts as a slim bar, never over the incident dots
+// Symulacja 24/7 (#1): only incidents running or just ended at the virtual clock (sim.view) count - a hypothesis shows once at
+// least 2 of its incidents have started, with those only; the model's text was written for all of them, so it is not shown then
+let advRaw = null, advSimSig = "";
+function advView(a) {
+  if (!a || !simOn()) return a;
+  const act = new Set(sim.view.map((i) => i.sc)), all = a.hypotheses || [];
+  const hs = all.map((h) => ({ ...h, incidents: h.incidents.filter((sc) => act.has(sc)) })).filter((h) => h.incidents.length >= 2);
+  const trim = hs.length !== all.length || hs.some((h, k) => h.incidents.length !== all.find((x) => x.id === h.id).incidents.length);
+  if (advSel >= hs.length) advSel = 0;
+  return { ...a, hypotheses: hs, incidents: act.size, simTrim: trim,
+    summary: hs.length ? a.summary : "Symulacja 24/7: wśród trwających akcji Doradca nie widzi teraz wspólnego źródła. Powiązania pokaże, gdy wystartują co najmniej 2 zdarzenia z jednej przyczyny." };
+}
+function advSimRefresh() {   // sim.view changed which incidents are running: re-filter without a new GET
+  const sig = simOn() ? [...new Set(sim.view.map((i) => i.sc))].sort().join(",") : "off";
+  if (sig === advSimSig || !advRaw) { advSimSig = sig; return; }
+  advSimSig = sig; adv = advView(advRaw); advRender(); if (PICK) renderPick(); else { tlBuild(); tlApply(); }
+}
 async function advTick() {
   if (advBusy || Date.now() < advMiss || (EMBED && pickHidden)) return; advBusy = true;
   try {
     const a = await api("/api/advisor");
     const sig = JSON.stringify((a.hypotheses || []).map((h) => [h.id, h.score, h.incidents, h.evidence.map((e) => e.text)]));
     if (sig !== advSig) { advSig = sig; if (advSel >= (a.hypotheses || []).length) advSel = 0; }
-    adv = a; advRender(); if (PICK) renderPick(); else { tlBuild(); tlApply(); }   // timeline: hypothesis brackets
+    advRaw = a; adv = advView(a); advRender(); if (PICK) renderPick(); else { tlBuild(); tlApply(); }   // timeline: hypothesis brackets
     if ((a.hypotheses || []).length && !advLlmAsked && !PICK) advLlm();   // the model's version: once per page load, in the background
   } catch (e) { if (e.status === 404) advMiss = Date.now() + 60000; console.warn("advisor", e); }
   advBusy = false;
@@ -440,7 +457,7 @@ function advRender() {
     const tabs = hs.length > 1 ? `<div class="advtabs">${hs.map((x, i) => `<button type="button" data-i="${i}" class="${i === advSel ? "on" : ""}">${esc(x.id)}</button>`).join("")}</div>` : "";
     const name = (sc) => { const x = incidents.find((i) => i.sc === sc); return x ? short(x) : sc; };
     const bar = h.evidence.map((e) => `<i style="flex:${e.contribution}" title="${esc(e.id)} ${esc(e.label)}"></i>`).join("");
-    const narr = (advNarrSig === advSig && advNarr) || adv.narrative || {};   // the model's text only for the state it was written for
+    const narr = adv.simTrim ? { summary: "Symulacja 24/7: opis modelu dotyczy pełnego zestawu akcji, część jeszcze się nie zaczęła - liczą się dowody powyżej.", by: "rules" } : (advNarrSig === advSig && advNarr) || adv.narrative || {};   // the model's text only for the state it was written for
     const by = narr.by && narr.by !== "rules" ? `model (${esc(narr.by === "llm-openai" ? "chmura" : "lokalny")})` : "reguły";
     const body = `
       <div class="advtop"><div><div class="kind" title="Dla operatora: wynik ${num2(h.score)} (0-1); ${esc(h.explain)}">${esc(h.kindLabel)}</div><h3>${esc(h.title)}</h3>
@@ -1056,7 +1073,7 @@ function simTick() {
 }
 // cards + dots at the virtual clock (cheap when nothing changed: signature of keys, states and 5-min clocks)
 function simPaint() {
-  sim.view = simView();
+  sim.view = simView(); advSimRefresh();
   for (const [k, m] of markers) {
     const x = incidents.find((i) => i.sc === k); if (!x) continue;
     if (m.getElement()._mm !== markMode(x)) paintMarker(x, m);
