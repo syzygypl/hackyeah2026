@@ -428,3 +428,10 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 .tfield summary{cursor:pointer;font-size:var(--rl-fs-s);padding:3px 0}
 .tfield summary .cnt{color:var(--rl-mute)}
 @media (max-width:900px){#tmLeg{top:8px;left:8px;max-width:calc(100% - 16px)}}
+/* sens-funkcji #1: Rezerwa by region, Najbliżej tej akcji */
+.grp .reg{margin:2px 0}
+.grp .reg summary{cursor:pointer;font-size:var(--rl-fs-s);padding:3px 0}
+.grp .reg summary .cnt{color:var(--rl-mute);font-size:var(--rl-fs-xs)}
+.grp.near{border:1px solid var(--rl-accent);background:color-mix(in srgb,var(--rl-accent) 6%,transparent)}
+.near .km{font-weight:700;color:var(--rl-ink)}
+.near .nsend{font:inherit;font-size:var(--rl-fs-xs);padding:2px 10px;border-radius:var(--rl-radius-s);border:1px solid var(--rl-accent);background:var(--rl-accent);color:var(--rl-on-accent,#fff);cursor:pointer}
