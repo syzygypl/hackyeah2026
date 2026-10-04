@@ -118,6 +118,8 @@ const EMB = Q.get('embed');
 if (EMB === '1' || EMB === 'bare' || EMB === 'scene') document.body.classList.add('embed');
 if (EMB === 'bare') document.body.classList.add('embed-bare');
 if (EMB === 'scene') document.body.classList.add('embed-scene'); // 3D buttons, no timeline (the shell has its own)
+const FPPWIN = EMB === 'fpp'; // the separate FPP window: only the scene in a unit's eye view, its picker and the clock
+if (FPPWIN) document.body.classList.add('embed', 'embed-bare', 'embed-fpp');
 if (document.body.classList.contains('embed')) {
   // decision S1: embedded views use the shell's tokens (dark operational theme, light via ?theme=light)
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../tokens.css'; document.head.appendChild(l);
@@ -2259,6 +2261,7 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
   // FPP: the outlines float metres above the ground and the signal pins stand like beams in an eye-level view, so they step aside
   onCamera: (on, actorId) => { fppHeat = on ? 0.3 : 1; for (const g of [dyn.top, dyn.searched, dyn.teams, dyn.sel, dyn.signals, dyn.live]) g.visible = !on; compose(); toParent({ type: 'fpp', on, actorId }); },
   onActor: (id) => toParent({ type: 'actor', id }),
+  onWindow: FPPWIN ? null : (id) => openFppWindow(id), lockFpp: FPPWIN,
   getFrame: async (t) => {
     const history = new URL(P.run, location.href).searchParams.get('live') === '0' ? '&live=0' : '';
     const f = await getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}${history}`, true);
@@ -2444,6 +2447,9 @@ async function pollLive() {
   }
   setTimeout(pollLive, 4000);
 }
+function hint(text) { // a short note in the feed corner (8 s)
+  const el = document.createElement('div'); el.className = 'toast'; el.textContent = text; $('feed').prepend(el); setTimeout(() => el.remove(), 8000);
+}
 function toast(e) {
   const el = document.createElement('div'); el.className = 'toast';
   el.innerHTML = `<span class="t">${esc(e.at || '')} meldunek</span>${esc(e.text)}`;
@@ -2468,7 +2474,44 @@ function selectSeg(id, { fly: doFly = true, notify = true } = {}) {
 dyn.sel = new THREE.Group(); scene.add(dyn.sel);
 addEventListener('message', (e) => {
   if (e.origin !== location.origin || e.source !== window.parent || !e.data || typeof e.data !== 'object') return;
-  const m = e.data; fromParent = true;
+  applyMsg(e.data);
+  if (FPP_BC && RELAY.has(e.data.type)) FPP_BC.postMessage({ ...e.data, sc: SC }); // the FPP window follows the shell
+});
+// ---------- FPP window (?embed=fpp): a unit's eye view in its own window, kept in step with this view ----------
+// The "Okno" button opens /app/3d/?embed=fpp&unit=<id> with this page's run, scenario and step in a named window (a second
+// click reuses it and switches the unit). This view relays the shell's step / time / evidence / unit messages over
+// BroadcastChannel('rl-3d'); the window applies them like its own parent's and asks for the current state when it
+// loads; a scenario or run switch makes it reload on the new one. A closed window costs nothing; a blocked popup falls
+// back to FPP in the map with a short note. The window renders at most 24 fps at DPR <= 0.75, without the water mirror
+// (measured on starship-v2, 1440x900 main view orbiting with GPU sync: render 5.1 ms alone; see README).
+const RELAY = new Set(['step', 'time', 'evidence', 'actor']);
+const FPP_BC = 'BroadcastChannel' in window ? new BroadcastChannel('rl-3d') : null;
+let fppWin = null;
+function openFppWindow(id) {
+  if (fppWin && !fppWin.closed) { FPP_BC?.postMessage({ type: 'unit', id, sc: SC }); fppWin.focus(); return; }
+  const u = new URL(location.href); u.searchParams.set('embed', 'fpp'); u.searchParams.set('unit', id); u.searchParams.set('step', String(STEP));
+  for (const k of ['stats', 'gpu', 'zoom']) u.searchParams.delete(k);
+  if (!u.searchParams.has('fx')) u.searchParams.set('fx', '-refl'); // the window skips the water mirror pass
+  fppWin = window.open(u.href, 'rl-fpp', 'popup,width=960,height=600');
+  if (!fppWin) { TL3D?.startFpp(id); hint('Przeglądarka zablokowała okno - widok z oczu jednostki jest w mapie. Zezwól na wyskakujące okna dla tej strony.'); }
+}
+function fppState() { // what a freshly opened window needs to catch up
+  FPP_BC.postMessage({ type: 'step', i: STEP, sc: SC });
+  if (TL3D?.minute != null) FPP_BC.postMessage({ type: 'time', minute: TL3D.minute, sc: SC });
+  for (const k of OFF) FPP_BC.postMessage({ type: 'evidence', id: k, on: false, sc: SC });
+}
+if (FPP_BC && !FPPWIN) FPP_BC.onmessage = (e) => { if (e.data?.type === 'hello' && e.data.sc === SC) fppState(); };
+if (FPP_BC && FPPWIN) FPP_BC.onmessage = (e) => {
+  const m = e.data; if (!m || typeof m !== 'object') return;
+  if (m.type === 'scene' && (m.sc !== SC || (m.run || '') !== (Q.get('run') || ''))) { // the main view switched scenario or run
+    const u = new URL(location.href); u.searchParams.set('sc', m.sc); if (m.run) u.searchParams.set('run', m.run); else u.searchParams.delete('run'); u.searchParams.delete('runInline'); location.replace(u); return;
+  }
+  if (m.sc && m.sc !== SC) return;
+  if (m.type === 'unit' && typeof m.id === 'string') TL3D?.startFpp(m.id);
+  else if (RELAY.has(m.type)) { if (m.type === 'actor') return; applyMsg(m); if (TL3D?.want && !TL3D.following) TL3D.startFpp(TL3D.want); }
+};
+function applyMsg(m) {
+  fromParent = true;
   try {
     if (m.type === 'step' && Number.isInteger(m.i)) setStep(m.i);
     else if (m.type === 'time' && Number.isFinite(m.minute)) { if (typeof m.live === 'boolean') TL_LIVE = m.live; if (Array.isArray(m.top) && m.top.length) { TL_TOP = m.top.map(String); TL_TOPM = m.minute; }
@@ -2494,7 +2537,7 @@ addEventListener('message', (e) => {
       const u = new URL(location.href); u.searchParams.set('run', m.url); u.searchParams.delete('runInline'); location.replace(u);
     }
   } finally { fromParent = false; }
-});
+}
 
 // ---------- loop ----------
 const clock = new THREE.Clock();
@@ -2522,7 +2565,7 @@ function fitShadow(now) {
 // compositor, not fill rate, so a lower resolution only blurred the picture. ?dpr=<n> pins it, ?stats=1 shows fps,
 // CPU split, draw calls and resolution (?gpu=1 adds a gl.finish so "render" includes GPU time).
 const DPR_AUTO = Q.get('dpr') === 'auto', DPR_PIN = Q.has('dpr') && !DPR_AUTO;
-const DPR_MAX = DPR_PIN ? +Q.get('dpr') : Math.min(devicePixelRatio, 1.5), DPR_MIN = DPR_AUTO ? Math.max(0.75, DPR_MAX * 0.6) : DPR_MAX;
+const DPR_MAX = DPR_PIN ? +Q.get('dpr') : Math.min(devicePixelRatio, FPPWIN ? 0.75 : 1.5), DPR_MIN = DPR_AUTO ? Math.max(0.75, DPR_MAX * 0.6) : DPR_MAX;
 let shellHidden = false; // {type:'visible', on:false} from /app: 2D is shown, the scene stays built but nothing ticks or renders
 let dpr = DPR_MAX, offscreen = false, lastRender = 0, lastLabels = 0, ema = 16, slowFor = 0, fastFor = 0, upWait = 4000, upAt = 0;
 renderer.setPixelRatio(dpr);
@@ -2597,6 +2640,7 @@ function frame() {
   const moved = cameraMoved();
   const active = moved || fly || CINE.on || walking || timelineMoving || coverageMoving || oneShot || heatT < 1 || controls.autoRotate || now - wakeAt < 600 || renderer.shadowMap.needsUpdate;
   if (!active && now - lastRender < 1000 / 31) return; // ambient only: 30 fps
+  if (FPPWIN && now - lastRender < 1000 / 25) return; // the FPP window: at most 24 fps, so the main view keeps its frame rate
   const interval = now - lastRender; lastRender = now;
   if (active) adaptResolution(now, interval);
   const c0 = performance.now();
@@ -2657,3 +2701,10 @@ if (FLAT) {
   document.body.appendChild(n);
 }
 toParent({ type: 'ready', scenario: SC, steps: R.steps.length, step: STEP });
+if (FPP_BC && !FPPWIN) FPP_BC.postMessage({ type: 'scene', sc: SC, run: Q.get('run') || '' }); // an open FPP window follows a scenario / run switch
+if (FPPWIN) {
+  document.title = 'Widok z oczu jednostki - ' + (SCENS[SC]?.name || SC);
+  const unit = Q.get('unit');
+  if (!R.timeline?.actors?.length) hint('Ten scenariusz nie ma osi czasu z pozycjami jednostek - brak widoku z oczu.');
+  else { if (unit) TL3D?.startFpp(unit); FPP_BC?.postMessage({ type: 'hello', sc: SC }); }
+}

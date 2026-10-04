@@ -26,7 +26,9 @@ export function timelineClock(timeline, minute) {
 }
 
 export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeAt, line, drape, dispose, label,
-  esc, nf, wake, onFrame, onStopCamera, onCamera, onActor, getFrame }) {
+  esc, nf, wake, onFrame, onStopCamera, onCamera, onActor, getFrame, onWindow = null, lockFpp = false }) {
+  // lockFpp: the separate FPP window (?embed=fpp) - it stays in FPP (Esc does not leave it) and re-enters when its unit
+  // shows up again; onWindow(id): the "Okno" button opens that window for the selected unit
   const timeline = run.timeline;
   if (!timeline?.actors?.length) return null;
   const colors = { pieszy: '#b8860b', pies: '#8d5524', dron: '#6c4ab6', smiglowiec: '#1f4e79', lodz: '#168aad', osoba: '#cf473f' };
@@ -56,9 +58,11 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
   let drawnMinute = null;
   let target = null, shown = null, from = null, blend = 1, lastFrame = null, held = null, lastSetAt = 0, request = 0, fpp = null, savedCamera = null, selected = null, visible = true;
   const panel = document.createElement('div'); panel.id = 'timeline3dCtl'; panel.className = 'floating';
-  panel.innerHTML = `<div class="tl3d-title">Perspektywa jednostki</div><select aria-label="Jednostka dla kamery FPP">${actors.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)}</option>`).join('')}</select><button class="btn full" type="button" title="Kamera na wysokości oczu; Esc wraca do mapy">FPP</button><div class="tl3d-key">● ślad GPS · - - ślad szacowany<br>okrąg: dokładność · obrys: pole widzenia</div><div class="tl3d-clock" aria-live="polite"></div>`;
+  panel.innerHTML = `<div class="tl3d-title">Perspektywa jednostki</div><select aria-label="Jednostka dla kamery FPP">${actors.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)}</option>`).join('')}</select><button class="btn full" type="button" title="Kamera na wysokości oczu; Esc wraca do mapy">FPP</button>${onWindow ? '<button class="btn full tl3d-win" type="button" title="Widok z oczu jednostki w osobnym oknie (np. na drugim monitorze); mapa zostaje tutaj">Okno</button>' : ''}<div class="tl3d-key">● ślad GPS · - - ślad szacowany<br>okrąg: dokładność · obrys: pole widzenia</div><div class="tl3d-clock" aria-live="polite"></div>`;
   (document.getElementById('sceneCtl') || document.body).appendChild(panel);
   const select = panel.querySelector('select'), button = panel.querySelector('button'), status = panel.querySelector('.tl3d-clock');
+  let want = null; // lockFpp: the unit the window follows
+  panel.querySelector('.tl3d-win')?.addEventListener('click', () => onWindow(select.value));
   const toggle = document.createElement('label'); toggle.className = 'tl3d-key';
   toggle.innerHTML = `<input type="checkbox"${fovOn ? ' checked' : ''}> Pole widzenia`;
   toggle.title = 'Zasięg widzenia lub zapachu z silnika, przycięty do terenu';
@@ -72,6 +76,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     savedCamera = null; button.classList.remove('on'); button.textContent = 'FPP'; trail.visible = area.visible = visible; onCamera(false); wake();
   }
   function startFpp(id) {
+    if (lockFpp && id) want = id;
     const a = actors.find((a) => a.id === id);
     if (!a || shown == null || !sampleAt(a.path, shown)) return false;
     if (!fpp) savedCamera = { position: camera.position.clone(), target: controls.target.clone(), near: camera.near };
@@ -81,8 +86,8 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     button.classList.add('on'); button.textContent = 'Wróć do mapy'; onCamera(true, a.id); wake(); return true;
   }
   button.onclick = () => { if (fpp) stopFpp(); else startFpp(select.value); };
-  select.onchange = () => { if (fpp) { if (!startFpp(select.value)) stopFpp(); } };
-  addEventListener('keydown', (e) => { if (e.key === 'Escape') { stopFpp(); selectActor(null); } });
+  select.onchange = () => { if (lockFpp) startFpp(select.value); else if (fpp) { if (!startFpp(select.value)) stopFpp(); } };
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && !lockFpp) { stopFpp(); selectActor(null); } });
   addEventListener('pointerup', (e) => {
     const d = labelDown; labelDown = null;
     if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) <= 5) selectActor(d.id);
@@ -207,6 +212,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
       }
     }
     if (fpp && !actors.find((a) => a.id === fpp)?.g.visible) stopFpp();
+    if (lockFpp && !fpp && want && shown != null) startFpp(want); // the window: back in FPP as soon as its unit has a position
     return fields.tick(dt, fpp, shown) || moving || !!fpp;
   }
   function setVisible(on) { visible = on; group.visible = trail.visible = area.visible = on; fields.setVisible(on); panel.hidden = !on; if (!on) stopFpp(); }
@@ -234,6 +240,6 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     const pts = a.path.filter((q) => shown == null || q[2] <= shown), use = pts.length ? pts : a.path;
     return { lat: use.reduce((s, q) => s + q[0], 0) / use.length, lon: use.reduce((s, q) => s + q[1], 0) / use.length };
   }
-  return { setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, fields, actorFocus, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
+  return { get want() { return want; }, setTime, tick, startFpp, stopFpp, selectActor, pickActor, setVisible, layoutLabels, fields, actorFocus, get selected() { return selected; }, get minute() { return shown; }, get frame() { return lastFrame; },
     get following() { return fpp; }, get actorCount() { return actors.filter((a) => a.g.visible).length; } };
 }

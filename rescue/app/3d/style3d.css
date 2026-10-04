@@ -379,3 +379,6 @@ body.walking canvas { cursor: grab; }
 #walkHint { position: fixed; z-index: 12; left: calc((100vw + var(--inset-l, 0px) - var(--inset-r, 0px)) / 2); bottom: calc(var(--inset-b, 0px) + 14px); transform: translateX(-50%); max-width: calc(100vw - var(--inset-l, 0px) - var(--inset-r, 0px) - 24px); padding: 8px 14px; border-radius: 10px;
   background: rgba(20, 24, 28, .78); color: #fff; font: 500 13px/1.4 system-ui, sans-serif; pointer-events: none; text-align: center; }
 #walkHint b { color: #ffd27a; margin-right: 6px; }
+/* the separate FPP window (?embed=fpp): only the eye view, the unit picker and the clock */
+body.embed-fpp > #timeline3dCtl { top: 12px; left: 12px; right: auto; width: 230px; }
+body.embed-fpp #timeline3dCtl > button, body.embed-fpp #timeline3dCtl .tl3d-key, body.embed-fpp #timeline3dCtl label { display: none; }
