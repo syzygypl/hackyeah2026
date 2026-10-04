@@ -126,4 +126,10 @@
   /* the chat drawer on a phone: full screen, 16 px input (no iOS zoom) */
   #chDrawer{top:0;right:0;bottom:0;left:0;width:auto;border-radius:0}
   #chDrawer textarea,#chDrawer input,#chDrawer select{font-size:16px}
+
+  /* Symulacja 24/7 bell (appbell.js, AI Mateusza #1): row 1 next to Czat; the list under the header, toasts above the bottom sheet */
+  body:not(.role-ratownik) header>.lfhost{display:inline-flex!important;order:3;flex:none}
+  body:not(.role-ratownik) header>.lfhost[hidden]{display:none!important}
+  body:not(.role-ratownik) .lfpanel{top:calc(var(--m-hdr) + 6px)}
+  body:not(.role-ratownik) .lftoasts{bottom:calc(var(--m-peek) + var(--m-dock) + 12px)}
 }

@@ -1282,6 +1282,15 @@ async function switchScenario(sc, push = true) {
   const sp = FRAMES["2da"]; if (sp.spare) { sp.spare.remove(); sp.spare = null; sp.spareReady = null; }
   try { await loadScenario(sc); } catch (e) { toast(plErr(e), 5000); }
 }
+// the livefeed bell (appbell.js, AI Mateusza #1): "Otwórz" = this incident in Historia at its clock, in place, one run load
+async function openAt(sc, clock) {
+  const toHist = store.time !== "hist";
+  if (toHist) { stopPlay(); store.time = "hist"; try { localStorage.setItem("rescue-app-time", "hist"); } catch (e) {} renderLiveHead(); }
+  if (sc !== store.scenario) await switchScenario(sc);
+  else if (toHist && store.backend === "api") { try { await loadScenario(sc); } catch (e) { toast(plErr(e)); } }
+  renderLiveHead();
+  const T = tlDoc(), m = clock && T ? tlMinOfClock(T, clock) : null; if (m != null) setMinute(m);
+}
 addEventListener("popstate", (e) => {
   const sc = (e.state && e.state.sc) || new URLSearchParams(location.search).get("sc") || (store.hasApi ? "zawrat" : null);
   if (PICK.open) pickClose(true);
@@ -1289,7 +1298,7 @@ addEventListener("popstate", (e) => {
 });
 
 window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, setMode, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
-Object.assign(window.rescueApp, { setTime, loadScenario, switchScenario, pickOpen });   // intro.js (guided tour) drives the shell through these
+Object.assign(window.rescueApp, { setTime, loadScenario, switchScenario, pickOpen, openAt });   // intro.js (guided tour) drives the shell through these
 Object.assign(window.rescueApp, { applyRun, onStore: (f) => subs.push(f) });   // chat.js (Czat): Historia what-if run + refresh hook
 async function boot() {
   try {

@@ -559,3 +559,7 @@ body.picking{overflow:hidden}
 #pickLayer .pickslow{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid var(--rl-line);border-radius:10px;padding:10px 14px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.18)}
 #pickLayer .pickslow[hidden]{display:none}
 #pickLayer .pickslow button{margin-left:8px}
+
+/* Symulacja 24/7 bell in the header (appbell.js, AI Mateusza #1): operator only; the rescuer phone has its own screen */
+header>.lfhost{display:inline-flex;align-items:center}
+header>.lfhost[hidden],body.role-ratownik header>.lfhost,body.role-ratownik .lftoasts{display:none}
