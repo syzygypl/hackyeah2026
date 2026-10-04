@@ -101,3 +101,11 @@ body.role-ratownik #chBtn,body.role-ratownik #chDrawer{display:none}   /* rescue
 #chBtn.inhdr{position:static;z-index:auto;box-shadow:none;padding:6px 14px;font-size:var(--rl-fs);border-radius:var(--rl-radius-s);min-height:36px;flex:none}
 @media (pointer:coarse),(max-width:760px){#chBtn.inhdr{min-height:44px;padding:0 14px}}
 @media (max-width:760px){#chBtn.inhdr{padding:0 12px;min-width:44px;justify-content:center}#chBtn.inhdr .lbl{display:none}}
+/* /app: the drawer opens on the LEFT below the top bar, so the top 3 panel (right) and the header buttons stay visible (Michał's review) */
+@media (min-width:761px){
+  #chDrawer{left:12px;right:auto;top:calc(var(--hdr-h,58px) + 8px);transform:translateX(calc(-100% - 24px))}
+  #chDrawer.open{transform:none}
+}
+/* example chips wrap into rows (max 3) instead of being cut off at the drawer edge */
+.ch-chips{flex-wrap:wrap;overflow-x:hidden;overflow-y:auto;max-height:118px}
+.ch-chip{max-width:100%}

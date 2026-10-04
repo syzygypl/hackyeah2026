@@ -31,7 +31,7 @@ function inPoly(lat, lon, poly) { let c = false; for (let i = 0, j = poly.length
 
 // ---------------------------------------------------------------- gazetteer (from the scenario file + the run's segments)
 const STOP = new Set(["i", "w", "z", "pod", "nad", "na", "do", "od", "ipp", "pttk", "przy", "oraz", "the"]);
-const stem = (w) => /^\d/.test(w) ? w : w.length <= 2 ? w : w.length === 3 ? w.slice(0, 2) : w.length <= 5 ? w.slice(0, w.length - 1) : w.slice(0, Math.max(5, w.length - 2));
+const stem = (w) => /^\d/.test(w) ? w : w.length <= 2 ? w : w.length === 3 ? w.slice(0, 2) : w.length <= 5 ? w.slice(0, w.length - 1) : w.slice(0, Math.max(4, w.length - 2));
 const GENERIC = new Set(["gran", "staw", "dolina", "szlak", "potok", "las", "droga", "dolna", "gorna", "zleb", "hala", "przelecz"]);
 const SPLIT = /\s*(?:\/|,|\s-\s|\si\s)\s*/;
 const words = (s) => fold(s).match(/[a-z0-9]+/g) || [];
@@ -53,6 +53,12 @@ export function gazetteer(scn, run) {
     for (const part of s.name.split(SPLIT)) if (part && part !== s.name && !words(part).every((w) => GENERIC.has(w) || STOP.has(w))) add(part, s.c, "sektor", 500, 1);
   }
   if (scn && scn.ipp && scn.ipp.at) add("IPP", scn.ipp.at, "IPP", 200, 2);
+  // long names ("Las przy wyplywie potoku", "Czarny Staw pod Rysami", "Toń - zatoka przy Nowych Gutach"): any two neighbouring
+  // words name the place too ("przy wypływie potoku", "Czarnego Stawu", "przy Nowych Gutach"); huts also by their first word
+  for (const g of [...G]) {
+    if (g.st.length >= 3) for (let i = 0; i + 1 < g.st.length; i++) G.push({ ...g, st: [g.st[i], g.st[i + 1]], prio: 0 });
+    if (g.kind === "schronisko" && g.st.length > 1) G.push({ ...g, st: [g.st[0]], prio: 0 });
+  }
   // lakes, streams and ridges in the scenario terrain are schematic; when a sector carries the same name ("Czarny Staw" ->
   // S5 Czarny Staw Polski, "Grań Orlej Perci" -> S10 Kozi Wierch - Orla Perć) the sector's seed is the place (nearest such sector)
   const sw = (a, b) => a.every((x) => b.some((w) => w.startsWith(x)));
@@ -99,9 +105,9 @@ const RX = {
   search: /(przeszuk|sprawdz|przeczesa|przelecial|przelecie|przelot|spenetrow|obszedl|obeszl|przeszli|przeszedl przez)/,
   nothing: /(\bnic\b|pusto|bez (sladu|sladow|rezultatu|wyniku|efektu)|brak (sladow|sladu|wynik)|negatyw|nie znalez|nikogo|czysto)/,
   sight: /(widzia|widzie|widziano|spotka|zauwaz|rozmawia|minal|minela|mijal|mijala|swiade|swiadk|widzial|wypatrz|slysza|slyszal|machal|wolal o pomoc)/,
-  item: /(plecak|kurtk|czapk|rekawic|rekawiczk|\bbut\b|\bbuty\b|\bbuta\b|kijek|kijki|\bkij\b|latark|butelk|portfel|okular|\bmap[aeęy]\b|polar|szalik|chust|kask|czolowk|ubrani|odziez|sweter|bluz|termos|kurtke|telefon\w* (lezal|znalez)|dokument)/,
+  item: /(kapelusz|kamizelk|laska\b|laske\b|plecak|kurtk|czapk|rekawic|rekawiczk|\bbut\b|\bbuty\b|\bbuta\b|kijek|kijki|\bkij\b|latark|butelk|portfel|okular|\bmap[aeęy]\b|polar|szalik|chust|kask|czolowk|ubrani|odziez|sweter|bluz|termos|kurtke|telefon\w* (lezal|znalez)|dokument)/,
   cloth: /(kurtk|czapk|rekawic|\bbut\b|\bbuty\b|\bbuta\b|polar|szalik|chust|ubrani|odziez|sweter|bluz)/,
-  trace: /(slad|odcisk|trop|krzyk|wolani|wolal|glos|gwizd|swiatl|swiecil|swiecila|blysk|zapach)/,
+  trace: /(placz|slad|odcisk|trop|krzyk|wolani|wolal|glos|gwizd|swiatl|swiecil|swiecila|blysk|zapach)/,
   phone: /(telefon|komork|bts|logowal|sygnal|112|gps z telefonu)/,
   weather: /(mgl|deszcz|snieg|wiatr|burz|widocznos|zmrok|ciemn|mroz|oblodz|temperatur|°|stopni|zadymk|whiteout|pada|leje|mzawk|grad|wichur|lod\b|oblodzenie|noc\b|zapada)/,
   status: /(uziemion|nie poleci|nie leci|nie moze|wraca|zawraca|wycofa|awari|bateri|rozladowa|gotow|dostepn|startuje|w drodze|wylecial|zmeczon|kontuzj|odpoczyn|przerw|niedostep|wystartowal|laduje|wymiana)/,
@@ -143,14 +149,14 @@ export function parse(text, ctx) {
   if (RX.found.test(f) && !isItem && !/nie (znalez|odnalez)/.test(f) && (RX.person.test(f) || /znalezion[oa]\b/.test(f) && !isTrace)) ev.kind = "found";
   else if (RX.dispatch.test(f) && res) ev.kind = "dispatch";
   else if ((isSearch || isNothing) && !isSight && !(isItem && !isNothing) && !(isTrace && !isNothing)) ev.kind = "search";
-  else if (isSight && (!isItem || /\b(go|ja|jego|kogos|ktos|osob\w*|mezczyzn\w*|kobiet\w*|turyst\w*|czlowiek\w*|chlopak\w*|starsz\w*)\b/.test(f))) ev.kind = "sighting";
+  else if (isSight && (!isItem || /\b(go|ja|jego|kogos|ktos|osob\w*|mezczyzn\w*|kobiet\w*|turyst\w*|czlowiek\w*|chlopak\w*|starsz\w*|zeglarz\w*|plywak\w*|dzieck\w*|dziewczyn\w*|chlop\w*|senior\w*|dziad\w*|babci\w*|staruszk\w*|pan\b|pani\b|x)\b/.test(f))) ev.kind = "sighting";
   else if (isItem || isTrace || (RX.phone.test(f) && !RX.status.test(f))) ev.kind = "clue";
   else if (res && RX.status.test(f)) ev.kind = "status";
   else if (RX.weather.test(f)) ev.kind = "weather";
   else if (/(kogos|ktos|osob|turyst|mezczyzn|kobiet|\bgo\b|\bja\b|\bbyl\b|\bbyla\b)/.test(f) && (RX.move.test(f) || /\b(byl|byla|stal|stala|siedzial|siedziala|lezal|lezala|odpoczywal|czekal)\b/.test(f))) ev.kind = "sighting";
   if (ev.kind === "clue") {
     ev.clueType = /(swiecil|swiecila|blysk|swiatl)/.test(f) ? "slad" : RX.cloth.test(f) ? "odziez" : isItem ? "znalezisko" : RX.phone.test(f) && !isTrace ? "telefon" : "slad";
-    const it = f.match(/(plecak|kurtk\w*|czapk\w*|rekawiczk\w*|rekawic\w*|\bbut\w*|kij\w*|latark\w*|butelk\w*|portfel|okular\w*|map[aey]|polar|szalik|chust\w*|kask|czolowk\w*|termos|telefon|sweter|bluz\w*|slad\w*|trop|krzyk|wolanie|glos|gwizd\w*|swiatl\w*|odcisk\w*)/);
+    const it = f.match(/(kapelusz|kamizelk\w*|plecak|kurtk\w*|czapk\w*|rekawiczk\w*|rekawic\w*|\bbut\w*|kij\w*|latark\w*|butelk\w*|portfel|okular\w*|map[aey]|polar|szalik|chust\w*|kask|czolowk\w*|termos|telefon|sweter|bluz\w*|slad\w*|trop|krzyk|wolanie|glos|gwizd\w*|swiatl\w*|odcisk\w*)/);
     ev.item = it ? text.slice(f.indexOf(it[0]), f.indexOf(it[0]) + it[0].length) : null;
   }
   if (ev.kind === "status" || ev.kind === "dispatch" || ev.kind === "search") ev.team = res;
@@ -159,7 +165,8 @@ export function parse(text, ctx) {
   if (RX.unsure.test(f)) { ev.conf = "niska"; ev.why.push("„chyba / może” - większy promień"); }
   else if (RX.sure.test(f)) { ev.conf = "wysoka"; ev.why.push("pewna obserwacja - mniejszy promień"); }
   // sectors by id ("S3", "s 12")
-  const ids = [...f.matchAll(/\bs\s?(\d{1,2})\b/g)].map((m) => "S" + +m[1]).filter((id) => ctx.segs.some((s) => s.id === id));
+  // sector ids of any scenario: S3, M7, W12, N9, R10, B4 (letters + number, as the scenario names them)
+  const ids = [...new Set([...f.matchAll(/\b([a-z]{1,2})\s?(\d{1,2})\b/g)].map((m) => ctx.segs.find((s) => s.id.toLowerCase() === m[1] + +m[2])).filter(Boolean).map((s) => s.id))];
   // places: the ones after a direction cue are the direction, the rest are where
   // "w stronę X", "w kierunku X" = direction; "na X" / "do X" = direction only right after a motion verb in the same clause
   // ("szedł na Zawrat", "schodził do Doliny"), else a place ("na Zawracie był"); "od X" (szedł od X) = where he was
@@ -353,6 +360,55 @@ export const EXAMPLES = {
     "Chyba widziałem kogoś z czołówką na grani Orlej Perci 20 min temu",
   ],
 };
+EXAMPLES["morskie-oko"] = [
+  "Turysta widział dziewczynkę o 14:20 przy wypływie potoku, szła w stronę schroniska",
+  "Patrol GOPR A przeszukał brzeg wschodni jeziora, nic",
+  "Znaleziono różową czapkę na brzegu zachodnim jeziora",
+  "Słychać płacz koło M7 10 min temu",
+  "Dron przeleciał nad M7 i M8, nic",
+  "Pies podjął trop przy szlaku w stronę Czarnego Stawu",
+];
+EXAMPLES["rodzina-dziecko-las"] = [
+  "Turystka widziała chłopca o 16:10 przy Jelenim Potoku",
+  "Patrol GOPR A przeszukał Dziki Potok, nic",
+  "Znaleziono czapkę przy Skałce",
+  "Pies podjął trop przy Łomniczce",
+  "Dron przeleciał nad R6, nic",
+  "Zmierzch o 18:30, 8 stopni",
+];
+EXAMPLES.sniardwy = [
+  "Rybak widział żeglarza w wodzie o 17:10 przy Nowych Gutach",
+  "Łódź WOPR przeszukała toń na wschód od LKP, nic",
+  "Znaleziono kamizelkę ratunkową w trzcinach przy brzegu SE",
+  "Słychać wołanie z toni przy brzegu SE 15 min temu",
+  "Dron WOPR przeleciał nad W3, nic",
+  "Wiatr 14 m/s, widoczność 300 m",
+];
+EXAMPLES["krakow-nowa-huta"] = [
+  "Sąsiadka widziała go o 15:40 przy Placu Centralnym, szedł w stronę Zalewu Nowohuckiego",
+  "Patrol Policji A sprawdził Park Ratuszowy, nic",
+  "Znaleziono kapelusz na ogródkach działkowych Mogiła",
+  "Dron Policji przeleciał nad bulwarem Wisły, nic",
+  "Pies tropiący przeszukał N9, bez śladów",
+  "Upał 32 stopnie",
+];
+// other scenarios: chips built from the scenario itself (sector names, teams, water / city / forest / mountain)
+export function autoExamples(ctx) {
+  const scn = ctx.scn || {}, cat = String(scn.subject && scn.subject.category || ""), res = ctx.resources || [];
+  const water = /boater|swimmer|water/.test(cat) || res.some((r) => /lod|łód|wopr|boat|nurk/i.test(r.name + " " + r.type));
+  const places = [], seen = new Set();
+  for (const g of ctx.G || []) if (g.kind !== "IPP" && !seen.has(g.name) && g.name.length <= 28 && !/\(/.test(g.name)) { seen.add(g.name); places.push(g); }
+  const pick = (i) => places.length ? places[i % places.length].name : "";
+  const seg = (i) => (ctx.segs[i % Math.max(1, ctx.segs.length)] || {}).id || "";
+  const team = res.find((r) => r.type === "ground") || res[0], tName = team ? short(team.name) : "Zespół A";
+  const out = [];
+  if (pick(0)) out.push(`Widziałem kogoś przy ${pick(0)} 20 min temu`);
+  if (seg(1)) out.push(`${tName} przeszukał ${seg(1)}, nic`);
+  if (pick(2)) out.push(`Znaleziono ${water ? "kamizelkę" : "czapkę"} przy ${pick(2)}`);
+  out.push(water ? "Wiatr 12 m/s, widoczność 300 m" : /dementia/.test(cat) ? "Upał 30 stopni" : "Mgła, widoczność 50 m");
+  if (seg(3) && res.some((r) => r.type === "drone")) out.push(`Dron przeleciał nad ${seg(3)}, nic`);
+  return out.length >= 3 ? out : EX_GENERIC;
+}
 const EX_GENERIC = ["Widziałem kogoś przy schronisku 30 min temu", "Zespół A przeszukał S1, nic", "Mgła, widoczność 50 m"];
 
 export function createChat(root, host, opts = {}) {
@@ -360,7 +416,7 @@ export function createChat(root, host, opts = {}) {
   const done = [];   // added: [{n, ev, how: live|sim|studio, undo: async fn, label}]
   root.innerHTML = `<div class="ch-log" aria-live="polite"></div>
     <div class="ch-chips" aria-label="Przykłady"></div>
-    <form class="ch-in"><textarea rows="2" placeholder="${esc(opts.placeholder || "Napisz, co się stało, np. „widziałem go o 14:20 przy Czarnym Stawie”")}" aria-label="Wiadomość"></textarea><button class="ch-send" type="submit" aria-label="Wyślij">➤</button></form>`;
+    <form class="ch-in"><textarea rows="2" placeholder="${esc(opts.placeholder || "Napisz, co się stało: kto lub co, gdzie, kiedy")}" aria-label="Wiadomość"></textarea><button class="ch-send" type="submit" aria-label="Wyślij">➤</button></form>`;
   const log = root.querySelector(".ch-log"), ta = root.querySelector("textarea"), chips = root.querySelector(".ch-chips");
   const SR = typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
   if (opts.voice && SR) {
@@ -384,7 +440,7 @@ export function createChat(root, host, opts = {}) {
   root.querySelector("form").onsubmit = (e) => { e.preventDefault(); const t = ta.value.trim(); ta.value = ""; onText(t); };
   ta.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); root.querySelector("form").requestSubmit(); } };
   function renderChips() {
-    const ex = EXAMPLES[host.scenario()] || EX_GENERIC;
+    const ex = EXAMPLES[host.scenario()] || (ctx ? autoExamples(ctx) : EX_GENERIC);
     chips.innerHTML = ex.map((t) => `<button type="button" class="ch-chip">${esc(t)}</button>`).join("");
     chips.querySelectorAll("button").forEach((b) => b.onclick = () => onText(b.textContent));
   }
@@ -729,6 +785,7 @@ export function mountAppChat() {
   dr.querySelector("[data-back]").onclick = () => { chat.resetSim(); host.restore(); chat.say("Wróciłem do nagrania - symulacja wyczyszczona."); };
   A().onStore && A().onStore((why) => {
     mode();
+    if (why === "load") chat.ensureCtx().catch(() => {});   // another scenario: its own gazetteer and example chips
     // the shell loaded something else (scenario switch, Historia / Na żywo): a running simulation is gone
     if (why === "load" && simRun && !restoring) { simRun = null; dr.querySelector(".ch-sim").hidden = true; chat.resetSim(); chat.say("Symulacja zakończona: wczytano inne dane (scenariusz albo tryb czasu)."); }
   });
