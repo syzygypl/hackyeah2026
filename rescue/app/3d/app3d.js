@@ -1588,7 +1588,7 @@ const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
 // the shell's panel top 3 ({type:'time', top:[ids]}, 7e2b7a9): when present it is the only source of the #1-#3 labels
 let TL_TOP = null, TL_TOPM = null, topDrawn = '';   // ids + the shell minute they belong to
 const topOfShell = () => TL_TOP.map((id) => segs.get(id)).filter(Boolean);
-const useShellTop = () => TL_TOP && ![...OFF].some((k) => k <= STEP);   // a signal switched off: own recomputed ranking, as 2D (7e2b7a9)
+const useShellTop = () => !!TL_TOP;   // also with a signal switched off: the shell relays the 2D's recomputed top 3 (33a6ad6)
 function drawTop(ranked) {
   if (useShellTop() && G.phase === 'off') ranked = topOfShell();   // also after a step / evidence redraw
   topDrawn = ranked.slice(0, 3).map((s) => s.id).join();
