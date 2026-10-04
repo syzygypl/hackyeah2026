@@ -11,11 +11,16 @@ export function initRescuer(ctx) {
   C = ctx;
   if (team) ls.set("rescue-team", team);
   $("rTeam").onchange = () => { team = $("rTeam").value; ls.set("rescue-team", team); lastTaskKey = ""; render(); C.onTeam(team); };
-  $("rCenter").onclick = () => { if (gps) C.map.flyTo({ center: [gps[1], gps[0]], zoom: 14.5, duration: 400 }); else C.toast("Brak pozycji GPS - włącz lokalizację w telefonie"); };
-  if (navigator.geolocation) navigator.geolocation.watchPosition((p) => { gps = [p.coords.latitude, p.coords.longitude, p.coords.accuracy]; drawGps(); }, () => {}, { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
+  $("rCenter").onclick = () => { startGps(); if (gps) C.map.flyTo({ center: [gps[1], gps[0]], zoom: 14.5, duration: 400 }); else C.toast("Brak pozycji GPS - włącz lokalizację w telefonie"); };
   setInterval(() => { if (C.store.role === "ratownik") pollTask(); }, 10000);
 }
 export const myTeam = () => team;
+// own GPS: only in the Ratownik role (setRole) or on "centre on me" - the operator's desk never gets a location prompt
+let gpsWatch = null;
+export function startGps() {
+  if (gpsWatch != null || !navigator.geolocation) return;
+  gpsWatch = navigator.geolocation.watchPosition((p) => { gps = [p.coords.latitude, p.coords.longitude, p.coords.accuracy]; drawGps(); }, () => {}, { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 });
+}
 
 function teamName() { const r = res().find((x) => x.id === team); return r ? r.name.split(" (")[0] : team || "Zespół"; }
 function res() { const S = C.curStep(); return (S && S.resources) || []; }

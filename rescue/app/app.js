@@ -6,7 +6,7 @@ import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/base
 import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tickerHTML, tipHTML, focusTarget, focusUnion } from "./dock.js";   // compact dock, shared with Ćwiczenia
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
-import { initRescuer, render as renderRescuer, pollTask, myTeam } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
+import { initRescuer, render as renderRescuer, pollTask, myTeam, startGps } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -812,7 +812,7 @@ function setRole(r) {
   showFirstRun(r);
   if (r === "ratownik") {
     $("rMapHost").appendChild($("map"));
-    pollTask(); renderRescuer(); setRescuerFrame();
+    pollTask(); renderRescuer(); setRescuerFrame(); startGps();
   } else {
     $("center").insertBefore($("map"), $("center").firstChild);
     setMode(store.mode || "akcja");
