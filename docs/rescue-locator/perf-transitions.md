@@ -90,3 +90,54 @@ Produkcja po 9342527: 2D -> 3D pierwszy raz 0.27 s, na ciepło 0.24 s, 3D -> 2D 
 1. Historia (5.0 s na ciepło) i pierwsza mapa 2D (3.5 s): agent wydajności AI Andrzeja (zgłoszone, nie dublujemy).
 2. Plan -> Akcja: 2D przeładowuje się, bo Plan ma inny run (`/story`); 1.5 s pustego 2D. Propozycja: ten sam mechanizm ciepłego widoku dla 2D albo podanie runu wiadomością - AI Marcina (app.js, web/app.js).
 3. CLS 0.23-0.31 przy Plan <-> Akcja i Na żywo: stała wysokość doku lub `transition: height` - AI Marcina (app.css).
+
+## Runda 3 (noc, Rust + front)
+
+2026-10-04 03:41-03:53 (Europe/Warsaw), produkcja https://rescue-locator.vercel.app, `/version.json` = `dd890df` (2026-10-04T01:37:09Z; zawiera backend Rust we fra1, ETagi, perf frontu, workery 3D, throttling przewijania osi czasu 6f71f9a/12aa235 i poprawki powłoki do 8a7e165). Sprawdzenie ścieżki pokazu przed tym pomiarem: na 8a7e165.
+
+Metoda jak w rundzie 2 (skrypt CDP w scratchpadzie, nie w repo), z trzema doprecyzowaniami:
+- headless Chrome (`--headless=new`, 1440x900, DPR 1) z `--enable-gpu` (WebGL na GPU maszyny, ANGLE / Mesa AGX). Bez tego WebGL idzie przez SwiftShader i 3D daje long taski 2.2-2.5 s, których na prawdziwym laptopie nie ma;
+- przechwytywanie (Fetch) i Network także w workerach i ramkach (auto-attach), więc bajty i żądania obejmują workery 3D. Wszystko poza GET/HEAD/OPTIONS odrzucane; zablokowanych żądań: 0;
+- adresy: Akcja = `/app/?sc=zawrat&role=operator&mode=akcja&view=2d|3d&time=live`, Historia 2D = to samo z `time=hist`. Przełączenia: strona Akcja 2D na żywo, 15 s, ruch myszy (rozgrzewka drugiego widoku i drugiego trybu czasu startuje dopiero po pierwszym ruchu operatora), 10 s, potem kliknięcia przez `element.click()` i 8 s próbkowania co klatkę. Podpis ekranu = klasy body, aktywne przyciski, widoczny iframe i jego stan, `visibility` paneli 2D/3D (koniec przenikania 0.22 s) oraz treść prawego panelu (Top 3, zegar), więc "ustalone" = nowa mapa i ranking na ekranie, a nie tylko zmiana przycisku.
+
+Jeden przebieg stron, dwa przebiegi przełączeń (zgodne do ~0.1 s). Sieć: Wi-Fi na hali, więc DCL i zimne czasy mają rozrzut rzędu sekundy.
+
+### Strony: przed (runda 2, po Rust + nagłówki) / po (runda 3)
+
+| Strona | Przebieg | DCL ms przed / po | Ustalone s przed / po | KB przed / po | Żądania przed / po | 304 przed / po | Z cache przed / po |
+|---|---|---|---|---|---|---|---|
+| start | zimno | 839 / 1175 | 3.2 / 1.9 | 429 / 598 | 18 / 19 | 0 / 0 | 0 / 0 |
+| start | ciepło | 650 / 408 | 1.3 / 0.7 | 4 / 1 | 18 / 19 | 0 / 0 | 6 / 12 |
+| Centrum | zimno | 1072 / 1426 | 3.3 / 6.5 | 602 / 743 | 54 / 47 | 0 / 0 | 1 / 0 |
+| Centrum | ciepło | 224 / 297 | 1.1 / 4.9 | 70 / 10 | 54 / 47 | 0 / 0 | 16 / 16 |
+| Akcja 2D | zimno | 1715 / 2548 | 7.2 / 7.8 | 3790 / 2908 | 121 / 105 | 4 / 3 | 2 / 14 |
+| Akcja 2D | ciepło | 386 / 595 | 3.5 / 1.8 | 2497 / 8 | 121 / 108 | 4 / 3 | 48 / 56 |
+| Akcja 3D | zimno | 461 / 1492 | 7.0 / 6.1 | 4784 / 5070 | 103 / 146 | 3 / 4 | 1 / 23 |
+| Akcja 3D | ciepło | 434 / 803 | 3.3 / 4.0 | 1739 / 203 | 102 / 144 | 3 / 5 | 43 / 67 |
+| Historia 2D | zimno | 1253 / 1461 | 6.6 / 4.1 | 5933 / 3277 | 271 / 129 | 4 / 3 | 2 / 14 |
+| Historia 2D | ciepło | 375 / 955 | 5.0 / 2.7 | 4643 / 10 | 274 / 131 | 4 / 3 | 48 / 57 |
+| Zasoby | zimno | 1405 / 957 | 1.7 / 3.2 | 171 / 174 | 16 / 17 | 0 / 0 | 0 / 0 |
+| Zasoby | ciepło | 200 / 321 | 0.4 / 0.5 | 16 / 1 | 16 / 17 | 0 / 0 | 7 / 7 |
+
+- Ciepła wizyta w Akcji i Historii pobiera teraz 8-10 KB zamiast 2.5-4.6 MB (ETagi i cache: odpowiedzi API wracają z cache przeglądarki zamiast pełnego pobrania), a Historia ma o połowę mniej żądań (129 zamiast 271). Ustalenie: Akcja 2D na ciepło 3.5 -> 1.8 s, Historia 2D 6.6 -> 4.1 s na zimno i 5.0 -> 2.7 s na ciepło.
+- Akcja 3D na ciepło 203 KB zamiast 1.7 MB; ustalenie 4.0 s to głównie ładowanie w tle widoku 2D po "ready" 3D (rozgrzewka), nie czekanie operatora.
+- Wyższe DCL na zimno (Akcja 2D 2.5 s, 3D 1.5 s) to rozrzut sieci na hali (ten sam HTML i te same moduły; na ciepło DCL 0.6-1.0 s).
+- Centrum "ustalone" 6.5 / 4.9 s: ostatnie nowe żądanie to `GET /api/advisor?llm=1` (Doradca z modelem językowym, ~3.3 s), pasek Doradcy uzupełnia się później; mapa i lista akcji są gotowe po ~0.8 s (scenariusze ~0.75 s). Bez Doradcy byłoby jak w rundzie 2.
+
+### Przełączenia w /app: przed (runda 2, produkcja po 9342527) / po
+
+| Przełączenie | Ustalone przed / po | Long taski po (max) | CLS przed / po | Pusty ekran po |
+|---|---|---|---|---|
+| Na żywo -> Historia, pierwszy raz | natychmiast / 0.60-0.67 s | 9-10 (max 0.18-0.26 s) | 0 / 0.008 | 0 |
+| Historia -> Na żywo, pierwszy raz | 2.3 s / 0.49-0.57 s | 8-9 (max 0.21-0.28 s) | 0.24 / 0.01 | 0 |
+| Na żywo -> Historia, drugi raz | natychmiast / 0.59-0.64 s | 8 (max 0.19-0.21 s) | 0 / 0.008 | 0 |
+| Historia -> Na żywo, drugi raz | - / 0.52-0.67 s | 7 (max 0.15-0.22 s) | - / 0.01 | 0 |
+| 2D -> 3D pierwszy raz (3D rozgrzane w tle) | 0.27 s / 0.25-0.32 s | 0 | 0 / 0 | 0 |
+| 3D -> 2D | 0.24 s / 0.27-0.29 s | 0 | 0 / 0 | 0 |
+| 2D -> 3D na ciepło | 0.24 s / 0.30 s | 0 | 0 / 0 | 0 |
+
+- "Natychmiast" w rundzie 2 dla Na żywo -> Historia liczyło tylko przycisk i klasy; teraz podpis obejmuje Top 3 i zegar, więc 0.6 s to czas do nowej mapy i rankingu. Historia -> Na żywo: 2.3 s -> 0.5-0.6 s i CLS 0.24 -> 0.01 (bez przeładowania 2D: nowy run trafia do żywego widoku).
+- Long taski przy zmianie trybu czasu: 7-10 bloków po 0.15-0.28 s (przeliczenie powłoki i obu widoków na nowy run). Bez pustego ekranu i bez przerw w klatkach > 0.35 s; do ewentualnego rozbicia, nie blokuje pokazu. W próbnym przebiegu (bez podpisu paneli) pierwsze Na żywo -> Historia raz trwało 3.2 s; dwa przebiegi końcowe 0.60-0.67 s.
+- 2D <-> 3D bez zmian: przenikanie 0.22 s plus klatka, 0 long tasków, 0 ms pustego ekranu.
+
+Uwaga do pomiaru: na zimno i ciepło pojedyncze `net::ERR_ABORTED` dla `/web/basemap/basemap.js` i `tatry.pmtiles` - przerwane żądania wymienianego (podwójnie buforowanego) widoku 2D, bez błędu w konsoli.
