@@ -1525,9 +1525,20 @@ function tmTick() {
   lg.hidden = !seen.size;
   if (seen.size) {
     const x = incidents.find((i) => i.sc === foc) || { sc: foc, place: foc, title: "" };
-    lg.innerHTML = `<b>Zespoły w akcji: ${esc(short(x))}</b>` + kinds.map((k) => `<span><i style="background:${TM_COL[k] || "#e76f51"}"></i>${esc(kindLabel(k))}</span>`).join("");
+    const nm = f.filter((q) => q.geometry.type === "Point").map((q) => String(q.properties.n || q.properties.id));
+    const orgs = [...new Set(nm.flatMap((n) => n.replace(/[()/]/g, " ").split(/\s+/).filter((w) => TM_ORG.test(w))))];
+    lg.title = nm.join("\n");   // full names (the dots carry the short part)
+    lg.innerHTML = `<b>Zespoły w akcji: ${esc(short(x))}</b>${orgs.length ? `<span class="mute">${esc(orgs.join(", "))}</span>` : ""}` + kinds.map((k) => `<span><i style="background:${TM_COL[k] || "#e76f51"}"></i>${esc(kindLabel(k))}</span>`).join("");
   } else if (foc && show.length && tm.data[foc]) { lg.hidden = false; lg.textContent = z < TM_Z ? "Przybliż mapę, aby zobaczyć ruch zespołów tej akcji" : "Zespoły tej akcji jeszcze nie wyruszyły (brak pozycji)"; }
 }
-const tmLabel = (n) => { const s = String(n).replace(/\s*\(.*?\)\s*/g, " ").trim(); return s.length > 16 ? s.slice(0, 15) + "…" : s; };
+// the distinguishing part: "GOPR Bieszczady patrol A (Ustrzyki Górne)" -> "Patrol A", "Łódź PSP JRG Pisz" -> "Łódź Pisz" (org in the title)
+const TM_ORG = /^[A-ZĄĆĘŁŃÓŚŹŻ]{2,}$/;
+const tmLabel = (n) => {
+  let w = String(n).replace(/\s*\(.*?\)\s*/g, " ").trim().split(/\s+/);
+  if (TM_ORG.test(w[0])) { const k = w.findIndex((x) => /^[a-ząćęłńóśźż]/.test(x)); if (k > 0) w = w.slice(k); }
+  w = w.filter((x) => !TM_ORG.test(x));
+  const s = w.join(" ").replace(/^./, (c) => c.toUpperCase()) || String(n);
+  return s.length > 18 ? s.slice(0, 17) + "…" : s;
+};
 setInterval(tmTick, 1000);
 window.rescueTm = tm;   // tests
