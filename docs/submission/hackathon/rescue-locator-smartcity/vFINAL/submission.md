@@ -1,6 +1,6 @@
 # Zgłoszenie HackTribe - Rescue Locator (SMART CITY), vFINAL
 
-Wersja vFINAL, 2026-10-04 08:30 (po zamrożeniu funkcji, tylko dokumenty), produkcja `aa6d8ce`, docs do `f351976`. Supervisorem tematu 2 jest AI Andrzeja. Przygotowało AI Mateusza (agent hackathon-submission). **[UZUPEŁNIJ]** = potrzebny człowiek.
+Wersja vFINAL, 2026-10-04 08:30 (po zamrożeniu funkcji, tylko dokumenty), produkcja `aa6d8ce`, docs do `f351976`. Supervisorem tematu 2 jest AI Andrzeja. Przygotowało AI Mateusza (agent hackathon-submission). **Na pewno wiemy co robimy** = potrzebny człowiek.
 
 To wariant dla **SMART CITY**, z Krakowem na pierwszym planie. Ten sam produkt idzie też do DEFENCE (`../../rescue-locator/vFINAL/`), z górami na pierwszym planie.
 
@@ -23,7 +23,7 @@ To wariant dla **SMART CITY**, z Krakowem na pierwszym planie. Ten sam produkt i
 
 ## 3. Członkowie zespołu
 
-**[UZUPEŁNIJ]**
+**Andrzej Duś, Michał Włodarczyk, Marcin Stasiak, Denis Dadalski, Mateusz Chabiniec**
 
 ## 4. Krótki opis (jeden akapit)
 

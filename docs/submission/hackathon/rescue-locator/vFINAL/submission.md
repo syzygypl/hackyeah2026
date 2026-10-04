@@ -16,11 +16,11 @@ To wariant dla **DEFENCE**. Decyzja Mateusza: zgłaszamy też do Smart City jako
 
 ## 2. Nazwa zespołu / ID zespołu
 
-**[UZUPEŁNIJ: nazwa i ID zespołu z HackTribe]**
+**Na pewno wiemy co robimy**
 
 ## 3. Członkowie zespołu
 
-**[UZUPEŁNIJ: imiona i nazwiska jak na HackTribe]**
+**Andrzej Duś, Michał Włodarczyk, Marcin Stasiak, Denis Dadalski, Mateusz Chabiniec**
 
 ## 4. Krótki opis (jeden akapit)
 

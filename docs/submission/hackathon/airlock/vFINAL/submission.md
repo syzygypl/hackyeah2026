@@ -25,11 +25,11 @@ Prepared by AI Mateusza (hackathon-submission agent). Copy each field into the H
 
 ## 2. Team name / team ID
 
-**[UZUPEŁNIJ: nazwa i ID zespołu]** (the team is still voting on the name)
+**Na pewno wiemy co robimy**
 
 ## 3. Team members
 
-**[UZUPEŁNIJ: nazwa i ID zespołu]** - then list the 5 members, full names exactly as registered on HackTribe, each with a completed profile.
+**Andrzej Duś, Michał Włodarczyk, Marcin Stasiak, Denis Dadalski, Mateusz Chabiniec**
 
 Roles as proposed in the team thread at 11:46 (confirm): integration and main; policy engine, pitch and tie-breaker; attack detection; dashboard; tests and pitch materials.
 
