@@ -350,6 +350,9 @@ $("events").addEventListener("change", (e) => { const c = e.target.closest(".evt
 $("events").addEventListener("click", (e) => { if (e.target.closest(".evt")) e.stopPropagation(); }, true);
 $("evReset").onclick = () => setEvidence("*", true, "panel");
 $("slider").oninput = () => tlScrub() ? setMinute(+$("slider").value) : setStep(+$("slider").value);
+// a drag on the timeline: the views may coalesce the time stream ({type:'time', scrub:true}, web/app.js pqPush); keys and clicks go as before
+$("slider").addEventListener("pointerdown", () => { TLP.scrub = true; });
+for (const ev of ["pointerup", "pointercancel", "change"]) $("slider").addEventListener(ev, () => { TLP.scrub = false; });
 $("events").onclick = async (e) => {
   if (suppressClick) return;
   const b = e.target.closest("button"), card = e.target.closest(".ev"); if (!card) return;
@@ -1369,7 +1372,7 @@ function tlSegments(S) {
 }
 // a new frame goes to a view at most every 180 ms while playing fast (heat rebuilds are not free); the minute always goes
 function tlPostOne(k, T, m, frame) {
-  const msg = { type: "time", minute: m, t: tlClock(T, m), live: liveOn() }, now = performance.now(), last = TLP.sent[k];
+  const msg = { type: "time", minute: m, t: tlClock(T, m), live: liveOn(), ...(TLP.scrub ? { scrub: true } : {}) }, now = performance.now(), last = TLP.sent[k];
   if (frame && last && frame !== last && playing && now - (TLP.sentAt[k] || 0) < 180 && last.minute <= m) frame = last;
   if (frame) { msg.frameMinute = frame.minute; if (last !== frame) { msg.frame = frame; TLP.sent[k] = frame; TLP.sentAt[k] = now; } }
   // the panel's top 3 (tlSegments: the minute's frame in Historia, the step on Na żywo) - the views label the same sectors #1-#3

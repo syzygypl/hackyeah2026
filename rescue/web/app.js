@@ -1150,11 +1150,32 @@
     del.forEach((k) => u.searchParams.delete(k));
     location.replace(u.href);
   }
+  // scrub (timeline drag in the shell): the shell's step/time stream costs a GeoJSON setData to the map worker per message.
+  // Hidden (3D shown, {type:'visible', on:false}): keep only the latest step + minute, applied once on show. Visible while the
+  // operator drags ({scrub:true}): at most one map update per 150 ms, the last one always lands. Single moves apply at once.
+  const PQ = { step: null, time: null, at: 0, h: 0, hidden: false, scrubAt: 0 };
+  function pqFlush() {
+    clearTimeout(PQ.h); PQ.h = 0;
+    const st = PQ.step, t = PQ.time; PQ.step = PQ.time = null;
+    if (st == null && !t) return;
+    PQ.at = performance.now();
+    if (st != null) { stop(); setStep(st, true); }
+    if (t) { if (t.scrub) S.tlMsgAt = PQ.at; tlTop(t.top); tlTime(t.minute, t.frame, t.frameMinute); }   // scrub: follow, no glide
+  }
+  function pqPush(kind, v) {
+    const now = performance.now();
+    if (kind === 'step') PQ.step = v;
+    else { PQ.time = { minute: v.minute, frameMinute: v.frameMinute, top: v.top, scrub: !!v.scrub, frame: v.frame || (PQ.time && PQ.time.frame) }; if (v.scrub) PQ.scrubAt = now; }   // a frame is sent once: keep it
+    if (PQ.hidden) return;
+    if (now - PQ.scrubAt > 300) return pqFlush();
+    if (!PQ.h) PQ.h = setTimeout(pqFlush, Math.max(0, 150 - (now - PQ.at)));
+  }
   function applyParentMessage(m) {
     try {
       if (m.type === 'insets' && Array.isArray(m.insets) && m.insets.length === 4) { INSETS = m.insets.map((v) => +v || 0); applyInsets(); }
-      else if (m.type === 'step' && Number.isInteger(m.i)) { stop(); setStep(m.i, true); }
-      else if (m.type === 'time' && Number.isFinite(m.minute)) { tlTop(m.top); tlTime(m.minute, m.frame, m.frameMinute); }
+      else if (m.type === 'visible') { PQ.hidden = m.on === false; if (!PQ.hidden) pqFlush(); }
+      else if (m.type === 'step' && Number.isInteger(m.i)) pqPush('step', m.i);
+      else if (m.type === 'time' && Number.isFinite(m.minute)) pqPush('time', m);
       else if (m.type === 'highlight') highlightActor(m);   // actor drawer (CONTRACT "Zasoby i dziennik" 6)
       else if (m.type === 'evidence' && typeof m.id === 'string') {   // the shell's signal checkboxes (demo step 2): recompute here, the panel follows via {type:'top3'}
         if (m.id === '*') S.disabled.clear(); else if (m.on === false) S.disabled.add(m.id); else S.disabled.delete(m.id);
