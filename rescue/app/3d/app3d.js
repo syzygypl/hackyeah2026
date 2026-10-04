@@ -80,7 +80,7 @@ const runPin = (u) => { try { const p = (localStorage.getItem('rescue-pin') || '
 const getJSON = async (u, optional) => {
   const k = new URL(u, location.href).href, pre = window.__pre3d?.[k]; // prefetched by index.html
   if (pre) { delete window.__pre3d[k]; try { return await pre; } catch (e) { if (optional) return null; throw e; } }
-  try { const r = await fetch(u, { cache: 'no-cache', headers: runPin(u) }); if (!r.ok) throw new Error(r.status + ' ' + u); return await r.json(); }
+  try { const r = await fetch(u, { cache: /\/api\/run\/[^?]*\?(.*&)?live=0(&|$)/.test(u) ? 'default' : 'no-cache', headers: runPin(u) }); if (!r.ok) throw new Error(r.status + ' ' + u); return await r.json(); }
   catch (e) { if (optional) return null; throw e; }
 };
 

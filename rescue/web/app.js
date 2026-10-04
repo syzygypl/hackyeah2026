@@ -115,7 +115,7 @@
   /* ---------- fetch helpers ---------- */
   async function fetchJSON(url, optional) {
     try {
-      const r = await fetch(url, { cache: 'no-cache', headers: runPin(url) });
+      const r = await fetch(url, { cache: /\/api\/run\/[^?]*\?(.*&)?live=0(&|$)/.test(url) ? 'default' : 'no-cache', headers: runPin(url) });   // recorded run / frames: max-age=10 (b892f5c)
       if (!r.ok) { if (optional) return null; throw new Error(`HTTP ${r.status} dla ${url}`); }
       return await r.json();
     } catch (e) {

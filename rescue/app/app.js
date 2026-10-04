@@ -38,7 +38,7 @@ keyProbe();
 addEventListener("storage", (e) => { if (e.key !== "rescue-pin" && e.key !== null) return; const k = ((e.key ? e.newValue : null) || "").replace(/^"(.*)"$/, "$1").trim(); if (k === PIN) return; PIN = k; if (!LOOPBACK) $("pin").value = PIN; keyProbe(); });
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
-  const r = await fetch(path, body === undefined ? { headers: h, cache: "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });
+  const r = await fetch(path, body === undefined ? { headers: h, cache: /^\/api\/run\/[^?]*\?(.*&)?live=0(&|$)/.test(path) ? "default" : "no-cache" } : { method: "POST", headers: h, body: JSON.stringify(body) });   // only the recorded run and its &t= frames (live=0): server max-age=10 + CDN (b892f5c); everything else stays no-cache
   if (r.status === 401) { document.body.classList.add("pin-needed", "pin-asked"); clearTimeout(api.calm); api.calm = setTimeout(() => { if (document.activeElement !== $("pin")) document.body.classList.remove("pin-asked"); }, 20000); throw new Error(PIN ? "Klucz akcji na tym urządzeniu jest nieprawidłowy: wpisz klucz kierownika akcji w polu Klucz albo otwórz link „Udostępnij”." : "Zmiany wymagają klucza akcji: otwórz link „Udostępnij” od kierownika akcji albo wpisz klucz w polu Klucz."); }
   if (r.status === 403) { if (store.role !== "ratownik") document.body.classList.add("pin-needed"); throw new Error("To klucz ratownika (meldunki i ślady). Ta zmiana wymaga klucza kierownika akcji: wpisz go w polu Klucz albo otwórz link „Udostępnij” od kierownika."); }
   if (r.status === 404) throw new Error("Nie znaleziono danych na serwerze.");
@@ -1486,7 +1486,7 @@ function tlNext() {
   return null;   // only a window around the playhead (-5..+20 min); it moves with setMinute, the run's own frames cover the rest (wydajnosc.md Runda 3: ~150 requests / 2.9 MB per opening before)
 }
 function tlPump() {
-  if (!Object.values(FRAMES).some((F) => F.ready)) return;   // minute frames (&t=) only after a view is ready: at boot the run and the map get the bandwidth
+  const FV = Object.values(FRAMES).filter((F) => F.visible()); if (!(FV.length ? FV : Object.values(FRAMES)).some((F) => F.ready)) return;   // after the shown view's ready (not a hidden one's); minute frames (&t=) only after a view is ready: at boot the run and the map get the bandwidth
   while (TLF.busy.size < 3) {
     const m = tlNext(); if (m == null) return;
     const gen = TLF.gen, u = TLF.key; TLF.busy.add(m);
