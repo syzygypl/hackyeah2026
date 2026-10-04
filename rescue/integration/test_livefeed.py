@@ -59,9 +59,9 @@ def main():
     e = next(e for e in es if all(not (0 < (mins(e["start"]) - s) % 1440 <= 20) for s in starts) and e["durationMin"] >= 30
              and 60 < mins(e["start"]) < 1380 and e["sc"] != "zawrat")
     late_e = max((x for x in es if x["durationMin"] >= 20), key=lambda x: mins(x["start"]))   # the day's last long entry, for the loop
-    at = hhmm(mins(e["start"]) + 2)
+    at = hhmm(mins(e["start"]) - 1)   # the page opens 1 min before the start: only notes after load toast (QA #3), the backlog stays in the list
     sc0 = json.load(open(os.path.join(lib.RESCUE, "scenarios", e["sc"] + ".json")))
-    want_clock = hhmm(mins(sc0["startClock"]) + 2) if sc0.get("startClock") else None
+    want_clock = hhmm(mins(sc0["startClock"])) if sc0.get("startClock") else None
     tmp = tempfile.mkdtemp(prefix="rescue-livefeed-")
     srv = Server(free_port(8815), None, os.path.join(tmp, "live-events.json"), strict=False, llm_off=True,
                  log=os.path.join(tmp, "server.log"), extra_env={"RESCUE_LIVE_DIR": tmp, "RESCUE_DIR": lib.RESCUE})
@@ -90,8 +90,11 @@ def main():
         # the bell sits in the /app header, a fresh entry toasts
         inhdr = c.js("!!document.querySelector('header #lfHost .lfbell')&&document.querySelector('header #lfHost').offsetParent!==null")
         check("bell_in_app_header", inhdr is True)
+        time.sleep(3)
+        bl = c.js("[document.querySelectorAll('.lftoast').length, (()=>{const b=document.querySelector('header .lfbadge');return b&&!b.hidden?+b.textContent:0})()]")
+        check("no_backlog_toasts_on_load", bool(bl) and bl[0] == 0, f"toasts {bl and bl[0]}, badge {bl and bl[1]} (the backlog stays in the bell)")
         key = f"{e['id']}|"
-        toast = c.until(f"(()=>{{const t=[...document.querySelectorAll('.lftoast')].find(x=>x.querySelector('[data-key^=\"{key}\"]'));return t&&t.querySelector('.lfn b').innerText!=='{e['sc']}'?t.innerText:''}})()", 30)
+        toast = c.until(f"(()=>{{const t=[...document.querySelectorAll('.lftoast')].find(x=>x.querySelector('[data-key^=\"{key}\"]'));return t&&t.querySelector('.lfn b').innerText!=='{e['sc']}'?t.innerText:''}})()", 120)
         check("toast_for_new_entry", bool(toast) and "Otwórz" in toast and "Potwierdź" in toast, f"{e['id']} at {at}: " + (toast or "").replace("\n", " | ")[:120])
         badge = c.js("(()=>{const b=document.querySelector('header .lfbadge');return b&&!b.hidden?+b.textContent:0})()")
         check("bell_badge", (badge or 0) >= 1, f"badge {badge}")
@@ -106,7 +109,7 @@ def main():
             c.until(f"document.getElementById('scenTitle').innerText!=={json.dumps(title0)}?1:0", 60)   # the new run is in
             time.sleep(1)
             got = c.js("document.getElementById('dkStep').innerText")
-            open_page(c, f"{base.replace('sc=zawrat', 'sc=' + e['sc'])}&t={want_clock}&simAt={at}", 1440, 900, False)
+            open_page(c, f"{base.replace('sc=zawrat', 'sc=' + e['sc'])}&t={want_clock}&simAt={hhmm(mins(e['start']) + 2)}", 1440, 900, False)
             ref = c.until("(()=>{const d=document.getElementById('dkStep');return d&&/\\d\\d:\\d\\d/.test(d.innerText)?d.innerText:''})()", 60)
             check("open_at_incident_clock", bool(got) and got == ref, f"clock {want_clock}: Otwórz {got!r}, deep link {ref!r}")
         back = c.js("!!document.querySelector('header #lfHost .lfbell')")
@@ -118,7 +121,7 @@ def main():
         time.sleep(0.5)
         acked = c.js(f"Object.keys(JSON.parse(localStorage.getItem('rescue-live-acks')||'{{}}')).some(k=>k.startsWith('{key}'))")
         check("ack_stored", acked is True)
-        open_page(c, url, 1440, 900, False)
+        open_page(c, f"{base}&simAt={hhmm(mins(e['start']) + 2)}", 1440, 900, False)   # after the start: the entry is in the list
         c.until("document.querySelector('header .lfbell')?1:0", 30)
         time.sleep(2)
         again = c.js(f"!!document.querySelector('.lftoast [data-key^=\"{key}\"]')")

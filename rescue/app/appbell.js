@@ -8,6 +8,7 @@ if (anchor) anchor.before(host); else document.querySelector("header")?.appendCh
 let entries = [];
 try { entries = (await lf.loadSchedule()).entries; } catch (e) { console.warn("[appbell] schedule", e); }
 const bell = lf.mountBell(host, {
+  toastSince: lf.nowMs() - 60000,   // QA #3: on a fresh load the backlog (up to 3 toasts) covered the right panel; it stays in the bell list
   onOpen(i, clock, ev) {
     const app = window.rescueApp;
     if (!app || !app.openAt) return true;   // shell not up: openURL (page load)

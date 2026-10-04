@@ -198,7 +198,7 @@ function render() {
   tlApply();
   advApply();   // Doradca: re-mark linked incidents after the cards / markers were rebuilt
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
-  $("counts").innerHTML = `${incidents.length} akcji${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
+  $("counts").innerHTML = `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !t.sc).length}/${teams.length}`;
   // data source only as a tooltip on the counts (review: no technical text in the header)
   $("counts").title = "Źródło danych: " + (has.incidents ? "GET /api/incidents" : "GET /api/scenarios + /api/run/<sc> (zapas)") + " · zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce");
 }
@@ -406,6 +406,7 @@ function announceEnded(x) {
 // plume cone, next towns with ETA; linked incidents ringed on the map and in the list.
 let adv = null, advSel = 0, advOpen = true, advSig = "", advLlmAsked = false, advLlmBusy = false, advNarr = null, advNarrSig = "", advBusy = false, advMiss = 0;
 const advTowns = [];
+const akcje = (n) => { n = +n || 0; const d = n % 10, t = n % 100; return n + (n === 1 ? " akcja" : d >= 2 && d <= 4 && (t < 12 || t > 14) ? " akcje" : " akcji"); };   // Polish plural (QA #8: "2 akcji")
 const num2 = (v) => (Math.round((v || 0) * 100) / 100).toFixed(2).replace(".", ",");
 const LEVEL = { alarm: "ALARM", ostrzezenie: "OSTRZEŻENIE", obserwacja: "DO OBSERWACJI" };
 try { advOpen = localStorage.getItem("rescue-advisor-open") === "1"; } catch (e) { advOpen = false; }   // demo review 3: starts as a slim bar, never over the incident dots
@@ -448,7 +449,7 @@ function advRender() {
   el.classList.toggle("alarm", !!hs.length && hs[0].level === "alarm");
   el.classList.toggle("closed", !advOpen);
   el.hidden = false;
-  const head = `<header class="advh"><h2>Doradca <span class="mute">wspólne źródło zdarzeń · ${adv.incidents} akcji</span></h2>
+  const head = `<header class="advh"><h2>Doradca <span class="mute">wspólne źródło zdarzeń · ${akcje(adv.incidents)}</span></h2>
     ${hs.length ? `<span class="lvl ${hs[0].level}">${LEVEL[hs[0].level]}</span>` : `<span class="lvl quiet">spokojnie</span>`}
     <button class="advt" type="button" aria-expanded="${advOpen}" title="${advOpen ? "Zwiń" : "Rozwiń"} panel Doradcy">${advOpen ? "Zwiń" : "Rozwiń"}</button></header>`;
   if (!hs.length) {
@@ -663,7 +664,7 @@ function tlBuild() {
   };
   const rows = groups.map((g) => {
     if (!g.h) return g.its.map(row).join("");
-    const p = P(g.since), lab = `${esc(g.h.title)} · ${g.its.length} akcji`;
+    const p = P(g.since), lab = `${esc(g.h.title)} · ${akcje(g.its.length)}`;
     return `<div class="tlhg ${esc(g.h.level)}" data-h="${esc(g.h.id)}" data-since="${g.since}"><div class="tlhl"><span class="tln" title="Doradca: hipoteza ${esc(g.h.id)} (${esc(g.h.kind || "")}). Świeci od chwili, gdy zgłoszono drugą z tych akcji.">Doradca ${esc(g.h.id)}</span>`
       + `<div class="trk"><span class="hyx" style="${p > 55 ? `left:0;right:${(100 - p).toFixed(3)}%;text-align:right` : `left:${p.toFixed(3)}%`}" title="${esc(g.h.kind || "")}: ${esc(g.h.title)}">${p > 55 ? lab + " ◆" : "◆ " + lab}</span></div></div>${g.its.map(row).join("")}</div>`;
   }).join("") + its.filter((it) => tl.off.has(it.sc)).map(row).join("");
@@ -698,7 +699,7 @@ function tlBuild() {
     }
     if (it.end != null && !fe) feed.push({ v: b + it.end, clock: tlClockAt(it, b + it.end), sc: it.sc, name, k: "found", text: it.endKind === "ended" ? "akcja zakończona: osoba odnaleziona" : "ZNALEZIONO" });
   }
-  for (const g of groups) if (g.h) feed.push({ v: g.since, clock: g.rep.start, sc: null, name: "Doradca", k: "hyp", text: `${g.h.title} (${g.its.length} akcji, ${(g.h.kind || "").toLowerCase()})`, h: g.h.id });
+  for (const g of groups) if (g.h) feed.push({ v: g.since, clock: g.rep.start, sc: null, name: "Doradca", k: "hyp", text: `${g.h.title} (${akcje(g.its.length)}, ${(g.h.kind || "").toLowerCase()})`, h: g.h.id });
   tl.feed = feed.map((f, i) => ({ ...f, i })).sort((a, b) => a.v - b.v || a.i - b.i);
   tl.feedKey = null;
 }
@@ -853,9 +854,9 @@ tlInit();
 // A row selects that hypothesis (map + linked cards) like the tabs of the open panel. No alarm: the old one-line summary.
 function advCollapsedHTML(hs, h) {
   const al = hs.map((x, i) => [x, i]).filter(([x]) => x.level === "alarm");
-  if (al.length < 2) return `<p class="help one">${esc(h.title)} · ${h.incidents.length} akcji · <button class="advt2" type="button">Pokaż szczegóły</button></p>`;
+  if (al.length < 2) return `<p class="help one">${esc(h.title)} · ${akcje(h.incidents.length)} · <button class="advt2" type="button">Pokaż szczegóły</button></p>`;
   return `<ul class="advrows">${al.map(([x, i]) => `<li><button type="button" class="advrow${i === advSel ? " on" : ""}" data-i="${i}" title="Dla operatora: wynik ${num2(x.score)} (0-1). Kliknij: pokaż powiązane akcje na mapie.">`
-    + `<span class="lvl ${esc(x.level)}">${esc(x.id)}</span><span class="t">${esc(x.title)}</span><span class="n mono">${num2(x.score)}</span><span class="mute">${x.incidents.length} akcji</span></button></li>`).join("")}</ul>`
+    + `<span class="lvl ${esc(x.level)}">${esc(x.id)}</span><span class="t">${esc(x.title)}</span><span class="n mono">${num2(x.score)}</span><span class="mute">${akcje(x.incidents.length)}</span></button></li>`).join("")}</ul>`
     + `<p class="help one"><button class="advt2" type="button">Pokaż szczegóły</button></p>`;
 }
 // --- #1 (AI Mateusza #1, for #2's timeline): a marker or a row name opens the incident in Historia at that moment
@@ -910,7 +911,7 @@ function renderPick() {
     const xs = h.incidents.map((sc) => all.find((x) => x.sc === sc)).filter(Boolean); if (!xs.length) continue;
     xs.forEach((x) => used.add(x.sc));
     html += `<section class="pkg ${esc(h.level)}" aria-label="${esc(h.kindLabel)}"><h3><span class="lvl ${esc(h.level)}">${LEVEL[h.level] || esc(h.level)}</span>${esc(h.kindLabel)}
-      <span class="mute mono" title="Wynik hipotezy Doradcy (0-1)">${num2(h.score)}</span></h3><div class="pkh">${esc(h.title)} · ${xs.length} akcji</div>${xs.map(item).join("")}</section>`;
+      <span class="mute mono" title="Wynik hipotezy Doradcy (0-1)">${num2(h.score)}</span></h3><div class="pkh">${esc(h.title)} · ${akcje(xs.length)}</div>${xs.map(item).join("")}</section>`;
   }
   const rest = all.filter((x) => !used.has(x.sc));
   html += (used.size ? `<h3 class="pkr">Pozostałe <span class="cnt">${rest.length}</span></h3>` : "") + rest.map(item).join("");

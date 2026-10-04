@@ -19,7 +19,7 @@
 //                                    when the server has them, else localStorage rescue-live-acks (this browser only)
 //   mountBell(host, opts)            bell + badge + dropdown list + toasts inside `host` (an element in a header).
 //                                    opts: { openURL(inst, clock, note) -> url, onOpen(inst, clock, ev, note)? (return false = handled),
-//                                    windowMin = 60, toastMin = 10 }; filters Wszystko / Nowe akcje / Zgłoszenia
+//                                    windowMin = 60, toastMin = 10, toastSince? (ms: no toast for notes older than this, the backlog stays in the list) }; filters Wszystko / Nowe akcje / Zgłoszenia
 //                                    returns { update(instances), destroy() }; call update() on every tick (cheap, diffed)
 // Notification rule: a note (new incident or incoming call) from the last toastMin minutes, not acked, gets a toast once per page;
 // the list shows every note of the last windowMin minutes, newest first; unacked for more than 5 min = escalation (red).
@@ -256,7 +256,7 @@ export function mountBell(host, opts = {}) {
     bell.setAttribute("aria-label", `Powiadomienia: ${cnt} niepotwierdzonych`);
     // toasts: once per page for fresh unacked notes (scenario info loaded, so the text is final); refreshed in place
     for (const n of rec.slice().reverse()) {
-      if (toasted.has(n.key) || acks.isAcked(n.key) || now - n.ms > toastMin * 60000 || !info[n.inst.sc]) continue;
+      if (toasted.has(n.key) || acks.isAcked(n.key) || now - n.ms > toastMin * 60000 || (opts.toastSince && n.ms < opts.toastSince) || !info[n.inst.sc]) continue;
       toasted.add(n.key); const el = document.createElement("div"); el.dataset.key = n.key; stack.prepend(el); beep();
       while (stack.children.length > 3) stack.lastElementChild.remove();
     }
