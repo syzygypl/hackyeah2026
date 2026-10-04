@@ -241,7 +241,7 @@ export function mountBell(host, opts = {}) {
   const onKey = (e) => { if (e.key === "Escape" && !panel.hidden) { toggle(false); bell.focus(); } };
   document.addEventListener("click", outside); document.addEventListener("keydown", onKey);
   let insts = [], notes = [], shownSig = "";
-  const toasted = new Set();
+  const toasted = new Set(), escalated = new Set();   // escalated (#1, feature C): a note that just passed 5 min unacked toasts once more, red
   const info = {};   // sc -> describe()
   const open = (n, ev) => { if (n.type === "adv") { if (n.onOpen) n.onOpen(ev); else if (n.url) location.href = n.url; return; } if (opts.onOpen && opts.onOpen(n.inst, n.clock, ev, n) === false) return; location.href = openURL(n.inst, n.clock, n); };
   function itemHTML(n, now, cls) {
@@ -293,6 +293,12 @@ export function mountBell(host, opts = {}) {
       toasted.add(n.key); const el = document.createElement("div"); el.dataset.key = n.key; stack.prepend(el); beep();
       { const d = (n.inst && info[n.inst.sc]) || { place: n.sub }; sysNotify(`${TYPE_LABEL[n.type] || "Powiadomienie"}: ${n.title}`, [d.place, SIM_NOTE].filter(Boolean).join(" · "), n.key, () => open(n)); }
       while (stack.children.length > 3) stack.lastElementChild.remove();
+    }
+    for (const n of rec) {   // client side only: no chat posts, no server writes
+      const age = now - n.ms;
+      if (escalated.has(n.key) || acks.isAcked(n.key) || age <= ESCALATE_MIN * 60000 || age > (ESCALATE_MIN + 2) * 60000 || (opts.toastSince && n.ms < opts.toastSince) || (n.type !== "adv" && !info[n.inst.sc])) continue;
+      escalated.add(n.key); toasted.add(n.key);
+      if (![...stack.children].some((el) => el.dataset.key === n.key)) { const el = document.createElement("div"); el.dataset.key = n.key; stack.prepend(el); beep(); while (stack.children.length > 3) stack.lastElementChild.remove(); }
     }
     for (const el of [...stack.children]) {
       const n = notes.find((x) => x.key === el.dataset.key);

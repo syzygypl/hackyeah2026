@@ -406,3 +406,6 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 /* 901-1250 px: the bar's last item (clock) wrapped under the list; the sim note goes (cards, toasts and the bell list say "symulacja") */
 @media (min-width:901px) and (max-width:1250px){#simNote{display:none}}
 @media (min-width:901px){body:has(#advisor:not(.closed):not([hidden])) .lftoasts .lftoast:nth-child(n+2),body:has(#advisor:not(.closed):not([hidden])) .lftoast .lfp{display:none}}   /* open Doradca fills the map column: one compact toast above it */
+/* escalation badge on a sim card (#1, feature C): a note of this incident unacked > 5 min */
+#simCards .card.esc{box-shadow:0 0 0 2px var(--rl-danger)}
+#simCards .escb{float:right;margin:0 0 4px 8px;padding:2px 8px;border-radius:6px;background:var(--rl-danger);color:var(--rl-on-danger);font-size:11px;font-weight:700}

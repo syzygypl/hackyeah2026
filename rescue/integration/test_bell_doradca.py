@@ -2,7 +2,8 @@
 """Doradca ALARM in the bell (Centrum, Symulacja 24/7; livefeed.js extraNotes + centrum.js advNotes): with the clock pinned after the
 2nd dam incident starts, the bell holds a Doradca note (time = that start, title = the hypothesis), a toast shows it, Otwórz opens the
 Doradca panel on that hypothesis, Potwierdź keeps it acked after a reload (local only: no 404 that would switch shared ACKs off),
-and before the 2nd start there is no such note. No JS exceptions.
+and before the 2nd start there is no such note. Escalation (client side): 6 min after a report with no ACK the card in Centrum has a
+red "bez potwierdzenia" badge and the toast is red; Potwierdź clears the badge. No JS exceptions.
 
     python3 rescue/integration/test_bell_doradca.py [--rebuild] [--server <binary>]
 """
@@ -98,6 +99,18 @@ def main():
         acked = c.js(f"!!window.rescueSim.lf.acks.get({json.dumps(key)})")
         again = c.js(f"!!document.querySelector('.lftoast [data-key=\"{key}\"]')")
         check("ack_persists_no_toast", acked is True and again is False, f"acked={acked} toast again={again}")
+        # escalation: the cluster's first incident 6 min after its report, nothing acked
+        first = next(e for e in es if e.get("group") == grp and mins(e["start"]) == starts[0])
+        c.js("localStorage.removeItem('rescue-live-acks')")
+        open_page(c, f"{base}&simAt={hhmm(starts[0] + 6)}")
+        ek = first["id"] + "|"
+        badge = c.until(f"(()=>{{const el=document.querySelector('#simCards .card.esc[data-key^=\"{ek}\"] .escb');return el?el.innerText:''}})()", 60)
+        check("card_badge_after_5_min", bool(badge) and "bez potwierdzenia" in badge, f"{first['id']}: {badge}")
+        late = c.until(f"(()=>{{const t=[...document.querySelectorAll('.lftoast.late')].find(x=>x.querySelector('[data-key^=\"{ek}\"]'));return t?1:0}})()", 20)
+        check("late_toast_red", late == 1)
+        c.js(f"document.querySelector('.lftoast [data-key^=\"{ek}\"] .lfack').click()")
+        gone = c.until(f"document.querySelector('#simCards .card[data-key^=\"{ek}\"]')&&!document.querySelector('#simCards .card.esc[data-key^=\"{ek}\"]')?1:0", 15)
+        check("ack_clears_badge", gone == 1)
         check("no_js_exceptions", not c.errors, "; ".join(map(str, c.errors))[:200])
     finally:
         chrome.terminate()

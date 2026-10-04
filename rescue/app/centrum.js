@@ -1002,6 +1002,24 @@ tlInit();
 // A row selects that hypothesis (map + linked cards) like the tabs of the open panel. No alarm: the old one-line summary.
 // Doradca ALARM -> the bell (#1, feature A): one note per alarm hypothesis; in Symulacja 24/7 its time is the start of its 2nd
 // incident (the moment Doradca could link them), else when this page first saw it. Otwórz selects it here (panel open, map fit).
+// escalation on the cards (#1, feature C, client side only): a running incident with a note (its report or a call) unacked for more
+// than 5 min gets a red badge with the age; the bell has the same rule (livefeed ESCALATE_MIN), Potwierdź there clears it
+function simEscPaint() {
+  const box = $("simCards"); if (!box || !sim.bell || !sim.lf) return;
+  const now = sim.lf.nowMs(), late = new Map();
+  for (const n of sim.bell.notes || []) {
+    if (n.type === "adv" || !n.inst || sim.lf.acks.isAcked(n.key) || now - n.ms <= 5 * 60000 || now - n.ms > 60 * 60000) continue;
+    const m = Math.floor((now - n.ms) / 60000); if (!late.has(n.inst.key) || late.get(n.inst.key) < m) late.set(n.inst.key, m);
+  }
+  box.querySelectorAll(".card[data-key]").forEach((el) => {
+    const m = late.get(el.dataset.key), b = el.querySelector(".escb");
+    el.classList.toggle("esc", m != null);
+    if (m == null) { if (b) b.remove(); return; }
+    const t = `bez potwierdzenia ${m} min`;
+    if (!b) { const s = document.createElement("span"); s.className = "escb"; s.textContent = t; s.title = "Zgłoszenie tej akcji czeka na potwierdzenie w dzwonku ponad 5 min"; el.prepend(s); }
+    else if (b.textContent !== t) b.textContent = t;
+  });
+}
 const advSeen = new Map();
 function advNotes(now) {
   const hs = ((adv && adv.hypotheses) || []).filter((h) => h.level === "alarm" && h.incidents.length >= 2);
@@ -1238,7 +1256,7 @@ function simTick() {
   if (!sim.lf) return;
   sim.insts = sim.on ? sim.lf.instancesAt(sim.entries, sim.lf.nowMs(), { pastMin: 120 }) : [];
   if (sim.bell) sim.bell.update(sim.insts);
-  simPaint();
+  simPaint(); simEscPaint();
 }
 // cards + dots at the virtual clock (cheap when nothing changed: signature of keys, states and 5-min clocks)
 function simPaint() {
@@ -1280,6 +1298,7 @@ function simPaint() {
     el.onclick = (e) => { if (!e.target.closest("a")) location.href = el.querySelector("h3 a").getAttribute("href"); };
     el.onmouseenter = () => setHl(el.dataset.sc); el.onmouseleave = () => setHl(null);
   });
+  simEscPaint();
 }
 function simNext() {
   const ms = simNowAt(), w = sim.lf.warsaw(ms), m = w.min;
