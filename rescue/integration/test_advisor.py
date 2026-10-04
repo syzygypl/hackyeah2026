@@ -6,7 +6,8 @@
 1. dam set (zapora-*): one dam hypothesis, high score, links exactly the 5 downstream incidents, the 2 unrelated
    (Olszanica 5 km off the San, Tarnica upstream) stay out, Olszanica is listed under "excluded" with a reason;
    the score is the sum of the evidence contributions; Sanok is predicted with an ETA after the last report.
-2. quiet day (every incident except zapora-*): no hypothesis.
+2. quiet day (every incident except zapora-*, dywersja-* and mazury-burza-*): no hypothesis; the mazury-burza-* squall set (+ the
+   unrelated pair) gives exactly one storm cluster with the 4 lake incidents.
 3. the unrelated pair alone: no hypothesis. 4. two downstream incidents only: lower score than the full set.
 5. a live clue with water words on Olszanica does not pull it into the dam hypothesis (still 5 km off the river).
 6. rail (train sabotage set dywersja-poprad*, two sites on PKP line 96 within an hour): one "rail" hypothesis on
@@ -25,6 +26,7 @@ PIN = "2468"
 RAIL = ["dywersja-poprad", "dywersja-poprad-2"]
 DAM = ["zapora-myczkowce", "zapora-uherce", "zapora-lesko", "zapora-huzele", "zapora-zaluz"]
 OTHER = ["zapora-tlo-olszanica", "zapora-tlo-tarnica"]
+STORM = ["mazury-burza-sniardwy", "mazury-burza-mikolajki", "mazury-burza-talty", "mazury-burza-beldany"]   # white squall set: generic cluster, kind storm
 FAILS = []
 
 
@@ -62,12 +64,16 @@ def main():
         check("rules_narrative_cites_evidence", d.get("narrative", {}).get("by") == "rules" and set(d["narrative"]["cites"]) <= {e["id"] for e in h.get("evidence", [])})
 
         check("dam_set_no_rail", not [x for x in hs if x.get("kind") == "rail"])
-        # quiet day: every incident except the two demo sets (dam, rail)
+        # quiet day: every incident except the demo sets (dam, rail, storm)
         st, sl, _ = G("/api/scenarios")
         names = [x if isinstance(x, str) else x.get("name") or x.get("id") for x in (sl.get("scenarios", sl) if isinstance(sl, dict) else sl or [])]
-        quiet = [n for n in names if n and not n.startswith(("zapora-", "dywersja-"))]
+        quiet = [n for n in names if n and not n.startswith(("zapora-", "dywersja-", "mazury-burza-"))]
         st, d, _ = G("/api/advisor?only=" + ",".join(quiet))
         check("quiet_day_no_hypothesis", st == 200 and d.get("hypotheses") == [] and d.get("incidents", 0) >= 5, f"{d.get('incidents')} incidents, {len(d.get('hypotheses', []))} hypotheses")
+        st, d, _ = G("/api/advisor?only=" + ",".join(STORM + OTHER))
+        hs = d.get("hypotheses", [])
+        check("storm_cluster_links_mazury_set", len(hs) == 1 and hs[0].get("kind") == "storm" and sorted(hs[0].get("incidents", [])) == sorted(STORM),
+              str([(x["kind"], x["score"], x["incidents"]) for x in hs]))
         st, d, _ = G("/api/advisor?only=" + ",".join(OTHER))
         check("unrelated_pair_no_hypothesis", d.get("hypotheses") == [])
         st, d, _ = G("/api/advisor?only=zapora-lesko,zapora-huzele")

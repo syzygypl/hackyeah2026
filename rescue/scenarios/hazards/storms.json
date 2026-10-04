@@ -1,0 +1,27 @@
+{
+  "schema": "rescue-storms/1",
+  "note": "Shared weather events (scenariusz fikcyjny) that several incidents can have in common. Not read by the engine yet: the Advisor links these incidents through its generic space-time cluster + storm keywords. Proposed use: a sourced 'storm' hypothesis (incident inside the area, between from-15 min and to+60 min, downwind of the front's path) - see the request to AI Andrzeja in the PUSH note of the mazury-burza-* set.",
+  "events": [
+    {
+      "id": "burza-mazury-2026-08-22",
+      "kind": "storm",
+      "name": "Biały szkwał nad Wielkimi Jeziorami Mazurskimi (Tałty, Mikołajki, zachodnie Śniardwy, Bełdany) - scenariusz fikcyjny",
+      "date": "2026-08-22",
+      "warning": {"by": "IMGW (fikcyjnie)", "at": "14:10", "level": 2, "text": "Ostrzeżenie 2. stopnia przed burzami z gradem, porywy do 90 km/h, powiaty mrągowski i piski"},
+      "from": "15:10",
+      "to": "15:55",
+      "windFromDeg": 290,
+      "gustMs": 24,
+      "speedKmh": 45,
+      "center": [53.785, 21.600],
+      "radiusKm": 12,
+      "front": [
+        {"at": "15:15", "line": [[53.880, 21.510], [53.800, 21.490]], "place": "Tałty"},
+        {"at": "15:20", "line": [[53.860, 21.580], [53.770, 21.560]], "place": "Mikołajki, Jezioro Mikołajskie"},
+        {"at": "15:28", "line": [[53.830, 21.660], [53.720, 21.640]], "place": "zachodnie Śniardwy"},
+        {"at": "15:35", "line": [[53.790, 21.720], [53.680, 21.700]], "place": "Bełdany, Śniardwy środkowe"}
+      ],
+      "incidents": ["mazury-burza-talty", "mazury-burza-mikolajki", "mazury-burza-sniardwy", "mazury-burza-beldany"]
+    }
+  ]
+}

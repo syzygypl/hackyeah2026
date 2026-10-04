@@ -1,0 +1,344 @@
+{
+  "incident": "Windsurfer zniknął w szkwale - Bełdany, rozlewisko (scenariusz fikcyjny)",
+  "date": "2026-08-22",
+  "startClock": "15:42",
+  "subject": {
+    "name": "Kuba W. (osoba fikcyjna)",
+    "age": 17,
+    "category": "boater",
+    "note": "Kursant szkółki windsurfingowej, w piance i kamizelce. Instruktor zwołał kursantów do brzegu przed burzą, Kuba był najdalej. O 15:36 szkwał z WNW przewrócił go z deską; instruktor stracił go z oczu w gradzie i ulewie. Motorówka asekuracyjna szkółki nie znalazła go przy miejscu upadku, szkółka dzwoni na 112 o 15:42.",
+    "lastContact": "15:36"
+  },
+  "bbox": {
+    "south": 53.70105,
+    "west": 21.5394,
+    "north": 53.75495,
+    "east": 21.6306
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "LKP: miejsce upadku widziane przez instruktora o 15:36",
+    "at": [
+      53.729,
+      21.564
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [
+      {
+        "name": "Bełdany",
+        "center": [
+          53.725,
+          21.565
+        ],
+        "radiusM": 900
+      }
+    ],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "B1",
+      "name": "Miejsce zdarzenia (LKP)",
+      "seed": [
+        53.729,
+        21.564
+      ]
+    },
+    {
+      "id": "B2",
+      "name": "Toń 3,9 km na północny wschód od LKP",
+      "seed": [
+        53.7545,
+        21.604
+      ]
+    },
+    {
+      "id": "B3",
+      "name": "Toń 3,2 km na południe od LKP",
+      "seed": [
+        53.7015,
+        21.57968
+      ]
+    },
+    {
+      "id": "B4",
+      "name": "Toń 1,6 km na południowy wschód od LKP",
+      "seed": [
+        53.71677,
+        21.57816
+      ]
+    },
+    {
+      "id": "B5",
+      "name": "Toń 1,9 km na północny wschód od LKP",
+      "seed": [
+        53.74103,
+        21.58424
+      ]
+    },
+    {
+      "id": "B6",
+      "name": "Toń 1,2 km na południe od LKP",
+      "seed": [
+        53.71857,
+        21.56144
+      ]
+    },
+    {
+      "id": "B7",
+      "name": "Toń 0,8 km na południowy wschód od LKP",
+      "seed": [
+        53.72306,
+        21.57056
+      ]
+    },
+    {
+      "id": "B8",
+      "name": "Toń 0,9 km na północny wschód od LKP",
+      "seed": [
+        53.73474,
+        21.5736
+      ]
+    },
+    {
+      "id": "B9",
+      "name": "Toń 2,5 km na południowy wschód od LKP",
+      "seed": [
+        53.70958,
+        21.58424
+      ]
+    },
+    {
+      "id": "B10",
+      "name": "Brzeg i trzciny 0,7 km na wschód od LKP",
+      "seed": [
+        53.72665,
+        21.5736
+      ]
+    },
+    {
+      "id": "B11",
+      "name": "Brzeg i trzciny 3,9 km na północny wschód od LKP",
+      "seed": [
+        53.7545,
+        21.60552
+      ]
+    },
+    {
+      "id": "B12",
+      "name": "Brzeg i trzciny 3,2 km na południe od LKP",
+      "seed": [
+        53.7015,
+        21.5812
+      ]
+    },
+    {
+      "id": "B13",
+      "name": "Brzeg i trzciny 2,0 km na południowy wschód od LKP",
+      "seed": [
+        53.71497,
+        21.58424
+      ]
+    },
+    {
+      "id": "B14",
+      "name": "Brzeg i trzciny 2,1 km na północny wschód od LKP",
+      "seed": [
+        53.74192,
+        21.58728
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): trzciny przy brzegu wschodnim",
+    "at": [
+      53.72665,
+      21.57208
+    ]
+  },
+  "events": [
+    {
+      "provider": "TerrainDifficulty",
+      "at": "15:42",
+      "title": "Teren: rozlewisko Bełdan, trzciny po wschodniej stronie, las",
+      "detail": "Łodzie na jeziorze, patrol pieszy wzdłuż brzegu."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "15:42",
+      "title": "Warunki: po szkwale wiatr 15 m/s z WNW, deszcz, widzialność 600 m, 19°C",
+      "detail": "Biały szkwał z WNW: linia burzowa przeszła nad Tałtami ok. 15:15, nad Mikołajkami 15:20, nad zachodnimi Śniardwami i Bełdanami 15:25-15:35; porywy do 24 m/s, ulewa i grad, widzialność poniżej 500 m do ok. 15:50. IMGW (fikcyjnie) wydał o 14:10 ostrzeżenie 2. stopnia przed burzami z gradem dla powiatów mrągowskiego i piskiego. Zachód słońca 19:47.",
+      "visibilityM": 600,
+      "windMs": 15,
+      "windFromDeg": 290,
+      "tempC": 19,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "15:42",
+      "title": "Pierścienie odległości od LKP (bez kierunku)",
+      "detail": "Bazowy model bez wiatru, przybliżony: 25% 0.2 km, 50% 0.5, 75% 0.9, 95% 1.6.",
+      "point": [
+        53.729,
+        21.564
+      ],
+      "quantilesKm": [
+        0.2,
+        0.5,
+        0.9,
+        1.6
+      ]
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "15:50",
+      "title": "Motorówka szkółki: miejsce upadku, nic",
+      "detail": "Instruktor wrócił do miejsca upadku w ulewie, widzialność 50 m. POD 40%.",
+      "segments": [
+        "B1"
+      ],
+      "pod": 0.4
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "15:55",
+      "title": "Dryf osoby w kamizelce: szkwał 15 m/s z 290°",
+      "detail": "Osoba w piance i kamizelce ~1.5% wiatru, deska szybciej. Brzeg wschodni blisko, łapie dryf. Parametry ilustracyjne (tabele leeway USCG).",
+      "point": [
+        53.729,
+        21.564
+      ],
+      "radiusM": 120,
+      "windMs": 15,
+      "windFromDeg": 290,
+      "object": "person"
+    },
+    {
+      "provider": "Clue",
+      "at": "16:05",
+      "title": "Wędkarz z brzegu: deska z żaglem wyrzucona w trzciny po wschodniej stronie, bez kursanta",
+      "detail": "Deska leży w trzcinach, żagiel podarty. 'Nikogo przy niej nie widziałem'.",
+      "point": [
+        53.72755,
+        21.5736
+      ],
+      "radiusM": 200,
+      "clueKind": "trace"
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "16:15",
+      "title": "Łódź WOPR Ruciane-Nida: pas toni między LKP a deską, nic",
+      "detail": "Tor równoległy 60 m. POD 70%.",
+      "segments": [
+        "B1"
+      ],
+      "pod": 0.7
+    },
+    {
+      "provider": "Clue",
+      "at": "16:32",
+      "title": "ZNALEZIONO: łódź WOPR - Kuba w trzcinach przy brzegu wschodnim, ok. 200 m na południe od deski",
+      "detail": "Trzymał się trzcin, wychłodzony, przytomny. Meldunek radiowy, nie GPS.",
+      "point": [
+        53.72665,
+        21.57208
+      ],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "props": [
+    {
+      "kind": "kayak-drifting",
+      "at": [
+        53.729,
+        21.564
+      ],
+      "heading": 20,
+      "from": "15:36",
+      "until": "16:05",
+      "label": "deska windsurfingowa (upadek)",
+      "size": 2.6
+    },
+    {
+      "kind": "kayak-capsized",
+      "at": [
+        53.72755,
+        21.5736
+      ],
+      "heading": 105,
+      "from": "16:05",
+      "label": "deska z podartym żaglem w trzcinach",
+      "size": 2.6
+    }
+  ],
+  "resources": [
+    {
+      "id": "wopr-ruciane",
+      "name": "Łódź WOPR Mazury (Ruciane-Nida)",
+      "type": "boat",
+      "base": [
+        53.702,
+        21.559
+      ],
+      "readyAt": "15:58"
+    },
+    {
+      "id": "szkolka-beldany-lodz",
+      "name": "Motorówka asekuracyjna szkółki (Bełdany)",
+      "type": "boat",
+      "base": [
+        53.7335,
+        21.556
+      ],
+      "readyAt": "15:42"
+    },
+    {
+      "id": "osp-ruciane-lodz",
+      "name": "Łódź OSP KSRG Ruciane-Nida",
+      "type": "boat",
+      "base": [
+        53.702,
+        21.559
+      ],
+      "readyAt": "16:10"
+    },
+    {
+      "id": "policja-brzeg-beldany",
+      "name": "Policja Pisz - patrol brzegowy",
+      "type": "ground",
+      "base": [
+        53.728,
+        21.58
+      ],
+      "readyAt": "16:00"
+    },
+    {
+      "id": "dron-wopr-beldany",
+      "name": "Dron WOPR z termowizją (Ruciane-Nida)",
+      "type": "drone",
+      "base": [
+        53.728,
+        21.58
+      ],
+      "readyAt": "16:20"
+    },
+    {
+      "id": "lpr-olsztyn",
+      "name": "Śmigłowiec LPR (Olsztyn)",
+      "type": "heli",
+      "base": [
+        53.781,
+        20.452
+      ],
+      "readyAt": "16:30"
+    }
+  ]
+}

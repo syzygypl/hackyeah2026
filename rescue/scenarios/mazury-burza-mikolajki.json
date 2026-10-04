@@ -1,0 +1,363 @@
+{
+  "incident": "Motorówka bez napędu dryfuje w szkwale, 3 osoby - Jezioro Mikołajskie (scenariusz fikcyjny)",
+  "date": "2026-08-22",
+  "startClock": "15:35",
+  "subject": {
+    "name": "Tomasz R. (osoba fikcyjna) i 2 osoby",
+    "age": 45,
+    "category": "boater",
+    "note": "Motorówka czarterowa (5,5 m), trzy osoby dorosłe (Tomasz R., Ewa R., Marek D., osoby fikcyjne). W szkwale o 15:30 zgasł silnik, kotwica nie trzyma na głębokim. Tomasz dzwoni na 112 o 15:31: 'silnik zgasł, burza, nie widzimy brzegu, znosi nas'. Rozmowa urwana, telefon nie odpowiada. Wiatr z WNW wieje w poprzek wąskiego jeziora: łódź płynie bokiem na wschodni brzeg.",
+    "lastContact": "15:31"
+  },
+  "bbox": {
+    "south": 53.75605,
+    "west": 21.5524,
+    "north": 53.80995,
+    "east": 21.6436
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "LKP: lokalizacja AML z połączenia 112 o 15:31",
+    "at": [
+      53.787,
+      21.5875
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [
+      {
+        "name": "Jezioro Mikołajskie",
+        "center": [
+          53.7823,
+          21.5946
+        ],
+        "radiusM": 1400
+      }
+    ],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "M1",
+      "name": "Miejsce zdarzenia (LKP)",
+      "seed": [
+        53.787,
+        21.5875
+      ]
+    },
+    {
+      "id": "M2",
+      "name": "Toń 5,0 km na południowy wschód od LKP",
+      "seed": [
+        53.7565,
+        21.64284
+      ]
+    },
+    {
+      "id": "M3",
+      "name": "Toń 2,7 km na południowy wschód od LKP",
+      "seed": [
+        53.76458,
+        21.60332
+      ]
+    },
+    {
+      "id": "M4",
+      "name": "Toń 1,4 km na południowy wschód od LKP",
+      "seed": [
+        53.77716,
+        21.6018
+      ]
+    },
+    {
+      "id": "M5",
+      "name": "Toń 3,1 km na południowy wschód od LKP",
+      "seed": [
+        53.76908,
+        21.62308
+      ]
+    },
+    {
+      "id": "M6",
+      "name": "Toń 1,0 km na południe od LKP",
+      "seed": [
+        53.77806,
+        21.5866
+      ]
+    },
+    {
+      "id": "M7",
+      "name": "Toń 0,7 km na południowy wschód od LKP",
+      "seed": [
+        53.78255,
+        21.5942
+      ]
+    },
+    {
+      "id": "M8",
+      "name": "Toń 2,0 km na północny zachód od LKP",
+      "seed": [
+        53.80142,
+        21.56988
+      ]
+    },
+    {
+      "id": "M9",
+      "name": "Toń 1,8 km na południe od LKP",
+      "seed": [
+        53.77087,
+        21.5942
+      ]
+    },
+    {
+      "id": "M10",
+      "name": "Toń 2,3 km na południowy wschód od LKP",
+      "seed": [
+        53.77177,
+        21.61092
+      ]
+    },
+    {
+      "id": "M11",
+      "name": "Brzeg i trzciny 4,3 km na południowy wschód od LKP",
+      "seed": [
+        53.76458,
+        21.64132
+      ]
+    },
+    {
+      "id": "M12",
+      "name": "Brzeg i trzciny 0,5 km na południowy wschód od LKP",
+      "seed": [
+        53.78525,
+        21.5942
+      ]
+    },
+    {
+      "id": "M13",
+      "name": "Brzeg i trzciny 3,4 km na południe od LKP",
+      "seed": [
+        53.7565,
+        21.59724
+      ]
+    },
+    {
+      "id": "M14",
+      "name": "Brzeg i trzciny 2,4 km na południowy wschód od LKP",
+      "seed": [
+        53.77357,
+        21.61548
+      ]
+    },
+    {
+      "id": "M15",
+      "name": "Brzeg i trzciny 1,8 km na południe od LKP",
+      "seed": [
+        53.77087,
+        21.59268
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): motorówka w trzcinach pod wschodnim brzegiem",
+    "at": [
+      53.78525,
+      21.5942
+    ]
+  },
+  "events": [
+    {
+      "provider": "TerrainDifficulty",
+      "at": "15:35",
+      "title": "Teren: wąskie jezioro rynnowe, strome zalesione brzegi, trzciny",
+      "detail": "Łodzie na jeziorze, patrol pieszy wzdłuż brzegów i z mostu w Mikołajkach."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "15:35",
+      "title": "Warunki: po szkwale wiatr 16 m/s z WNW, deszcz, widzialność 500 m, 19°C",
+      "detail": "Biały szkwał z WNW: linia burzowa przeszła nad Tałtami ok. 15:15, nad Mikołajkami 15:20, nad zachodnimi Śniardwami i Bełdanami 15:25-15:35; porywy do 24 m/s, ulewa i grad, widzialność poniżej 500 m do ok. 15:50. IMGW (fikcyjnie) wydał o 14:10 ostrzeżenie 2. stopnia przed burzami z gradem dla powiatów mrągowskiego i piskiego. Zachód słońca 19:47.",
+      "visibilityM": 500,
+      "windMs": 16,
+      "windFromDeg": 290,
+      "tempC": 19,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "15:35",
+      "title": "Pierścienie odległości od LKP (bez kierunku)",
+      "detail": "Bazowy model bez wiatru, przybliżony: 25% 0.4 km, 50% 0.9, 75% 1.6, 95% 3.0.",
+      "point": [
+        53.787,
+        21.5875
+      ],
+      "quantilesKm": [
+        0.4,
+        0.9,
+        1.6,
+        3.0
+      ]
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "15:36",
+      "title": "CPR Olsztyn: AML z telefonu Tomasza (15:31), dokładność 50 m",
+      "detail": "Lokalizacja AML przyszła z połączeniem 112. Potem telefon poza zasięgiem lub rozładowany.",
+      "point": [
+        53.787,
+        21.5875
+      ],
+      "radiusM": 150
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "15:40",
+      "title": "Dryf motorówki bez napędu: szkwał 16 m/s z 290°, ok. 4% wiatru",
+      "detail": "Łódź z wysoką burtą dryfuje szybko (ilustracyjnie wg tabel leeway USCG). Jezioro wąskie, a wiatr wieje w poprzek: smuga szybko dochodzi do wschodniego brzegu, brzeg łapie łódź.",
+      "point": [
+        53.787,
+        21.5875
+      ],
+      "radiusM": 150,
+      "windMs": 16,
+      "windFromDeg": 290,
+      "object": "boat"
+    },
+    {
+      "provider": "Clue",
+      "at": "15:52",
+      "title": "Świadek z brzegu: biała motorówka z trzema osobami płynie bokiem na wschodni brzeg",
+      "detail": "Mieszkaniec domku nad jeziorem widział ją w przerwie ulewy, ok. 15:48, 'bez silnika, ktoś machał kamizelką'.",
+      "point": [
+        53.78598,
+        21.59173
+      ],
+      "radiusM": 300,
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "16:00",
+      "title": "Policja wodna Mikołajki: toń przy LKP, nic",
+      "detail": "Pierwsza łódź zaczęła od lokalizacji AML. Motorówki tam już nie ma. POD 70%.",
+      "segments": [
+        "M1"
+      ],
+      "pod": 0.7
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "16:10",
+      "title": "Łódź PSP Mrągowo: rozlewisko na SE (tam 'zwykle znosi'), nic",
+      "detail": "Załoga popłynęła z doświadczenia wzdłuż jeziora na SE. Tam łodzi nie ma: wiatr wiał w poprzek jeziora. POD 70%.",
+      "segments": [
+        "M10"
+      ],
+      "pod": 0.7
+    },
+    {
+      "provider": "Clue",
+      "at": "16:20",
+      "title": "ZNALEZIONO: łódź WOPR R-2 - motorówka w trzcinach pod wschodnim brzegiem, trzy osoby całe",
+      "detail": "Łódź wciśnięta w trzciny pod stromym, zalesionym brzegiem, z jeziora niewidoczna w deszczu. Wszyscy w kamizelkach, przemoczeni, Ewa z otarciem dłoni. Holowanie do Mikołajek. Meldunek radiowy, nie GPS.",
+      "point": [
+        53.78525,
+        21.5942
+      ],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "props": [
+    {
+      "kind": "kayak-drifting",
+      "at": [
+        53.78598,
+        21.59173
+      ],
+      "heading": 20,
+      "from": "15:48",
+      "until": "16:20",
+      "label": "motorówka bez napędu, 3 osoby (świadek)",
+      "size": 5.5
+    },
+    {
+      "kind": "kayak-drifting",
+      "at": [
+        53.78525,
+        21.5942
+      ],
+      "heading": 20,
+      "from": "16:20",
+      "label": "motorówka w trzcinach pod wschodnim brzegiem",
+      "size": 5.5
+    }
+  ],
+  "resources": [
+    {
+      "id": "wopr-mikolajki-r2",
+      "name": "Łódź WOPR Mazury R-2 (Mikołajki)",
+      "type": "boat",
+      "base": [
+        53.8003,
+        21.5745
+      ],
+      "readyAt": "15:50"
+    },
+    {
+      "id": "policja-wodna-mikolajki",
+      "name": "Policja wodna Mikołajki - łódź",
+      "type": "boat",
+      "base": [
+        53.7999,
+        21.5762
+      ],
+      "readyAt": "15:45"
+    },
+    {
+      "id": "policja-brzeg-mikolajki",
+      "name": "Policja Mrągowo - patrol brzegowy",
+      "type": "ground",
+      "base": [
+        53.7985,
+        21.5735
+      ],
+      "readyAt": "15:50"
+    },
+    {
+      "id": "psp-mragowo-lodz",
+      "name": "Łódź PSP JRG Mrągowo",
+      "type": "boat",
+      "base": [
+        53.8003,
+        21.5745
+      ],
+      "readyAt": "15:55"
+    },
+    {
+      "id": "dron-psp-mragowo",
+      "name": "Dron PSP Mrągowo z termowizją",
+      "type": "drone",
+      "base": [
+        53.7985,
+        21.5735
+      ],
+      "readyAt": "16:15"
+    },
+    {
+      "id": "lpr-olsztyn",
+      "name": "Śmigłowiec LPR (Olsztyn)",
+      "type": "heli",
+      "base": [
+        53.781,
+        20.452
+      ],
+      "readyAt": "16:10"
+    }
+  ]
+}

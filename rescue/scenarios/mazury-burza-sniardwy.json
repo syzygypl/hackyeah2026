@@ -1,0 +1,400 @@
+{
+  "incident": "Wywrotka Omegi po białym szkwale, 2 osoby - Śniardwy, zachodnia część (scenariusz fikcyjny)",
+  "date": "2026-08-22",
+  "startClock": "15:45",
+  "subject": {
+    "name": "Aleksandra K. (osoba fikcyjna)",
+    "age": 27,
+    "category": "boater",
+    "note": "Para z Łodzi (Aleksandra K. i Piotr M., osoby fikcyjne) na Omedze wypożyczonej w Mikołajkach, oboje w kamizelkach. O 15:28 szkwał z WNW położył łódź ok. 1 km od północnego brzegu zachodnich Śniardw. Załoga jachtu 'Zefir' widziała wywrotkę, straciła łódź z oczu w ulewie i gradzie i o 15:40 dzwoni na 112. Dwie osoby za burtą, łódź do góry dnem.",
+    "lastContact": "15:28"
+  },
+  "bbox": {
+    "south": 53.73805,
+    "west": 21.6394,
+    "north": 53.79195,
+    "east": 21.7306
+  },
+  "cellM": 100,
+  "ipp": {
+    "name": "LKP: wywrotka Omegi widziana z jachtu 'Zefir' o 15:28",
+    "at": [
+      53.778,
+      21.668
+    ]
+  },
+  "terrain": {
+    "trails": [],
+    "streams": [],
+    "ridges": [],
+    "lakes": [
+      {
+        "name": "Śniardwy",
+        "center": [
+          53.761793,
+          21.735663
+        ],
+        "radiusM": 5637
+      }
+    ],
+    "huts": []
+  },
+  "segments": [
+    {
+      "id": "S1",
+      "name": "Miejsce zdarzenia (LKP)",
+      "seed": [
+        53.778,
+        21.668
+      ]
+    },
+    {
+      "id": "S2",
+      "name": "Toń 6,0 km na południowy wschód od LKP",
+      "seed": [
+        53.7385,
+        21.72984
+      ]
+    },
+    {
+      "id": "S3",
+      "name": "Toń 4,1 km na wschód od LKP",
+      "seed": [
+        53.77533,
+        21.72984
+      ]
+    },
+    {
+      "id": "S4",
+      "name": "Toń 2,9 km na południowy wschód od LKP",
+      "seed": [
+        53.75736,
+        21.6964
+      ]
+    },
+    {
+      "id": "S5",
+      "name": "Toń 2,6 km na północny wschód od LKP",
+      "seed": [
+        53.7915,
+        21.70096
+      ]
+    },
+    {
+      "id": "S6",
+      "name": "Toń 1,9 km na wschód od LKP",
+      "seed": [
+        53.77443,
+        21.6964
+      ]
+    },
+    {
+      "id": "S7",
+      "name": "Toń 4,5 km na południowy zachód od LKP",
+      "seed": [
+        53.7403,
+        21.64168
+      ]
+    },
+    {
+      "id": "S8",
+      "name": "Toń 2,3 km na południe od LKP",
+      "seed": [
+        53.75736,
+        21.66144
+      ]
+    },
+    {
+      "id": "S9",
+      "name": "Toń 1,5 km na południowy wschód od LKP",
+      "seed": [
+        53.76635,
+        21.67816
+      ]
+    },
+    {
+      "id": "S10",
+      "name": "Toń 4,4 km na południe od LKP",
+      "seed": [
+        53.7385,
+        21.67968
+      ]
+    },
+    {
+      "id": "S11",
+      "name": "Toń 4,5 km na południowy wschód od LKP",
+      "seed": [
+        53.75736,
+        21.7268
+      ]
+    },
+    {
+      "id": "S12",
+      "name": "Brzeg i trzciny 1,7 km na północny wschód od LKP",
+      "seed": [
+        53.7897,
+        21.68576
+      ]
+    },
+    {
+      "id": "S13",
+      "name": "Brzeg i trzciny 4,4 km na południowy zachód od LKP",
+      "seed": [
+        53.74119,
+        21.64168
+      ]
+    },
+    {
+      "id": "S14",
+      "name": "Brzeg i trzciny 2,1 km na południowy zachód od LKP",
+      "seed": [
+        53.76455,
+        21.64472
+      ]
+    },
+    {
+      "id": "S15",
+      "name": "Brzeg i trzciny 0,9 km na północ od LKP",
+      "seed": [
+        53.78611,
+        21.67208
+      ]
+    }
+  ],
+  "truth": {
+    "name": "Miejsce odnalezienia Aleksandry (fikcyjne, tylko do backtestu): ok. 1,4 km od LKP z wiatrem",
+    "at": [
+      53.77367,
+      21.688
+    ]
+  },
+  "events": [
+    {
+      "provider": "TerrainDifficulty",
+      "at": "15:45",
+      "title": "Teren: otwarta toń Śniardw, trzcinowiska przy brzegu",
+      "detail": "Łodzie tylko na jeziorze, patrole piesze tylko z brzegu. Po szkwale fala do 1,2 m na otwartej toni."
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "15:45",
+      "title": "Warunki: po szkwale wiatr 14 m/s z WNW, deszcz, widzialność 800 m, 19°C",
+      "detail": "Biały szkwał z WNW: linia burzowa przeszła nad Tałtami ok. 15:15, nad Mikołajkami 15:20, nad zachodnimi Śniardwami i Bełdanami 15:25-15:35; porywy do 24 m/s, ulewa i grad, widzialność poniżej 500 m do ok. 15:50. IMGW (fikcyjnie) wydał o 14:10 ostrzeżenie 2. stopnia przed burzami z gradem dla powiatów mrągowskiego i piskiego. Zachód słońca 19:47.",
+      "visibilityM": 800,
+      "windMs": 14,
+      "windFromDeg": 290,
+      "tempC": 19,
+      "precip": "rain",
+      "dark": false
+    },
+    {
+      "provider": "KoesterRings",
+      "at": "15:45",
+      "title": "Pierścienie odległości od LKP (bez kierunku)",
+      "detail": "Bazowy model bez wiatru, przybliżony (ISRID nie ma tabel dla osoby za burtą): 25% 0.6 km, 50% 1.2, 75% 2.2, 95% 4.0.",
+      "point": [
+        53.778,
+        21.668
+      ],
+      "quantilesKm": [
+        0.6,
+        1.2,
+        2.2,
+        4.0
+      ]
+    },
+    {
+      "provider": "Clue",
+      "at": "15:45",
+      "title": "Zgłoszenie 112: jacht 'Zefir' widział wywrotkę Omegi w szkwale",
+      "detail": "Skipper 'Zefira': 'położyło ich w pierwszym uderzeniu szkwału, dwie głowy przy kadłubie, potem ulewa i grad, nic nie widać'. Namiar z jachtu, ok. 300 m dokładności.",
+      "point": [
+        53.778,
+        21.668
+      ],
+      "radiusM": 300,
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "15:50",
+      "title": "Dryf przewróconej Omegi: szkwał 14 m/s z 290°, ok. 3% wiatru",
+      "detail": "Smuga dryfu łodzi od LKP. Parametry ilustracyjne wg tabel leeway US Coast Guard. Z wiatrem otwarta toń na ESE, brzeg daleko.",
+      "point": [
+        53.778,
+        21.668
+      ],
+      "radiusM": 200,
+      "windMs": 14,
+      "windFromDeg": 290,
+      "object": "dinghy"
+    },
+    {
+      "provider": "Cell112Fix",
+      "at": "15:58",
+      "title": "CPR Olsztyn: telefon Piotra ostatnio w sieci 15:31, BTS Mikołajki",
+      "detail": "Telefon Aleksandry wyłączony od 15:29. Sektor nad jeziorem, promień ok. 1.5 km.",
+      "point": [
+        53.77706,
+        21.67698
+      ],
+      "radiusM": 1500
+    },
+    {
+      "provider": "Clue",
+      "at": "16:22",
+      "title": "Policja wodna Mikołajki: Piotr podjęty przy przewróconej Omedze, Aleksandry nie ma",
+      "detail": "Piotr wychłodzony, trzymał się kadłuba. Mówi, że Aleksandra puściła kadłub ok. 15:45, 'fale ją odsunęły, miała kamizelkę'. Łódź ok. 1,2 km od LKP z wiatrem.",
+      "point": [
+        53.77438,
+        21.68471
+      ],
+      "radiusM": 250,
+      "clueKind": "sighting"
+    },
+    {
+      "provider": "WeatherConditions",
+      "at": "16:25",
+      "title": "Wiatr słabnie do 9 m/s, przestaje padać, widzialność 5 km",
+      "detail": "Szkwał przeszedł na wschód nad Pisz. Dron może startować (< 12 m/s).",
+      "windMs": 9,
+      "windFromDeg": 290,
+      "precip": "none",
+      "visibilityM": 5000
+    },
+    {
+      "provider": "SegmentSearched",
+      "at": "16:40",
+      "title": "Łódź WOPR R-1: toń wokół Omegi, nic",
+      "detail": "Pierwsza łódź przeszukała rejon, gdzie podjęto Piotra (klasyczny odruch: szukać przy łodzi). POD 65%.",
+      "segments": [
+        "S6"
+      ],
+      "pod": 0.65
+    },
+    {
+      "provider": "WaterDrift",
+      "at": "16:45",
+      "title": "Dryf Aleksandry (w kamizelce) od miejsca, gdzie puściła kadłub",
+      "detail": "Osoba w kamizelce dryfuje ok. 2x wolniej niż przewrócona łódź (~1.5% wiatru, średnio ~11 m/s od 15:45): powinna być między LKP a miejscem podjęcia Piotra.",
+      "point": [
+        53.77686,
+        21.67329
+      ],
+      "radiusM": 200,
+      "windMs": 11,
+      "windFromDeg": 290,
+      "object": "person",
+      "driftHours": 1.0
+    },
+    {
+      "provider": "DronePassEmpty",
+      "at": "16:55",
+      "title": "Dron WOPR: toń na zachód od LKP (pod wiatr), nic",
+      "detail": "Przelot kontrolny pod wiatr. POD 70%.",
+      "segments": [
+        "S1"
+      ],
+      "pod": 0.7
+    },
+    {
+      "provider": "Clue",
+      "at": "17:20",
+      "title": "ZNALEZIONO: śmigłowiec LPR - Aleksandra w kamizelce, ok. 1,4 km od LKP z wiatrem",
+      "detail": "Załoga śmigłowca dostrzegła pomarańczową kamizelkę, łódź WOPR podjęła wychłodzoną, przytomną kobietę. Meldunek radiowy, nie GPS.",
+      "point": [
+        53.77367,
+        21.688
+      ],
+      "radiusM": 30,
+      "found": true
+    }
+  ],
+  "props": [
+    {
+      "kind": "kayak-capsized",
+      "at": [
+        53.778,
+        21.668
+      ],
+      "heading": 200,
+      "from": "15:28",
+      "until": "16:22",
+      "label": "Omega przewrócona w szkwale (LKP)",
+      "size": 6
+    },
+    {
+      "kind": "kayak-capsized",
+      "at": [
+        53.77438,
+        21.68471
+      ],
+      "heading": 200,
+      "from": "16:22",
+      "label": "Omega do góry dnem, tu podjęto Piotra",
+      "size": 6
+    }
+  ],
+  "resources": [
+    {
+      "id": "wopr-mikolajki-r1",
+      "name": "Łódź WOPR Mazury R-1 (Mikołajki)",
+      "type": "boat",
+      "base": [
+        53.8003,
+        21.5745
+      ],
+      "readyAt": "15:58"
+    },
+    {
+      "id": "policja-wodna-mikolajki",
+      "name": "Policja wodna Mikołajki - łódź",
+      "type": "boat",
+      "base": [
+        53.7999,
+        21.5762
+      ],
+      "readyAt": "16:05"
+    },
+    {
+      "id": "psp-pisz-lodz",
+      "name": "Łódź PSP JRG Pisz",
+      "type": "boat",
+      "base": [
+        53.7445,
+        21.73
+      ],
+      "readyAt": "16:20"
+    },
+    {
+      "id": "dron-wopr-mikolajki",
+      "name": "Dron WOPR z termowizją (Mikołajki)",
+      "type": "drone",
+      "base": [
+        53.7905,
+        21.656
+      ],
+      "readyAt": "16:30"
+    },
+    {
+      "id": "nurkowie-psp-gizycko",
+      "name": "Nurkowie PSP (SGRW Giżycko)",
+      "type": "diver",
+      "base": [
+        53.7905,
+        21.656
+      ],
+      "readyAt": "17:30"
+    },
+    {
+      "id": "lpr-olsztyn",
+      "name": "Śmigłowiec LPR (Olsztyn)",
+      "type": "heli",
+      "base": [
+        53.781,
+        20.452
+      ],
+      "readyAt": "16:35"
+    }
+  ]
+}
