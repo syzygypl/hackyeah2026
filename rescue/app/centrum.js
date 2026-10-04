@@ -175,7 +175,8 @@ const SHORT = { zawrat: "Zawrat", "morskie-oko": "Morskie Oko", kasprowy: "Kaspr
   sniardwy: "Śniardwy", morzycko: "Morzycko", miedzyzdroje: "Międzyzdroje", mamry: "Mamry", krakow: "Kraków", "krakow-nowa-huta": "Kraków - Nowa Huta", "night-test": "Test nocny",
   "tragedia-w-moryniu": "Tragedia w Moryniu", "rodzina-dziecko-las": "Karpacz - dziecko w lesie", "kajak-pieniny": "Pieniny - Dunajec",
   "auto-w-rzece-wizna": "Wizna - auto w Narwi",
-  "grzybiarz-puszcza-notecka": "Puszcza Notecka - grzybiarz", "lawina-wolowiec": "Wołowiec - lawina" };
+  "grzybiarz-puszcza-notecka": "Puszcza Notecka - grzybiarz", "lawina-wolowiec": "Wołowiec - lawina",
+  "senior-demencja-lodz": "Łódź - senior z demencją" };
 const short = (x) => SHORT[x.sc] || (x.place && x.place !== x.sc ? x.place.split(/[,/]/)[0].trim() : x.sc);
 const longText = (x) => [x.title, x.place !== x.sc ? x.place : ""].filter(Boolean).join(" - ");
 const modeOf = (x) => x.found ? "found" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident

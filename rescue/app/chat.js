@@ -443,6 +443,14 @@ EXAMPLES["grzybiarz-puszcza-notecka"] = [
   "Dron przeleciał nad N12, nic",
   "Mgła w obniżeniach, +3 stopnie",
 ];
+EXAMPLES["senior-demencja-lodz"] = [
+  "Sąsiadka widziała starszego pana w kaszkiecie na przystanku Legionów ok. 11:00",
+  "Patrol przeszedł Park na Zdrowiu od Fali do ZOO, nic",
+  "Znaleziono granatowy kaszkiet przy furtce ROD Łączność",
+  "Pies podjął trop alejką działkową w stronę Łódki",
+  "Dron nad Łódzkimi Błoniami, nic",
+  "Mżawka, 8 stopni, zmrok o 18:35",
+];
 EXAMPLES.sniardwy = [
   "Rybak widział żeglarza w wodzie o 17:10 przy Nowych Gutach",
   "Łódź WOPR przeszukała toń na wschód od LKP, nic",
