@@ -1,0 +1,497 @@
+{
+ "incident": "Zaginiony paralotniarz - Skrzyczne, Beskid Śląski: zwijka w rotorze przed frontem, las nad Kalonką (scenariusz fikcyjny)",
+ "date": "2026-07-18",
+ "startClock": "16:00",
+ "subject": {
+  "name": "Tomasz K., 41 lat (osoba fikcyjna)",
+  "age": 41,
+  "category": "paraglider",
+  "note": "Pilot paralotni z fikcyjnego klubu 'Beskidzkie Skrzydła' (scenariusz fikcyjny), 6 lat latania, skrzydło klasy EN-B czerwono-żółte, kask, uprząż z zapasem. Start ze startowiska na Skrzycznem ok. 13:30, termika wzdłuż grzbietu na Małe Skrzyczne i Kopę Skrzyczeńską. Live tracking w aplikacji klubowej: ostatni punkt 14:12 nad grzbietem Małego Skrzycznego, ok. 1580 m n.p.m., potem cisza. Ok. 14:10 przeszedł front z zachodu (szkwał, wiatr WSW 10-14 m/s, rotor po zawietrznej). Nie wylądował na lądowisku w Szczyrku, telefon nie odpowiada. Klub i żona dzwonią na 112 o 16:00.",
+  "lastContact": "14:12"
+ },
+ "bbox": {
+  "south": 49.65,
+  "west": 18.995,
+  "north": 49.704,
+  "east": 19.0785
+ },
+ "cellM": 100,
+ "ipp": {
+  "name": "IPP: ostatni punkt live-trackingu 14:12 nad grzbietem Małego Skrzycznego (ok. 1580 m n.p.m.)",
+  "at": [
+   49.672,
+   19.0095
+  ]
+ },
+ "terrain": {
+  "trails": [],
+  "streams": [],
+  "ridges": [],
+  "lakes": [],
+  "huts": []
+ },
+ "segments": [
+  {
+   "id": "B1",
+   "name": "Szczyrk - Żylica",
+   "seed": [
+    49.69725,
+    19.00335
+   ]
+  },
+  {
+   "id": "B2",
+   "name": "Jaworzyna - stok płn.",
+   "seed": [
+    49.69725,
+    19.02005
+   ]
+  },
+  {
+   "id": "B3",
+   "name": "Przełęcz Becyrek",
+   "seed": [
+    49.69725,
+    19.03675
+   ]
+  },
+  {
+   "id": "B4",
+   "name": "Kalonka - górna",
+   "seed": [
+    49.69725,
+    19.05345
+   ]
+  },
+  {
+   "id": "B5",
+   "name": "Lipowa - Kalonka",
+   "seed": [
+    49.69725,
+    19.07015
+   ]
+  },
+  {
+   "id": "B6",
+   "name": "Szczyrk - Gondola",
+   "seed": [
+    49.68375,
+    19.00335
+   ]
+  },
+  {
+   "id": "B7",
+   "name": "Skrzyczne - stok zach.",
+   "seed": [
+    49.68375,
+    19.02005
+   ]
+  },
+  {
+   "id": "B8",
+   "name": "Skrzyczne - szczyt i schronisko",
+   "seed": [
+    49.68375,
+    19.03675
+   ]
+  },
+  {
+   "id": "B9",
+   "name": "Skrzyczne - stok wsch. nad Kalonką",
+   "seed": [
+    49.68375,
+    19.05345
+   ]
+  },
+  {
+   "id": "B10",
+   "name": "Kalonka - dolina",
+   "seed": [
+    49.68375,
+    19.07015
+   ]
+  },
+  {
+   "id": "B11",
+   "name": "Małe Skrzyczne - grzbiet",
+   "seed": [
+    49.67025,
+    19.00335
+   ]
+  },
+  {
+   "id": "B12",
+   "name": "Małe Skrzyczne - stok wsch.",
+   "seed": [
+    49.67025,
+    19.02005
+   ]
+  },
+  {
+   "id": "B13",
+   "name": "Grzbiet nad Ostrem - szlak niebieski",
+   "seed": [
+    49.67025,
+    19.03675
+   ]
+  },
+  {
+   "id": "B14",
+   "name": "Kalna - górna",
+   "seed": [
+    49.67025,
+    19.05345
+   ]
+  },
+  {
+   "id": "B15",
+   "name": "Ostre - Kalna",
+   "seed": [
+    49.67025,
+    19.07015
+   ]
+  },
+  {
+   "id": "B16",
+   "name": "Malinowska Skała",
+   "seed": [
+    49.65675,
+    19.00335
+   ]
+  },
+  {
+   "id": "B17",
+   "name": "Malinowski Potok - górny",
+   "seed": [
+    49.65675,
+    19.02005
+   ]
+  },
+  {
+   "id": "B18",
+   "name": "Malinowski Potok - środek",
+   "seed": [
+    49.65675,
+    19.03675
+   ]
+  },
+  {
+   "id": "B19",
+   "name": "Dolina Zimnika",
+   "seed": [
+    49.65675,
+    19.05345
+   ]
+  },
+  {
+   "id": "B20",
+   "name": "Ostre - Leśnianka",
+   "seed": [
+    49.65675,
+    19.07015
+   ]
+  }
+ ],
+ "resources": [
+  {
+   "id": "gopr-skrzyczne",
+   "name": "GOPR Grupa Beskidzka - patrol A (stacja Skrzyczne)",
+   "type": "ground",
+   "base": [
+    49.68443,
+    19.03203
+   ],
+   "readyAt": "16:10"
+  },
+  {
+   "id": "heli-lpr",
+   "name": "Śmigłowiec LPR (Kraków)",
+   "type": "heli",
+   "base": [
+    50.0777,
+    19.7848
+   ],
+   "readyAt": "16:30"
+  },
+  {
+   "id": "pol-lipowa",
+   "name": "Patrol Policji (KPP Żywiec, Lipowa)",
+   "type": "ground",
+   "base": [
+    49.6789,
+    19.079
+   ],
+   "readyAt": "16:30"
+  },
+  {
+   "id": "gopr-szczyrk",
+   "name": "GOPR Grupa Beskidzka - patrol B (Centralna Stacja Szczyrk)",
+   "type": "ground",
+   "base": [
+    49.7155,
+    19.028
+   ],
+   "readyAt": "16:35"
+  },
+  {
+   "id": "psp-lipowa",
+   "name": "PSP JRG Żywiec + OSP Lipowa",
+   "type": "ground",
+   "base": [
+    49.66652,
+    19.07564
+   ],
+   "readyAt": "16:40"
+  },
+  {
+   "id": "dron-gopr",
+   "name": "Dron termowizyjny GOPR Grupy Beskidzkiej",
+   "type": "drone",
+   "base": [
+    49.68443,
+    19.03203
+   ],
+   "readyAt": "16:45"
+  },
+  {
+   "id": "pies-gopr",
+   "name": "GOPR - przewodnik z psem tropiącym",
+   "type": "dog",
+   "base": [
+    49.7155,
+    19.028
+   ],
+   "readyAt": "17:20"
+  }
+ ],
+ "props": [
+  {
+   "kind": "paraglider",
+   "at": [
+    49.6788,
+    19.0458
+   ],
+   "heading": 70,
+   "from": "16:55",
+   "label": "Skrzydło w koronach świerków (LPR 16:55)"
+  }
+ ],
+ "truth": {
+  "name": "Miejsce odnalezienia (fikcyjne, tylko do backtestu): żleb potoku pod wschodnim stokiem Skrzycznego, ok. 650 m poniżej skrzydła",
+  "at": [
+   49.67955,
+   19.0545
+  ]
+ },
+ "events": [
+  {
+   "provider": "Terrain",
+   "at": "16:00",
+   "title": "Teren: szlaki, potoki, las regla dolnego na stokach Skrzycznego",
+   "detail": "OSM. Pilot po lądowaniu w lesie zwykle schodzi w dół, do potoku albo do najbliższej drogi.",
+   "factor": 1
+  },
+  {
+   "provider": "Terrain",
+   "at": "16:00",
+   "title": "Teren: koszt (strome stoki poza szlakiem)",
+   "detail": "Stromizny z DEM poza szlakiem: kontuzjowany pilot rzadko idzie pod górę.",
+   "factor": 0
+  },
+  {
+   "provider": "TerrainDifficulty",
+   "at": "16:00",
+   "title": "Trudność terenu: szlak / polana / stromy las",
+   "detail": "Klasy z nachylenia DEM. Wschodnie stoki Skrzycznego strome, gęsty świerk: dron i śmigłowiec słabo widzą pod koronami."
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "16:00",
+   "title": "Warunki: po przejściu frontu, przelotny deszcz, wiatr W 9 m/s (porywy 14), +13°C",
+   "detail": "IMGW: front przeszedł ok. 14:10 (szkwał). Podstawa chmur 1100 m - Skrzyczne we mgle. Kolejna linia opadów ok. 17:10.",
+   "visibilityM": 3000,
+   "windMs": 9,
+   "windFromDeg": 250,
+   "tempC": 13,
+   "precip": "rain",
+   "dark": false,
+   "ice": false
+  },
+  {
+   "provider": "KoesterRings",
+   "at": "16:00",
+   "title": "Pierścienie od ostatniego punktu trackingu (paralotniarz, przybliżone)",
+   "detail": "Brak tabel ISRID dla paralotniarzy: przybliżenie 25% 0.6 km, 50% 1.5, 75% 3.0, 95% 6.0 od ostatniego punktu 14:12.",
+   "point": [
+    49.672,
+    19.0095
+   ],
+   "quantilesKm": [
+    0.6,
+    1.5,
+    3.0,
+    6.0
+   ]
+  },
+  {
+   "provider": "TripPlan",
+   "at": "16:10",
+   "title": "Korytarz dryfu z wiatrem: ostatni punkt 14:12 + wiatr WSW 250°, 10-14 m/s",
+   "detail": "Klub: o 14:12 pilot był ok. 400 m nad grzbietem, szkwał z zachodu. Z wysokości ok. 1580 m skrzydło (albo zapas) niesie z wiatrem na wschód-północny wschód, za grzbiet, na zawietrzne stoki Skrzycznego nad Kalonką. Korytarz 4.5 km z wiatrem, bufor 500 m.",
+   "points": [
+    [
+     49.672,
+     19.0095
+    ],
+    [
+     49.67507,
+     19.02254
+    ],
+    [
+     49.67814,
+     19.03559
+    ],
+    [
+     49.68122,
+     19.04863
+    ],
+    [
+     49.68583,
+     19.0682
+    ]
+   ],
+   "radiusM": 500
+  },
+  {
+   "provider": "Clue",
+   "at": "16:15",
+   "title": "Radio klubowe: 14:14 'zwijka w rotorze, rzucam zapas' (słabo, z wysokości)",
+   "detail": "Kolega z lądowiska w Szczyrku słyszał pilota na częstotliwości klubowej o 14:14. Bez pozycji: tylko tyle, że był już za grzbietem, po stronie wschodniej. Szeroki sektor.",
+   "point": [
+    49.67599,
+    19.02646
+   ],
+   "radiusM": 1200,
+   "seenAt": "14:14"
+  },
+  {
+   "provider": "Cell112Fix",
+   "at": "16:25",
+   "title": "CPR Katowice: telefon pilota ostatnio w sektorze BTS Lipowa (zachodni)",
+   "detail": "Ostatnie logowanie 14:31, sektor anteny w stronę Skrzycznego. Zgrubnie, promień 1.5 km. Od 14:31 telefon poza zasięgiem albo wyłączony.",
+   "point": [
+    49.6815,
+    19.052
+   ],
+   "radiusM": 1500,
+   "seenAt": "14:31"
+  },
+  {
+   "provider": "Clue",
+   "at": "16:40",
+   "title": "Świadek (meldunek): czasza schodząca do lasu nad Kalonką ok. 14:20",
+   "detail": "Meldunek: pracownik leśny z Ostrego, Jan M. (osoba fikcyjna), po komunikacie Policji: 'ok. 14:20 widziałem kolorową czaszę, schodziła szybko w las na wschodnim stoku Skrzycznego, na zachód ode mnie, nad doliną Kalonki'. Kierunek z jego pozycji, odległość szacowana.",
+   "point": [
+    49.68,
+    19.048
+   ],
+   "radiusM": 500,
+   "seenAt": "14:20",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "16:50",
+   "title": "GOPR patrol A: grzbiet Małego Skrzycznego pod ostatnim punktem, nic",
+   "detail": "Patrol ze stacji na Skrzycznem przeszedł grzbiet i polany pod punktem z 14:12, we mgle. POD 50%.",
+   "segments": [
+    "B11",
+    "B12"
+   ],
+   "pod": 0.5,
+   "resource": "gopr-skrzyczne"
+  },
+  {
+   "provider": "Clue",
+   "at": "16:55",
+   "title": "LPR: czerwono-żółte skrzydło w koronach świerków, pilota nie widać",
+   "detail": "Śmigłowiec LPR z Krakowa przeleciał pod podstawą chmur wzdłuż korytarza dryfu. Skrzydło zawieszone w koronach na wschodnim stoku Skrzycznego, uprząż pusta albo niewidoczna pod drzewami. Zawis niemożliwy (porywy).",
+   "point": [
+    49.6788,
+    19.0458
+   ],
+   "radiusM": 60,
+   "seenAt": "16:55",
+   "clueKind": "trace"
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "17:10",
+   "title": "Druga linia opadów: ulewa, widzialność 400 m, wiatr 13 m/s",
+   "detail": "Śmigłowiec wraca do bazy, dron uziemiony. Tylko zespoły naziemne.",
+   "visibilityM": 400,
+   "windMs": 13,
+   "windFromDeg": 260,
+   "precip": "rain"
+  },
+  {
+   "provider": "SegmentSearched",
+   "at": "17:30",
+   "title": "Policja + PSP: drogi w dolinach Kalonki i Kalnej, nic",
+   "detail": "Patrol Policji i OSP Lipowa przejechały i przeszły drogi leśne w dolinach, pytali mieszkańców. Nikt nie schodził do wsi. POD 40%.",
+   "segments": [
+    "B10",
+    "B15"
+   ],
+   "pod": 0.4,
+   "resource": "psp-lipowa"
+  },
+  {
+   "provider": "WeatherConditions",
+   "at": "17:40",
+   "title": "Opad słabnie: wiatr 6 m/s, widzialność 2500 m, +11°C",
+   "detail": "Dron może startować. Pilot mokry od ok. 3 h: rośnie ryzyko wychłodzenia.",
+   "visibilityM": 2500,
+   "windMs": 6,
+   "tempC": 11,
+   "precip": "rain"
+  },
+  {
+   "provider": "Clue",
+   "at": "17:55",
+   "title": "GOPR patrol B: znalezisko - kask pilota przy żlebie, 400 m poniżej skrzydła",
+   "detail": "Patrol B doszedł do skrzydła: uprząż odpięta, zapas wyrzucony, pilota brak. Kask leżał niżej, na krawędzi żlebu potoku. Kierunek: w dół, do potoku.",
+   "point": [
+    49.6784,
+    19.0497
+   ],
+   "radiusM": 80,
+   "clueKind": "trace"
+  },
+  {
+   "provider": "Clue",
+   "at": "18:10",
+   "title": "Dron: sygnatura cieplna przy potoku, ok. 650 m poniżej skrzydła",
+   "detail": "Termowizja w przecince nad potokiem: nieruchoma sylwetka przy korycie. Pies GOPR jednocześnie prowadzi od kasku w dół żlebem.",
+   "point": [
+    49.6797,
+    19.0541
+   ],
+   "radiusM": 80,
+   "seenAt": "18:10",
+   "clueKind": "sighting"
+  },
+  {
+   "provider": "Found",
+   "at": "18:30",
+   "title": "ZNALEZIONO: patrol B GOPR z psem w żlebie potoku pod wschodnim stokiem Skrzycznego",
+   "detail": "Pilot przytomny, złamanie podudzia i wychłodzenie, zsunął się do koryta potoku. Ewakuacja noszami do drogi w dolinie Kalonki. Meldunek radiowy, nie GPS.",
+   "point": [
+    49.67955,
+    19.0545
+   ],
+   "radiusM": 30,
+   "resource": "gopr-szczyrk"
+  }
+ ]
+}

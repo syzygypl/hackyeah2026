@@ -310,5 +310,18 @@
     49.2625
    ]
   ]
+ },
+ "paralotniarz-beskidy": {
+  "file": "hillshade/paralotniarz-beskidy.png",
+  "bounds": [
+   [
+    18.97416666666666,
+    49.63638888888889
+   ],
+   [
+    19.09944444444444,
+    49.7175
+   ]
+  ]
  }
 }

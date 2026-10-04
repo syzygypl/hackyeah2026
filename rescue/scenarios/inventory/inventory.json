@@ -6932,6 +6932,458 @@
     }
    },
    "fictional": true
+  },
+  {
+   "id": "dron-gopr",
+   "kind": "dron",
+   "name": "Dron termowizyjny GOPR Grupy Beskidzkiej",
+   "base": "baza wg scenariusza",
+   "model": "quadrokopter klasy Matrice 30T z kamerą termowizyjną (fikcyjny egz.)",
+   "callsign": "DRON-897",
+   "equipment": {
+    "spareBatteries": 4,
+    "flightMinPerBattery": 35,
+    "hoursTotal": 131.9,
+    "maintenanceEveryH": 50,
+    "hoursAtLastMaintenance": 100.8,
+    "lastMaintenance": "2026-09-02"
+   },
+   "spares": [
+    {
+     "item": "akumulator TB30",
+     "qty": 4
+    },
+    {
+     "item": "śmigła (kpl.)",
+     "qty": 2
+    },
+    {
+     "item": "stacja ładowania BS30",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-19",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    },
+    {
+     "date": "2026-09-04",
+     "type": "baterie",
+     "note": "wymiana 2 akumulatorów po 150 cyklach"
+    }
+   ],
+   "crew": [
+    {
+     "name": "DRON-GOPR-1 (fikcyjny)",
+     "role": "operator drona"
+    },
+    {
+     "name": "DRON-GOPR-2 (fikcyjny)",
+     "role": "obserwator"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "Dron termowizyjny GOPR Grupy Beskidzkiej",
+     "readyAt": "16:45",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "DRON-GOPR-1 (fikcyjny)",
+       "role": "operator drona (GOPR)"
+      },
+      {
+       "name": "DRON-GOPR-2 (fikcyjny)",
+       "role": "obserwator (GOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "gopr-skrzyczne",
+   "kind": "pieszy",
+   "name": "GOPR Grupa Beskidzka - patrol A (stacja Skrzyczne)",
+   "base": "stacja Skrzyczne",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-437",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-14",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-SKRZYCZNE-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-SKRZYCZNE-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SKRZYCZNE-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SKRZYCZNE-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "GOPR Grupa Beskidzka - patrol A (stacja Skrzyczne)",
+     "readyAt": "16:10",
+     "base": "stacja Skrzyczne",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-SKRZYCZNE-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-SKRZYCZNE-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SKRZYCZNE-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SKRZYCZNE-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "gopr-szczyrk",
+   "kind": "pieszy",
+   "name": "GOPR Grupa Beskidzka - patrol B (Centralna Stacja Szczyrk)",
+   "base": "Centralna Stacja Szczyrk",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "GOPR-445",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-26",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "GOPR-SZCZYRK-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "GOPR-SZCZYRK-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SZCZYRK-3 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "GOPR-SZCZYRK-4 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "GOPR Grupa Beskidzka - patrol B (Centralna Stacja Szczyrk)",
+     "readyAt": "16:35",
+     "base": "Centralna Stacja Szczyrk",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "GOPR-SZCZYRK-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "GOPR-SZCZYRK-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SZCZYRK-3 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "GOPR-SZCZYRK-4 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "heli-lpr",
+   "kind": "smiglowiec",
+   "name": "Śmigłowiec LPR (Kraków)",
+   "base": "Kraków",
+   "model": "śmigłowiec ratowniczy (fikcyjny egz.)",
+   "callsign": "HELI-505",
+   "equipment": {
+    "enduranceMin": 150,
+    "hoursTotal": 3424.8,
+    "maintenanceEveryH": 100,
+    "hoursAtLastMaintenance": 3354.5,
+    "lastMaintenance": "2026-09-11"
+   },
+   "spares": [
+    {
+     "item": "nosze / kosz ratowniczy",
+     "qty": 1
+    },
+    {
+     "item": "lina wyciągarki (zapas)",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-20",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "HELI-LPR-1 (fikcyjny)",
+     "role": "pilot dowódca"
+    },
+    {
+     "name": "HELI-LPR-2 (fikcyjny)",
+     "role": "drugi pilot / operator wyciągarki"
+    },
+    {
+     "name": "HELI-LPR-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "Śmigłowiec LPR (Kraków)",
+     "readyAt": "16:30",
+     "base": "Kraków",
+     "operator": "LPR",
+     "crew": [
+      {
+       "name": "HELI-LPR-1 (fikcyjny)",
+       "role": "pilot dowódca (LPR)"
+      },
+      {
+       "name": "HELI-LPR-2 (fikcyjny)",
+       "role": "drugi pilot / operator wyciągarki (LPR)"
+      },
+      {
+       "name": "HELI-LPR-3 (fikcyjny)",
+       "role": "ratownik (LPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pies-gopr",
+   "kind": "pies",
+   "name": "GOPR - przewodnik z psem tropiącym",
+   "base": "baza wg scenariusza",
+   "model": "zespół z psem ratowniczym (fikcyjny)",
+   "callsign": "PIES-906",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "woda dla psa (l)",
+     "qty": 3
+    },
+    {
+     "item": "kamizelka chłodząca",
+     "qty": 1
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-18",
+     "type": "weterynarz",
+     "note": "badanie okresowe psa"
+    }
+   ],
+   "dog": {
+    "name": "Saba (fikcyjny)",
+    "breed": "owczarek belgijski",
+    "certified": "2025-05"
+   },
+   "crew": [
+    {
+     "name": "PIES-GOPR-1 (fikcyjny)",
+     "role": "przewodnik psa"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "GOPR - przewodnik z psem tropiącym",
+     "readyAt": "17:20",
+     "base": "baza wg scenariusza",
+     "operator": "GOPR",
+     "crew": [
+      {
+       "name": "PIES-GOPR-1 (fikcyjny)",
+       "role": "przewodnik psa (GOPR)"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "pol-lipowa",
+   "kind": "pieszy",
+   "name": "Patrol Policji (KPP Żywiec, Lipowa)",
+   "base": "KPP Żywiec, Lipowa",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "POL-681",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-28",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "POL-LIPOWA-1 (fikcyjny)",
+     "role": "dowódca patrolu (Policja)"
+    },
+    {
+     "name": "POL-LIPOWA-2 (fikcyjny)",
+     "role": "policjant"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "Patrol Policji (KPP Żywiec, Lipowa)",
+     "readyAt": "16:30",
+     "base": "KPP Żywiec, Lipowa",
+     "operator": "Policja",
+     "crew": [
+      {
+       "name": "POL-LIPOWA-1 (fikcyjny)",
+       "role": "dowódca patrolu (Policja)"
+      },
+      {
+       "name": "POL-LIPOWA-2 (fikcyjny)",
+       "role": "policjant"
+      }
+     ]
+    }
+   },
+   "fictional": true
+  },
+  {
+   "id": "psp-lipowa",
+   "kind": "pieszy",
+   "name": "PSP JRG Żywiec + OSP Lipowa",
+   "base": "baza wg scenariusza",
+   "model": "patrol pieszy (fikcyjny)",
+   "callsign": "PSP-612",
+   "equipment": {},
+   "spares": [
+    {
+     "item": "akumulator radiotelefonu",
+     "qty": 2
+    },
+    {
+     "item": "baterie do czołówek (kpl.)",
+     "qty": 4
+    }
+   ],
+   "maintenanceLog": [
+    {
+     "date": "2026-09-27",
+     "type": "przegląd",
+     "note": "przegląd okresowy (fikcyjny)"
+    }
+   ],
+   "crew": [
+    {
+     "name": "PSP-LIPOWA-1 (fikcyjny)",
+     "role": "kierownik patrolu"
+    },
+    {
+     "name": "PSP-LIPOWA-2 (fikcyjny)",
+     "role": "ratownik"
+    },
+    {
+     "name": "PSP-LIPOWA-3 (fikcyjny)",
+     "role": "ratownik"
+    }
+   ],
+   "byHome": {
+    "paralotniarz-beskidy": {
+     "name": "PSP JRG Żywiec + OSP Lipowa",
+     "readyAt": "16:40",
+     "base": "baza wg scenariusza",
+     "operator": "PSP",
+     "crew": [
+      {
+       "name": "PSP-LIPOWA-1 (fikcyjny)",
+       "role": "kierownik patrolu"
+      },
+      {
+       "name": "PSP-LIPOWA-2 (fikcyjny)",
+       "role": "ratownik"
+      },
+      {
+       "name": "PSP-LIPOWA-3 (fikcyjny)",
+       "role": "ratownik"
+      }
+     ]
+    }
+   },
+   "fictional": true
   }
  ]
 }

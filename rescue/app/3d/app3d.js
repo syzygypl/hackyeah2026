@@ -34,7 +34,7 @@ const SCENS = {
 };
 // Regions outside the Tatras: any scenario with tools/terrain/data/<sc>-dem.json opens on its own (narrow) DEM, without
 // the wide backdrop or aerial photo. Blind tests only through their SCENS entries.
-const REGIONS = { 'bieszczady-wetlinska': 'Bieszczady - Połonina Wetlińska', 'karkonosze-sniezka': 'Karkonosze - Śnieżka', sniardwy: 'Śniardwy', morzycko: 'Morzycko', miedzyzdroje: 'Międzyzdroje (Bałtyk)', 'kajak-pieniny': 'Pieniny - Przełom Dunajca', 'lawina-wolowiec': 'Tatry Zachodnie - lawina pod Wołowcem', 'pozar-biebrza': 'Biebrza - Czerwone Bagno' };
+const REGIONS = { 'bieszczady-wetlinska': 'Bieszczady - Połonina Wetlińska', 'karkonosze-sniezka': 'Karkonosze - Śnieżka', sniardwy: 'Śniardwy', morzycko: 'Morzycko', miedzyzdroje: 'Międzyzdroje (Bałtyk)', 'kajak-pieniny': 'Pieniny - Przełom Dunajca', 'lawina-wolowiec': 'Tatry Zachodnie - lawina pod Wołowcem', 'pozar-biebrza': 'Biebrza - Czerwone Bagno', 'paralotniarz-beskidy': 'Beskid Śląski - Skrzyczne' };
 const addScen = (id) => { if (!SCENS[id] && /^[a-z0-9-]{1,40}$/.test(id) && !/blind/.test(id)) SCENS[id] = { name: REGIONS[id] || id, run: `../../out/${id}.run.json`, region: true, ortho: `data/${id}-ortho.jpg`, demWide: `data/${id}-dem-wide.json` }; };
 SCENS['blind-01-replay'] = SCENS['blind-01']; // the shell's id for the round 1 replay
 if (Q.get('sc')) addScen(Q.get('sc'));

@@ -32,6 +32,7 @@ export const REGIONS = {
   poprad:     { file: "poprad.pmtiles",     bounds: [[20.60, 49.42], [20.78, 49.53]], label: "Dolina Popradu (Rytro - Piwniczna, linia 96)" },
   notecka:    { file: "notecka.pmtiles",    bounds: [[15.98, 52.68], [16.18, 52.77]], label: "Puszcza Notecka (Kobusz, Smolarnia)" },
   biebrza:    { file: "biebrza.pmtiles",    bounds: [[22.68, 53.575], [22.87, 53.685]], label: "Biebrza - Czerwone Bagno (Grzędy)" },
+  skrzyczne:  { file: "skrzyczne.pmtiles",  bounds: [[18.975, 49.63], [19.0985, 49.724]], label: "Beskid Śląski - Skrzyczne" },
 };
 // Pick the region whose bounds contain a scenario bbox ({west,south,east,north}); null if none.
 export function regionFor(bb) {
