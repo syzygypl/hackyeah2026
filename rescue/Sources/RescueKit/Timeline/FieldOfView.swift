@@ -152,7 +152,7 @@ public struct FieldOfView {
             let rad = ang * .pi / 180
             func pt(_ m: Double) -> Coord { Coord(p.lat + m * cos(rad) / Geo.mPerDegLat, p.lon + m * sin(rad) / kx) }
             var re = base
-            if let bd = band(f, env: env), inCone(f, env: env, bearing: ang, d: 0) { re = max(re, bd.rangeM) }
+            if let bd = band(f, env: env), inCone(f, env: env, bearing: ang, d: 0) { re = max(re, env.windFromDeg == nil ? (f.windCone.first?.rangeM ?? bd.rangeM) : bd.rangeM) }   // unknown wind direction: calm-band circle
             var m = re
             if f.los && re > Self.stepM {
                 var s = Self.stepM * 2

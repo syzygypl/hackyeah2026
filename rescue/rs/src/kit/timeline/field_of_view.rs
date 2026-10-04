@@ -262,7 +262,8 @@ impl FieldOfView {
             let mut re = base;
             if let Some(bd) = self.band(f, env) {
                 if self.in_cone(f, env, ang, 0.0) {
-                    re = re.max(bd.range_m);
+                    // unknown wind direction: the calm-band circle (as in_cone), not the full upwind range
+                    re = re.max(if env.wind_from_deg.is_none() { f.wind_cone.first().map(|c| c.range_m).unwrap_or(bd.range_m) } else { bd.range_m });
                 }
             }
             let mut m = re;
