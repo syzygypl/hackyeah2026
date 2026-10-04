@@ -55,6 +55,19 @@ Aktualizacja jest dokładnie P(i | nic) ∝ P(i)·(1 - POD_i). Nie ma podwójneg
 
 AI Andrzeja przejrzał część 1 niezależnie (tylko odczyt) i potwierdza: Rust i Swift mają te same wzory linia w linię; puste przeszukanie to dokładna aktualizacja bayesowska; "% obszaru" to udział powierzchni, nie prawdopodobieństwo. Zgadza się to z tabelą wyżej (Bayes 0,3 / 0,2 / 0,25 / 0,25, Σ POA = 1) i z punktem 3 (`areaPct` = udział komórek, różnica geodezyjna <= 0,004 pp).
 
+Szczegóły od AI Andrzeja, zgodne z tym audytem: POA = iloczyn warstw normalizowany po wszystkich komórkach prostokąta (`probability_grid.rs:443-460`, Swift `ProbabilityGrid.swift:225-238`), segmenty Voronoi (`:191`), `areaPct` = udział komórek (`run_json.rs:117`); prior Koestera 25/25/25/20 na kwantylach 1,1 / 3,0 / 5,8 / 11,5 km (`koester_rings_provider.rs:24`), poza pierścieniem 95% gęstość nominalna 0,05/(3·π·r95²) (`probability_grid.rs:246-263`); teren 1 + 2,5e^(-dSzlak/120) + 1,5e^(-dPotok/120) + 1,0e^(-dSchronisko/150), jeziora x0,15 (`:287-296`); waga wskazówki = źródło x typ x 0,5^(wiek/półokres) x potwierdzenie (`clue_weights.rs:418-494`), jako warstwa^waga przy wadze < 0,9995 (`probability_grid.rs:430-439`); puste przeszukanie x(1 - POD) i normalizacja (`:400-404`), domyślnie SegmentSearched 0,7, DronePassEmpty 0,6; `parity.py`: 103/105 dokumentów bajt w bajt. Jego zastrzeżenie, że bezwzględne POA zależy od wielkości prostokąta, to ta sama sprawa co punkt H niżej (tylko 53% masy Koestera w prostokącie zawrat).
+
+Rozbieżność do rozstrzygnięcia: AI Andrzeja pisze "UI nigdy nie pokazuje POA jako szansy". Ten audyt (punkt G) znalazł miejsca, gdzie POA lub POA x POD jest pokazane jako % albo "szansa":
+
+| miejsce | gdzie zobaczyć | kod |
+|---|---|---|
+| powód przydziału "POA 10%, POD 42% (szlak, noc), ..." | `/app`, panel zespołu, Szczegóły (zawrat, Na żywo 19:45, śmigłowiec -> S7) | `search_planner.rs:820-829`, Swift `SearchPlanner.swift:418`, wyświetla `app/app.js:248` |
+| kolumna "POA" w tabeli segmentów, "top 3 = 46% w 7% obszaru" | `/web/?sc=zawrat&standalone=1` | `web/index.html:73`, `web/app.js:987, 994` |
+| "szansa znalezienia" = POA x POD przy przydziale, "szansa znalezienia dotąd", "szansa znalezienia w 2 h" | `/web/?sc=zawrat&standalone=1`, panele Przydział / Przebieg akcji / Wartość | `web/app.js:1009, 1045, 1050, 1067` |
+| dymek komórki "N% POA komórki" | mapa 2D, także osadzona w `/app` | `web/app.js:1322` |
+
+Obie strony mogą mieć rację co do głównego ekranu: panele `/app`, Centrum, Odprawa i Czat pokazują ranking i "% obszaru", nie POA (`app/app.js:231` komentarz "no POA % on screen"). Wyjątkami są tekst powodu z silnika, 2D standalone i dymek komórki.
+
 ### K. Wagi wskazówek: skrypt vs na żywo (mylące, za AI Andrzeja)
 
 Zastrzeżenie AI Andrzeja: wskazówki ze scenariusza (skrypt, nagranie) wchodzą z pełną wagą 1, chyba że scenariusz ma `features: clueWeights` albo `applyToScripted: true`; wskazówki na żywo są ważone źródłem (operator 1,0, ratownik 0,9, GPS 0,95, BTS 0,8, świadek 0,6, pies 0,5, obywatel niezweryfikowany 0,3), dokładnością i świeżością. Kod: `clue_weights.rs:493` (`applied = override || live || force_all`), Swift `ClueWeights.swift`. Przykład z zawrat: sektor BTS ma wyliczoną wagę 0,083 (źródło 0,8 x dokładność 0,4 x świeżość 0,26), a w mapie działa z wagą 1 (`applied: false`, dopisek "waga informacyjna, mapa bez zmian"). Ten sam meldunek wpisany na żywo przesunąłby mapę dużo słabiej niż w nagraniu, więc Historia i Na żywo nie są porównywalne 1:1. Poprawka (silnik, AI Andrzeja): albo włączyć wagi dla skryptów w scenariuszach demo (`applyToScripted`), albo w UI przy wskazówce nagranej pokazywać "waga 1 (nagranie), na żywo byłoby 0,08".
