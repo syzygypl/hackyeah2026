@@ -571,7 +571,7 @@ function tlBuild() {
   const rows = its.map((it) => {
     const b = tlBase(it), to = b + (it.end ?? it.last), cls = it.endKind || "open";
     const tip = `${short(it.x)}: zgłoszenie ${it.date || ""} ${it.start}${it.lastContact ? ` (ostatni kontakt ${it.lastContact})` : ""}${it.end != null ? ` · ${TL_STATE[it.endKind]} po ${tlFmtDur(it.end)}` : " · trwa (brak końca w danych)"}`;
-    const mk = it.evs.map((e) => `<i class="tlk k-${e.k}" data-v="${b + e.m}" style="left:${pc(b + e.m)}${e.k !== "found" && EV_COL[e.kind] ? `;--c:var(${EV_COL[e.kind]})` : ""}" title="${esc(e.at + " · " + (e.k === "zespol" ? e.title : shortEv(e.title, e.k)))}"></i>`).join("");
+    const mk = it.evs.map((e) => `<i class="tlk k-${e.k}" data-v="${b + e.m}" data-sc="${esc(it.sc)}" data-at="${esc(e.at)}" data-tip="${esc(e.k === "zespol" ? e.title : shortEv(e.title, e.k))}" style="left:${pc(b + e.m)}${e.k !== "found" && EV_COL[e.kind] ? `;--c:var(${EV_COL[e.kind]})` : ""}"></i>`).join("");   // tooltip + click: #1 block below tlInit()
     if (tl.off.has(it.sc)) return `<div class="tlr off" data-sc="${esc(it.sc)}"><a class="tln" href="${openURL(it.sc)}" title="${esc(tip)}">${esc(short(it.x))}</a><div class="trk" title="${esc(tip)}"><span class="offd">inny dzień: ${esc(tlFmt(it.t0))}</span></div></div>`;
     return `<div class="tlr" data-sc="${esc(it.sc)}"><a class="tln" href="${openURL(it.sc)}" title="${esc(tip)}">${esc(short(it.x))}</a><div class="trk" title="${esc(tip)}">`
       + `<i class="tlb ${cls}" style="left:${pc(b)};width:${Math.max(0.4, P(to) - P(b)).toFixed(3)}%"></i>${it.end == null ? `<i class="tlt" style="left:${pc(to)};right:0"></i>` : ""}${mk}</div></div>`;
@@ -639,7 +639,7 @@ function tlInit() {
   let drag = false;
   body.addEventListener("pointerdown", (e) => {
     const trk = $("tlMini").querySelector(".trk"); if (!trk || e.button > 0 || e.target.closest("a,button")) return;
-    if (e.clientX < trk.getBoundingClientRect().left - 4) return;
+    if (e.clientX < trk.getBoundingClientRect().left - 4 || e.target.closest(".tlk[data-at]")) return;   // a marker opens Historia (#1 block)
     drag = true; tlStop(); try { body.setPointerCapture(e.pointerId); } catch (er) {} tlSet(vAt(e)); e.preventDefault();
   });
   body.addEventListener("pointermove", (e) => { if (drag) tlSet(vAt(e)); });
@@ -657,6 +657,35 @@ function tlInit() {
   ro.observe(el);
 }
 tlInit();
+// --- #1 (AI Mateusza #1, for #2's timeline): a marker or a row name opens the incident in Historia at that moment
+// (/app ?time=hist&t=HH:MM, app.js boot), markers get the dock-style tooltip "HH:MM · title". Phone: a tap opens.
+const histURL = (sc, clock) => PICK ? openURL(sc) : `./?role=operator&mode=akcja&time=hist&sc=${encodeURIComponent(sc)}${clock ? `&t=${encodeURIComponent(clock)}` : ""}`;
+function tlClockAt(it, v) {   // the scenario clock of timeline value v in this incident (clamped to its report .. end)
+  const s0 = toMin(it.start); if (s0 == null) return null;
+  const o = Math.max(0, Math.min(it.end ?? it.last, Math.round(v - tlBase(it)))), m = (s0 + o) % 1440;
+  return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60);
+}
+(() => {
+  const el = $("tl"); if (!el) return;
+  const tip = document.createElement("div"); tip.className = "tltip"; tip.hidden = true; document.body.appendChild(tip);
+  const hide = () => { tip.hidden = true; };
+  el.addEventListener("mouseover", (e) => {
+    const k = e.target.closest(".tlk[data-at]"); if (!k) return;
+    tip.innerHTML = `<div>${esc(k.dataset.at)} · ${esc(k.dataset.tip || "")}</div><div style="opacity:.75;font-weight:400">kliknij: Historia w tej chwili</div>`;
+    tip.hidden = false;
+    const r = k.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.max(6, Math.min(innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + "px";
+    tip.style.top = Math.max(6, r.top - h - 8) + "px";
+  });
+  el.addEventListener("mouseout", (e) => { if (e.target.closest(".tlk[data-at]")) hide(); });
+  el.addEventListener("click", (e) => {
+    const k = e.target.closest(".tlk[data-at]");
+    if (k) { e.preventDefault(); hide(); location.href = histURL(k.dataset.sc, k.dataset.at); return; }
+    const n = e.target.closest(".tlr .tln"), it = n && tl.by[n.closest(".tlr").dataset.sc];   // a name with the cursor set: Historia at the cursor
+    if (it && tl.cur != null && !tl.off.has(it.sc) && tlState(it, tl.cur) !== "pre") { e.preventDefault(); location.href = histURL(it.sc, tlClockAt(it, tl.cur)); }
+  });
+  addEventListener("scroll", hide, true);
+})();
 
 // ---------- pick mode (/app "Zmień scenariusz", see PICK at the top): compact list next to the same map. Plain list first (from
 // /api/scenarios, then /api/incidents); when /api/advisor answers, incidents linked by a hypothesis move to the top as one group

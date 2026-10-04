@@ -1238,6 +1238,7 @@ async function boot() {
     await loadScenario($("scen").value);
     setMode(m, q.get("view"));
     if (q.get("step") != null && Number.isFinite(+q.get("step"))) setStep(+q.get("step") + 1); // ?step= is 0-based, like the views
+    if (q.get("t") && tlDoc()) { const tm = tlMinOfClock(tlDoc(), q.get("t")); if (tm != null) setMinute(tm); }   // ?t=HH:MM (Centrum timeline, AI Mateusza #1): Historia at that clock
     initRescuer({ store, api, map, maplibregl, toast, curStep, selectSeg: (id, from) => selectSeg(id, from), onTeam: setRescuerFrame });
     try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
     let role = q.get("role"); if (!role) { try { role = localStorage.getItem("rescue-app-role"); } catch (e) {} }

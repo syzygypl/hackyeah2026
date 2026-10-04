@@ -294,3 +294,6 @@ body.pick .mk:focus-visible .dot{box-shadow:0 0 0 4px var(--rl-accent)}
   .pk{grid-template-columns:96px 40px 1fr auto;min-height:56px}
 }
 @media (max-width:420px){ .pk{grid-template-columns:auto 1fr;grid-template-rows:auto auto} .pk .pkt{justify-self:end} .pk .pkn{grid-column:1/-1} .pk .pkc{display:none} }
+/* #1 (AI Mateusza #1): timeline markers open Historia at that moment */
+#tl .tlr .tlk[data-at]{cursor:pointer}
+#tl .tlr .tlk[data-at]:hover{transform:scale(1.5)}
