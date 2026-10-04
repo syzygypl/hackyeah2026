@@ -1916,7 +1916,10 @@ function cineFpp(next) {
   if (!TL3D?.startFpp) return false;
   // rescue units only: the missing person's track is an estimate, "through their eyes" would read as knowing where they are
   const kindOf = (id) => (R.timeline?.actors || []).find((a) => a.id === id)?.kind;
-  const ids = (TL3D.frame?.actors || []).map((a) => a.id).filter((id) => id && kindOf(id) !== 'osoba');
+  // and only units inside the terrain model (inset 5%): the helicopter waits at its base outside it, its insert was fog and sky
+  const b = R.bbox, mLat = (b.north - b.south) * 0.05, mLon = (b.east - b.west) * 0.05;
+  const inside = (p) => !Array.isArray(p) || (p[0] > b.south + mLat && p[0] < b.north - mLat && p[1] > b.west + mLon && p[1] < b.east - mLon);
+  const ids = (TL3D.frame?.actors || []).filter((a) => a.id && kindOf(a.id) !== 'osoba' && inside(a.pos)).map((a) => a.id);
   const clock = R.steps[STEP]?.t || '';   // the shot just shown; startFpp can move STEP to the unit's first sample, the clock must not go back
   for (let k = 0; k < ids.length; k++) {
     const id = ids[(next + k) % ids.length];
