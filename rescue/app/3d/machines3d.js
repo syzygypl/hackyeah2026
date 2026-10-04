@@ -253,7 +253,8 @@ export function createDamagedTrack(THREE) {
 // ---------- scenario props: objects of the story (scenario "props", app3d places them; real size) ----------
 // createProp(THREE, p) -> { obj, tick?, float? (sits on the water surface), sink? (km below it) } or null for an unknown
 // kind. obj's local +x = p.heading; origin on the ground. Kinds: kayak-capsized, kayak-drifting, paddle, car-in-river,
-// car-damaged, car-parked, basket, elk, avalanche (size = length m), skis, burn (size = radius m), smoke, paraglider.
+// car-damaged, car-parked, basket, elk, avalanche (size = length m), skis, burn (size = radius m), smoke, paraglider,
+// gps-ping (a GPS collar's last fix: a pulsing ring of the fix accuracy, size = radius m), harness (a dog's harness on a fence).
 const KM = (m) => m / 1000;
 export function createProp(THREE, p) {
   const k = p.kind, obj = new THREE.Group(); obj.rotation.order = 'YXZ'; obj.name = 'prop-' + k;
@@ -286,6 +287,20 @@ export function createProp(THREE, p) {
     if (p.upsideDown) { obj.rotation.x = Math.PI; obj.rotation.z = 0.08; sink = KM(-0.9); } else { obj.rotation.z = -0.32; sink = KM(0.9); } // on its roof: wheels up, roof in the water
   } else if (k === 'car-parked') {
     car(p.color ? new THREE.Color(p.color).getHex() : 0xb9bec4);
+  } else if (k === 'gps-ping') { // last GPS fix of a collar: a ring of the fix accuracy on the ground and a beacon post, pulsing
+    const R = p.size || 20, on = new THREE.MeshBasicMaterial({ color: 0x00b4d8, toneMapped: false, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false });
+    const ring = add(new THREE.RingGeometry(KM(R * 0.85), KM(R), 48).rotateX(-Math.PI / 2), on, 0, KM(0.5));
+    add(new THREE.CylinderGeometry(KM(0.15), KM(0.15), KM(4), 6).translate(0, KM(2), 0), mat(0x2a2d31));
+    const dot = add(new THREE.SphereGeometry(KM(0.6), 10, 8), new THREE.MeshBasicMaterial({ color: 0x00b4d8, toneMapped: false }), 0, KM(4.3)); dot.userData.glow = ['#48cae4', 60];
+    tick = (dt) => { t += dt; const u = (t % 2) / 2; ring.scale.setScalar(0.4 + 0.6 * u); on.opacity = 0.85 * (1 - u * 0.7); };
+  } else if (k === 'harness') { // a grey dog harness hanging on a wire fence (two posts, wire, the harness)
+    const post = mat(0x6b5b45, { roughness: 0.9 }), wire = mat(0x9aa0a6, { metalness: 0.6, roughness: 0.4 });
+    for (const x of [-1.2, 1.2]) add(new THREE.BoxGeometry(KM(0.08), KM(1.3), KM(0.08)), post, KM(x), KM(0.65));
+    for (const y of [0.4, 0.8, 1.2]) add(new THREE.BoxGeometry(KM(2.4), KM(0.015), KM(0.015)), wire, 0, KM(y));
+    const h = new THREE.Group(); h.position.set(KM(0.2), KM(0.75), KM(0.05)); obj.add(h);
+    add(new THREE.TorusGeometry(KM(0.22), KM(0.035), 6, 16), mat(0x5c6168), 0, 0, 0, h);
+    add(new THREE.BoxGeometry(KM(0.06), KM(0.45), KM(0.05)), mat(0x5c6168), 0, KM(-0.3), 0, h);
+    add(new THREE.TorusGeometry(KM(0.15), KM(0.03), 6, 16), mat(0xc1121f), 0, KM(-0.55), 0, h);
   } else if (k === 'basket') { // a wicker basket of mushrooms, ~45 cm
     const wick = mat(0xa8763e, { roughness: 0.95 });
     add(new THREE.CylinderGeometry(KM(0.22), KM(0.17), KM(0.2), 10, 1, true), wick, 0, KM(0.1));

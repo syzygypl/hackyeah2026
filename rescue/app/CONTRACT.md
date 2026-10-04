@@ -591,6 +591,8 @@ Kinds (real size, placed on the rendered terrain; `float` kinds sit on the water
 | `car-damaged` | car with a crushed front, hazard lights (road shoulder) | - |
 | `car-parked` | parked car, e.g. the missing person's car at a car park (optional `"color": "#rrggbb"`) | - |
 | `basket` | wicker basket with mushrooms (a found item) | - |
+| `gps-ping` | a GPS collar's / tracker's last fix: pulsing ring of the fix accuracy + beacon post | radius m, default 20 |
+| `harness` | a dog's harness hanging on a wire fence (a found item) | - |
 | `elk` | dead elk (bull) lying on its side | - |
 | `avalanche` | `at` = release point; debris along `heading` (downhill): a white surface draped on the terrain, narrow track widening into the deposit fan, snow blocks on it | length m, default 300 |
 | `skis` | pair of skis and a pole stuck in the snow | - |
