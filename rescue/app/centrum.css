@@ -199,6 +199,8 @@ body.dragging .grp{border-color:var(--rl-line-strong)}
 #tl .tlmode button.on,#tl #tlLive.on{background:var(--rl-accent);border-color:var(--rl-accent);color:var(--rl-on-accent)}
 #tl #tlNow{flex:1;min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tl #tlMore{display:none}
+#tl .tlmode.one button{border-radius:var(--rl-radius-s);margin-left:0}   /* sens-funkcji #6: one visible axis button (Doba) */
+#tl #tlShow{font-size:var(--rl-fs-xs)}#tl #tlShow[aria-pressed=true]{background:var(--rl-warn);border-color:var(--rl-warn);color:var(--rl-ink)}
 #tlBody{position:relative;margin-top:4px;touch-action:pan-y;cursor:ew-resize;user-select:none;-webkit-user-select:none}
 #tlRows{max-height:0;overflow:hidden;transition:max-height .18s ease}
 #tl.peek #tlRows{max-height:min(46vh,520px);overflow-y:auto}

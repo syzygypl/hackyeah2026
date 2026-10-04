@@ -734,7 +734,20 @@ const PROV_KIND = { Found: "found", SegmentSearched: "searched", DronePassEmpty:
   Terrain: "terrain", TerrainDifficulty: "difficulty", KoesterRings: "rings", TripPlan: "route", WaterDrift: "route", TrailheadCar: "containment", Cell112Fix: "sector", RatunekPing: "fix", Clue: "clue" };
 const toMin = (c) => { const m = /^(\d{1,2}):(\d{2})/.exec(c || ""); return m ? +m[1] * 60 + +m[2] : null; };
 const TL_SPEEDS = [1, 2, 5, 10, 30, 60];
-const tl = { mode: null, auto: true, cur: null, speed: 1, play: 0, items: [], by: {}, off: new Set(), day: null, lo: 0, hi: 60, built: "" };
+const tl = { mode: null, auto: true, cur: null, speed: 1, play: 0, items: [], by: {}, off: new Set(), day: null, lo: 0, hi: 60, built: "", show: false };
+// sens-funkcji #6: a real dispatcher does not know the future. Default: two buttons, "Na żywo" + "Doba" (Grafik 24/7 with Symulacja on,
+// czas rzeczywisty with it off), and Doba ends at NOW (only what was reported so far). "Tryb pokazu" (button, ?demo=1, remembered)
+// brings back the whole day incl. not-yet-reported occurrences and the other axes (Dzień w Centrum = the demo layout, od zgłoszenia).
+try { tl.show = new URLSearchParams(location.search).get("demo") === "1" || localStorage.getItem("rescue-centrum-show") === "1"; } catch (e) {}
+function tlButtons() {
+  const el = $("tl"); if (!el) return;
+  let on = false; try { on = !!sim.on; } catch (e) {} const b = (m) => el.querySelector(`[data-mode="${m}"]`), set = (x, hid, txt) => { if (!x) return; if (x.hidden !== hid) x.hidden = hid; if (txt && x.textContent !== txt) x.textContent = txt; };
+  set(b("sim"), !on, tl.show ? "Grafik 24/7" : "Doba");
+  set(b("day"), !tl.show); set(b("rel"), !tl.show);
+  set(b("abs"), !tl.show && on, tl.show ? "czas rzeczywisty" : "Doba");
+  const g = el.querySelector(".tlmode"); if (g) g.classList.toggle("one", !tl.show);
+  const t = $("tlShow"); if (t) { t.setAttribute("aria-pressed", tl.show); t.classList.toggle("on", tl.show); }
+}
 try { const v = +localStorage.getItem("rescue-centrum-tl-speed"); if (TL_SPEEDS.includes(v)) tl.speed = v; } catch (e) {}
 // axis value of an incident's report: "abs" = real date + clock, "day" = its slot on the show day (tlDaySlots), "rel" = T0 for all.
 // Everything else (state at the cursor, #1's Historia clock tlClockAt) works on v - tlBase(it) = minutes since the REAL report.
@@ -818,8 +831,10 @@ function tlHyps() {   // Doradca hypotheses (GET /api/advisor), best first: thei
 function tlBuild() {
   let its = incidents.map(tlItem).filter(Boolean).sort((a, b) => a.t0 - b.t0 || a.sc.localeCompare(b.sc));
   tl.items = its; tl.by = Object.fromEntries(its.map((i) => [i.sc, i]));
-  if (tl.auto) tl.mode = simOn() ? "sim" : "day";   // default: Dzień w Centrum (Mateusz: bars spread like a busy day, not at T0 or across months); Symulacja 24/7 on: today's schedule
-  if (tl.mode === "sim" && !simOn()) tl.mode = "day";
+  if (tl.auto) tl.mode = simOn() ? "sim" : tl.show ? "day" : "abs";   // default: Symulacja 24/7 on: today's schedule; off: real time; Dzień w Centrum (bars spread like a busy day) only in Tryb pokazu (#6)
+  if (tl.mode === "sim" && !simOn()) tl.mode = tl.show ? "day" : "abs";
+  if (!tl.show && (tl.mode === "day" || tl.mode === "rel" || (tl.mode === "abs" && simOn()))) tl.mode = simOn() ? "sim" : "abs";
+  tlButtons();
   if (tl.mode === "sim") { tl.items = []; tl.by = {}; tl.off = new Set(); return simTlBuild(); }
   const hyps = PICK ? [] : tlHyps();
   tlDaySlots(its, hyps);
@@ -1007,6 +1022,7 @@ function tlInit() {
   $("tlPlay").onclick = tlPlay;
   $("tlSpeed").onclick = () => tlSpeed(1);
   $("tlLive").onclick = () => { tlStop(); tlSet(null); };
+  $("tlShow").onclick = () => { tl.show = !tl.show; try { localStorage.setItem("rescue-centrum-show", tl.show ? "1" : "0"); } catch (e) {} tl.auto = true; tlStop(); tl.cur = null; tl.built = ""; tlBuild(); tlApply(); };
   el.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => { if (tl.mode === b.dataset.mode) return; tl.auto = false; tl.mode = b.dataset.mode; tlStop(); tl.cur = null; tlBuild(); tlApply(); });
   // scrub: press / drag anywhere over the tracks column (the mini strip, the axis or the Gantt rows)
   const body = $("tlBody"), vAt = (e) => { const r = $("tlMini").querySelector(".trk").getBoundingClientRect(); return tl.lo + (tl.hi - tl.lo) * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); };
@@ -1299,7 +1315,7 @@ function simApply() {
   $("simTog").setAttribute("aria-pressed", sim.on); $("simTog").classList.toggle("on", sim.on);
   $("simBox").classList.toggle("on", sim.on); document.body.classList.toggle("sim", sim.on);
   const w = $("simBox").querySelector(".lfw"); if (w) w.hidden = !sim.on;
-  const b = $("tl").querySelector('[data-mode="sim"]'); if (b) b.hidden = !sim.on;
+  tlButtons();
   if (sim.on && tl.mode !== "sim") { tl.auto = true; tlStop(); tl.cur = null; }
   tl.built = ""; tlBuild(); tlApply();
   simTick();
@@ -1403,30 +1419,33 @@ function simFetch(sc, clk) {
 // timeline "Grafik 24/7": 0..1440 min of today, one row per scenario, a bar per occurrence (the one from yesterday that runs past
 // midnight starts at 0:00); bars red while running at the cursor, green after, faint before
 function simTlBuild() {
-  tl.lo = 0; tl.hi = 1440;
+  const nowMin = sim.lf.warsaw(sim.lf.nowMs()).min, H = tl.show ? 1440 : Math.min(1440, Math.max(60, Math.ceil(nowMin) + 1));   // #6: the day so far (to now)
+  tl.lo = 0; tl.hi = H;
   if (tl.cur != null) tl.cur = Math.min(tl.hi, Math.max(tl.lo, tl.cur));
   const byS = {};
   for (const e of sim.entries) { const s = toMin(e.start); if (s == null) continue; (byS[e.sc] ||= []).push([s, s + (e.durationMin || 30), e]); }
   const scs = Object.keys(byS).sort((a, b) => Math.min(...byS[a].map((v) => v[0])) - Math.min(...byS[b].map((v) => v[0])));
-  const sig = JSON.stringify(["sim", scs.length, sim.entries.length]);
+  const sig = JSON.stringify(["sim", scs.length, sim.entries.length, H]);
   const el = $("tl"); el.hidden = !sim.entries.length;
   if (sig === tl.built) return; tl.built = sig;
-  const pc = (v) => (v / 1440 * 100).toFixed(3) + "%";
+  const pc = (v) => (v / H * 100).toFixed(3) + "%";
   const nameOf = (sc) => { const x = incidents.find((y) => y.sc === sc) || { sc, place: sc }; let p = null; try { p = window.rescueCentrum.pathOf && window.rescueCentrum.pathOf(x); } catch (e) {} return { s: short(x), p: p || longText(x) }; };
   const rows = scs.map((sc) => {
     const n = nameOf(sc), bars = [];
     for (const [a, b, e] of byS[sc]) {
       const tip = `${n.s}: zgłoszenie ${e.start}, ${e.durationMin} min`;
-      bars.push([a, Math.min(b, 1440), tip]); if (b > 1440) bars.push([a - 1440, b - 1440, tip + " (od wczoraj)"]);
+      if (a <= nowMin || tl.show) bars.push([a, Math.min(b, 1440), tip]); if (b > 1440) bars.push([a - 1440, b - 1440, tip + " (od wczoraj)"]);
     }
+    const vis = bars.filter(([a, b]) => a < H && b > 0).map(([a, b, t]) => [a, Math.min(b, H), t]); if (!vis.length) return "";   // #6: no future rows
     return `<div class="tlr" data-sc="${esc(sc)}"><a class="tln" href="${openURL(sc)}" title="${esc(n.p)}">${esc(n.s)}</a><div class="trk">`
-      + bars.map(([a, b, tip]) => `<i class="tlb sb" data-a="${a}" data-b="${b}" title="${esc(tip)}" style="left:${pc(Math.max(0, a))};width:${Math.max(0.3, (b - Math.max(0, a)) / 14.4).toFixed(3)}%"></i>`).join("") + `</div></div>`;
+      + vis.map(([a, b, tip]) => `<i class="tlb sb" data-a="${a}" data-b="${b}" title="${esc(tip)}" style="left:${pc(Math.max(0, a))};width:${Math.max(0.3, (b - Math.max(0, a)) / H * 100).toFixed(3)}%"></i>`).join("") + `</div></div>`;
   }).join("");
-  const ticks = []; for (let v = 0; v <= 1440; v += 180) ticks.push(v);
-  $("tlRows").innerHTML = `<div class="tllg"><span><i class="sw live"></i>trwa</span><span><i class="sw found"></i>zakończona</span><span><i class="sw simpre"></i>jeszcze nie zgłoszona</span>`
-    + `<span class="daynote"><b>Grafik 24/7:</b> ${esc(sim.lf.SIM_NOTE)} · ${sim.entries.length} zgłoszeń na dobę. Kursor = co trwało o tej godzinie (karty i mapa).</span>`
+  const ticks = [], stp = H > 720 ? 180 : H > 240 ? 60 : 30; for (let v = 0; v <= H - stp / 3; v += stp) ticks.push(v);
+  const past = sim.entries.filter((e) => toMin(e.start) != null && toMin(e.start) <= nowMin).length;
+  $("tlRows").innerHTML = `<div class="tllg"><span><i class="sw live"></i>trwa</span><span><i class="sw found"></i>zakończona</span>${tl.show ? `<span><i class="sw simpre"></i>jeszcze nie zgłoszona</span>` : ""}`
+    + `<span class="daynote"><b>${tl.show ? "Grafik 24/7 (tryb pokazu)" : "Doba do teraz"}:</b> ${esc(sim.lf.SIM_NOTE)} · ${tl.show ? `${sim.entries.length} zgłoszeń na dobę` : `${past} zgłoszeń od północy`}. Kursor = co trwało o tej godzinie (karty i mapa).</span>`
     + `<span class="keys">Klawisze: ← → krok, Shift = duży krok, spacja = odtwórz, Home / End, Esc = teraz</span></div>` + rows;
-  $("tlMini").innerHTML = `<span class="tln" title="${esc(sim.lf.SIM_NOTE)}">Doba <b>${sim.entries.length}</b></span><div class="trk">${sim.entries.map((e) => `<i class="ms" style="left:${pc(toMin(e.start))}"></i>`).join("")}<i class="simnow"></i></div>`;
+  $("tlMini").innerHTML = `<span class="tln" title="${esc(sim.lf.SIM_NOTE)}">Doba <b>${tl.show ? sim.entries.length : past}</b></span><div class="trk">${sim.entries.filter((e) => tl.show || toMin(e.start) <= nowMin).map((e) => `<i class="ms" style="left:${pc(toMin(e.start))}"></i>`).join("")}<i class="simnow"></i></div>`;
   $("tlAxis").innerHTML = `<span class="tln"></span><div class="trk">${ticks.map((v) => `<span style="left:${pc(v)}">${tlFmt(v % 1440 === 0 && v ? 1439.99 : v)}</span>`).join("")}</div>`; tlThin();
   $("tl").querySelectorAll(".tlr").forEach((r) => { r.onmouseenter = () => setHl(r.dataset.sc); r.onmouseleave = () => setHl(null); });
   for (const b of $("tl").querySelectorAll("[data-mode]")) b.classList.toggle("on", b.dataset.mode === tl.mode);
@@ -1438,10 +1457,11 @@ function simTlApply(c) {
   const nowMin = sim.lf.warsaw(sim.lf.nowMs()).min, v = c ?? nowMin;
   for (const o of tl.simBars || []) { const s = v < o.a ? "pre" : v < o.z ? "live" : "found"; if (o.s !== s) { o.s = s; o.b.className = "tlb sb " + s; } }
   const fd = $("tlFeed"); if (fd && !fd.hidden) fd.hidden = true;   // the incident feed of the other modes; the bell is the feed here
-  const nw = $("tlMini").querySelector(".simnow"); if (nw) nw.style.left = (nowMin / 14.4).toFixed(3) + "%";
+  if (!tl.show && Math.min(1440, Math.max(60, Math.ceil(nowMin) + 1)) !== tl.hi) { simTlBuild(); }   // #6: Doba grows with the clock
+  const nw = $("tlMini").querySelector(".simnow"); if (nw) nw.style.left = (nowMin / tl.hi * 100).toFixed(3) + "%";
   simPaint();
   const n = sim.view.filter((i) => i.state === "live").length;
-  setHtml($("tlNow"), c == null ? `<b>Teraz ${esc(tlFmt(nowMin))}</b> <span class="tlday" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span> <span class="tlc">trwa <b>${n}</b></span> <span class="mute">przesuń kursor albo ▶, aby zobaczyć dobę</span>`
+  setHtml($("tlNow"), c == null ? `<b>Teraz ${esc(tlFmt(nowMin))}</b> <span class="tlday" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span> <span class="tlc">trwa <b>${n}</b></span> <span class="mute">${tl.show ? "przesuń kursor albo ▶, aby zobaczyć dobę" : "przesuń kursor, aby zobaczyć, co trwało wcześniej"}</span>`
     : `<b class="mono">${tlFmt(c)}</b> <span class="tlday" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span> <span class="tlc">trwa <b>${n}</b></span>`);
 }
 simInit().catch((e) => console.warn("[centrum] sim", e));

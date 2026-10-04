@@ -50,7 +50,8 @@ def main():
         c = Cdp(port)
         c.call("Runtime.enable")
         # desktop: rows, markers, tooltip
-        open_page(c, f"{srv.base}/app/centrum.html?sim=0", 1440, 900, False)
+        # sens-funkcji #6: Dzień w Centrum (the layout these checks were written for) lives in Tryb pokazu (?demo=1)
+        open_page(c, f"{srv.base}/app/centrum.html?sim=0&demo=1", 1440, 900, False)
         rows = c.until("(()=>{const t=document.getElementById('tl');return t&&!t.hidden?document.querySelectorAll('#tl .tlr').length:0})()", 60)
         check("timeline_rows", bool(rows), f"{rows} incident rows")
         marks = c.until("document.querySelectorAll('#tl .tlr .tlk[data-at]').length", 10)

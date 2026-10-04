@@ -146,11 +146,19 @@ def main():
         open_page(c, f"{srv.base}/app/centrum.html?dyzurny=0&simAt={hhmm(mins(e['start']) + 7)}", 1440, 900, False)
         late = c.until(f"(()=>{{const t=document.querySelector('.lftoast [data-key^=\"{key}\"]');return t&&t.classList.contains('late')&&document.querySelector('.lfbell.late')?1:0}})()", 30)
         check("escalation_after_5_min", late == 1)
-        # virtual-live: the entry is a live card (one card per occurrence), Grafik 24/7 is the default timeline mode
+        # virtual-live: the entry is a live card (one card per occurrence), Grafik 24/7 ("Doba") is the default timeline mode
+        # sens-funkcji #6: Doba ends at now - only rows with an occurrence reported so far, no future bars; Tryb pokazu = the whole day
         cards = c.until(f"(()=>{{const k=[...document.querySelectorAll('#simCards .card.simc')].map(x=>x.dataset.key);return k.some(x=>x.startsWith('{key}'))?k:null}})()", 30)
         check("sim_live_card", bool(cards) and len(cards) == len(set(cards)), f"{len(cards or [])} cards")
         gantt = c.until("(()=>{const b=document.querySelector('#tl [data-mode=sim]');return b&&!b.hidden&&b.classList.contains('on')?document.querySelectorAll('#tl .tlr').length:0})()", 20)
-        check("gantt_sim_default", (gantt or 0) >= 25, f"{gantt} rows")
+        check("gantt_sim_default", (gantt or 0) >= 1, f"{gantt} rows")
+        fut = c.js("(()=>{const r=window.rescueCentrum.tl;return [r.hi, Math.max(0,...[...document.querySelectorAll('#tl .sb')].map(b=>+b.dataset.a))]})()")
+        check("doba_ends_now_no_future", bool(fut) and fut[0] < 1440 and fut[1] < fut[0], json.dumps(fut))
+        btns = c.js("[...document.querySelectorAll('#tl [data-mode]')].filter(b=>!b.hidden).map(b=>b.textContent)")
+        c.js("document.getElementById('tlShow').click()")
+        show = c.js("[window.rescueCentrum.tl.hi, document.querySelectorAll('#tl .tlr').length, [...document.querySelectorAll('#tl [data-mode]')].filter(b=>!b.hidden).map(b=>b.textContent)]")
+        c.js("document.getElementById('tlShow').click()")
+        check("tryb_pokazu_whole_day", btns == ["Doba"] and bool(show) and show[0] == 1440 and show[1] >= 25 and "Dzień w Centrum" in show[2], json.dumps([btns, show], ensure_ascii=False))
         dot = c.js(f"(()=>{{const m=window.rescueCentrum.map;return [...document.querySelectorAll('.mk.live')].length}})()")
         check("sim_live_dots", (dot or 0) >= 1, f"{dot} live dots")
         # scrub in Grafik 24/7 moves the virtual clock: the cards follow the cursor
@@ -158,7 +166,7 @@ def main():
         h = c.js("(()=>{const r=document.querySelector('#tlMini .trk').getBoundingClientRect();const b=document.getElementById('tlBody');"
                  "const o={clientX:r.left+r.width*0.25,clientY:r.top+r.height/2,bubbles:true,button:0,pointerId:1};"
                  "b.dispatchEvent(new PointerEvent('pointerdown',o));b.dispatchEvent(new PointerEvent('pointerup',o));return document.querySelector('#simCards .cgrp').innerText})()")
-        check("scrub_moves_sim_clock", bool(h) and "O 06:" in h.upper(), (h or "").replace("\n", " ")[:80])
+        check("scrub_moves_sim_clock", bool(h) and re.search(r"O \d\d:\d\d", h.upper()) is not None, (h or "").replace("\n", " ")[:80])
         c.js("document.getElementById('tlLive').click()")
         # calls: an incoming call inside a running occurrence is its own note (Zgłoszenie), filter works
         zw = next(x for x in es if x["sc"] == "zawrat" and 30 < mins(x["start"]) < 1380)
