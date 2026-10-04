@@ -580,7 +580,7 @@ impl ClueWeights {
                     why.push(format!("operator ustawił wagę ręcznie: {} (auto {})", pl(o), pl(f.auto)));
                 }
                 if !f.applied {
-                    why.push("zdarzenie z nagrania: waga informacyjna, mapa bez zmian (ustaw ręcznie, by zastosować)".to_string());
+                    why.push(format!("waga 1 (nagranie): mapa liczy to zdarzenie w pełni, na żywo byłoby {} (ustaw ręcznie, by zastosować)", pl(f.auto)));
                 }
                 let mut o = Map::new();
                 o.insert("id".into(), json!(it.id));
@@ -597,6 +597,9 @@ impl ClueWeights {
                 o.insert("applied".into(), json!(f.applied));
                 o.insert("negative".into(), json!(it.negative));
                 o.insert("weight".into(), json!(r3(f.weight)));
+                // the weight the map actually uses: 1 for a recorded event (applied = false), and what it would be live
+                o.insert("effective".into(), json!(if f.applied { r3(f.weight) } else { 1.0 }));
+                o.insert("liveWeight".into(), json!(r3(f.override_.unwrap_or(f.auto).clamp(0.0, 1.0))));
                 o.insert("auto".into(), json!(r3(f.auto)));
                 o.insert("override".into(), f.override_.map(|x| json!(r3(x))).unwrap_or(Value::Null));
                 o.insert("halfLifeH".into(), t.half_life_h.map(|x| json!(x)).unwrap_or(Value::Null));

@@ -260,11 +260,11 @@ public final class ClueWeights: @unchecked Sendable {
                 why.append("potwierdzenie: \(c.isEmpty ? "brak innych śladów w pobliżu" : c.joined(separator: "; ")) - x\(pl(f.corroboration))")
             }
             if let o = f.override { why.append("operator ustawił wagę ręcznie: \(pl(o)) (auto \(pl(f.auto)))") }
-            if !f.applied { why.append("zdarzenie z nagrania: waga informacyjna, mapa bez zmian (ustaw ręcznie, by zastosować)") }
+            if !f.applied { why.append("waga 1 (nagranie): mapa liczy to zdarzenie w pełni, na żywo byłoby \(pl(f.auto)) (ustaw ręcznie, by zastosować)") }
             var o: [String: Any] = ["id": it.id, "hintId": it.hintId, "type": it.type, "typeLabel": T.label, "source": it.source,
                                     "sourceLabel": params.sourceLabels[it.source] ?? it.source, "title": it.title, "t": s.clock(it.minute),
                                     "seenAt": s.clock(it.seen), "ageMin": f.ageMin, "live": it.live, "applied": f.applied, "negative": it.negative,
-                                    "weight": r3(f.weight), "auto": r3(f.auto), "override": f.override.map { r3($0) as Any } ?? NSNull(),
+                                    "weight": r3(f.weight), "effective": f.applied ? r3(f.weight) : 1.0, "liveWeight": r3(max(0, min(1, f.override ?? f.auto))), "auto": r3(f.auto), "override": f.override.map { r3($0) as Any } ?? NSNull(),
                                     "halfLifeH": T.halfLifeH.map { $0 as Any } ?? NSNull(),
                                     "factors": ["reliability": r3(f.reliability), "accuracy": r3(f.accuracy), "recency": r3(f.recency), "corroboration": r3(f.corroboration)],
                                     "agree": f.agree, "conflict": f.conflict, "why": why]
