@@ -1796,7 +1796,7 @@ function renderOffBanner(i) {
   $('resetoff').onclick = () => { setEvidence('*', true); toParent({ type: 'evidence', id: '*', on: true }); };
 }
 // Na żywo: the shell's {type:'time', live:true} (fallback: a run URL without live=0); then the frame does not re-rank the top 3
-let TL_LIVE = (() => { try { return !P.reveal && new URL(P.run, location.href).searchParams.get('live') !== '0' && Q.get('embed') === 'scene'; } catch { return false; } })();
+let TL_LIVE = (() => { try { return !P.reveal && new URL(P.run, location.href).searchParams.get('live') !== '0' && (Q.get('embed') === 'scene' || Q.get('embed') === 'fpp'); } catch { return false; } })();
 const rankedOf = (segments) => [...segments].sort((a, b) => b.poa - a.poa);
 // the shell's panel top 3 ({type:'time', top:[ids]}, 7e2b7a9): when present it is the only source of the #1-#3 labels
 let TL_TOP = null, TL_TOPM = null, topDrawn = '';   // ids + the shell minute they belong to
@@ -2261,7 +2261,7 @@ TL3D = createTimeline3D({ THREE, run: R, scene, camera, controls, v3, eyeAt, lin
   // FPP: the outlines float metres above the ground and the signal pins stand like beams in an eye-level view, so they step aside
   onCamera: (on, actorId) => { fppHeat = on ? 0.3 : 1; for (const g of [dyn.top, dyn.searched, dyn.teams, dyn.sel, dyn.signals, dyn.live]) g.visible = !on; compose(); toParent({ type: 'fpp', on, actorId }); },
   onActor: (id) => toParent({ type: 'actor', id }),
-  onWindow: FPPWIN ? null : (id) => openFppWindow(id), lockFpp: FPPWIN,
+  onWindow: FPPWIN ? null : (id) => openFppWindow(id), lockFpp: FPPWIN, isLive: () => TL_LIVE && !P.reveal, onMove: postMove,
   getFrame: async (t) => {
     const history = new URL(P.run, location.href).searchParams.get('live') === '0' ? '&live=0' : '';
     const f = await getJSON(`/api/run/${SC}?t=${encodeURIComponent(t)}${history}`, true);
@@ -2510,6 +2510,20 @@ if (FPP_BC && FPPWIN) FPP_BC.onmessage = (e) => {
   if (m.type === 'unit' && typeof m.id === 'string') TL3D?.startFpp(m.id);
   else if (RELAY.has(m.type)) { if (m.type === 'actor') return; applyMsg(m); if (TL3D?.want && !TL3D.following) TL3D.startFpp(TL3D.want); }
 };
+// WASD in FPP (timeline3d): the moved unit's position goes to the server, so 2D, the timeline and Zasoby see it.
+// POST /api/positions/<sc> (manual positions) when the server has it, else the live GPS fix route POST /api/fix;
+// same auth as every write (X-Rescue-Pin). Throttled by timeline3d (~1/s or every 10 m); a failed post is dropped.
+let POS_API = true;
+async function postMove(unit, lat, lon, headingDeg, t) {
+  const H = { 'Content-Type': 'application/json', ...runPin('/api/fix') }, la = +lat.toFixed(6), lo = +lon.toFixed(6);
+  try {
+    if (POS_API) {
+      const r = await fetch(`/api/positions/${encodeURIComponent(SC)}`, { method: 'POST', headers: H, body: JSON.stringify({ unit, lat: la, lon: lo, ts: new Date().toISOString(), t, headingDeg: Math.round(headingDeg), source: 'manual', by: '3d-fpp' }) });
+      if (r.ok) return; if (r.status === 404 || r.status === 405) POS_API = false; else return;
+    }
+    await fetch('/api/fix', { method: 'POST', headers: H, body: JSON.stringify({ sc: SC, actor: unit, t, lat: la, lon: lo, accM: 5, src: 'est' }) }); // an older server: a live fix (gps / report / est)
+  } catch (e) { console.warn('3d: position post failed', e); }
+}
 function applyMsg(m) {
   fromParent = true;
   try {

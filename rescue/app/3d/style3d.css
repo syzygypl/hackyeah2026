@@ -363,7 +363,7 @@ body.embed .wchip, body.embed #game .stat, body.embed #game code { background: c
 body > #timeline3dCtl { position: fixed; right: 12px; top: 76px; z-index: 12; padding: 10px; }
 #timeline3dCtl select { width: 100%; margin: 6px 0; padding: 5px; color: inherit; background: var(--rl-surface, #f7f5ef); border: 1px solid var(--rl-border, #bcb8ad); border-radius: 4px; }
 #timeline3dCtl .tl3d-title { font-weight: 600; }
-#timeline3dCtl .tl3d-key, #timeline3dCtl .tl3d-clock { margin-top: 6px; font-size: 11px; line-height: 1.5; }
+#timeline3dCtl .tl3d-key, #timeline3dCtl .tl3d-clock, #timeline3dCtl .tl3d-wasd { margin-top: 6px; font-size: 11px; line-height: 1.5; }
 /* Kino: no paper box in the corner, only the shot switch floating on the letterbox (light on dark) */
 body.embed.cinema #sceneCtl { background: transparent; border-color: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 body.embed.cinema #sceneCtl .seg-switch { background: rgba(255, 255, 255, 0.1); }
