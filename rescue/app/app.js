@@ -534,7 +534,9 @@ function openForm(c, ll) {
   f += `<div class="row"><button type="button" class="cancel">Anuluj</button><button class="primary" type="submit">Dodaj</button></div>`;
   const el = document.createElement("form"); el.className = "pop"; el.innerHTML = f;
   const W = $("map").clientWidth, H = $("map").clientHeight;
-  el.style.left = Math.max(4, Math.min(W - 240, ll.px[0] + 14)) + "px"; el.style.top = Math.max(4, Math.min(H - 240, ll.px[1] - 20)) + "px";
+  // inside the visible map, not under the floating panels (#right with its alerts covered "Dodaj" at 1100 px; insets() = the bar, #right, the dock, #left)
+  const [iT, iR, iB, iL] = insets(), fw = 236, fh = 240;
+  el.style.left = Math.max(iL + 4, Math.min(W - iR - fw - 4, ll.px[0] + 14)) + "px"; el.style.top = Math.max(iT + 4, Math.min(H - iB - fh - 4, ll.px[1] - 20)) + "px";
   $("map").appendChild(el);
   const m = c.weather ? null : new maplibregl.Marker({ element: pinEl(c.pin || "?", c.color) }).setLngLat([ll.lng, ll.lat]).addTo(map);
   pop = { el, m };
