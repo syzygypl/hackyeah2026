@@ -374,3 +374,17 @@ body.tlplaying #tl,body.tlplaying #list,body.tlplaying #roster,body.tlplaying #b
 #tlBody .tlb.sb.found{background:var(--rl-ok);opacity:.55}
 #tl .sw.simpre{background:transparent;box-shadow:inset 0 0 0 1.5px var(--rl-line-strong)}
 #tlMini .simnow{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--rl-danger)}
+
+/* AI Mateusza #2: map clustering + "województwo → rejon" naming */
+.mk.inclu{display:none}
+.mk.clu{width:26px;height:26px}
+.mk.clu .dot{width:26px;height:26px;border:2px solid var(--rl-panel-solid);display:grid;place-items:center}
+.mk.clu .dot b{display:grid;place-items:center;min-width:16px;height:16px;padding:0 3px;border-radius:8px;background:var(--rl-panel-solid);color:var(--rl-ink);font-size:11px;line-height:1}
+.mk.clu .dot::before{content:none}
+.mk.clu .dot::after{inset:-7px}
+.mk.clu .lbl{left:32px;top:calc(var(--k,0) * 24px + 3px)}
+.mk.clu .ld{left:13px;top:13px}
+.mk.clu.adv .dot{outline:3px solid var(--rl-warn);outline-offset:2px}
+.card .rpath{font-size:var(--rl-fs-xs);color:var(--rl-mute);margin-top:6px;line-height:1.2}
+.card .rpath + h3{margin-top:0}
+.pk .rpath{color:var(--rl-ink-2)}

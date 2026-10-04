@@ -5,7 +5,8 @@
 // in-memory team roster mock seeded from the scenario files. Switching is automatic: a 404 means "not there yet".
 // MapLibre (~300 kB) is imported dynamically (initMap at the bottom): cards and roster render from the API without waiting for it.
 let maplibregl, offlineStyle, loadBasemap, REGIONS;
-import { evKind, EV_COL, shortEv, hoverHold } from "./dock.js";   // timeline (Oś czasu): same event kinds / colours / hover-hold as the /app dock
+import { evKind, EV_COL, shortEv, hoverHold } from "./dock.js";
+import { regionOf, pathText, MAP_DETAIL } from "./regions.js";   // naming "województwo → rejon → nazwa" + rivers / ranges / cities on the map (AI Mateusza #2)   // timeline (Oś czasu): same event kinds / colours / hover-hold as the /app dock
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -123,6 +124,7 @@ function loadMeta(sc) {
     try { const s = await api("/scenarios/" + encodeURIComponent(sc) + ".json"); meta[sc] = { ipp: s.ipp && s.ipp.at, bbox: s.bbox, resources: s.resources || [],
       // timeline: report date + clock, scripted events (clock, provider, title), teams' readyAt
       date: s.date || null, startClock: s.startClock || null, lastContact: (s.subject && s.subject.lastContact) || null,
+      incident: s.incident || "",
       events: (s.events || []).map((e) => ({ at: e.at, provider: e.provider, title: e.title || "" })),
       ready: (s.resources || []).filter((r) => r.readyAt).map((r) => ({ at: r.readyAt, name: r.name || r.id, id: r.id })) }; } catch (e) {}
     return meta[sc];
@@ -181,6 +183,16 @@ const SHORT = { zawrat: "Zawrat", "morskie-oko": "Morskie Oko", kasprowy: "Kaspr
   "paralotniarz-beskidy": "Skrzyczne - paralotniarz" };
 const short = (x) => SHORT[x.sc] || (x.place && x.place !== x.sc ? x.place.split(/[,/]/)[0].trim() : x.sc);
 const longText = (x) => [x.title, x.place !== x.sc ? x.place : ""].filter(Boolean).join(" - ");
+// naming (AI Mateusza #2): "województwo → rejon → nazwa", e.g. "małopolskie → Tatry → Zaginiony turysta · Zawrat". Województwo and
+// rejon from the IPP (regions.js regionOf); until the scenario file is in, just the name. x = incident or its sc (other modules:
+// window.rescueCentrum.pathOf(sc), e.g. livefeed.js toasts). The map keeps short(x); the full path goes to tooltips.
+const regOf = (x) => { const md = meta[x.sc]; return md && md.ipp ? regionOf(md.ipp) : null; };
+const rpath = (x) => { const r = regOf(x); return r ? `${r.woj} → ${r.rejon}` : ""; };
+function pathOf(x) {
+  if (typeof x === "string") x = incidents.find((i) => i.sc === x) || { sc: x, title: "", place: (meta[x] && meta[x].incident) || x };
+  const r = regOf(x), s = short(x), t = x.title ? x.title.charAt(0).toUpperCase() + x.title.slice(1) : "";
+  return pathText(r, !t || s.includes(" - ") ? s : t + (r && s === r.rejon ? "" : " · " + s));   // "Wizna - auto w Narwi" already says what
+}
 const modeOf = (x) => x.found ? "found" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident
 const BADGE = { live: "LIVE", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE" };
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); };
@@ -212,7 +224,7 @@ function renderCards() {
     const rf = x.replayFound && !x.found ? `<span class="mute" title="Plik scenariusza kończy się odnalezieniem; tu pokazujemy moment przed nim">odtworzenie z odnalezieniem</span>` : "";
     return `<article class="card ${m} ${hl === x.sc ? "hl" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
       <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="mute">${esc(x.sc)}</span><span class="when mono">${when}</span></div>
-      <h3><a href="${openURL(x.sc)}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>
+      ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${openURL(x.sc)}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>
       ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw${x.top3.every((s) => s.areaPct != null) ? ` · top 3 to ${areaTxt(x.top3.reduce((a, s) => a + (+s.areaPct || 0), 0))} obszaru` : ""}</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span>${s.areaPct != null ? `<span class="mute">${areaTxt(s.areaPct)} obszaru</span>` : ""}</div>`).join("")}</div>`
         : `<div class="loading">${x.pending ? "Liczę mapę..." : "Brak mapy dla tej akcji."}</div>`}
       <div class="cteams">${x.teams ? `Zespoły z sektorem: <span class="n">${x.teams.assigned}/${x.teams.total}</span>` : ""}
@@ -275,6 +287,7 @@ function setHl(sc) {
   hl = sc;
   document.querySelectorAll(".card, .pk").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
   for (const [k, m] of markers) m.getElement().classList.toggle("hl", k === sc);
+  cluMark();
   document.querySelectorAll("#tl .tlr").forEach((el) => el.classList.toggle("hl", el.dataset.sc === sc));
 }
 
@@ -289,12 +302,13 @@ async function initMap() {
   maplibregl = m; ({ offlineStyle, loadBasemap, REGIONS } = b);
   const base = offlineStyle();
   map = new maplibregl.Map({
-    container: "map", attributionControl: { compact: true, customAttribution: "Granica: Natural Earth" }, center: [19.4, 52.0], zoom: 5.3, minZoom: 4,
+    container: "map", attributionControl: { compact: true, customAttribution: "Granica: Natural Earth · rzeki, pasma, miasta: uproszczone dane publiczne" }, center: [19.4, 52.0], zoom: 5.3, minZoom: 4,
     style: { version: 8, glyphs: base.glyphs, sprite: base.sprite,
-      sources: { pl: { type: "geojson", data: pl } },
+      sources: { pl: { type: "geojson", data: pl }, "md-rivers": { type: "geojson", data: MAP_DETAIL.rivers }, "md-areas": { type: "geojson", data: MAP_DETAIL.areas }, "md-places": { type: "geojson", data: MAP_DETAIL.places }, "md-block": { type: "geojson", data: { type: "FeatureCollection", features: [] } } },
       layers: [{ id: "bg", type: "background", paint: { "background-color": css("--rl-bg") } },
         { id: "pl-fill", type: "fill", source: "pl", maxzoom: 8, paint: { "fill-color": css("--rl-panel-solid"), "fill-opacity": 0.75 } },
-        { id: "pl-line", type: "line", source: "pl", maxzoom: 8, paint: { "line-color": css("--rl-line-strong"), "line-width": 1.5 } }] },
+        { id: "pl-line", type: "line", source: "pl", maxzoom: 8, paint: { "line-color": css("--rl-line-strong"), "line-width": 1.5 } },
+        ...mapDetailLayers()] },
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
   map.on("load", () => { mapReady = true; renderMarkers(); fitAll(); loadRegions(); stackLabels(); advMap();
@@ -303,6 +317,31 @@ async function initMap() {
   map.on("zoom", () => document.body.classList.toggle("zin", map.getZoom() >= 9));   // zoomed in: labels next to their own dots
   map.on("zoomend", stackLabels);
   map.on("resize", stackLabels);
+}
+// light map detail (regions.js MAP_DETAIL): main rivers, soft range / lake district labels, cities by rank; up to zoom 8, where
+// the regional offline basemaps take over (their own labels collide with these, so no doubles)
+function mapDetailLayers() {
+  const ink = css("--rl-ink-2"), mute = css("--rl-mute"), halo = css("--rl-bg"), water = "#5b8db8";
+  const rk = (n) => ["<=", ["get", "rank"], n];
+  return [
+    { id: "md-river", type: "line", source: "md-rivers", maxzoom: 8, layout: { "line-join": "round", "line-cap": "round" },
+      paint: { "line-color": water, "line-opacity": 0.55, "line-width": ["interpolate", ["linear"], ["zoom"], 5, ["match", ["get", "rank"], 1, 1.4, 2, 1, 0.7], 8, ["match", ["get", "rank"], 1, 2.6, 2, 2, 1.6]] } },
+    { id: "md-river-l", type: "symbol", source: "md-rivers", minzoom: 5.6, maxzoom: 8, filter: ["any", rk(2), [">=", ["zoom"], 6.8]],
+      layout: { "symbol-placement": "line", "text-field": ["get", "name"], "text-font": ["Noto Sans Italic"], "text-size": 10.5, "symbol-spacing": 400, "text-max-angle": 30 },
+      paint: { "text-color": water, "text-halo-color": halo, "text-halo-width": 1.4 } },
+    { id: "md-area-l", type: "symbol", source: "md-areas", maxzoom: 8.5, filter: ["any", rk(1), [">=", ["zoom"], 6.3]],
+      layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Italic"], "text-size": ["interpolate", ["linear"], ["zoom"], 5, 10.5, 8, 13], "text-letter-spacing": 0.18, "text-transform": "uppercase", "text-max-width": 8, "text-padding": 6 },
+      paint: { "text-color": mute, "text-opacity": 0.75, "text-halo-color": halo, "text-halo-width": 1.2 } },
+    { id: "md-place", type: "circle", source: "md-places", maxzoom: 8, filter: ["any", rk(1), ["all", rk(2), [">=", ["zoom"], 6.3]], [">=", ["zoom"], 7.2]],
+      paint: { "circle-radius": ["match", ["get", "rank"], 1, 3, 2, 2.2, 1.8], "circle-color": css("--rl-panel-solid"), "circle-stroke-color": ink, "circle-stroke-width": ["match", ["get", "rank"], 1, 1.4, 1] } },
+    { id: "md-place-l", type: "symbol", source: "md-places", maxzoom: 8, filter: ["any", rk(1), ["all", rk(2), [">=", ["zoom"], 6.3]], [">=", ["zoom"], 7.2]],
+      layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Medium"], "text-size": ["match", ["get", "rank"], 1, 11.5, 10.5],
+        "text-variable-anchor": ["left", "right", "top", "bottom"], "text-radial-offset": 0.55, "text-justify": "auto", "symbol-sort-key": ["get", "rank"] },
+      paint: { "text-color": ink, "text-halo-color": halo, "text-halo-width": 1.4 } },
+    // invisible copies of the incident dots and labels (HTML markers, stackLabels): on top, so city / range labels give way to them
+    { id: "md-block", type: "symbol", source: "md-block", layout: { "text-field": ["get", "t"], "text-font": ["Noto Sans Medium"], "text-size": 12, "text-anchor": ["get", "a"],
+      "text-offset": ["get", "o"], "text-padding": 3, "text-allow-overlap": true, "text-ignore-placement": false }, paint: { "text-opacity": 0 } },
+  ];
 }
 const loaded = new Set();
 async function loadRegions() {
@@ -348,17 +387,99 @@ function renderMarkers() {
 function paintMarker(x, m) {
   const el = m.getElement(), mode = markMode(x);
   el.classList.add("mk"); for (const c of ["live", "found", "plan", "replay", "pre", "idle"]) el.classList.toggle(c, c === mode); el.classList.toggle("hl", hl === x.sc);
-  el.title = `${short(x)}: ${longText(x)} - ${mode === "pre" ? "jeszcze nie zgłoszona" : BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
+  el.title = `${pathOf(x)}\n${longText(x)} - ${mode === "pre" ? "jeszcze nie zgłoszona" : BADGE[mode]} (kliknij, aby otworzyć; upuść zespół, aby dołączyć)`;
   el.querySelector(".lbl").textContent = short(x);
   el.style.zIndex = mode === "live" ? 3 : 1;
+  if (el._mm !== undefined && el._mm !== mode) cluSoon();   // a dot appeared / changed status: its group's count and mix change
   el._mm = mode;   // timeline: tlApply repaints only the dots whose mode changed
+}
+// Clustering (AI Mateusza #2): dots closer than CLU_PX on screen merge into one marker with the count and the status mix
+// (pie: live red, found green, the rest grey); hidden members (.inclu) keep their own marker and state (markMode stays the one
+// source of a dot's mode). Recomputed with the labels after every zoom, resize, render and status change, so zooming in splits
+// a group by itself; a click zooms to its members. Dots on the very same point (one IPP, several scenarios) open as a ring instead.
+const CLU_PX = 24, clusters = new Map();   // key (sorted sc list) -> { m: Marker, scs }
+let cluOpen = null, cluRaf = 0;            // { scs: Set, z }: an opened same-point group
+function cluSoon() { if (!cluRaf && mapReady) cluRaf = requestAnimationFrame(() => { cluRaf = 0; stackLabels(); }); }
+function clusterize() {
+  if (cluOpen && map.getZoom() < cluOpen.z - 0.3) cluOpen = null;
+  const live = (m) => m.getElement()._mm === "live";
+  const order = [...markers.entries()].filter(([, m]) => m.getElement()._mm !== "pre").sort((a, b) => (live(b[1]) - live(a[1])) || a[0].localeCompare(b[0]));
+  const pt = new Map(order.map(([k, m]) => [k, map.project(m.getLngLat())]));
+  const isOpen = (k) => cluOpen && cluOpen.scs.has(k);
+  const used = new Set(), groups = [];
+  for (const [k] of order) {
+    if (used.has(k)) continue;
+    used.add(k); const g = [k], p = pt.get(k);
+    if (!isOpen(k)) for (const [k2] of order) {
+      if (used.has(k2) || isOpen(k2)) continue;
+      const q = pt.get(k2); if (Math.hypot(p.x - q.x, p.y - q.y) < CLU_PX) { g.push(k2); used.add(k2); }
+    }
+    groups.push(g);
+  }
+  for (const [k, m] of markers) m.getElement().classList.add("inclu");   // reset below: solo dots shown again
+  // opened same-point group: a ring of 34 px around the point
+  const open = cluOpen ? [...cluOpen.scs].filter((k) => markers.has(k)).sort() : [];
+  for (const [k, m] of markers) { const i = open.indexOf(k), a = i / open.length * 2 * Math.PI - Math.PI / 2; m.setOffset(i >= 0 && open.length > 1 ? [Math.cos(a) * 34, Math.sin(a) * 34] : [0, 0]); }
+  const keep = new Set();
+  for (const g of groups) {
+    if (g.length < 2) { markers.get(g[0]).getElement().classList.remove("inclu"); continue; }
+    const key = g.slice().sort().join("|"); keep.add(key);
+    let c = clusters.get(key);
+    if (!c) {
+      const el = document.createElement("div"); el.className = "mk clu";
+      el.innerHTML = `<span class="ld"></span><span class="dot"><b></b></span><span class="lbl"></span>`;
+      el.tabIndex = 0; el.setAttribute("role", "button");
+      el.onclick = () => cluClick(g);
+      el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cluClick(g); } };
+      el.onmouseenter = () => { for (const k of g) document.querySelectorAll(`.card[data-sc="${CSS.escape(k)}"], .pk[data-sc="${CSS.escape(k)}"], #tl .tlr[data-sc="${CSS.escape(k)}"]`).forEach((e) => e.classList.add("hl")); };
+      el.onmouseleave = () => setHl(hl);
+      const ll = g.map((k) => markers.get(k).getLngLat());
+      c = { scs: g, m: new maplibregl.Marker({ element: el, anchor: "center" }).setLngLat([ll.reduce((a, p) => a + p.lng, 0) / ll.length, ll.reduce((a, p) => a + p.lat, 0) / ll.length]).addTo(map) };
+      clusters.set(key, c);
+    }
+    cluPaint(c);
+  }
+  for (const [k, c] of clusters) if (!keep.has(k)) { c.m.remove(); clusters.delete(k); }
+  cluMark();
+}
+function cluPaint(c) {
+  const el = c.m.getElement(), n = { live: 0, found: 0, other: 0 };
+  for (const k of c.scs) { const md = markers.get(k).getElement()._mm; n[md === "live" ? "live" : md === "found" ? "found" : "other"]++; }
+  const N = c.scs.length, a = n.live / N * 360, b = a + n.found / N * 360;
+  el.querySelector(".dot").style.background = `conic-gradient(var(--rl-danger) 0 ${a}deg, var(--rl-ok) ${a}deg ${b}deg, var(--rl-ink-2) ${b}deg)`;
+  el.querySelector("b").textContent = N;
+  el.classList.toggle("live", n.live > 0);
+  el.style.zIndex = n.live ? 4 : 2;
+  const xs = c.scs.map((k) => incidents.find((i) => i.sc === k)).filter(Boolean);
+  const rj = [...new Set(xs.map((x) => (regOf(x) || {}).rejon || short(x)))];
+  el.querySelector(".lbl").textContent = (rj.length === 1 ? rj[0] : rj.slice(0, 2).join(" / ") + (rj.length > 2 ? " …" : "")) + ` · ${N}`;
+  el.title = `${N} akcji${n.live ? `, ${n.live} LIVE` : ""}${n.found ? `, ${n.found} znaleziono` : ""} (kliknij, aby przybliżyć)\n` + xs.map((x) => "• " + pathOf(x)).join("\n");
+  el.setAttribute("aria-label", `Grupa ${N} akcji: ${rj.join(", ")}`);
+}
+function cluMark() {   // hl / adv ring of a group = any member's
+  for (const [, c] of clusters) {
+    const el = c.m.getElement(), mem = c.scs.map((k) => markers.get(k)?.getElement()).filter(Boolean);
+    el.classList.toggle("hl", mem.some((e) => e.classList.contains("hl")));
+    el.classList.toggle("adv", mem.some((e) => e.classList.contains("adv")));
+  }
+}
+function cluClick(g) {
+  const ll = g.map((k) => markers.get(k).getLngLat()), lons = ll.map((p) => p.lng), lats = ll.map((p) => p.lat);
+  const span = Math.max(Math.max(...lons) - Math.min(...lons), Math.max(...lats) - Math.min(...lats));
+  if (span < 0.003 || map.getZoom() >= 14) { cluOpen = { scs: new Set(g), z: map.getZoom() }; stackLabels(); return; }
+  const wide = innerWidth > 900;
+  map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: wide ? { left: 460, right: 360, top: 140, bottom: 200 } : 60, maxZoom: 15, duration: 600 });
 }
 // Labels that would overlap on screen (Tatra and Bieszczady incidents sit a few km apart) move down one row at a time
 // until they are free; dots stay on their IPP. Recomputed after every zoom, since overlaps depend on the scale.
+// With the clustering only what is on screen takes part: single dots and the groups.
 function stackLabels() {
   if (!mapReady) return;
-  const ROW = 24, items = [...markers.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const pts = items.map(([, m]) => map.project(m.getLngLat()));
+  clusterize();
+  const ROW = 24, items = [...[...markers.entries()].filter(([, m]) => { const e = m.getElement(); return e._mm !== "pre" && !e.classList.contains("inclu"); }),
+    ...[...clusters.entries()].map(([k, c]) => [k, c.m])].sort((a, b) => a[0].localeCompare(b[0]));
+  const pts = items.map(([, m]) => { const p = map.project(m.getLngLat()), o = m.getOffset(); return { x: p.x + o.x, y: p.y + o.y }; });
+  const block = [];   // -> md-block layer (map labels make room for the incident labels)
   const boxes = pts.map((p) => ({ x: p.x - 9, y: p.y - 9, w: 18, h: 18 }));   // every dot is an obstacle for every label
   // each dot's own label row is reserved for it: a shifted label never lands next to another incident's dot
   const own = items.map(([, m], i) => { const l = m.getElement().querySelector(".lbl"); return { x: pts[i].x + 14, y: pts[i].y - 11, w: (l && l.offsetWidth) || 80, h: 22 }; });
@@ -377,8 +498,10 @@ function stackLabels() {
     // a label moved off its row gets a line from its own dot (centre 8,8) to the start of its 8 px tick (14, row middle):
     // without it a label 1-2 rows away read as the neighbour's name (Huzele next to Kraków, Zawrat under Morskie Oko)
     const ld = el.querySelector(".ld");
-    if (ld) { const dy = (k ?? 0) * ROW + 1, len = Math.hypot(6, dy); ld.style.display = k ? "block" : "none"; ld.style.width = len + "px"; ld.style.transform = `rotate(${Math.atan2(dy, 6)}rad)`; }
+    if (lbl && k !== undefined) { const ll = items[i][1].getLngLat(), c = el.classList.contains("clu"); block.push([ll, "MM", "center", [0, 0]], [ll, lbl.textContent + "··", "left", [(c ? 19 : 14) / 12, (k * ROW + (c ? 1 : 0)) / 12]]); }
+    if (ld) { const dx = el.classList.contains("clu") ? 11 : 6, dy = (k ?? 0) * ROW + 1, len = Math.hypot(dx, dy); ld.style.display = k ? "block" : "none"; ld.style.width = len + "px"; ld.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`; }
   }
+  map.getSource("md-block")?.setData({ type: "FeatureCollection", features: block.map(([ll, t, a, o]) => ({ type: "Feature", properties: { t, a, o }, geometry: { type: "Point", coordinates: [ll.lng, ll.lat] } })) });
 }
 function fitAll() {
   if (fitted || !mapReady) return;
@@ -491,6 +614,7 @@ function advApply() {
   const s = advLinked();
   document.querySelectorAll("#cards .card").forEach((c) => c.classList.toggle("adv", s.has(c.dataset.sc)));
   for (const [k, m] of markers) m.getElement().classList.toggle("adv", s.has(k));
+  cluMark();
   if (PICK) pickMarkers();
 }
 const advEmpty = { type: "FeatureCollection", features: [] };
@@ -655,7 +779,7 @@ function tlBuild() {
   const P = (v) => (v - tl.lo) / (tl.hi - tl.lo) * 100, pc = (v) => P(v).toFixed(3) + "%";
   const row = (it) => {
     const b = tlBase(it), to = b + (it.end ?? it.last), cls = it.endKind || "open";
-    const tip = `${short(it.x)}: zgłoszenie ${it.date || ""} ${it.start}${it.lastContact ? ` (ostatni kontakt ${it.lastContact})` : ""}${it.end != null ? ` · ${TL_STATE[it.endKind]} po ${tlFmtDur(it.end)}` : " · trwa (brak końca w danych)"}`;
+    const tip = `${pathOf(it.x)}: zgłoszenie ${it.date || ""} ${it.start}${it.lastContact ? ` (ostatni kontakt ${it.lastContact})` : ""}${it.end != null ? ` · ${TL_STATE[it.endKind]} po ${tlFmtDur(it.end)}` : " · trwa (brak końca w danych)"}`;
     const mk = it.evs.map((e) => `<i class="tlk k-${e.k}" data-v="${b + e.m}" data-sc="${esc(it.sc)}" data-at="${esc(e.at)}" data-tip="${esc(e.k === "zespol" ? e.title : shortEv(e.title, e.k))}" style="left:${pc(b + e.m)}${e.k !== "found" && EV_COL[e.kind] ? `;--c:var(${EV_COL[e.kind]})` : ""}"></i>`).join("");   // tooltip + click: #1 block below tlInit()
     if (tl.off.has(it.sc)) return `<div class="tlr off" data-sc="${esc(it.sc)}"><a class="tln" href="${openURL(it.sc)}" title="${esc(tip)}">${esc(short(it.x))}</a><div class="trk" title="${esc(tip)}"><span class="offd">inny dzień: ${esc(tlFmt(it.t0))}</span></div></div>`;
     const pre = it.lc != null ? `<i class="tlpre" style="left:${pc(b + it.lc)};width:${(P(b) - P(b + it.lc)).toFixed(3)}%" title="Od ostatniego kontaktu (${esc(it.lastContact)}) do zgłoszenia"></i>` : "";
@@ -903,7 +1027,7 @@ function renderPick() {
   const item = (x) => { const st = stOf(x), me = x.sc === cur;
     return `<a class="pk ${st}${linked.has(x.sc) ? " adv" : ""}${hl === x.sc ? " hl" : ""}${me ? " cur" : ""}" href="${esc(openURL(x.sc))}" data-sc="${esc(x.sc)}"${me ? ' aria-current="true"' : ""}>
       <span class="badge ${st === "ended" ? "found" : st}">${PK_ST[st]}</span><span class="pkt mono" title="Czas zdarzenia">${esc(timeOf(x))}</span>
-      <span class="pkn"><b>${esc(short(x))}</b><span>${esc(longText(x))}</span></span>${me ? '<span class="pkc">obecny</span>' : ""}</a>`; };
+      <span class="pkn" title="${esc(pathOf(x))}"><b>${esc(short(x))}</b><span>${rpath(x) ? `<span class="rpath">${esc(rpath(x))}</span> · ` : ""}${esc(longText(x))}</span></span>${me ? '<span class="pkc">obecny</span>' : ""}</a>`; };
   const all = sortIncidents(incidents), used = new Set();
   const hs = ((adv && adv.hypotheses) || []).slice().sort((a, b) => (b.level === "alarm") - (a.level === "alarm") || b.score - a.score);
   let html = "";
@@ -1012,7 +1136,7 @@ async function skeleton(teamP) {
 setInterval(() => { $("clock").textContent = new Date().toLocaleTimeString("pl-PL"); }, 1000);
 setInterval(tick, POLL_MS);
 tick();
-window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, get map() { return map; }, tl, tlSet };   // tests
+window.rescueCentrum = { get incidents() { return incidents; }, get teams() { return teams; }, has, doAssign, get map() { return map; }, tl, tlSet, pathOf, regionOf };   // tests; pathOf(sc) for other modules
 initMap().catch((e) => console.warn("[centrum] map", e));
 
 // ---------- Symulacja 24/7 (AI Mateusza #2, livefeed.js, docs/rescue-locator/live-feed.md): a fictional daily schedule of
@@ -1097,7 +1221,7 @@ function simPaint() {
     const el = Math.floor((Math.min(simNowAt(), i.endMs) - i.startMs) / 60000);
     return `<article class="card simc ${i.state === "live" ? "live" : "found ended"}" data-sc="${esc(i.sc)}" data-key="${esc(i.key)}">
       <div class="ctop"><span class="badge ${i.state === "live" ? "live" : "found"}">${i.state === "live" ? "LIVE" : "ZAKOŃCZONA"}</span><span class="simtag" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span><span class="when mono">zgł. ${hm(i.startMs)}</span></div>
-      <h3><a href="${esc(histURL(i.sc, clk))}">${esc(short(x))}</a></h3><div class="sub">${esc(d ? d.name : i.sc)}${d && d.place ? " - " + esc(d.place) : ""}</div>
+      ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${esc(histURL(i.sc, clk))}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(d ? d.name : i.sc)}${d && d.place ? " - " + esc(d.place) : ""}</div>
       <div class="simt mono">${i.state === "live" ? `T+${Math.floor(el / 60)}:${pad2(el % 60)} · w scenariuszu ${esc(clk || "")}` : `zakończona ${hm(i.endMs)} · po ${i.durationMin} min`}</div>
       ${i.state !== "live" ? "" : t3 ? (t3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw o ${esc(r.c5)}</div>${t3.slice(0, 3).map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.id || s.segmentId)} ${esc(s.name)}</span></div>`).join("")}</div>` : `<div class="loading">Brak mapy dla tej chwili.</div>`)
         : `<div class="loading">Liczę mapę na ${esc(r.c5 || "...")}...</div>`}</article>`;
