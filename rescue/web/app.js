@@ -1562,8 +1562,12 @@
     if (!SCALE) return fatal('brak wspólnej skali ../app/scale.js (serwer musi działać w rescue/)');
     // qa-mobile 7: ?legend=compact = smaller legend (porównanie's 330 px frames); narrow2d (< 400 px) = smaller chips, same rules
     if (Q.get('legend') === 'compact') document.body.classList.add('legend-compact');
-    // inside /app (embed=scene): the legend is compact until hover / tap, full for 3 s after (hoverHold, web/style.css body.lg-hover)
-    else if (EMBED === 'scene' && innerWidth > 600) import('../app/dock.js').then((m) => { m.hoverHold($('#legend')); $('#legend').tabIndex = 0; document.body.classList.add('lg-hover'); }).catch(() => {});
+    // inside /app (embed=scene): the legend and the layer box collapse like every overlay panel in /app (foldPanel from
+    // ../app/dock.js: a strip with a pin, hover / focus / tap opens, held 3 s, Esc closes; AI Mateusza #1 2026-10-04)
+    else if (EMBED === 'scene' && (() => { try { return top.innerWidth; } catch (e) { return innerWidth; } })() > 600) import('../app/dock.js').then((m) => {   // the top window: a 2D+3D half is narrower than 600 px
+      m.foldPanel($('#legend'), { title: 'Legenda', key: 'rl2dLegPin', sum: (el) => (el.querySelector('.lg-title')?.firstChild?.textContent || '').replace(/\s*\(silnik\)\s*$/, '').trim() });
+      m.foldPanel($('#mapctl'), { title: 'Podkład', key: 'rl2dCtlPin', sum: (el) => el.querySelector('.seg-switch .on, .seg-switch [aria-pressed="true"]')?.textContent.trim() || '' });
+    }).catch(() => {});
     const narrow2d = () => document.body.classList.toggle('narrow2d', innerWidth < 400);
     narrow2d(); addEventListener('resize', narrow2d);
     if (EMBED) {

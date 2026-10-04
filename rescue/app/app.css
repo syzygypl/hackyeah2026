@@ -183,11 +183,13 @@ h2{font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--rl-mute);margi
   /* hover-hold right panel (hoverHold in dock.js, #right.peek): in Akcja the rail is collapsed to Top 3 (+ alerts and the
      "Niepotwierdzone: N" row when there are any); hover / focus / tap unfolds Zasoby, Na żywo and the details over the map for
      3 s after leaving. The top and left edge stay put, so the insets and the map never move. */
-  body.float.mode-akcja #right:not(.peek){bottom:auto;max-height:calc(100vh - var(--float-gap) * 4 - max(var(--bar-h), var(--hdr-h, 0px)) - var(--dock-h))}
-  body.float.mode-akcja #right:not(.peek) :is(#assets,#moreInfo),body.float.mode-akcja #right:not(.peek) #liveBox:not(.has-unack),body.float.mode-akcja #right:not(.peek) #liveBox>:not(.ackrow){display:none}
-  body.float.mode-akcja #right:not(.peek) #liveBox{border-top:0;margin-top:4px}
-  body.float.mode-akcja #right:not(.peek) #ackCount{color:var(--rl-danger);font-weight:700}
-  body.float.mode-akcja #right.peek :is(#assets,#liveBox,#moreInfo){animation:rl-unfold .18s ease both}
+  body.float.mode-akcja #right:not(.peek):not(.pinned){bottom:auto;max-height:calc(100vh - var(--float-gap) * 4 - max(var(--bar-h), var(--hdr-h, 0px)) - var(--dock-h))}
+  body.float.mode-akcja #right:not(.peek):not(.pinned) :is(#assets,#moreInfo),body.float.mode-akcja #right:not(.peek):not(.pinned) #liveBox:not(.has-unack),body.float.mode-akcja #right:not(.peek):not(.pinned) #liveBox>:not(.ackrow){display:none}
+  body.float.mode-akcja #right:not(.peek):not(.pinned) #liveBox{border-top:0;margin-top:4px}
+  body.float.mode-akcja #right:not(.peek):not(.pinned) #ackCount{color:var(--rl-danger);font-weight:700}
+  body.float.mode-akcja #right.peek:not(.pinned) :is(#assets,#liveBox,#moreInfo){animation:rl-unfold .18s ease both}
+  #right.fold.fold-live>h2:first-of-type{display:none}   /* the fold strip (dock.js foldPanel) carries the title in Akcja */
+  body.float.mode-akcja #right.fold>.fold-head{margin:2px 0 6px}
 }
 @keyframes rl-unfold{from{opacity:0;transform:translateY(-4px)}}
 @media (prefers-reduced-motion:reduce){body.float #right.peek :is(#assets,#liveBox,#moreInfo){animation:none}}

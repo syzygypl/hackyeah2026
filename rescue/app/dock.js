@@ -136,3 +136,50 @@ export function hoverHold(el, { intentMs = 150, holdMs = 3000, onOpen, onClose, 
   el.addEventListener("keydown", (e) => { if (e.key === "Escape" && on) set(false); });
   return { open: () => set(true), close: () => set(false), isOpen: () => on };
 }
+// foldPanel (Mateusz 2026-10-04, AI Mateusza #1): ONE way for every overlay panel over the map / scene in /app (the right panel,
+// the 2D and 3D legends and control boxes) to collapse: a slim strip "<title> <summary chip> <pin>" until hover / focus / tap
+// (hoverHold: open after 150 ms, held 3 s after leaving, Esc closes, tap outside closes), the pin keeps it open (localStorage
+// `key`, try/catch). The panel's box keeps its anchor and width in both states, so nothing else moves (insets, camera, map).
+// Children with .fold-keep stay visible when collapsed (the right panel's Top 3). The strip is shown only while el has
+// .fold-live (callers turn it off where the panel is not collapsible, e.g. Plan). Phones (top window <= 600 px) keep their own
+// layout: no-op. sum(el) -> the chip text, re-read when the panel's content changes (innerHTML rewrites keep the strip on top).
+// Styles are injected once per document (the 2D and 3D frames are separate documents). Returns {open, close, isOpen, setPin, sync}.
+const FOLD_CSS = `.fold-head{display:flex;align-items:center;gap:3px;min-height:26px;margin:0;padding:0;font:600 12px/1.2 var(--rl-font,system-ui,sans-serif);color:var(--rl-ink,#23272a);box-sizing:border-box;width:100%}
+.fold-ttl{appearance:none;flex:none;display:flex;align-items:center;gap:4px;min-height:26px;margin:0;padding:0 2px;border:0;border-radius:6px;background:transparent;color:inherit;font:700 12px/1.2 var(--rl-font,system-ui,sans-serif);letter-spacing:0;text-transform:none;white-space:nowrap;cursor:pointer}
+.fold-ttl::before{content:"";width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg) translate(-1px,-1px);opacity:.6;transition:transform .15s}
+.fold.peek .fold-ttl::before,.fold.pinned .fold-ttl::before{transform:rotate(-135deg) translate(-1px,-1px)}
+.fold-ttl:focus-visible,.fold-pin:focus-visible{outline:2px solid var(--rl-accent,#1f4e79);outline-offset:1px}
+.fold-sum{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;font-weight:600;padding:1px 4px;border-radius:999px;text-align:center;background:color-mix(in srgb,var(--rl-ink,#23272a) 8%,transparent);color:var(--rl-ink-2,#4a5054)}
+.fold-sum:empty{visibility:hidden}
+.fold-pin{appearance:none;flex:none;display:grid;place-items:center;width:24px;height:24px;margin:0;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--rl-ink-2,#4a5054);cursor:pointer;opacity:.55}
+.fold-pin:hover{opacity:1;border-color:var(--rl-line-strong,rgba(35,39,42,.22))}
+.fold.pinned .fold-pin{opacity:1;color:var(--rl-accent,#1f4e79);background:color-mix(in srgb,var(--rl-accent,#1f4e79) 12%,transparent)}
+.fold:not(.fold-live)>.fold-head{display:none!important}
+.fold.fold-live:not(.peek):not(.pinned)>:not(.fold-head):not(.fold-keep){display:none!important}
+.fold.fold-live:not(.peek):not(.pinned):not(:has(>.fold-keep)){padding-top:4px!important;padding-bottom:4px!important}
+.fold.fold-live.peek:not(.pinned)>:not(.fold-head):not(.fold-keep){animation:fold-unfold .15s ease both}
+@keyframes fold-unfold{from{opacity:.5;transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.fold.fold-live.peek>*{animation:none!important}.fold-ttl::before{transition:none}}
+@media (pointer:coarse){.fold-ttl{min-height:36px}.fold-pin{width:36px;height:36px}}`;
+const PIN_SVG = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 1.5h4l-.6 4.2 2.6 2.3v1.2H8.6V15h-1.2V9.2H4V8l2.6-2.3z" fill="currentColor"/></svg>';
+export function foldPanel(el, { title, key, sum, live = true, holdMs = 3000 } = {}) {
+  if (!el || el.__fold) return el && el.__fold;
+  let topW = innerWidth; try { topW = window.top.innerWidth; } catch (e) {}
+  if (topW <= 600) return null;
+  const doc = el.ownerDocument;
+  if (!doc.getElementById("rl-fold-css")) { const st = doc.createElement("style"); st.id = "rl-fold-css"; st.textContent = FOLD_CSS; doc.head.appendChild(st); }
+  const head = doc.createElement("div"); head.className = "fold-head";
+  head.innerHTML = `<button type="button" class="fold-ttl" aria-expanded="false">${esc(title)}</button><span class="fold-sum" aria-hidden="true"></span><button type="button" class="fold-pin" aria-pressed="false" title="Przypnij panel (zostaje rozwinięty)" aria-label="Przypnij panel: ${esc(title)}">${PIN_SVG}</button>`;
+  el.prepend(head); el.classList.add("fold"); if (live) el.classList.add("fold-live");
+  const ttl = head.querySelector(".fold-ttl"), pin = head.querySelector(".fold-pin"), chip = head.querySelector(".fold-sum");
+  const aria = () => { const o = el.classList.contains("peek") || el.classList.contains("pinned"); ttl.setAttribute("aria-expanded", String(o)); ttl.title = o ? "" : "Rozwiń: " + title; };
+  const hh = hoverHold(el, { holdMs, onOpen: aria, onClose: aria });
+  const setPin = (v) => { el.classList.toggle("pinned", v); pin.setAttribute("aria-pressed", String(v)); aria(); if (key) try { localStorage.setItem(key, v ? "1" : "0"); } catch (e) {} };
+  if (key) try { if (localStorage.getItem(key) === "1") setPin(true); } catch (e) {}
+  pin.addEventListener("click", (e) => { e.stopPropagation(); setPin(!el.classList.contains("pinned")); if (!el.classList.contains("pinned")) hh.close(); });
+  ttl.addEventListener("click", () => hh.open());
+  const sync = () => { if (el.firstElementChild !== head) el.prepend(head); if (sum) { const s = sum(el) || ""; if (chip.textContent !== s) chip.textContent = s; } };
+  new MutationObserver(sync).observe(el, { childList: true, subtree: !!sum, characterData: !!sum });
+  sync(); aria();
+  return (el.__fold = { ...hh, setPin, sync, head });
+}

@@ -340,6 +340,8 @@ function applyInsets() {
   [['t', T], ['r', Rr], ['b', Bm], ['l', L]].forEach(([k, v]) => st.setProperty('--inset-' + k, v + 'px'));
   const dx = (L - Rr) / 2, dy = (T - Bm) / 2;
   if (dx || dy) camera.setViewOffset(innerWidth, innerHeight, -dx, -dy, innerWidth, innerHeight); else camera.clearViewOffset();
+  // overlay fit (AI Mateusza #1): too narrow for the legend and the control box side by side (2D+3D, 1100 px) -> style3d.css body.ov-tight
+  document.body.classList.toggle('ov-tight', innerWidth - L - Rr < 480); document.body.classList.toggle('ov-narrow', innerWidth - L - Rr < 236);
   wake();
 }
 applyInsets();
@@ -1900,21 +1902,16 @@ if (EMB === 'scene') {
     ctl.querySelector('input[data-b="btn-ortho"]').closest('label').hidden = $('btn-ortho').hidden; // shown once the aerial photo has loaded
   };
   setInterval(syncCtl, 1000); // Kino ends on its own; keep the box honest
-  // collapsible box (Mateusz, AI Mateusza #2): a strip "Sterowanie 3D" + the active mode until hover / focus / tap
-  // (hoverHold from ../dock.js, held 3 s, Esc closes); the pin keeps it open (localStorage). The width stays the same in both
-  // states, so frameScene's reserved right margin (it reads only the box width) does not change. Kino keeps its own look.
-  if (innerWidth > 600) {
-    const head = document.createElement('div'); head.className = 'ctl-head';
-    head.innerHTML = `<span class="ctl-ttl">Sterowanie 3D</span><span class="ctl-mode"></span><button type="button" class="ctl-pin" aria-pressed="false" title="Przypnij panel (zostaje rozwinięty)" aria-label="Przypnij panel sterowania 3D"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M6 1.5h4l-.6 4.2 2.6 2.3v1.2H8.6V15h-1.2V9.2H4V8l2.6-2.3z" fill="currentColor"/></svg></button>`;
-    ctl.prepend(head); ctl.classList.add('cc'); ctl.tabIndex = 0;
-    const pin = head.querySelector('.ctl-pin'), mode = head.querySelector('.ctl-mode');
-    const setPin = (v) => { ctl.classList.toggle('pinned', v); pin.setAttribute('aria-pressed', String(v)); try { localStorage.setItem('rl3dCtlPin', v ? '1' : '0'); } catch {} };
-    try { if (localStorage.getItem('rl3dCtlPin') === '1') setPin(true); } catch {}
-    pin.addEventListener('click', (e) => { e.stopPropagation(); setPin(!ctl.classList.contains('pinned')); });
-    const syncMode = () => { mode.textContent = document.body.classList.contains('cinema') ? 'Kino' : (WALK?.on || WALK?.armed) ? 'Spacer' : document.querySelector('#timeline3dCtl button.on') ? 'FPP' : $('btn-rot').classList.contains('on') ? 'Obrót' : 'Swobodny'; };
-    syncMode(); setInterval(syncMode, 500); ctl.addEventListener('click', () => setTimeout(syncMode, 0));
-    import('../dock.js').then((m) => m.hoverHold(ctl, { holdMs: 3000 })).catch(() => { ctl.classList.remove('cc'); head.remove(); });
-  }
+  // collapsible boxes (Mateusz; AI Mateusza #1 2026-10-04): the control box and the legend collapse the same way as every overlay
+  // panel in /app - foldPanel from ../dock.js: a strip "<title> <chip> <pin>", hover / focus / tap opens, held 3 s, Esc closes, pin
+  // keeps it open (localStorage). Width and anchor stay the same in both states, so frameScene's reserved right margin (it reads
+  // only the box width) and the insets do not change. Kino keeps the control box's own look (shot switch only, style3d.css).
+  const ctlMode = () => document.body.classList.contains('cinema') ? 'Kino' : (WALK?.on || WALK?.armed) ? 'Spacer' : document.querySelector('#timeline3dCtl button.on') ? 'FPP' : $('btn-rot').classList.contains('on') ? 'Obrót' : 'Swobodny';
+  import('../dock.js').then((m) => {
+    const f = m.foldPanel(ctl, { title: 'Sterowanie 3D', key: 'rl3dCtlPin', sum: ctlMode });
+    if (f) { setInterval(f.sync, 500); ctl.addEventListener('click', () => setTimeout(f.sync, 0)); }
+    m.foldPanel($('sceneLegend'), { title: 'Legenda', key: 'rl3dLegPin', sum: (el) => (el.querySelector('.lg-title')?.firstChild?.textContent || '').replace(/\s*\(silnik\)\s*$/, '').trim() });
+  }).catch(() => {});
 }
 
 // ---------- camera ----------

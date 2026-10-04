@@ -350,21 +350,18 @@ body.embed #sceneCtl .chk input { width: 16px; height: 16px; accent-color: var(-
 body.embed #sceneCtl .full { min-height: 34px; background: var(--rl-card, #fff); color: var(--rl-ink, #23272a); border: 1px solid var(--rl-line-strong, rgba(35,39,42,.22)); border-radius: 8px; font-size: 13px; font-weight: 600; }
 body.embed #sceneCtl .full:hover { border-color: var(--rl-ink, #23272a); }
 body.embed #sceneCtl [data-b="btn-game"] { background: var(--rl-danger, #b8322a); color: var(--rl-on-danger, #fff); border-color: var(--rl-danger, #b8322a); }
-/* collapsible box (app3d.js #sceneCtl.cc, hoverHold .peek, .pinned): a one-line strip until hover / focus / tap, same width, so
-   the camera framing (frameScene reads the box width) and the insets do not move. Kino keeps its own look (shot switch only). */
-#sceneCtl .ctl-head { display: flex; align-items: center; gap: 5px; min-height: 26px; padding: 0 0 0 4px; font-size: 12px; cursor: default; }
-#sceneCtl .ctl-ttl { font-weight: 700; white-space: nowrap; }
-#sceneCtl .ctl-mode { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 999px; text-align: center;
-  background: color-mix(in srgb, var(--rl-ink, #23272a) 8%, transparent); color: var(--rl-ink-2, #4a5054); }
-#sceneCtl .ctl-pin { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--rl-ink-2, #4a5054); cursor: pointer; opacity: .55; }
-#sceneCtl .ctl-pin:hover, #sceneCtl .ctl-pin:focus-visible { opacity: 1; border-color: var(--rl-line-strong, rgba(35,39,42,.22)); }
-#sceneCtl.pinned .ctl-pin { opacity: 1; color: var(--rl-accent, #1f4e79); background: color-mix(in srgb, var(--rl-accent, #1f4e79) 12%, transparent); }
-#sceneCtl.cc:focus-visible { outline: 2px solid var(--rl-accent, #1f4e79); outline-offset: 2px; }
-body:not(.cinema) #sceneCtl.cc:not(.peek):not(.pinned) > :not(.ctl-head) { display: none; }
-body:not(.cinema) #sceneCtl.cc:not(.peek):not(.pinned) { padding-top: 4px; padding-bottom: 4px; }
-body:not(.cinema) #sceneCtl.cc.peek:not(.pinned) { animation: ctl-unfold .15s ease both; }
-@keyframes ctl-unfold { from { opacity: .7; } }
-@media (prefers-reduced-motion: reduce) { #sceneCtl.cc.peek { animation: none !important; } }
+/* collapsible boxes (app3d.js -> foldPanel in ../dock.js: .fold strip, .peek, .pinned; the strip styles are injected by dock.js, the
+   same in the shell, the 2D and the 3D). Kino keeps the control box's own look: only the shot switch, never collapsed. */
+body.cinema #sceneCtl.fold > .fold-head { display: none !important; }
+body.cinema #sceneCtl.fold > .seg-switch { display: flex !important; }
+/* overlay fit (AI Mateusza #1, QA: the legend sat over 'Sterowanie 3D' in 2D+3D): when the free area (frame minus insets, app3d.js
+   applyInsets) is narrower than legend + control box, the legend goes to the bottom-left corner (it opens upwards) and the toasts
+   step above it; when even one box does not fit, both take the free width, the control box anchored left. */
+body.embed-scene.ov-tight #sceneLegend { top: auto; bottom: calc(var(--inset-b, 0px) + 10px); max-width: calc(100vw - var(--inset-l, 0px) - var(--inset-r, 0px) - 20px); box-sizing: border-box; }
+body.embed-scene.ov-tight #feed { bottom: calc(var(--inset-b, 0px) + 56px); }
+body.embed-scene.ov-narrow #sceneCtl { right: auto; left: calc(var(--inset-l, 0px) + 10px); width: max(140px, calc(100vw - var(--inset-l, 0px) - var(--inset-r, 0px) - 20px)); box-sizing: border-box; }
+body.embed-scene.ov-narrow #sceneCtl .seg-switch { flex-wrap: wrap; }
+body.embed-scene.ov-narrow #sceneLegend { width: max(140px, calc(100vw - var(--inset-l, 0px) - var(--inset-r, 0px) - 20px)); }
 body.embed .lbl3d { background: color-mix(in srgb, var(--rl-panel-solid, #faf8f3) 94%, transparent); color: var(--rl-ink, #23272a); border-color: var(--rl-line, rgba(35,39,42,.12)); font-family: var(--rl-font); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
 body.embed .lbl3d.top3 .rk { color: var(--rl-danger, #b8322a); }
 body.embed .tip, body.embed .toast { background: var(--rl-panel-solid, #faf8f3); color: var(--rl-ink, #23272a); border: 1px solid var(--rl-line, rgba(35,39,42,.12)); border-radius: 10px; box-shadow: var(--rl-shadow); }
@@ -398,3 +395,5 @@ body.walking canvas { cursor: grab; }
 /* the separate FPP window (?embed=fpp): only the eye view, the unit picker and the clock */
 body.embed-fpp > #timeline3dCtl { top: 12px; left: 12px; right: auto; width: 230px; }
 body.embed-fpp #timeline3dCtl > button, body.embed-fpp #timeline3dCtl .tl3d-key, body.embed-fpp #timeline3dCtl label { display: none; }
+body.embed-scene.ov-tight #sceneLegend.fold { display: flex; flex-direction: column; }
+body.embed-scene.ov-tight #sceneLegend.fold > .fold-head { order: 99; }

@@ -3,7 +3,7 @@
 // `swift run rescue-server` on a laptop). Offline: MapLibre + basemap from ../web/, no CDN.
 import * as maplibregl from "../web/vendor/maplibre-gl.mjs";
 import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/basemap/basemap.js";
-import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tipHTML, focusTarget, focusUnion, hoverHold } from "./dock.js";   // compact dock, shared with Ćwiczenia
+import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tipHTML, focusTarget, focusUnion, hoverHold, foldPanel } from "./dock.js";   // compact dock, shared with Ćwiczenia
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
 import { initRescuer, render as renderRescuer, pollTask, myTeam, startGps } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
@@ -673,10 +673,13 @@ function insets() {
   const r = (id) => { const el = $(id); if (!el || getComputedStyle(el).display === "none") return null; const b = el.getBoundingClientRect(); return b.width && b.height ? b : null; }; // fixed panels have no offsetParent
   const h = document.querySelector("header").getBoundingClientRect(), L = r("left"), Rr = r("right"), Bt = r("bottom");
   document.documentElement.style.setProperty("--hdr-h", Math.round(h.height) + "px"); // a wrapped header pushes the rails down
-  return [Math.round(h.bottom), Rr ? Math.round(innerWidth - Rr.left) : 0, Bt ? Math.round(innerHeight - Bt.top) : 0, L ? Math.round(L.right) : 0];
+  // 2D+3D: the view switch (#views) sits over the 2D frame's top-right box (its pane ends at the middle) - the frames' overlays start below it
+  const V = store.view === "split" ? r("views") : null;
+  return [Math.round(Math.max(h.bottom, V ? V.bottom - 8 : 0)), Rr ? Math.round(innerWidth - Rr.left) : 0, Bt ? Math.round(innerHeight - Bt.top) : 0, L ? Math.round(L.right) : 0];
 }
 function setFloat() {
   document.body.classList.toggle("float", store.role !== "ratownik" && (store.mode === "akcja" || store.mode === "edycja"));
+  $("right").classList.toggle("fold-live", store.role !== "ratownik" && store.mode === "akcja");   // the strip only where #right collapses (Akcja)
   pushInsets();
 }
 // the same free area in one element's own coordinates (split view: each frame covers only half the screen)
@@ -878,7 +881,11 @@ function showFirstRun(role) {
 // Akcja: the event cards hide behind "Sygnały" so the dock is one line; Plan always shows them
 $("sigBtn").onclick = () => { const on = document.body.classList.toggle("signals"); $("sigBtn").setAttribute("aria-pressed", on); setTimeout(pushInsets, 50); };
 hoverHold($("bottom"));   // hover: the cards open above the dock and stay 3 s after leaving (dock.css #bottom.peek, no inset change)
-hoverHold($("right")); $("right").tabIndex = 0;   // Akcja: the right panel shows Top 3, hover / Tab unfolds the rest for 3 s (app.css #right.peek, no inset change)
+// Akcja: the right panel collapses like every overlay panel (foldPanel in dock.js: strip + pin, hover / focus / tap, 3 s hold); it
+// keeps the Top 3 (.fold-keep) and unfolds Zasoby, Na żywo and the details over the map (app.css #right.peek, no inset change).
+// The phone (<= 600 px) keeps its bottom sheet: foldPanel is a no-op there, hoverHold as before.
+for (const e of document.querySelectorAll("#right>.hero, #segs, #alerts, #liveBox")) e.classList.add("fold-keep");
+if (!foldPanel($("right"), { title: "Gdzie szukać najpierw", key: "rescue-right-pin", live: false, sum: () => document.body.classList.contains("time-live") ? "zasoby · na żywo · plan" : "zasoby · plan · ocena" })) { hoverHold($("right")); $("right").tabIndex = 0; }
 function setRescuerFrame() { const t = myTeam(); setFrame("frameRescuer", patrolURL(t)); }
 $("roleBtn").onclick = () => { $("rolePick").hidden = false; };
 $("rolePick").onclick = (e) => { const b = e.target.closest("[data-role]"); if (b) setRole(b.dataset.role); };

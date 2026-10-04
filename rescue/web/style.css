@@ -390,3 +390,7 @@ body.embed-scene .lg-keys { gap: 10px; margin-top: 3px; font-size: 11px; }
   body.embed:not(.lg-tap-open) #mapctl, body.embed:not(.lg-tap-open) #tllegend { display: none !important; }
   body.embed.lg-tap-open #legend.floating { z-index: 8; }
 }
+/* collapsible overlays inside /app (foldPanel from ../app/dock.js, the strip styles are injected by dock.js): the layer box keeps one
+   width in both states (like the 3D 'Sterowanie 3D'), so the strip does not jump when it opens */
+body.embed-scene #mapctl.fold { width: 196px; box-sizing: border-box; }
+body.embed-scene #legend.fold { box-sizing: border-box; }
