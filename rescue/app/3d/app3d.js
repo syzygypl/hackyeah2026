@@ -1595,7 +1595,7 @@ const halos = (() => {
 })();
 const glowCol = new Map(), glowV = new THREE.Vector3();
 function glowTick() {
-  const night = clamp(heatU.uEmis.value * 4, 0, 1), fog = clamp((9 - scene.fog.near) / 3, 0, 1); // mood: emis 0.25 at night, fog near 9 clear .. 5 thick
+  const night = clamp(heatU.uEmis.value * 4, 0, 1), fog = clamp((9 - cur.near) / 3, 0, 1); // mood: emis 0.25 at night, fog near 9 clear .. 5 thick
   heatU.uNight.value = night;
   const amt = Math.max(night, fog * 0.65); haloMat.uniforms.uAmt.value = amt; haloMat.uniforms.uTime.value = heatU.uTime.value;
   halos.visible = amt > 0.01; if (!halos.visible) return;
@@ -1706,7 +1706,10 @@ function stepMood(dt, snap = false) {
   su.uMoon.value = night * (1 - 0.85 * cur.cloud) * (1 - 0.7 * f);
   su.uCloudLit.value.copy(C_WHITE).multiplyScalar(0.95).lerp(p.glow, 0.7 * tw).multiplyScalar(0.1 + 0.9 * smooth(-9, 0, el)).lerp(C_MOONLIT, night * 0.8).multiplyScalar(1 - 0.35 * st);
   su.uCloudDark.value.copy(p.bottom).lerp(p.top, 0.35).multiplyScalar(0.92); // bases: sky light from below
-  scene.fog.color.copy(p.fog); scene.fog.near = cur.near; scene.fog.far = cur.far;
+  // the weather fog band starts behind the orbit target: a far start shot (phone, flat wide cut) stays readable and keeps the
+  // mood as tint and haze; in FPP / Spacer (eye height) and close orbits the step's own near / far apply unchanged
+  const orbit = TL3D?.following || WALK?.on ? 0 : camera.position.distanceTo(controls.target), fogOff = Math.max(0, orbit * 1.1 - cur.near);
+  scene.fog.color.copy(p.fog); scene.fog.near = cur.near + fogOff; scene.fog.far = cur.far + fogOff * 1.5;
   ATMO.uAtmoSunCol.value.copy(p.glow).multiplyScalar(smooth(-7, -1, el) * (1 - 0.7 * st) * (1 - 0.5 * f));
   ATMO.uValleyP.value.set(cur.valley, cur.vthick, heatU.uTime.value, ATMO.uValleyP.value.w);
   ATMO.uValleyCol.value.copy(p.fog).lerp(p.hs, 0.35).lerp(p.glow, 0.2 * tw);
@@ -1973,7 +1976,10 @@ function frameScene({ pts, vis, keepAz = false, padRight = 0, dur } = {}) {
   if (!pts.length) return;
   vis = vis || [pts];
   const W = innerWidth, H = innerHeight, [T0, R0, B0, L0] = INSETS, ctl = $('sceneCtl'), cr = ctl && !ctl.hidden ? ctl.getBoundingClientRect() : null;
-  const Rr = R0 + padRight + (cr && cr.width ? cr.width + 14 : 0), T = T0 + 12, Bm = B0 + 12, L = L0 + 12;
+  // the control box is left out of the free area when it would take more than a third of it (phone): framed under the
+  // overlay beats a camera parked kilometres away in the fog
+  const ctlW = cr && cr.width && cr.width + 14 < (W - R0 - padRight - L0) / 3 ? cr.width + 14 : 0;
+  const Rr = R0 + padRight + ctlW, T = T0 + 12, Bm = B0 + 12, L = L0 + 12;
   const fx0 = -1 + (2 * L) / W, fx1 = 1 - (2 * Rr) / W, fy0 = -1 + (2 * Bm) / H, fy1 = 1 - (2 * T) / H;
   if (fx1 - fx0 < 0.3 || fy1 - fy0 < 0.3) return;
   const pitch = ((MOUNTAIN ? 42 : 36) * Math.PI) / 180, fill = MOUNTAIN ? 0.74 : 0.68, bias = MOUNTAIN ? -0.14 : -0.04; // bias: NDC of the targets' centre in the free area

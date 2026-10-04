@@ -179,7 +179,11 @@ export function installHeightFog() {
         float vfIn = vfFloor + uValleyP.y * ( 0.3 + 1.4 * vfN ) - fogY;
         if ( vfIn > 0.0 ) {
           float vfLen = min( fogDist, vfIn / max( - fogV.y, 0.025 ) );
-          gl_FragColor.rgb = mix( gl_FragColor.rgb, uValleyCol, ( 1.0 - exp( - uValleyP.x * 10.0 * vfLen ) ) * smoothstep( 0.0, uValleyP.y * 0.6, vfIn ) );
+          // seen from above the layer (orbit, overview) the bank stays a veil of at most ~35%, so flat or low ground under
+          // thick fog (marsh, basin at night) still shows terrain, sectors and signals; inside the fog (FPP, Spacer) it is full
+          float vfTopC = texture2D( uValley, ( cameraPosition.xz - uValleyRect.xy ) / uValleyRect.zw ).r * uValleyP.w + uValleyP.y * 1.7;
+          float vfVeil = 1.0 - 0.65 * smoothstep( 0.0, 0.6, fogCamY - vfTopC );
+          gl_FragColor.rgb = mix( gl_FragColor.rgb, uValleyCol, ( 1.0 - exp( - uValleyP.x * 10.0 * vfLen ) ) * smoothstep( 0.0, uValleyP.y * 0.6, vfIn ) * vfVeil );
         }
       }
     }
