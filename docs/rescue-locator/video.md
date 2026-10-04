@@ -2,6 +2,16 @@
 
 Backup video for the DEFENCE submission (MP4 not required for open tasks, but it covers venue wifi failure and mentor phase-1 review). Target **2:30**, hard max 3:00. Polish voice-over, read from [`pitch.md`](pitch.md). Record by Sun 07:00 (T+20h).
 
+**Update 2026-10-04 02:30:** a captioned draft of the live product, with no voice, is in
+[`docs/submission/hackathon/rescue-locator/video/`](../submission/hackathon/rescue-locator/video/shotlist.md) (`draft.mp4`, 2:07, plus
+`draft.srt`). It shows both audiences:
+- the family: Ktoś zaginął and Przygotuj zgłoszenie
+- the commander: Akcja with the top 3, 2D/3D, a timeline click with zoom, and Czat
+- porownanie, Odprawa with the task cards, the rescuer phone and Centrum
+
+Its `shotlist.md` has the URLs and clicks for re-recording it with narration. The plan below is the original story (engine replay) and
+still holds for the voice-over.
+
 ## Setup
 
 - Source: `swift run rescue-demo`, then open `rescue/out/index.html` in Chrome, window 1920x1080, zoom so the heatmap, hints panel and plan panel all fit with no scrolling.

@@ -1,0 +1,67 @@
+1
+00:00:04,566 --> 00:00:08,568
+Rodzina: ktoś bliski nie wrócił z gór. Najpierw 112.
+
+2
+00:00:08,568 --> 00:00:13,995
+Potem lista: co powiedzieć dyżurnemu. Nic nie jest wysyłane.
+
+3
+00:00:13,995 --> 00:00:18,510
+„Gotowy tekst” - do przeczytania przez telefon albo wysłania, gdy ratownicy poproszą.
+
+4
+00:00:18,583 --> 00:00:23,087
+Kierownik akcji. Zawrat, 19:45: mgła, zmrok, sektory przeszukane bez wyniku.
+
+5
+00:00:23,087 --> 00:00:28,090
+Gdzie szukać najpierw: trzy sektory to 7% obszaru. Każdy zespół ma sektor i czas dojścia.
+
+6
+00:00:28,090 --> 00:00:39,518
+Ta sama akcja na prawdziwym terenie w 3D.
+
+7
+00:00:39,518 --> 00:00:44,529
+Klik w zdarzenie na osi czasu: mapa pokazuje, co ono zmieniło.
+
+8
+00:00:44,529 --> 00:00:53,972
+Nowa relacja? Wpisz ją zwykłym zdaniem w Czacie.
+
+9
+00:00:53,972 --> 00:01:09,566
+Czat pokazuje, co zrozumiał. Dodaj - i mapa się przelicza (symulacja tylko na tym ekranie).
+
+10
+00:01:09,594 --> 00:01:14,596
+Ta sama akcja policzona dwa razy: bez relacji turystki i z nią.
+
+11
+00:01:14,596 --> 00:01:20,305
+Inna kolejność sektorów, inne zespoły w drodze.
+
+12
+00:01:20,305 --> 00:01:27,309
+Epilog (fikcyjny): żleb pod Zawratem. Bez relacji pies, dojście 95 min. Z relacją dron, 12 min.
+
+13
+00:01:27,343 --> 00:01:36,852
+Odprawa na jednej kartce A4: kogo szukamy, gdzie najpierw, kto dokąd idzie, pogoda i zmrok.
+
+14
+00:01:36,886 --> 00:01:42,391
+Karty zadań: każdy zespół dostaje swoją połówkę kartki z sektorem i uwagami bezpieczeństwa.
+
+15
+00:01:42,421 --> 00:01:49,424
+Ratownik w terenie widzi swój sektor i melduje jednym przyciskiem.
+
+16
+00:01:49,545 --> 00:01:55,047
+Centrum: wszystkie akcje w Polsce na jednej mapie i wspólna pula zespołów.
+
+17
+00:01:55,047 --> 00:02:00,050
+Doradca łączy zgłoszenia z kilku akcji w jedną przyczynę - tu fala po awarii zapory na Sanie.
