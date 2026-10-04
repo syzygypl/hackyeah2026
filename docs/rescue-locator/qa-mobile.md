@@ -110,3 +110,45 @@ interactive elements under 44 px (inline text links exempt), computed contrast o
 background, `scrollWidth > clientWidth` on clipped text, `img.complete && naturalWidth == 0`, console errors and HTTP 4xx/5xx, and
 `first-contentful-paint`. Interaction checks: porównanie toggle (auto on desktop, tap and scroll on phone), Widziałem form, Zasoby unit
 drawer, Centrum Doradca.
+
+## Second pass (2026-10-04, after 11:00): the commander on a phone, 112 buttons, map legend
+
+Real Chrome (headless, CDP, touch, 2x) at 390x844 and 360x740, production read-only; fixes checked on a local read-only proxy
+(worktree `rescue/app/` + `rescue/web/`, production API, writes refused). Desktop 1440 px checked unchanged.
+
+### Audit: what was confusing on a phone (before)
+
+| Page | Problem | Shot |
+|---|---|---|
+| /app operator, Na żywo and Historia | The header took ~430 px in 4 rows (Na żywo/Historia, scenario, Akcja/Plan/Więcej, 2D/3D/2D+3D over them, Klucz 26 px, Nowa akcja, Centrum, Zasoby, Czat, Udostępnij, ?, Rola) plus the first-run hint. The 2D map started at y=681 (below the fold), "Gdzie szukać najpierw" at 1145, Wyślij zespół at 1814; the page was 2190 px tall. The legend, layer panel and timeline key covered half of the map. Select 14 px and key 13 px (iOS zooms) | `mobile-op-live-390.jpg`, `mobile-op-hist-390.jpg`, `-360` |
+| start.html | "Ktoś zaginął" at y=1341 at 360 px, nothing to call 112 above the fold | `mobile-start-360.jpg` |
+| landing/?dla=turysci | 112 block fine, but the first card read just "112 / numer alarmowy" | `mobile-landing-turysci-360.jpg` |
+| rodzina.html | "Zadzwoń 112" fine (above the fold, 64 px, `tel:112`, 5.95:1); no visible keyboard focus on the red block | `mobile-rodzina-360.jpg` |
+| Phone map frames (/app, czat, porównanie) | The `legend-compact` rules lost to `body.embed-scene #legend` (specificity): a 180x75 px legend with 6 stops and keys | `legend-before-*.jpg` |
+| Rescuer phone, czat.html, Centrum, Zasoby, Ćwiczenia | Usable; small leftovers: Centrum and Zasoby inputs 13-14.5 px (iOS zoom), Ćwiczenia key 29 px, czat brand link 28x20 (other owners) | `mobile-ratownik-*.jpg`, `mobile-czat-*`, `mobile-centrum-*`, `mobile-zasoby-*`, `mobile-cwiczenia-*` |
+
+### Fixes
+
+- **Commander view (`f7c7911`, `c0ccd7a`)**: new `rescue/app/mobile.css` + `mobile.js`, two lines in `app/index.html`, only under 600 px and
+  never for the rescuer. Header in two slim rows: Na żywo/Historia, Czat, Menu, then the LIVE badge and the incident name. Menu: scenario,
+  2D/3D, key, Nowa akcja, Centrum, Zasoby, Udostępnij, Instrukcja, Rola; Plan, Teren, Monitoring, Walidacja and the 2D+3D split are desktop
+  only (a phone is kept on Akcja). The 2D map is full-bleed. The bottom sheet has 3 states: a 60 px bar (the #1 sector and an "N
+  niepotwierdzone" badge), half (top 3 as one-line rows with % obszaru, Wyślij zespół, + Ślad, the 3 latest events with unconfirmed ones
+  highlighted) and full (every event). Tap or swipe the bar; a tap on the map folds it back; the state is kept per session; a new message
+  only bumps the badge. Historia: the dock is play + slider. All targets 44 px or more, inputs 16 px, no horizontal scroll. Chat drawer full
+  screen. Shots: `mobile-sheet-peek-live-390.jpg`, `mobile-sheet-half-live-390.jpg`, `mobile-sheet-full-live-390.jpg`, `mobile-after-op-menu-390.jpg`.
+- **112 buttons (`74cd50a`)**: start.html shows "Ktoś zaginął? Zadzwoń 112" (`tel:112`, 56 px, 5.95:1) and "Co robić, gdy ktoś zaginął"
+  under the header on phones; the tourist landing's first card reads "Zadzwoń 112"; a white focus ring on the red blocks (rodzina, landing).
+  Checked: above the fold at 360/390, `tel:` for 112, 985, 601 100 300 and 601 100 100, nothing covers them, Tab reaches them.
+  Shots: `mobile-after-start-360.jpg`, `mobile-after-rodzina-360.jpg`, `mobile-after-landing-turysci-360.jpg`.
+- **Map legend on phones (`c0ccd7a`)**: `web/style.css`, only when the frame itself is 520 px or narrower (porównanie's desktop frames are
+  588): a strip in the bottom-left corner, one ramp, "niska / średnia / wysoka", 11 px, semi-transparent, an (i) mark; the layer panel and
+  the timeline key are hidden. A tap on the strip shows the full legend and panels for 3 s or until a tap elsewhere (toggle injected by
+  `app/mobile.js` and `app/porownanie.js`). The desktop hover legend (another agent) lives at 601 px and up. Shots: `legend-after-czat-360.jpg`,
+  `legend-after-porownanie-360.jpg`, `mobile-sheet-peek-live-390.jpg`.
+
+### Still open
+
+- On a tall phone map the 2D view fits the area by width, so dark bands (outside the terrain) show above and below (web/, AI Marcina).
+- czat.html keeps its own expanded map attribution on load (chat agent); porównanie and /app now start it collapsed.
+- Centrum key and Zasoby selects 13-14.5 px (iOS zooms on focus); Ćwiczenia key 29 px.
