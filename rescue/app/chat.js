@@ -239,6 +239,58 @@ function findResource(f, R) {
   return null;
 }
 
+// ---------------------------------------------------------------- the LLM's reading (POST /api/parse) -> the same event shape as parse()
+const DIRS = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315 };
+export function fromLLM(o, text, ctx) {
+  const f = fold(text), ev = { text, kind: o && o.kind && o.kind !== "none" && KINDS[o.kind] ? o.kind : null, conf: ["niska", "średnia", "wysoka"].includes(o.confidence) ? o.confidence : "średnia", why: ["odczytane przez AI"], ai: true };
+  if (!ev.kind) return ev;
+  const byName = (n) => { if (!n) return null; const k = fold(n), c = ctx.G.filter((g) => fold(g.name) === k).sort((a, b) => b.prio - a.prio); if (c.length) return c[0]; const h = findPlaces(words(n), ctx.G); return h.length ? h[0].g : null; };
+  if (typeof o.time === "string" && /^([01]?\d|2[0-3]):[0-5]\d$/.test(o.time)) ev.t = o.time.padStart(5, "0");
+  else if (o.minutesAgo != null && isFinite(o.minutesAgo) && o.minutesAgo >= 0) ev.t = hm(minOf(ctx.clock || "12:00") - o.minutesAgo);
+  const pg = byName(o.place), dg = byName(o.towards);
+  const ids = [...new Set((o.segments || []).map((id) => ctx.segs.find((s) => s.id.toLowerCase() === String(id).toLowerCase())).filter(Boolean).map((s) => s.id))];
+  const c = text.match(/(4[89]|5[0-5])[.,](\d{3,6})[,;\s]+(1[4-9]|2[0-4])[.,](\d{3,6})/);
+  if (c) { ev.place = { name: "punkt GPS z tekstu", p: [+(c[1] + "." + c[2]), +(c[3] + "." + c[4])], r: 100, how: "gps" }; ev.conf = "wysoka"; }
+  else if (pg) ev.place = { name: pg.name, p: pg.p.slice(), r: pg.r, kind: pg.kind, how: "nazwa" };
+  else if (ids.length && ev.kind !== "search" && ev.kind !== "dispatch") { const s = ctx.segs.find((x) => x.id === ids[0]); if (s && s.c) ev.place = { name: `${s.id} ${s.name}`, p: s.c.slice(), r: 500, how: "sektor" }; }
+  if (ev.place && ev.place.how === "nazwa" && o.offsetM > 0 && o.offsetM < 20000 && DIRS[o.offsetDir] != null) {
+    const m = +o.offsetM, b = DIRS[o.offsetDir];
+    ev.place.p = offset(ev.place.p, m, b); ev.place.name = `${Math.round(m)} m na ${["północ", "pn-wsch", "wschód", "pd-wsch", "południe", "pd-zach", "zachód", "pn-zach"][Math.round(b / 45) % 8]} od: ${ev.place.name}`; ev.place.r = Math.max(150, m * 0.35); ev.place.how = "odległość od nazwy";
+  }
+  if (dg && ev.kind === "sighting" && (!pg || dg.name !== pg.name)) ev.dir = { name: dg.name, p: dg.p.slice() };
+  if (ev.place) {
+    let r = ev.place.r;
+    if (ev.kind === "sighting") r = Math.max(r, 400); if (ev.kind === "found") r = 30;
+    if (ev.kind === "clue" && ev.place.how === "nazwa") r = Math.max(200, Math.min(r, 400));
+    if (ev.conf === "niska" && ev.kind !== "found") r *= 1.6; if (ev.conf === "wysoka" && ev.kind !== "found" && ev.place.how !== "gps") r *= 0.7;
+    ev.place.r = Math.round(r / 10) * 10;
+    const s = segAt(ctx.segs, ev.place.p); if (s) ev.place.seg = s.id;
+  }
+  const R = ctx.resources || [], tm = R.find((x) => x.id === o.team);
+  if (["status", "dispatch", "search"].includes(ev.kind)) ev.team = tm ? { id: tm.id, name: tm.name } : findResource(f, R);
+  if (ev.kind === "clue") { ev.clueType = ["odziez", "znalezisko", "slad", "telefon"].includes(o.clueType) ? o.clueType : "znalezisko"; ev.item = o.item ? String(o.item).slice(0, 40) : null; }
+  if (ev.kind === "search") {
+    const tr = ev.team && R.find((x) => x.id === ev.team.id);
+    ev.drone = !!o.drone || !!(tr && tr.type === "drone");
+    ev.pod = ev.drone ? 0.6 : /(pies|psem|psa\b)/.test(f) || (tr && tr.type === "dog") ? 0.8 : /(pobiezn|szybko|mgl|ciemn)/.test(f) ? 0.4 : /(dokladn|szczegol|tyralier)/.test(f) ? 0.8 : 0.6; const p = f.match(/pod\s*(\d{2})\s*%/); if (p) ev.pod = +p[1] / 100;
+    ev.segs = ids.length ? ids : ev.place && ev.place.seg ? [ev.place.seg] : [];
+  }
+  if (ev.kind === "dispatch") ev.segs = ids.length ? ids.slice(0, 1) : ev.place && ev.place.seg ? [ev.place.seg] : [];
+  if (ev.kind === "weather" || ev.kind === "status") {
+    const L = ctx.lastWeather || {}, w = {};
+    for (const k of ["visibilityM", "windMs", "tempC"]) if (o[k] != null && isFinite(o[k])) w[k] = Math.round(+o[k]);
+    if (o.precip && o.precip !== "none") w.precip = o.precip; if (o.dark) w.dark = true; if (o.ice) w.ice = true;
+    if (Object.keys(w).length) ev.weather = { visibilityM: L.visibilityM ?? 1000, windMs: L.windMs ?? 5, tempC: L.tempC ?? 5, precip: L.precip || "none", dark: !!L.dark, ice: !!L.ice, ...w, given: Object.keys(w) };
+    if (ev.kind === "status") ev.available = typeof o.available === "boolean" ? o.available : /(gotow|dostepn|startuje|w drodze|wylecial|wystartowal)/.test(f) && !/(nie |niedostep)/.test(f);
+  }
+  if (ev.kind === "sighting" || ev.kind === "clue") ev.seenAt = ev.t || null;
+  ev.missing = [];
+  if (["sighting", "clue", "found"].includes(ev.kind) && !ev.place) ev.missing.push("place");
+  if ((ev.kind === "search" || ev.kind === "dispatch") && !(ev.segs && ev.segs.length)) ev.missing.push("segs");
+  if (ev.kind === "dispatch" && !ev.team) ev.kind = null;   // nobody to send: let the rules / the user say it again
+  return ev;
+}
+
 // several events in one message: split at sentence ends, ";", ", a / oraz / potem / natomiast"; a piece without its own kind
 // ("nic", "widoczność 50 m") stays with the previous one. Only when 2+ pieces are events of their own.
 export function splitEvents(text, ctx) {
@@ -459,6 +511,23 @@ export function createChat(root, host, opts = {}) {
     for (const d of done) for (const e of d.events || []) if (e.provider === "WeatherConditions") L = e;
     return L || {};
   }
+  // POST /api/parse: the model's events in parse() shape, or null (off, slow, error) - the rules take over then
+  let llmDown = 0;
+  async function llmParse(t, c, prev) {
+    if (Date.now() < llmDown) return null;
+    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 6000);
+    try {
+      const seen = new Set(), places = [];
+      for (const g of c.G) if (g.prio > 0 && g.kind !== "IPP" && !seen.has(g.name)) { seen.add(g.name); places.push(g.name); }
+      const r = await fetch("/api/parse", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ac.signal,
+        body: JSON.stringify({ text: t, clock: c.clock, prev, places, segments: c.segs.map((s) => ({ id: s.id, name: s.name })), teams: (c.resources || []).map((x) => ({ id: x.id, name: x.name, type: x.type || "" })) }) });
+      const o = r.ok ? await r.json() : null;
+      if (!o || !Array.isArray(o.events)) { if (!r.ok || (o && o.error)) llmDown = Date.now() + 60000; return null; }
+      const evs = o.events.map((x) => fromLLM(x, t, c)).filter((e) => e.kind);
+      return evs.length ? evs : null;
+    } catch (e) { llmDown = Date.now() + 30000; return null; }
+    finally { clearTimeout(to); }
+  }
   // safe failure: whatever the parser or the card does with a message, the run and the action view stay as they were
   async function onText(t) {
     t = String(t ?? "").trim();
@@ -471,9 +540,25 @@ export function createChat(root, host, opts = {}) {
     await ensureCtx();
     const c = { ...ctx, clock: host.clock() }; c.lastWeather = lastWeather(c.clock);
     // several events in one message ("S3 i S4 przeszukane, nic, a o 15:10 turystka widziała go przy Zawracie"): one card each
-    const parts = splitEvents(t, c);
-    if (parts.length > 1) { draft = null; multi(parts); return; }
-    let ev = parse(t, c);
+    // the LLM reads it first (POST /api/parse, ~1-3 s); the rules answer when the model is off, slow or unsure
+    const prevDraft = draft && draft.ev.missing.length ? draft : null;
+    const wait = say(`<span class="spin"></span> Czytam…`, "bot", "wait");
+    const L = await llmParse(t, c, prevDraft ? prevDraft.ev.text : null); wait.remove();
+    const rules = parse(t, c);
+    let ev;
+    if (L && L.length > 1) { draft = null; multi(L); return; }
+    if (L && L.length === 1) {
+      ev = L[0];
+      if (rules.kind === ev.kind) {   // what the rules saw and the model missed (a GPS fix, a sector id, a time)
+        if (!ev.place && rules.place) ev.place = rules.place; if (!ev.t && rules.t) { ev.t = rules.t; if (ev.kind === "sighting" || ev.kind === "clue") ev.seenAt = ev.t; }
+        if ((ev.kind === "search" || ev.kind === "dispatch") && !(ev.segs && ev.segs.length) && rules.segs && rules.segs.length) ev.segs = rules.segs;
+        ev.missing = ev.missing.filter((m) => !(m === "place" && ev.place) && !(m === "segs" && ev.segs && ev.segs.length));
+      }
+    } else {
+      const parts = splitEvents(t, c);
+      if (parts.length > 1) { draft = null; multi(parts); return; }
+      ev = rules;
+    }
     // a follow-up answer fills what the last card was missing ("przy Wielkim Stawie", "o 15:10", "S4")
     if (draft && draft.ev.missing.length && (!ev.kind || ev.kind === draft.ev.kind)) {
       const d = draft.ev;
@@ -481,6 +566,7 @@ export function createChat(root, host, opts = {}) {
       if ((d.kind === "search" || d.kind === "dispatch") && ev.segs && ev.segs.length) d.segs = ev.segs; else if ((d.kind === "search" || d.kind === "dispatch") && ev.place && ev.place.seg) d.segs = [ev.place.seg];
       if (d.place && !d.place.seg) { const s = segAt(ctx.segs, d.place.p); if (s) d.place.seg = s.id; }
       d.text += " / " + t; d.missing = d.missing.filter((m) => !(m === "place" && d.place) && !(m === "time" && d.t) && !(m === "segs" && d.segs && d.segs.length));
+      const old = draft.el; old.querySelector(".ch-card")?.classList.add("off"); const oa = old.querySelector(".ch-acts"); if (oa) oa.innerHTML = `<span class="mute">Uzupełnione poniżej.</span>`;
       ev = d;
     }
     if (!ev.kind) {

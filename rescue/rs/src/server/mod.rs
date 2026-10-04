@@ -9,6 +9,7 @@ mod http;
 mod incidents;
 mod inventory;
 mod live;
+mod parse;
 mod state;
 mod store;
 

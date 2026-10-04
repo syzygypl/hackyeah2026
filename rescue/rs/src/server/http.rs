@@ -28,7 +28,7 @@ pub fn is_write(q: &Req) -> bool {
     if q.path.starts_with("/api/exercise/") {
         return false; // exercise mode: a sandboxed training session, no action key
     }
-    !["/api/run", "/story/assessment", "/client-event"].contains(&q.path.as_str())
+    !["/api/run", "/api/parse", "/story/assessment", "/client-event"].contains(&q.path.as_str())
 }
 /// What a rescuer's phone may do with the field key (RESCUE_FIELD_PIN): send reports and clues.
 pub fn is_field_write(q: &Req) -> bool { q.method == "POST" && (q.path == "/report" || q.path == "/api/clue" || q.path == "/api/fix") }
@@ -62,7 +62,7 @@ pub async fn handle(q: Req) -> Resp {
     if q.path != "/api/run" && q.path != "/story" && q.body.len() > 65_536 {
         return json_err(413, "body over 64 KB");
     }
-    let stateful = q.method != "OPTIONS" && (q.path.starts_with("/api/") || q.path.starts_with("/story") || q.path == "/report" || q.path == "/live-events");
+    let stateful = q.method != "OPTIONS" && q.path != "/api/parse" && (q.path.starts_with("/api/") || q.path.starts_with("/story") || q.path == "/report" || q.path == "/live-events");
     if stateful {
         SHARED.pull().await;
     }
@@ -173,6 +173,7 @@ pub async fn route(q: &Req) -> Resp {
             ok_json(st_assign_team(&b))
         }
         ("POST", "/api/clue") => add_clue(q).await,
+        ("POST", "/api/parse") => super::parse::parse_route(q).await,
         ("POST", "/api/clue/weight") | ("GET", "/api/clue/weights") => clue_weight_route(q).await,
         ("POST", "/api/advance") => advance(q).await,
         ("GET", "/api/live") => live_feed_data(q.q("since").and_then(|s| s.parse().ok()).unwrap_or(0), sc_param(q, &Default::default()).as_deref()).await,

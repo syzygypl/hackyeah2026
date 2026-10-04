@@ -13,7 +13,10 @@ and on "Dodaj" posts it through the **existing** API. Then it answers with the n
 
 ## Flow
 
-1. **Message** -> rules parser (deterministic, in the browser, < 5 ms).
+1. **Message** -> `POST /api/parse` (the LLM, gpt-6-luna on the deploy, ~1-3 s, "Czytam…" meanwhile) with the scenario's place
+   names, sectors and teams; the answer maps back onto the gazetteer (`fromLLM` in chat.js). The rules parser (deterministic, in the
+   browser, < 5 ms) fills what the model missed (GPS fix, sector id, time) and takes over completely when the model is off, errors
+   or takes over 6 s (then the model is skipped for 30-60 s). A follow-up message is sent with the previous incomplete one (`prev`).
 2. **Card**: kind + confidence, one sentence "Na mapie zaznaczę: osoba widziana o 14:20 - Czarny Staw (±400 m), kierunek: Zawrat.",
    SVG mini map (sectors, trails, the point with its radius, the direction arrow, highlighted sectors), "Popraw szczegóły"
    (kind, time, place from the gazetteer, radius, clue type, direction, sectors, POD, team, visibility/wind). If something is
@@ -78,10 +81,15 @@ App hook (AI Marcina's `app.js`, one line): `window.rescueApp.applyRun` and `onS
 | POD | searched: 0.6, dog 0.8, `dokładnie` 0.8, `pobieżnie / mgła` 0.4, `POD 70%` | editable |
 | Weather | `widoczność 50 m`, `mgła` (80 m, `gęsta` 30), `18 m/s`, `km/h`, `-2 stopnie`, rain/snow, `zmrok`, `oblodzenie`; missing values carry over from the last weather event | |
 
-Rules vs LLM: everything above is rules, in the browser, and the chat works fully without any model. The only LLM path is the
-server's existing one: on Na żywo a message the rules cannot read offers "Wyślij jako meldunek tekstowy" -> `POST /report`, which the
-server parses with its LLM when `rescue_llm_up` is 1, else its own rules. Searched/weather/status reports also go through
-`/report`, so the server's parser (rules + LLM) has the last word on those.
+Rules vs LLM: the LLM reads every message first (`POST /api/parse`, below); everything above is the rules, which fill gaps and
+are the whole parser when the model is down, so the chat still works without any model. On Na żywo a message neither can read
+offers "Wyślij jako meldunek tekstowy" -> `POST /report`. Searched/weather/status reports also go through `/report`, so the
+server's field-report parser (rules + LLM) has the last word on those.
+
+`POST /api/parse {text, clock, prev?, places: [name], segments: [{id, name}], teams: [{id, name, type}]}` -> `{events: [{kind,
+place, offsetM, offsetDir, towards, time, minutesAgo, segments, team, clueType, item, confidence, drone, visibilityM, windMs, tempC,
+precip, dark, ice, available}], model, ms}` or `{error}`. Stores nothing, needs no action key, 40/min per client, 8 s model timeout
+(rescue/rs/src/server/parse.rs). Place, direction, sector and team values are constrained to the lists sent.
 
 ## Examples (zawrat chips)
 
@@ -109,8 +117,7 @@ Also read: "Widziałem kogoś" (asks where, then when), "przy Wielkim Stawie 20 
 
 ## Server request (optional, not needed for the demo)
 
-`POST /api/parse {text, sc}` -> the `/report` FieldReport JSON (hints) **without storing it** - would let the chat show the LLM's reading
-in the card before "Dodaj". And `seenAt` on `POST /api/clue` (passed through to the hint) so na żywo keeps the observation time.
+`seenAt` on `POST /api/clue` (passed through to the hint) so na żywo keeps the observation time.
 
 ## Test
 

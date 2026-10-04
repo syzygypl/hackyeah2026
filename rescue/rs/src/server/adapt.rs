@@ -212,6 +212,8 @@ pub fn llm_openai() -> bool { LLM::open_ai() }
 pub fn llm_model() -> String { LLM::model() }
 pub fn llm_endpoint() -> String { LLM::endpoint() }
 pub fn llm_tag() -> String { LLM::tag().to_string() }
+/// One JSON-schema chat call (blocking; run it inside `blocking`). Err = the failure text for the client.
+pub fn llm_chat(messages: &[Value], schema: &Value, name: &str, timeout: f64) -> Result<String, String> { LLM::chat(messages, schema, name, timeout).map_err(|e| e.description) }
 
 fn labels(l: &[(&str, &str)]) -> HashMap<String, String> { l.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect() }
 pub fn m_inc(name: &str, l: &[(&str, &str)], by: f64) { Metrics::shared().inc(name, &labels(l), by) }
