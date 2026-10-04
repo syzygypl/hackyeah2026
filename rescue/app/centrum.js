@@ -55,7 +55,8 @@ async function loadIncidents() {
 }
 function normIncident(x) {
   return { sc: x.sc, title: x.title || "", place: x.place || x.sc, live: !!x.live, found: !!(x.ended ?? x.found), replayFound: !!x.replayFound, mode: x.mode || null, lastEventAt: x.lastEventAt || null,
-    lastClock: x.at || x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0, areaPct: s.areaPct })), teams: x.teams || null, pending: !!x.pending };
+    lastClock: x.at || x.lastClock || null, top3: (x.top3 || []).map((s) => ({ segmentId: s.segmentId, name: s.name, weight: s.weight ?? s.poa ?? 0, areaPct: s.areaPct })), teams: x.teams || null, pending: !!x.pending,
+    startedAt: x.startedAt || null, endedAt: x.endedAt || null };   // timeline: the report and the end, ISO with the Warsaw offset (CONTRACT.md)
 }
 // fallback: /api/scenarios (every 60 s) + one /api/run/<sc> at a time (first engine run can take ~15 s), summarized and cached
 let scenCache = null, scenAt = 0;
@@ -117,7 +118,7 @@ function loadMeta(sc) {
       // timeline: report date + clock, scripted events (clock, provider, title), teams' readyAt
       date: s.date || null, startClock: s.startClock || null, lastContact: (s.subject && s.subject.lastContact) || null,
       events: (s.events || []).map((e) => ({ at: e.at, provider: e.provider, title: e.title || "" })),
-      ready: (s.resources || []).filter((r) => r.readyAt).map((r) => ({ at: r.readyAt, name: r.name || r.id })) }; } catch (e) {}
+      ready: (s.resources || []).filter((r) => r.readyAt).map((r) => ({ at: r.readyAt, name: r.name || r.id, id: r.id })) }; } catch (e) {}
     return meta[sc];
   })();
 }
@@ -515,22 +516,31 @@ const tl = { mode: null, auto: true, cur: null, speed: 1, play: 0, items: [], by
 try { const v = +localStorage.getItem("rescue-centrum-tl-speed"); if (TL_SPEEDS.includes(v)) tl.speed = v; } catch (e) {}
 const tlBase = (it) => tl.mode === "abs" ? it.t0 : 0;
 function tlItem(x) {
-  const md = meta[x.sc], s0 = md && toMin(md.startClock); if (s0 == null) return null;
+  // start / end: /api/incidents startedAt / endedAt (server, Europe/Warsaw offset). Without them (fallback list, older server)
+  // the same rule from the scenario file: start = date + startClock, end = the live find (at), else the file's find event.
+  const api0 = x.startedAt ? Date.parse(x.startedAt) / 60000 : NaN, sa = isFinite(api0) ? new Date(api0 * 60000) : null;
+  // scenario file not in (yet): the bar from the API alone, no markers
+  const md = meta[x.sc] || (sa && { startClock: pad2(sa.getHours()) + ":" + pad2(sa.getMinutes()), date: x.startedAt.slice(0, 10), events: [], ready: [] });
+  const s0 = md && toMin(md.startClock); if (s0 == null) return null;
   const off = (c) => { const m = toMin(c); if (m == null) return null; let d = m - s0; if (d < -180) d += 1440; return d; };   // past midnight
-  const t0 = new Date(`${md.date || "2026-10-04"}T${md.startClock.slice(0, 5).padStart(5, "0")}:00`).getTime() / 60000;
+  const t0 = isFinite(api0) ? api0 : new Date(`${md.date || "2026-10-04"}T${md.startClock.slice(0, 5).padStart(5, "0")}:00`).getTime() / 60000;
   if (!isFinite(t0)) return null;
   const evs = [];
   for (const e of md.events || []) {
     const m = off(e.at), kind = PROV_KIND[e.provider] || "clue", k = evKind({ kind, source: e.provider, label: e.title });
-    if (m != null && k !== "baza") evs.push({ m, at: e.at, k, kind, title: e.title || e.provider });
+    if (m != null && k !== "baza") evs.push({ m, at: e.at, k, kind, title: e.title || e.provider, prov: e.provider });
   }
-  for (const r of md.ready || []) { const m = off(r.at); if (m != null && m >= 0) evs.push({ m, at: r.at, k: "zespol", kind: "dispatch", title: `${r.name}: na miejscu / gotowy` }); }
+  for (const r of md.ready || []) { const m = off(r.at); if (m != null && m >= 0) evs.push({ m, at: r.at, k: "zespol", kind: "dispatch", title: `${r.name}: na miejscu / gotowy`, team: r.id }); }
   evs.sort((a, b) => a.m - b.m);
   const f = evs.find((e) => e.k === "found"), now = off(x.lastClock), last = Math.max(0, now ?? 0, ...evs.map((e) => e.m));
   let end = null, endKind = null;
-  if (x.found) { end = now ?? (f ? f.m : last); endKind = "ended"; }   // a live ZNALEZIONO: zakończona
+  const apiEnd = x.endedAt && isFinite(api0) ? Math.round(Date.parse(x.endedAt) / 60000 - api0) : NaN;
+  if (isFinite(apiEnd) && apiEnd >= 0) { end = apiEnd; endKind = x.found ? "ended" : "found"; }
+  else if (x.found) { end = now ?? (f ? f.m : last); endKind = "ended"; }   // a live ZNALEZIONO: zakończona
   else if (f) { end = f.m; endKind = "found"; }                       // the scenario file ends with a find: znaleziono
-  return { sc: x.sc, x, t0, end, endKind, last: Math.max(last, end ?? 0), evs, start: md.startClock, date: md.date, lastContact: md.lastContact };
+  // last contact (subject.lastContact) comes before the report: a faint lead-in on the bar and "ostatni kontakt" in the feed
+  let lc = toMin(md.lastContact); if (lc != null) { lc -= s0; if (lc > 0) lc -= 1440; if (lc < -1440 || lc === 0) lc = null; }
+  return { sc: x.sc, x, t0, end, endKind, last: Math.max(last, end ?? 0), evs, start: md.startClock, date: md.date, lastContact: md.lastContact, lc };
 }
 function tlState(it, v) { const o = v - tlBase(it); return o < 0 ? "pre" : it.end != null && o >= it.end ? it.endKind : "live"; }
 function markMode(x) {
