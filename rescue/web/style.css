@@ -367,3 +367,25 @@ body.embed-scene .lg-keys { gap: 10px; margin-top: 3px; font-size: 11px; }
 .chip.cw.info { background: rgba(35, 48, 58, 0.9); border-color: #b9c9da; color: #dbe5ee; }
 .chip.cw.man { border-color: #3ee08f; }
 .chip.cw .cwd { display: inline-block; border-radius: 50%; background: currentColor; flex: none; }
+/* phone frames (AI Mateusza #2; the frame's own width <= 520 px, porównanie's desktop frames are 588: /app on a phone, porównanie, czat): the heat legend is a small strip
+   in the bottom-left corner - one ramp, niska / średnia / wysoka, an (i) mark; the layer panel and the timeline key step aside.
+   A tap (toggle injected by the parent page: app/mobile.js, app/porownanie.js) sets body.lg-tap-open = the full legend and panels.
+   Desktop and tablets: untouched (the desktop compact / hover legend is a separate rule set, min-width 901 px). */
+@media (max-width: 520px) {
+  body.embed:not(.lg-tap-open) #legend.floating:has(.lg-ramp) { top: auto !important; bottom: calc(var(--inset-b, 0px) + 8px) !important; left: 8px !important; width: auto !important;
+    display: grid; grid-template-columns: 136px 16px; column-gap: 6px; align-items: center; padding: 4px 7px 3px !important; font-size: 11px !important; line-height: 1.2;
+    background: color-mix(in srgb, var(--rl-panel-solid, #faf8f3) 72%, transparent) !important; box-shadow: none !important; border-radius: 8px !important; cursor: pointer; pointer-events: auto; }
+  body.embed:not(.lg-tap-open) #legend.floating:has(.lg-ramp) .lg-title,
+  body.embed:not(.lg-tap-open) #legend.floating:has(.lg-ramp) .lg-keys { display: none !important; }
+  body.embed:not(.lg-tap-open) #legend.floating .lg-ramp { grid-column: 1; width: 136px !important; height: 6px !important; margin: 0; }
+  body.embed:not(.lg-tap-open) #legend.floating .lg-stops { grid-column: 1; width: 136px !important; display: flex; justify-content: space-between; gap: 6px; font: 600 11px/1.2 var(--rl-font, system-ui, sans-serif) !important; color: var(--rl-ink, #23272a); margin: 1px 0 0; }
+  body.embed:not(.lg-tap-open) #legend.floating .lg-stops span { display: none; }
+  body.embed:not(.lg-tap-open) #legend.floating .lg-stops::before { content: "niska"; }
+  body.embed:not(.lg-tap-open) #legend.floating .lg-stops::after { content: "wysoka"; }
+  body.embed:not(.lg-tap-open) #legend.floating .lg-stops span:nth-child(2) { display: inline; font-size: 0; }
+  body.embed:not(.lg-tap-open) #legend.floating .lg-stops span:nth-child(2)::after { content: "średnia"; font-size: 11px; }
+  body.embed:not(.lg-tap-open) #legend.floating:has(.lg-ramp)::after { content: "i"; grid-column: 2; grid-row: 1 / span 2; width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid currentColor;
+    font: italic 700 11px/13px Georgia, serif; text-align: center; color: var(--rl-ink-2, #3d4247); }
+  body.embed:not(.lg-tap-open) #mapctl, body.embed:not(.lg-tap-open) #tllegend { display: none !important; }
+  body.embed.lg-tap-open #legend.floating { z-index: 8; }
+}

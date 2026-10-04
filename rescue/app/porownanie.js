@@ -173,6 +173,22 @@
     render(true);
   }
   const NARROW = () => matchMedia("(max-width:860px)").matches;
+  // phone frames: web/style.css (<= 520 px) shows the legend as a small strip; a tap opens the full legend for 3 s or until a tap
+  // elsewhere (copy of app/mobile.js legendTap)
+  function legendTap(d) {
+    if (!d || !d.body || d.__lgTap) return; d.__lgTap = true;
+    let t = 0;
+    const close = () => { clearTimeout(t); d.body.classList.remove("lg-tap-open"); };
+    const arm = () => { clearTimeout(t); t = setTimeout(close, 3000); };
+    d.addEventListener("click", (e) => {
+      const b = d.body, inLegend = e.target.closest && e.target.closest("#legend"), inPanel = e.target.closest && e.target.closest("#legend,#mapctl,#tllegend");
+      if (!b.classList.contains("lg-tap-open")) { if (inLegend) { b.classList.add("lg-tap-open"); arm(); } }
+      else if (inPanel) arm(); else close();
+    }, true);
+  }
+  // + the map attribution starts collapsed (expanded it covered a third of the 330 px map); its (i) still opens it
+  const attrFold = (d) => { try { const a = d.querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show"); if (a) { a.classList.remove("maplibregl-compact-show"); a.removeAttribute("open"); } } catch (e) {} };
+  for (const id of ["mapA", "mapB"]) $(id).addEventListener("load", () => { try { if (!NARROW()) return; const d = $(id).contentDocument; legendTap(d); for (const t of [0, 1500, 4000, 8000]) setTimeout(() => attrFold(d), t); } catch (e) {} });
   // phone: the user taps at the top, the change happens in map B below - bring it into view first
   $("relive").onclick = () => { const q = new URLSearchParams(location.search); q.set("live", "1"); location.search = q; };
   $("toggle").onclick = () => { toggle(); if (NARROW()) $("colB").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth", block: "start" }); };

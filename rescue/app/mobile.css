@@ -4,9 +4,10 @@
    sectors, Wyślij zespół and the 3 latest events. 3D, scenario, key, Centrum, Zasoby, Udostępnij, Instrukcja and Rola live in
    Menu; Plan, Teren, Monitoring, Walidacja and the 2D + 3D split are desktop only. mobile.js adds the Menu and sheet buttons. */
 @media (max-width:600px){
-  body:not(.role-ratownik){--m-hdr:86px;--m-sheet:44dvh;--m-dock:0px;overflow:hidden}
+  body:not(.role-ratownik){--m-hdr:86px;--m-peek:60px;--m-sheet:var(--m-peek);--m-dock:0px;overflow:hidden}
   body:not(.role-ratownik).time-hist{--m-dock:58px}
-  body:not(.role-ratownik).m-sheet-open{--m-sheet:78dvh}
+  body.m-sheet-half:not(.role-ratownik){--m-sheet:50dvh}
+  body.m-sheet-full:not(.role-ratownik){--m-sheet:86dvh}
   body:not(.role-ratownik)::before,body:not(.role-ratownik)::after{display:none!important}
   body:not(.role-ratownik) #app{display:block;height:100dvh;overflow:hidden}
   body:not(.role-ratownik) #left,body:not(.role-ratownik) #firstRun,body:not(.role-ratownik) #modes,body:not(.role-ratownik) #more{display:none!important}
@@ -56,22 +57,33 @@
   body:not(.role-ratownik) #views button[data-view="split"]{display:none}
 
   /* map full-bleed between the header and the sheet (Historia: and the slider) */
-  body:not(.role-ratownik) #center{position:fixed!important;top:var(--m-hdr);left:0;right:0;bottom:calc(var(--m-sheet) + var(--m-dock));inset:var(--m-hdr) 0 calc(var(--m-sheet) + var(--m-dock)) 0;min-height:0!important;z-index:0;transition:bottom .2s ease}
+  /* the map's bottom edge never moves (no layout shift): the half and full sheet overlay it */
+  body:not(.role-ratownik) #center{position:fixed!important;top:var(--m-hdr);left:0;right:0;bottom:calc(var(--m-peek) + var(--m-dock));inset:var(--m-hdr) 0 calc(var(--m-peek) + var(--m-dock)) 0;min-height:0!important;z-index:0}
   body:not(.role-ratownik).view-split #center{flex-direction:row}
 
-  /* bottom sheet: top 3 sectors, next step, the 3 latest events */
+  /* bottom sheet, 3 states (mobile.js): peek = one bar (#1 sector + unconfirmed badge), half = top 3 + Wyślij zespół + 3 events,
+     full = every event. Tap / swipe the bar, tap the map = back to the bar */
   body:not(.role-ratownik) #right{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:auto!important;height:var(--m-sheet)!important;max-height:none!important;
     z-index:15;display:flex!important;flex-direction:column;overflow:auto;overscroll-behavior:contain;padding:0 14px 16px!important;margin:0;transform:none!important;opacity:1!important;
     border:0;border-top:1px solid var(--rl-line);border-radius:16px 16px 0 0;background:var(--rl-panel-solid,var(--rl-panel));box-shadow:0 -6px 20px rgba(0,0,0,.14);transition:height .2s ease}
+  body.m-sheet-peek:not(.role-ratownik) #right{overflow:hidden}
   body:not(.role-ratownik) #right>*{order:5}
-  body:not(.role-ratownik) #right>#mSheetBtn{order:0;position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:center;gap:8px;flex:none;width:calc(100% + 28px);margin:0 -14px;min-height:44px;border:0;border-radius:16px 16px 0 0;background:var(--rl-panel-solid,var(--rl-panel));font-size:14px;color:var(--rl-mute)}
-  body:not(.role-ratownik) #right>#mSheetBtn::before{content:"";width:40px;height:5px;border-radius:3px;background:var(--rl-line-strong,#bbb);position:absolute;top:6px;left:50%;transform:translateX(-50%)}
-  body:not(.role-ratownik) #right>#mSheetBtn span{margin-top:8px}
+  body:not(.role-ratownik) #right>#mPeek{order:0;position:sticky;top:0;z-index:2;flex:none;display:flex;align-items:center;gap:10px;width:calc(100% + 28px);margin:0 -14px;min-height:var(--m-peek);padding:12px 14px 4px;
+    border:0;border-radius:16px 16px 0 0;background:var(--rl-panel-solid,var(--rl-panel));color:var(--rl-ink);font-size:16px;text-align:left;touch-action:none}
+  body:not(.role-ratownik) #right>#mPeek::before{content:"";width:40px;height:5px;border-radius:3px;background:var(--rl-line-strong,#bbb);position:absolute;top:5px;left:50%;transform:translateX(-50%)}
+  body:not(.role-ratownik) #mPeek .mp-rank{flex:none;width:26px;height:26px;border-radius:50%;background:var(--rl-danger);color:var(--rl-on-danger);font:700 13px/26px var(--rl-font);text-align:center}
+  body:not(.role-ratownik) #mPeek .mp-name{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body:not(.role-ratownik) #mPeek .mp-badge{flex:none;padding:3px 9px;border-radius:999px;background:var(--rl-danger);color:var(--rl-on-danger);font-size:13px;font-weight:700}
+  body:not(.role-ratownik) #mPeek .mp-badge[hidden]{display:none}
+  body:not(.role-ratownik) #mPeek .mp-chev{flex:none;font-size:18px;color:var(--rl-mute);transition:transform .2s ease}
+  body.m-sheet-peek:not(.role-ratownik) #mPeek .mp-chev{transform:rotate(180deg)}
+  body:not(.role-ratownik) #right>#mMore{order:4;flex:none;min-height:44px;margin-top:10px;font-size:15px;font-weight:600;border-radius:10px}
+  @media (prefers-reduced-motion:reduce){body:not(.role-ratownik) #right,body:not(.role-ratownik) #bottom,body:not(.role-ratownik) #mPeek .mp-chev{transition:none!important}}
   body:not(.role-ratownik) #right>h2:first-of-type{order:1;margin:2px 0 6px}
   body:not(.role-ratownik) #right>#segs{order:2}
   body:not(.role-ratownik) #right>#liveBox{order:3}
   body:not(.role-ratownik) #right>.hero,body:not(.role-ratownik) #right>#assets,body:not(.role-ratownik) #right>#moreInfo{display:none!important}
-  body:not(.role-ratownik):not(.m-sheet-open) #right>#alerts{display:none}
+  body:not(.role-ratownik):not(.m-sheet-full) #right>#alerts{display:none}
   /* a sector = one row: rank, name, % obszaru */
   body:not(.role-ratownik) #segs .seg{display:flex;align-items:center;gap:10px;min-height:48px;padding:8px 12px!important;margin-bottom:6px;border-radius:10px}
   body:not(.role-ratownik) #segs .seg .rank{position:static;flex:none;width:28px;height:28px;line-height:25px}
@@ -96,7 +108,7 @@
   body:not(.role-ratownik) #liveFeed .lfi{font-size:15px;padding:8px 6px;line-height:1.35}
   body:not(.role-ratownik) #liveFeed .lfi.unack{border-left:4px solid var(--rl-danger);background:color-mix(in srgb,var(--rl-danger) 9%,transparent);border-radius:0 8px 8px 0;padding-left:10px}
   body:not(.role-ratownik) #liveFeed .ack1{min-width:44px;min-height:40px;margin-left:4px}
-  body:not(.role-ratownik):not(.m-sheet-open) #liveFeed .lfi:nth-child(n+4){display:none}
+  body:not(.role-ratownik):not(.m-sheet-full) #liveFeed .lfi:nth-child(n+4){display:none}
 
   /* dock: Na żywo none; Historia = play, clock and the slider only */
   body:not(.role-ratownik) #bottom{position:fixed!important;left:0!important;right:0!important;bottom:var(--m-sheet)!important;top:auto!important;height:var(--m-dock)!important;z-index:14;padding:0 10px!important;margin:0;
