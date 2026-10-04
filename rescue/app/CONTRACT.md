@@ -223,6 +223,30 @@ Blind-test scenarios are never listed. Runs are cached per (sc, live version), s
 - Header: time switch **Na żywo / Historia** (whole app, `?time=live|hist`, remembered per device; join links / QR and the Ratownik role are always live) and the mode badge `LIVE` (TOPR red, pulsing dot) / `HISTORIA` (neutral) / `PLAN` (Plan mode or Studio story), next to the scenario title "<place> - <what>" (e.g. "Zawrat - zaginiony turysta"); a red (live, "NA ŻYWO") or navy (history, "HISTORIA · NAGRANIE") label tab sits at the top edge (no frame around the screen). **Historia** = the prerecorded scenario only (`GET /api/run/<sc>?live=0`), timeline and play; live functions (+ Ślad, Wyślij zespół, ACK, + Nowa akcja) stay visible but inactive (the Centrum link always works: it only shows live incidents), with a note and "Przełącz na żywo". **Na żywo** = `GET /api/run/<sc>` with field reports folded in, timeline held at the live moment. Ratownik: same badge + title in a bar above the team picker.
 - Akcja, right panel "Na żywo": last 8 feed events (time, who, what), "+ Ślad" (arm, click the 2D map, pick type + note -> `POST /api/clue` with `sc`), "Wyślij zespół" (team + segment -> `/story/assign` with `scenario`). Polls `/api/live?sc=` every 3 s; on a new seq it refetches the run (2D/3D reload via `{type:"run", url}`) and the assignments, and toasts events from others.
 
+### Centrum pick mode, embedded (`centrum.html?pick=1&embed=1`): "Zmień scenariusz" without reloads
+
+`centrum.html?pick=1&return=<app url>` (no `embed`) stays the full-page fallback: a click navigates to `<return>` with `?sc=<chosen>`, Esc / Wróć go to `<return>` unchanged. With `embed=1` the page is meant for a same-origin iframe overlay in /app and never navigates: no Centrum header (Wróć sits on the list header), transparent page background, list + map only. Optional `&sc=<current>` marks the current scenario at load. Messages are plain objects via `postMessage`, target origin = the page's own origin; the iframe accepts messages only from `window.parent` on the same origin.
+
+Iframe -> parent:
+
+| Message | When |
+|---|---|
+| `{type:"rl-pick-ready"}` | once, as soon as the iframe listens (the parent may send `rl-pick-current` from then on) |
+| `{type:"rl-pick", sc}` | a scenario was chosen (list item click / Enter, map dot click / Enter). `sc` may be `"studio"` (when `/modules` exists) |
+| `{type:"rl-pick-cancel"}` | Esc inside the iframe or the Wróć button |
+
+After `rl-pick` / `rl-pick-cancel` the iframe considers itself hidden: it stops polling (`/api/incidents` every 10 s, `/api/advisor` every 60 s) until the next `rl-pick-show`. Middle click / Ctrl+click on a list item still opens the old full-page URL in a new tab.
+
+Parent -> iframe:
+
+| Message | Effect |
+|---|---|
+| `{type:"rl-pick-show", sc?}` | the overlay is shown again: polling resumes, one immediate background refresh of `/api/incidents` + `/api/advisor` (the cached list is on screen at once), map resized (safe after `display:none`), `sc` given = mark it as current |
+| `{type:"rl-pick-current", sc}` | mark `sc` as the current scenario (badge "obecny", focus goes there), no reload; `sc: null` clears it |
+| `{type:"rl-pick-hide"}` | optional: stop polling (e.g. the parent closed the overlay with its own button) |
+
+Parent recipe: create the iframe once (lazily on the first "Zmień scenariusz", or idle-preloaded hidden), keep it in the DOM; on open show it, post `{type:"rl-pick-show", sc: <current>}` and call `iframe.focus()` (Esc only reaches the iframe when it has focus; the parent should also close on its own Esc); on `rl-pick` hide the overlay and switch the scenario in place (`loadScenario(sc)` + `history.replaceState` of `?sc=`); on `rl-pick-cancel` just hide it. Check: `python3 rescue/integration/test_centrum_pick_embed.py`.
+
 ## Advisor (Doradca: do several incidents share one common source?)
 
 `GET /api/advisor[?llm=1][&only=a,b,c][&skip=<prefix>]` (read; Centrum polls every 60 s and asks `?llm=1` once per page load or on "Zapytaj model ponownie"; cached by scenario files + feed seq, the `llm=1` narrative 5 min per top hypothesis). Engine `RescueKit/Advisor.swift`, deterministic; catalogue `rescue/scenarios/hazards/hazards.json` (`rescue-hazards/1`, real public infrastructure from OSM via `tools/terrain/hazards.py`: dams with the downstream river polyline and places with their river km, large industrial sites, railway lines with their stations and line km). Input per listed incident: IPP, `date` + `subject.lastContact` (when it happened) / `startClock` (reported), category, texts (incident, subject note, scripted report events - not the Terrain/Weather/Koester setup - and the live feed notes of that `sc`), wind of its WeatherConditions (`windFromDeg`).

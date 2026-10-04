@@ -287,6 +287,12 @@ body.pick #list{width:calc(var(--list-w) + 40px)}
 .pkr .cnt{background:var(--rl-panel-2);border-radius:10px;padding:0 7px;color:var(--rl-ink-2)}
 body.pick .mk:focus-visible{outline:none}
 body.pick .mk:focus-visible .dot{box-shadow:0 0 0 4px var(--rl-accent)}
+/* embed (pick=1&embed=1, iframe overlay in /app): no header / nav, Wróć on the list, transparent page so the overlay shows through until the map paints */
+html:has(body.embed),body.embed{background:transparent}
+body.embed #bar{display:none!important}
+body.embed #list{top:var(--gap)}
+body.embed #list > h2{display:flex;align-items:center;gap:8px}
+body.embed #list > h2 #pickBack{margin-left:auto;cursor:pointer;font-size:var(--rl-fs);text-transform:none;letter-spacing:0}
 /* phone: one full-screen sheet - bar, a short map, then the list */
 @media (max-width:900px){
   body.pick #map{height:34vh}

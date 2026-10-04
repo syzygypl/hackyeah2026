@@ -20,6 +20,12 @@ const PICK = new URLSearchParams(location.search).get("pick") === "1";
 const PICK_BACK = (() => { try { const u = new URL(new URLSearchParams(location.search).get("return") || "./", location.href); if (u.origin === location.origin) return u; } catch (e) {} return new URL("./?role=operator", location.href); })();
 const pickURL = (sc) => { const u = new URL(PICK_BACK); u.searchParams.set("sc", sc); return u.pathname + u.search + u.hash; };
 const openURL = (sc) => PICK ? pickURL(sc) : `./?role=operator&mode=akcja&time=live&sc=${encodeURIComponent(sc)}`;
+// embed (centrum.html?pick=1&embed=1, an iframe overlay in /app): no navigation at all, the choice goes to the parent as a
+// postMessage (CONTRACT.md "Centrum pick mode, embedded"); the iframe stays alive and is reused, so polling pauses while hidden
+const EMBED = PICK && new URLSearchParams(location.search).get("embed") === "1";
+let pickHidden = false;
+const pickPost = (m) => { if (m.type !== "rl-pick-ready") pickHidden = true; try { parent.postMessage(m, location.origin); } catch (e) {} };
+const pickGo = (sc) => EMBED ? pickPost({ type: "rl-pick", sc }) : (location.href = openURL(sc));
 function toast(t, ms = 3000) { const el = $("toast"); el.textContent = t; el.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => el.style.display = "none", ms); }
 
 // ---------- transport (PIN like app.js: loopback needs none)
@@ -318,7 +324,7 @@ function renderMarkers() {
     if (!m) {
       const el = document.createElement("div");
       el.innerHTML = `<span class="ld"></span><span class="dot"></span><span class="lbl"></span>`;
-      el.onclick = () => location.href = openURL(x.sc);
+      el.onclick = () => pickGo(x.sc);
       el.onmouseenter = () => setHl(x.sc); el.onmouseleave = () => setHl(null);
       el.dataset.drop = x.sc;
       el.ondragover = (e) => { e.preventDefault(); el.classList.add("over"); };
@@ -399,7 +405,7 @@ const num2 = (v) => (Math.round((v || 0) * 100) / 100).toFixed(2).replace(".", "
 const LEVEL = { alarm: "ALARM", ostrzezenie: "OSTRZEŻENIE", obserwacja: "DO OBSERWACJI" };
 try { advOpen = localStorage.getItem("rescue-advisor-open") === "1"; } catch (e) { advOpen = false; }   // demo review 3: starts as a slim bar, never over the incident dots
 async function advTick() {
-  if (advBusy || Date.now() < advMiss) return; advBusy = true;
+  if (advBusy || Date.now() < advMiss || (EMBED && pickHidden)) return; advBusy = true;
   try {
     const a = await api("/api/advisor");
     const sig = JSON.stringify((a.hypotheses || []).map((h) => [h.id, h.score, h.incidents, h.evidence.map((e) => e.text)]));
@@ -850,10 +856,10 @@ function tlClockAt(it, v) {   // the scenario clock of timeline value v in this 
 // /api/scenarios, then /api/incidents); when /api/advisor answers, incidents linked by a hypothesis move to the top as one group
 // (alarm first), ringed on the map like "linked" in Doradca. Advisor down = the plain list keeps working. Esc / Wróć = no change.
 const PK_ST = { live: "LIVE", ended: "ZAKOŃCZONA", replay: "ODTWORZENIE" };
-let pickStudio = false, pickFocused = false;
+let pickStudio = false, pickFocused = false, pickCur = new URLSearchParams(location.search).get("sc") || PICK_BACK.searchParams.get("sc");
 function renderPick() {
   if (!incidents.length) return;
-  const pos = (adv && adv.positions) || {}, cur = PICK_BACK.searchParams.get("sc");
+  const pos = (adv && adv.positions) || {}, cur = pickCur;
   const stOf = (x) => x.found ? "ended" : x.live ? "live" : (pos[x.sc] && PK_ST[pos[x.sc].status] && pos[x.sc].status) || "replay";   // incidents first (fresher), advisor positions.status as fallback
   const timeOf = (x) => (pos[x.sc] && pos[x.sc].time) || (x.lastEventAt ? hhmm(x.lastEventAt) : x.lastClock || "");
   const linked = advLinked();
@@ -887,7 +893,7 @@ function pickMarkers() {   // dots reachable with Tab, Enter opens like a click
     const el = m.getElement(); if (el.dataset.pick) continue;
     el.dataset.pick = "1"; el.tabIndex = 0; el.setAttribute("role", "link");
     el.setAttribute("aria-label", "Wybierz: " + (el.querySelector(".lbl").textContent || k));
-    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); location.href = openURL(k); } };
+    el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pickGo(k); } };
     el.onfocus = () => setHl(k); el.onblur = () => setHl(null);
   }
 }
@@ -901,14 +907,41 @@ if (PICK) {
   $("list").querySelector("h2").innerHTML = 'Scenariusze <span class="mute">kliknij, aby otworzyć · Esc wraca</span>';
   const b = document.createElement("a"); b.id = "pickBack"; b.href = back; b.textContent = "Wróć"; b.title = "Wróć bez zmiany scenariusza (Esc)";
   $("bar").querySelector("h1").after(b);
-  addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented) location.href = back; });
+  addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented) { if (EMBED) pickPost({ type: "rl-pick-cancel" }); else location.href = back; } });
+  if (EMBED) pickEmbed(b);
   fetch("/modules", { cache: "no-cache" }).then((r) => r.ok ? r.json() : null).then((m) => { if (m && m.modules) { pickStudio = true; renderPick(); } }).catch(() => {});   // Studio, as on the old dropdown
+}
+
+// embed: the parent's overlay hosts this page in a reused iframe (contract in CONTRACT.md, Centrum pick mode, embedded)
+function pickEmbed(b) {
+  document.body.classList.add("embed");
+  b.removeAttribute("href"); b.setAttribute("role", "button"); b.tabIndex = 0;
+  b.onclick = (e) => { e.preventDefault(); pickPost({ type: "rl-pick-cancel" }); };
+  b.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); b.click(); } };
+  $("list").querySelector("h2").append(b);   // the header is hidden: Wróć sits on the list
+  // list items stay <a href> (middle click = the old full-page flow), a plain click / Enter only tells the parent
+  $("cards").addEventListener("click", (e) => {
+    const a = e.target.closest(".pk[data-sc]"); if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+    e.preventDefault(); pickGo(a.dataset.sc);
+  });
+  const setCur = (sc) => { if (sc === undefined) return; pickCur = sc || null; pickFocused = false; renderPick(); };
+  addEventListener("message", (e) => {
+    const d = e.data; if (e.origin !== location.origin || e.source !== parent || !d || typeof d !== "object") return;
+    if (d.type === "rl-pick-current") setCur(d.sc);
+    else if (d.type === "rl-pick-hide") pickHidden = true;
+    else if (d.type === "rl-pick-show") {
+      pickHidden = false; setCur(d.sc);
+      if (map) { map.resize(); fitAll(); }   // the iframe may have been display:none
+      tick(); advTick();   // the cached list is already on screen, fresh data lands in the background
+    }
+  });
+  pickPost({ type: "rl-pick-ready" });
 }
 
 // ---------- loop: every 5 s, never overlapping
 let busy = false;
 async function tick() {
-  if (busy) return; busy = true;
+  if (busy || (EMBED && pickHidden)) return; busy = true;
   try {
     const wasFound = new Set(incidents.filter((x) => x.found).map((x) => x.sc)), first = !incidents.length;
     // teams and the incident list in parallel; on the first load the cards, map and roster show up from the fast
