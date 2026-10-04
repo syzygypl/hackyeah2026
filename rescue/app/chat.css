@@ -109,3 +109,8 @@ body.role-ratownik #chBtn,body.role-ratownik #chDrawer{display:none}   /* rescue
 /* example chips wrap into rows (max 3) instead of being cut off at the drawer edge */
 .ch-chips{flex-wrap:wrap;overflow-x:hidden;overflow-y:auto;max-height:118px}
 .ch-chip{max-width:100%}
+/* one-tap card: big Dodaj, sector picks instead of form fields */
+.ch-acts button.primary.big{flex:1;min-height:48px;font-size:17px}
+.ch-picks{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px}
+.ch-picks button{font:inherit;font-size:var(--rl-fs-s);cursor:pointer;min-height:44px;padding:4px 12px;border-radius:var(--rl-radius-s);border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-picks button.on{background:var(--rl-accent);border-color:var(--rl-accent);color:var(--rl-on-accent,#fff)}

@@ -17,10 +17,11 @@ and on "Dodaj" posts it through the **existing** API. Then it answers with the n
    names, sectors and teams; the answer maps back onto the gazetteer (`fromLLM` in chat.js). The rules parser (deterministic, in the
    browser, < 5 ms) fills what the model missed (GPS fix, sector id, time) and takes over completely when the model is off, errors
    or takes over 6 s (then the model is skipped for 30-60 s). A follow-up message is sent with the previous incomplete one (`prev`).
-2. **Card**: kind + confidence, one sentence "Na mapie zaznaczę: osoba widziana o 14:20 - Czarny Staw (±400 m), kierunek: Zawrat.",
-   SVG mini map (sectors, trails, the point with its radius, the direction arrow, highlighted sectors), "Popraw szczegóły"
-   (kind, time, place from the gazetteer, radius, clue type, direction, sectors, POD, team, visibility/wind). If something is
-   missing the card asks ("Gdzie to było?") and the next message fills it ("przy Wielkim Stawie").
+2. **Card** (one tap, no forms - nobody fills fields during an action): kind + confidence ("AI ·" when the model read it), one
+   sentence "Na mapie zaznaczę: osoba widziana o 14:20 - Czarny Staw (±400 m), kierunek: Zawrat.", SVG mini map, a big "Dodaj".
+   Missing place or sectors -> a row of the current top-6 sectors to tap (several for "przeszukane"), or the next message fills it
+   ("przy Wielkim Stawie"). No time = now, never asked. "Popraw ręcznie" (kind, time, place, radius, clue type, direction,
+   sectors, POD, team, visibility/wind) stays folded.
 3. **Dodaj** -> API (below) -> the map recomputes.
 4. **Answer**: "Gdzie szukać najpierw - teraz" = top 3 as rank + sector + `% obszaru` (never the POA %), each with "▲ było 4." /
    "▼ było 2." / "bez zmian", and the moves ("S3 spadł z 3. na 9. miejsce", "S5 awansował z 20. na 3. miejsce").

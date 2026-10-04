@@ -226,7 +226,6 @@ export function parse(text, ctx) {
   if (ev.kind === "sighting" || ev.kind === "clue") ev.seenAt = ev.t || null;
   ev.missing = [];
   if (["sighting", "clue", "found"].includes(ev.kind) && !ev.place) ev.missing.push("place");
-  if (ev.kind === "sighting" && !ev.t) ev.missing.push("time");
   if (ev.kind === "search" && !(ev.segs && ev.segs.length)) ev.missing.push("segs");
   if (ev.kind === "dispatch" && !(ev.segs && ev.segs.length)) ev.missing.push("segs");
   return ev;
@@ -588,19 +587,32 @@ export function createChat(root, host, opts = {}) {
     for (const g of [...ctx.G].sort((a, b) => b.prio - a.prio || a.name.localeCompare(b.name, "pl"))) { if (seen.has(g.name) || g.name === "IPP") continue; seen.add(g.name); o.push(g); }
     return o;
   }
-  function card(ev, into) {
+  function card(ev, into, keepPicks) {
     const k = KINDS[ev.kind], live = host.mode() === "live";
-    const ask = ev.missing.includes("place") ? "Gdzie to było? Napisz nazwę (np. „przy Wielkim Stawie”) albo wybierz poniżej." : ev.missing.includes("segs") ? "Który sektor? Napisz np. „S4” albo nazwę miejsca." : ev.missing.includes("time") ? "O której? (np. „o 15:10”, „20 min temu”) - albo dodaj bez godziny." : "";
-    const html = (`<div class="ch-card k-${ev.kind}"><div class="ch-kind"><span class="ico">${k.ico}</span>${esc(k.label)} <span class="conf c-${fold(ev.conf)}">pewność: ${esc(ev.conf)}</span></div>
+    // one tap, no forms: what is missing is picked from the top sectors (or typed as the next message); the editor stays folded
+    const needPlace = ev.missing.includes("place"), needSegs = ev.missing.includes("segs") || (keepPicks && ev.kind === "search");
+    const top = (ranking(host.run()).length ? ranking(host.run()) : ctx.segs).slice(0, 6), sel = new Set(ev.segs || []);
+    const picks = needPlace || needSegs ? `<div class="ch-ask">${needPlace ? "Gdzie? Stuknij sektor albo napisz nazwę miejsca." : ev.kind === "search" ? "Które sektory? Stuknij (kilka naraz) albo napisz." : "Który sektor? Stuknij albo napisz."}</div>
+      <div class="ch-picks">${[...top, ...ctx.segs.filter((s) => sel.has(s.id) && !top.some((x) => x.id === s.id))].map((s) => `<button type="button" data-pick="${esc(s.id)}" class="${sel.has(s.id) ? "on" : ""}"><b>${esc(s.id)}</b> ${esc(short(s.name))}</button>`).join("")}</div>` : "";
+    const html = (`<div class="ch-card k-${ev.kind}"><div class="ch-kind"><span class="ico">${k.ico}</span>${esc(k.label)} <span class="conf c-${fold(ev.conf)}">${ev.ai ? "AI · " : ""}pewność: ${esc(ev.conf)}</span></div>
       <div class="ch-sum">${esc(summary(ev))}</div>${miniMap(ctx, ev)}
-      ${ask ? `<div class="ch-ask">${esc(ask)}</div>` : ""}
-      <details class="ch-edit" ${ask ? "open" : ""}><summary>Popraw szczegóły</summary>${fieldsHTML(ev)}</details>
-      <div class="ch-acts"${ev._multi ? " hidden" : ""}><button class="ch-add primary" ${ev.missing.includes("place") || ev.missing.includes("segs") ? "disabled" : ""}>Dodaj${live ? " (na żywo)" : host.mode() === "hist" ? " (symulacja)" : ""}</button><button class="ch-no">Anuluj</button></div>
+      ${picks}
+      <div class="ch-acts"${ev._multi ? " hidden" : ""}><button class="ch-add primary big" ${ev.missing.includes("place") || ev.missing.includes("segs") ? "disabled" : ""}>Dodaj${live ? " (na żywo)" : host.mode() === "hist" ? " (symulacja)" : ""}</button><button class="ch-no">Anuluj</button></div>
+      <details class="ch-edit"><summary>Popraw ręcznie</summary>${fieldsHTML(ev)}</details>
       <div class="ch-foot">${live ? "Na żywo: zobaczą to wszyscy w akcji. Możesz cofnąć." : host.mode() === "hist" ? "Historia: zmiana tylko na Twoim ekranie (symulacja), nagranie zostaje nietknięte." : ""}</div></div>`);
     let el = into; if (el) el.innerHTML = html; else el = say(html);
     if (!ev._multi || !into) draft = { ev, el };
     wireFields(el, ev);
-    el.querySelector(".ch-no").onclick = () => { el.querySelector(".ch-card").classList.add("off"); el.querySelector(".ch-acts").innerHTML = `<span class="mute">Anulowano.</span>`; draft = null; };
+    el.querySelectorAll("[data-pick]").forEach((b) => b.onclick = () => {
+      const s = ctx.segs.find((x) => x.id === b.dataset.pick); if (!s) return;
+      if (ev.kind === "search") { const set = new Set(ev.segs || []); set.has(s.id) ? set.delete(s.id) : set.add(s.id); ev.segs = [...set]; }
+      else if (ev.kind === "dispatch") ev.segs = [s.id];
+      else if (s.c) ev.place = { name: `${s.id} ${s.name}`, p: s.c.slice(), r: ev.kind === "found" ? 30 : 500, how: "sektor", seg: s.id };
+      ev.missing = ev.missing.filter((m) => !(m === "place" && ev.place) && !(m === "segs" && ev.segs && ev.segs.length));
+      if ((ev.kind === "search" || ev.kind === "dispatch") && !(ev.segs && ev.segs.length) && !ev.missing.includes("segs")) ev.missing.push("segs");
+      card(ev, el, ev.kind === "search");
+    });
+    el.querySelector(".ch-no").onclick = () => { el.querySelectorAll(".ch-picks, .ch-ask").forEach((x) => x.remove()); el.querySelector(".ch-card").classList.add("off"); el.querySelector(".ch-acts").innerHTML = `<span class="mute">Anulowano.</span>`; draft = null; };
     el.querySelector(".ch-add").onclick = () => commit(ev, el);
   }
   function fieldsHTML(ev) {
@@ -639,6 +651,7 @@ export function createChat(root, host, opts = {}) {
   }
   async function commit(ev, el) {
     const acts = el.querySelector(".ch-acts"); acts.innerHTML = `<span class="spin"></span> Dodaję i przeliczam mapę…`; draft = null;
+    el.querySelectorAll(".ch-picks, .ch-ask").forEach((x) => x.remove());
     const mode = host.mode(); n++;
     try {
       let r;
@@ -673,7 +686,7 @@ export function createChat(root, host, opts = {}) {
         n++; const r = mode === "live" ? await commitLive(ev, n) : await commitStudio(ev, n); if (!r) continue;
         if (!before) before = r.before; after = r.after; how = r.how; if (r.undo) undos.push(r.undo); if (r.note) notes.push(r.note);
       }
-      ok.forEach((ev) => { const el = els[evs.indexOf(ev)]; el.querySelector(".ch-edit")?.removeAttribute("open"); el.querySelector(".ch-card")?.classList.add("added"); });
+      ok.forEach((ev) => { const el = els[evs.indexOf(ev)]; el.querySelector(".ch-edit")?.removeAttribute("open"); el.querySelectorAll(".ch-picks, .ch-ask").forEach((x) => x.remove()); el.querySelector(".ch-card")?.classList.add("added"); });
       acts.innerHTML = `<span class="ok">✓ Dodano ${ok.length}${how === "sim" ? " do symulacji" : how === "live" ? " na żywo" : ""}</span>${ok.length < evs.length ? ` <span class="mute">(pominięto ${evs.length - ok.length} bez miejsca)</span>` : ""}`;
       const all = { segs: ok.flatMap((e) => e.segs || []) }, focusSeg = (ok[0].place && ok[0].place.seg) || (ok[0].segs && ok[0].segs[0]);
       const m = say(`${notes.length ? `<div class="ch-note">${notes.join(" ")}</div>` : ""}${after && after.length ? diffHTML(before || [], after, all) : ""}
