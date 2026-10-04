@@ -3,6 +3,7 @@
   background:var(--rl-panel-solid);color:var(--rl-ink);border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);
   font:var(--rl-fs)/1.4 var(--rl-font);transform:translateX(calc(100% + 24px));transition:transform .18s ease;overflow:hidden}
 #alDrawer.open{transform:none}
+#alDrawer:focus{outline:none}   /* focused on open (actorlog.js) so Escape closes it; the container itself needs no ring */
 #alDrawer .al-h{padding:12px 14px 10px;border-bottom:1px solid var(--rl-line);display:flex;gap:10px;align-items:flex-start}
 #alDrawer .al-h h2{margin:0;font-size:var(--rl-fs-l);line-height:1.2;color:var(--rl-ink);text-transform:none;letter-spacing:0;display:block}
 #alDrawer .al-sub{font-size:var(--rl-fs-s);color:var(--rl-ink-2)}

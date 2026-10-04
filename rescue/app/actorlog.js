@@ -26,7 +26,7 @@ function ensure() {
   addEventListener("keydown", (e) => { if (e.key === "Escape" && el.classList.contains("open")) closeActor(); });
   return el;
 }
-export function closeActor() { if (!el) return; el.classList.remove("open"); el.setAttribute("aria-hidden", "true"); if (cur && cur.onClose) cur.onClose(); cur = null; }
+export function closeActor() { if (!el) return; if (el.contains(document.activeElement)) document.activeElement.blur(); el.classList.remove("open"); el.setAttribute("aria-hidden", "true"); if (cur && cur.onClose) cur.onClose(); cur = null; }
 
 /** opts: { sc, at, onTrack(id) - "pokaż ślad na mapie" (else a link to the app), onClose() } */
 export async function openActor(id, opts = {}) {
@@ -34,6 +34,9 @@ export async function openActor(id, opts = {}) {
   cur = { id, ...opts, filter: opts.filter || "all", log: null, feeds: null, err: null, chart: false };
   el.classList.add("open"); el.setAttribute("aria-hidden", "false");
   render();
+  // opened from a click in the 2D / 3D view: focus stays in that iframe and its keys never reach this page, so Escape did not close
+  // the drawer - take the focus (and give it back to the page on close)
+  el.tabIndex = -1; try { el.focus({ preventScroll: true }); } catch (e) {}
   const q = new URLSearchParams(); if (opts.sc) q.set("sc", opts.sc); if (opts.at) q.set("at", opts.at);
   const me = cur;
   try {
