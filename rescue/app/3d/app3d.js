@@ -1526,6 +1526,11 @@ const props = (() => {
     const h = ((+p.heading || 0) * Math.PI) / 180;
     pr.obj.position.set(x, y, z); pr.obj.rotation.y = Math.atan2(Math.cos(h), Math.sin(h));
     if (pr.obj.userData.drape) { pr.obj.updateMatrixWorld(true); for (const [m, lift] of pr.obj.userData.drape) { m.getWorldPosition(v); m.position.y = meshHeightAt(toLat(v.z), toLon(v.x)) - y + lift; } }
+    if (pr.obj.userData.drapeMesh) { // a surface laid on the terrain vertex by vertex (avalanche debris)
+      const [m, lift] = pr.obj.userData.drapeMesh, P = m.geometry.attributes.position; pr.obj.updateMatrixWorld(true);
+      for (let i = 0; i < P.count; i++) { const j = P.getY(i); v.fromBufferAttribute(P, i).setY(0).applyMatrix4(m.matrixWorld); P.setY(i, meshHeightAt(toLat(v.z), toLon(v.x)) - y + lift + j); }
+      P.needsUpdate = true; m.geometry.computeVertexNormals(); m.geometry.computeBoundingSphere();
+    }
     const g = new THREE.Group(); g.name = 'prop'; g.add(pr.obj);
     if (p.label) g.add(pin(la, lo, '#b8322a', 0.25, esc(p.label), 'clue', 0.018));
     scene.add(g); out.push({ p, pr, g });

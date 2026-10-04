@@ -300,11 +300,22 @@ export function createProp(THREE, p) {
     const ant = mat(0xcbb79a, { roughness: 0.8 });
     for (const z of [0.25, 0.55]) add(new THREE.BoxGeometry(KM(0.5), KM(0.05), KM(0.38)), ant, KM(1.4), KM(0.55), KM(z));
     for (const x of [0.75, 0.45, -0.6, -0.9]) { const l = add(new THREE.CylinderGeometry(KM(0.06), KM(0.05), KM(1.1), 6), legs, KM(x), KM(0.3), KM(-0.75)); l.rotation.x = Math.PI / 2 - 0.25; }
-  } else if (k === 'avalanche') { // debris tongue along +x: lumps of snow, narrowing downhill; the caller drapes the lumps on the terrain
+  } else if (k === 'avalanche') { // from the release point `at` down along +x: a white debris surface (narrow track, widening
+    // into the deposit fan, ragged edges) and snow blocks, thickest on the fan; the caller drapes surface and blocks on the terrain
     const L = p.size || 300, snow = mat(0xf2f5f8, { roughness: 0.9 }); let seed = 77; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const halfW = (u) => L * (0.07 + 0.13 * u * u) + 8; // half width in m: narrow crown and track, widening fan
+    const NU = 48, NV = 10, pos = [], idx = [], edge = Array.from({ length: NU + 1 }, () => [0.85 + rnd() * 0.3, 0.85 + rnd() * 0.3]);
+    for (let i = 0; i <= NU; i++) for (let j = 0; j <= NV; j++) {
+      const u = i / NU, v = j / NV * 2 - 1, w = halfW(u) * (v < 0 ? edge[i][0] : edge[i][1]);
+      pos.push(KM(u * L), KM(rnd() * 1.5 * (0.3 + u)), KM(v * w)); // y: lumpy debris, kept above the draped ground
+      if (i < NU && j < NV) { const a = i * (NV + 1) + j; idx.push(a, a + 1, a + NV + 1, a + 1, a + NV + 2, a + NV + 1); }
+    }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); sg.setIndex(idx);
+    const surf = add(sg, mat(0xe9eef2, { roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: THREE.DoubleSide }));
+    obj.userData.drapeMesh = [surf, KM(0.8)];
     obj.userData.drape = [];
-    for (let i = 0; i < 140; i++) {
-      const u = rnd(), w = (1 - u * 0.6) * L * 0.22, r = 1.2 + rnd() * 2.6;
+    for (let i = 0; i < 420; i++) {
+      const u = Math.sqrt(rnd()), w = halfW(u) * 0.9, r = 0.8 + rnd() * 2.2 * (0.4 + u);
       const m = add(new THREE.IcosahedronGeometry(KM(r), 0), snow, KM(u * L), 0, KM((rnd() - 0.5) * 2 * w));
       m.scale.set(1, 0.6, 1); m.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3); obj.userData.drape.push([m, KM(r * 0.3)]);
     }

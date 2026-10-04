@@ -590,7 +590,7 @@ Kinds (real size, placed on the rendered terrain; `float` kinds sit on the water
 | `car-parked` | parked car, e.g. the missing person's car at a car park (optional `"color": "#rrggbb"`) | - |
 | `basket` | wicker basket with mushrooms (a found item) | - |
 | `elk` | dead elk (bull) lying on its side | - |
-| `avalanche` | debris tongue along `heading` (downhill), lumps draped on the terrain | length m, default 300 |
+| `avalanche` | `at` = release point; debris along `heading` (downhill): a white surface draped on the terrain, narrow track widening into the deposit fan, snow blocks on it | length m, default 300 |
 | `skis` | pair of skis and a pole stuck in the snow | - |
 | `burn` | scorched patch with an ash rim and embers | radius m, default 40 |
 | `smoke` | rising smoke plume, animated, drifts along `heading` | height m, default 150 |
