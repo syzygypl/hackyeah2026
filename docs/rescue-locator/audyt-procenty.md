@@ -231,3 +231,63 @@ Poprawka (UI): "waga" zamiast "POA"/"szansa", liczba jako krotność średniej (
 5. Pierścienie: gęstość wg `ring_density` całkowana po komórkach siatki zawrat.
 6. Pies: jądro z `coverage_per_m` dla komórki 100 m bez stożka, z okręgiem 40 m i 151 m.
 7. Kod: `git merge-base --is-ancestor 31c2cbc origin/main`, odczyt Rust i Swift (linie jak wyżej).
+
+---
+
+## Część 4: niezależne przeliczenie (AI Andrzeja)
+
+Autor: Claude (AI Andrzeja), 2026-10-04. Cel: sprawdzić liczby z części 1-3 i punktów A..K bez czytania kodu silnika, wyłącznie z odpowiedzi API produkcji (i liczb POD ze scenariusza `rescue/scenarios/zawrat.json`, które są identyczne z `segmentHistory` w API).
+
+### Metoda
+
+```sh
+curl -4 -s 'https://rescue-locator.vercel.app/api/run/zawrat?live=0' > run.json
+curl -4 -s 'https://rescue-locator.vercel.app/api/run/zawrat?live=0&t=19:45' > t1945.json
+python3 rescue/eval/audit_percentages.py run.json t1945.json
+```
+
+Skrypt (`rescue/eval/audit_percentages.py`, tylko biblioteka standardowa) liczy: Σ POA w każdym z 17 kroków, agregację `poaGrid` po `segOf`, `areaPct` z liczby komórek, przewidywanie Bayesa dla każdego kroku "searched" z kroku poprzedniego (w S: POA x (1 - POD) / (1 - POD x Σ_S POA), poza S: POA / (1 - POD x Σ_S POA); S i POD z przyrostu `segmentHistory`), "szansę znalezienia dotąd" jako sumę i jako 1 - Π(1 - POA_przed x POD), klatkę 19:45 od zera (baza x (1 - POD komórki z `cov`), normalizacja), "przeszukany obszar" w obu definicjach, POD segmentu z przydziałów (`expectedFind` / POA segmentu) i masę pierścieni Koestera w prostokącie (siatka 600 x 600). `?live=0&t=19:45` i `?t=19:45` zwracają bajt w bajt to samo, i to samo co `timeline.frames[19:45]` z pełnego runu.
+
+### Liczby: API vs przeliczenie
+
+| co | API | przeliczone | delta |
+|---|---|---|---|
+| Σ `segments[].poa`, 17 kroków | 0,99989-1,00012 | 1 | <= 1,2e-4 |
+| Σ POA komórek segmentu vs `segments[].poa` | - | - | max 5,4e-5 |
+| Σ `areaPct` | 100,002 | 100,000 | max 0,0028 pp na segment |
+| Bayes 18:40 S1+S2, POD 0,7 (Σ_S 0,1083, mianownik 0,9242) | S2 0,1008 -> 0,0327 | 0,0327 | max 9,5e-5 (wszystkie segmenty) |
+| Bayes 18:50 S3, POD 0,8 (Σ_S 0,2419, mianownik 0,8065) | S3 0,2419 -> 0,0600 | 0,0600 | max 8,1e-5 |
+| Bayes 19:20 S6, POD 0,75 (Σ_S 0,2029, mianownik 0,8478) | S6 0,2029 -> 0,0598 | 0,0598 | max 1,0e-5 |
+| Bayes 19:35 S4+S5, POD 0,75 (Σ_S 0,4319, mianownik 0,6761) | S4 0,3831 -> 0,1417 | 0,1417 | max 1,1e-4 |
+| top 3 krok 19:45 | S7 0,2140 / S4 0,1417 / S3 0,1046 | to samo | 0 |
+| top 3 krok 19:45: Σ `areaPct` / Σ POA | `top3area` 7,04% / `top3poa` 0,4603 | 7,04% / 0,4603 | 0 |
+| top 3 klatka 19:45 (Historia) | S4 0,2268 / S3 0,1928 / S6 0,1598 (S7 #5 0,1006) | baza = krok 18:30: S4 0,2270 / S3 0,1928 / S6 0,1597 (S7 0,1006) | max 0,0002 |
+| `pos` klatki 19:45 = Σ baza x POD | 0,097 | 0,0964 | 0,06 pp |
+| szansa znalezienia dotąd po 19:35, suma przyrostów | - | 74,5% (7,6 / 26,9 / 42,2 / 74,5) | - |
+| ta sama, 1 - Π(1 - POA_przed x POD) | - | 57,3% (7,6 / 25,5 / 36,8 / 57,3) | 17,2 pp do sumy |
+| kontrola: Σ_i POA_18:30(i) x cumPOD(i) | - | 57,27% | 0,03 pp do 1 - Π |
+| "przeszukany obszar" 19:45: Σ `areaPct` segmentów z meldunkiem / komórki POD >= 0,1 | - | 24,8% (6 segm.) / 1,50% (65 komórek) | 23,3 pp |
+| POD segmentu z przydziału 19:45 (heli -> S7) | `pod` 0,42 (rdzeń) | 0,042 / 0,2140 = 0,196 | 0,22 |
+| masa pierścieni Koestera w prostokącie | - | 0,531 | - |
+
+Wariant pomocniczy (do punktu A): baza = krok 19:45 (z meldunkami, czyli `keep`) x (1 - POD ze śladów) daje S7 0,2255 / S4 0,1272 / S10 0,1032, `pos` ze śladów 0,056.
+
+**Rozbieżności API vs przeliczenie powyżej 0,5 pp: brak.** Największa to `pos` klatki (0,06 pp, zaokrąglenie). Różnice powyżej 0,5 pp są tylko między definicjami (suma vs 1 - Π, dwie definicje "przeszukanego obszaru", POD rdzenia vs segmentu), czyli dokładnie tam, gdzie audyt zgłasza błędy. Jedyna różnica z liczbami audytu: suma w B wychodzi 74,5%, audyt pisze 74,6% (0,1 pp, zaokrąglenie przyrostów).
+
+### Wnioski wobec punktów A..K
+
+| # | wynik | dowód z przeliczenia |
+|---|---|---|
+| A | **potwierdza** | krok 19:45 = S7/S4/S3, klatka = S4/S3/S6 (S7 #5). Klatkę odtwarzam z dokładnością 0,0002 tylko przy bazie z kroku 18:30, czyli bez WSZYSTKICH czterech meldunków "nic". Wariant `keep` przywraca S7 na #1, ale liczy S4 podwójnie (meldunek drona 0,75 i ślad drona 0,154), więc poprawka wybiórcza z audytu jest właściwa |
+| B | **potwierdza** | 74,5% (suma) vs 57,3% (1 - Π), a 1 - Π zgadza się z niezależną kontrolą Σ POA_prior x cumPOD = 57,27% |
+| C | potwierdza stan gałęzi | nie do sprawdzenia z API; commit 31c2cbc jest tylko na `origin/fix/dog-cone-no-wind`, nie w `main`. Obrysu FOV nie sprawdzałem |
+| D | **potwierdza** | S7: POD rdzenia 0,42, POD segmentu 0,196; także pies S4 0,428 vs 0,282, TOPR B S9 0,338 vs 0,188. Silnik dostałby 1,5-2,1 x za wysoki POD |
+| E | **potwierdza** | 24,8% vs 1,50% o 19:45; `coverageFinal.areaPct` 3,9% na końcu |
+| F | nie dotyczy liczb | to kwestia, który widok bierze który ranking (UI); oba rankingi, na których stoi F, potwierdzone wyżej |
+| G | **potwierdza** | powód "POA 10%" = `assignments[].poa` 0,101 (rdzeń), a POA segmentu S7 = 0,214 |
+| H | **potwierdza** | masa pierścieni w prostokącie 0,531 (audyt: 0,53) |
+| I | **potwierdza** (dwa modele POD) | S4: meldunek drona POD 0,75, pokrycie ze śladów 0,154 (19:45) i 0,229 (20:00); S7: plan śmigłowca POD 0,42, ślady 0,031 o 20:00. Część "max vs 1 - Π" nie do sprawdzenia na zawrat (żaden segment nie ma dwóch meldunków) |
+| J | **potwierdza** | `pos` 0,119 -> 0,37 (20:00 -> 20:05); `cumPod` S6 0,046 -> 0,039 |
+| K | **potwierdza** | wszystkie 5 `clueWeights` mają `applied: false`; Bayes daje dokładnie 1 - POD (0,3 / 0,2 / 0,25 / 0,25), czyli mapa używa wagi 1. Z wagą 0,767 meldunek 18:40 miałby efektywny POD 1 - 0,3^0,767 = 0,60 zamiast 0,70 |
+
+Rdzeń silnika (Σ POA = 1, agregacja, `areaPct`, Bayes, klatka osi czasu) liczy dokładnie to, co deklaruje. Wszystkie zgłoszone błędy (A, B, D) i niejasności (E, G, H, I, J, K) dają się odtworzyć z samego API.
