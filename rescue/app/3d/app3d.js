@@ -17,6 +17,7 @@ import { FX, FX_OFF, applyFx, installHeightFog } from './fx3d.js'; // vertex / p
 import { createTimeline3D } from './timeline3d.js';
 import { createCoverage3D } from './coverage3d.js';
 import { createWalk3D } from './walk3d.js';
+import { createLivePos3D } from './livepos3d.js'; // live team positions (GET /api/positions), Na żywo only
 import { createMachine, createVehicle, vehicleKind, operatorPaint, createRailcar, createDamagedTrack, createProp } from './machines3d.js'; // unit models: aircraft, boats, ground vehicles   // free walk (Spacer): first person from a clicked spot
 
 // ---------- config ----------
@@ -2274,6 +2275,8 @@ WALK = createWalk3D({ THREE, camera, controls, eyeAt, toLat, toLon, host, wake,
   onStart: () => { if (CINE.on) cinema(false); TL3D?.stopFpp(); fly = null; autoRot = false; $('btn-rot')?.classList.remove('on'); },
 });
 $('btn-walk')?.addEventListener('click', () => WALK.arm());
+createLivePos3D({ THREE, pin, label, v3, drape: drapeRuns, dispose: disposeGroup, wake, inside, esc, parent: dyn.live, sc: SC, isLive: () => TL_LIVE && !P.reveal,
+  units: () => R.steps[R.steps.length - 1]?.resources || [], skip: (id) => (R.timeline?.actors || []).some((a) => a.id === id) });
 function hover() {
   hoverPending = false; const e = lastEv, tip = $('tip'); if (!e) return;
   const hit = pick(e); if (!hit) { tip.hidden = true; return; }
