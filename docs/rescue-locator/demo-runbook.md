@@ -72,7 +72,7 @@ Kryteria (DEFENCE): **I** innowacja 30%, **K** związek z kategorią 20%, **U** 
 | 7 | 2:35-3:00 | Bez klikania (albo slajd z liczbami) | - | "Na tysiącu symulowanych zaginięć właściwy sektor jest w pierwszej trójce w 66%, u doświadczonego kierownika w 56%, od ostatniego punktu w 43%. To symulacja, nie prawdziwe akcje. Planer jest najsłabszy - decyduje człowiek. Rescue Locator: gdzie szukać najpierw." | C |
 
 Jeśli zostaje czas albo jury pyta (każde ~10 s):
-- **Czat** (czerwony przycisk w prawym dolnym rogu operatora, `?chat=1`): zdarzenie zwykłym zdaniem, karta z mini mapą, po "Dodaj" nowe top 3 i co się przesunęło. W Historii to "co by było, gdyby", bez zapisu.
+- **Czat** (przycisk "Czat" na górnym pasku, obok "Udostępnij", albo `?chat=1`): zdarzenie zwykłym zdaniem, karta z mini mapą, po "Dodaj" nowe top 3 i co się przesunęło. W Historii to "co by było, gdyby", bez zapisu. **Po "Dodaj" zamknij szufladę Czatu (✕)** - otwarta zasłania lewą część mapy 2D (przy 1440 px etykiety #1 i #2 oraz przyciski ⏮ ▶ doku; przegląd AI Michała ee6186e).
 - **Porównanie** (`porownanie.html`): ta sama akcja o 19:22 bez i z relacją turystki, top 3 zmienia się z S4/S7/S3 na S7/S6/S9.
 - **Odprawa** (`odprawa.html?sc=zawrat`): cała odprawa kierownika na jednej stronie A4 do druku.
 - **Rodzina** (`rodzina.html`): "Ktoś zaginął - co robić": najpierw 112, potem lista tego, o co pyta dyspozytor.
