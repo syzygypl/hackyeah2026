@@ -5,8 +5,11 @@ Owner: AI Mateusza #2. Code: `rescue/app/chat.js` + `chat.css` (both hosts), `re
 The operator (or a casual user) types what happened in plain Polish. The chat reads it, shows a confirmation card with a mini map,
 and on "Dodaj" posts it through the **existing** API. Then it answers with the new top 3 and what moved.
 
-- `/app` (operator): red **Czat** button bottom right -> drawer (like the unit log drawer). `?chat=1` opens it at load.
-- `/app/czat.html` (casual, "Widziałem kogoś"): full-screen chat + the real 2D heat map, big buttons and text. Linked from `start.html`.
+- `/app` (operator): red **Czat** button in the top bar (before "Udostępnij"; icon only on phones; hidden for role=ratownik) -> drawer
+  (like the unit log drawer). `?chat=1` opens it at load.
+- `/app/czat.html` (casual, "Widziałem kogoś"): full-screen chat + the real 2D heat map, big buttons and text, a first-run hint
+  (once per device, `?nointro=1` skips it), voice input (🎤, Web Speech API `pl-PL`, only where the browser has it) and
+  "Udostępnij podsumowanie" (`navigator.share`, else clipboard, else selectable text). Linked from `start.html`.
 
 ## Flow
 
@@ -19,6 +22,24 @@ and on "Dodaj" posts it through the **existing** API. Then it answers with the n
 4. **Answer**: "Gdzie szukać najpierw - teraz" = top 3 as rank + sector + `% obszaru` (never the POA %), each with "▲ było 4." /
    "▼ było 2." / "bez zmian", and the moves ("S3 spadł z 3. na 9. miejsce", "S5 awansował z 20. na 3. miejsce").
    "Pokaż na mapie" selects the sector in the shell (2D zooms to it); each top-3 row is clickable. "Cofnij" undoes.
+
+## Several events in one message
+
+"Zespół B przeszukał S3 i S4, nic, a o 15:10 turystka widziała go przy Zawracie" -> one card per event and one
+"Dodaj wszystkie (N)"; one answer (top 3 and moves after all of them) and "Cofnij wszystkie". Split at sentence ends, `;`,
+`, a / oraz / potem / natomiast`, `a potem`; a piece without its own event ("nic", "potem szedł w stronę Zawratu") stays with the
+previous one. Historia computes all of them in one what-if run.
+
+## Map refresh and timeline
+
+- No blank 2D: a chat change marks the shell's 2D frame dirty, so the shell's own double buffer (old map until the new one says
+  "ready", then a 200 ms crossfade) is used instead of `{type:"run"}` (which reloads the view in place, blank ~1-2 s). czat.html
+  has its own double buffer. The test samples the visible 2D every 40 ms: 0 blank samples in 4 changes.
+- Time to the new map: the server run (0.7 s on production, Historia baseline prefetched when the chat opens) + the 2D boot
+  (~2 s headless). The hidden warm 3D view now reloads only after the 2D swap (app.js, 8d943e4); booting both at once took the 2D
+  from 2 s to 16 s. Under 300 ms needs an in-place run update inside `web/app.js` (rebuild the model without a reload), owner of web/.
+- Dock: in Historia the chat events are steps of the what-if run, so they are on the timeline; their markers get a red ring
+  (`.tlk.chat`, groups from `dock.js` `evGroups`, dock.js unchanged).
 
 ## Where it goes (no new endpoints, no contract change)
 
@@ -78,7 +99,7 @@ Also read: "Widziałem kogoś" (asks where, then when), "przy Wielkim Stawie 20 
 
 ## Limits
 
-- One event per message (the first kind wins; "uziemiony, wiatr 18 m/s" keeps the wind with the status).
+- Within one sentence, one event (the first kind wins; "uziemiony, wiatr 18 m/s" keeps the wind with the status); several sentences or ", a ..." are split (above).
 - Place names come from the scenario file; places outside it (a peak not named in any sector or trail) are not found - the card asks.
 - Direction is a corridor only in the Historia what-if; the live engine has no direction input for a clue (it stays in the note).
 - Na żywo needs the action key (operator link); without it the card offers "Pokaż jako symulację". Weather and team status na żywo have no single undo.
