@@ -1917,13 +1917,14 @@ function cineFpp(next) {
   // rescue units only: the missing person's track is an estimate, "through their eyes" would read as knowing where they are
   const kindOf = (id) => (R.timeline?.actors || []).find((a) => a.id === id)?.kind;
   const ids = (TL3D.frame?.actors || []).map((a) => a.id).filter((id) => id && kindOf(id) !== 'osoba');
+  const clock = R.steps[STEP]?.t || '';   // the shot just shown; startFpp can move STEP to the unit's first sample, the clock must not go back
   for (let k = 0; k < ids.length; k++) {
     const id = ids[(next + k) % ids.length];
     CINE.inserting = true; const ok = TL3D.startFpp(id); CINE.inserting = false;   // our own insert: startFpp's onStopCamera must not end Kino
     if (ok) {
       const name = document.querySelector(`.tl3d-title ~ select option[value="${CSS.escape(id)}"], select[aria-label="Jednostka dla kamery FPP"] option[value="${CSS.escape(id)}"]`)?.textContent || id;
       CINE.fpp = { t: 5, next }; CINE.shot = null;
-      $('caption').innerHTML = `<b>${esc(R.steps[STEP]?.t || '')}</b> Oczami jednostki: ${esc(name)}`;
+      $('caption').innerHTML = `<b>${esc(clock)}</b> Oczami jednostki: ${esc(name)}`;
       return true;
     }
   }
