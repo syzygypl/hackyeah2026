@@ -63,7 +63,7 @@ Stops follow the demo order in [`najmocniejsze-funkcje.md`](najmocniejsze-funkcj
 | 4 | first assignments | team plan (Szczegóły) | Kto, dokąd, za ile minut. Na oblodzone płyty tylko zespół z liną. Plan podpowiada, decyduje kierownik akcji. |
 | 5 | sectors back empty, drone sees nothing | map, S7 selected | "Nic nie znaleźliśmy" to też informacja: Żleb pod Zawratem idzie z #20 (same statystyki) na #1. |
 | 6 | 19:45 wiatr, 20:03 ZNALEZIONO | dock + right panel | Wiatr uziemia drona, w planie zostaje śmigłowiec do żlebu. 20:03 znaleziony. |
-| end | | | "Teraz Ty": telefon ratownika przez Udostępnij (meldunek zwykłym zdaniem, LIVE, potwierdzenie), Centrum (wiele akcji, wspólne zespoły), ten sam silnik na wodzie (Śniardwy) i w mieście (Kraków, "Widziałem"), Nowa akcja. |
+| end | | | "Teraz Ty": main button "Zacznij od zgłoszenia (17:40)" = Historia at step 5 with the chat open, the user adds reports as a private what-if (not Na żywo: the shared live action is already past ZNALEZIONO); then telefon ratownika przez Udostępnij (meldunek zwykłym zdaniem, LIVE, potwierdzenie), Centrum (wiele akcji, wspólne zespoły), ten sam silnik na wodzie (Śniardwy) i w mieście (Kraków, "Widziałem"), Nowa akcja. |
 
 Implementation notes:
 - `?tour=1` starts it; a "Przewodnik" button in the header restarts it. Remember "done" in `localStorage` (wrapped in try/catch like the existing hints).

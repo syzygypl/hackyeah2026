@@ -30,7 +30,7 @@ const STOPS = [
   { step: 17, target: "map", seg: "S7", title: "20:03 · ZNALEZIONO",
     text: () => "Śmigłowiec znajduje turystę w żlebie pod Zawratem, w sektorze, który mapa wskazała jako pierwszy. To scenariusz napisany przez nas: ilustracja działania, nie dowód skuteczności." },
   { end: true, title: "Teraz Ty",
-    text: () => "To była nagrana historia. Na żywo dochodzą meldunki z terenu i nowe wskazówki, a mapa przelicza się dla wszystkich." },
+    text: () => "To była nagrana historia. Teraz Ty prowadzisz akcję od zgłoszenia o 17:40: pisz w czacie, co meldują świadkowie i zespoły, a mapa przeliczy się po każdym meldunku (symulacja tylko u Ciebie)." },
 ];
 
 // ---------- DOM: spotlight (does not catch clicks) + card
@@ -85,7 +85,7 @@ function drawCard() {
   const S = STOPS[tour.i], n = STOPS.length;
   const dots = STOPS.map((_, k) => `<i class="${k === tour.i ? "on" : k < tour.i ? "done" : ""}"></i>`).join("");
   const endLinks = S.end ? `<div class="tc-end">
-      <button type="button" data-a="live" class="primary">Przełącz na żywo</button>
+      <button type="button" data-a="begin" class="primary">Zacznij od zgłoszenia (17:40)</button>
       <button type="button" data-a="share">Telefon ratownika (QR)</button>
       <a href="centrum.html">Centrum - wiele akcji</a>
       <a href="./?role=operator&sc=sniardwy">Woda: Śniardwy</a>
@@ -149,13 +149,29 @@ function stop() {
   try { localStorage.setItem("rescue-tour-done", "1"); } catch (e) {}
   if (Q.has("tour")) { const u = new URL(location.href); u.searchParams.delete("tour"); history.replaceState(null, "", u); }
 }
+// "Teraz Ty": the recording back at the call (step 5, 17:40, the first full picture), chat open; what the user adds is a private
+// what-if (chat.js Historia). Not Na żywo: the shared live action is already past ZNALEZIONO.
+async function begin() {
+  stop();
+  const a = app(), s = st();
+  try {
+    if (s.scenario !== "zawrat") { $("scen").value = "zawrat"; await a.loadScenario("zawrat"); }
+    if (s.time !== "hist") await a.setTime("hist", true);
+    if (s.mode !== "akcja") a.setMode("akcja");
+    a.setStep(STOPS[0].step);
+  } catch (e) { console.warn("tour begin", e); }
+  for (let k = 0; k < 40 && !window.rescueChat; k++) await wait(100);
+  const c = window.rescueChat; if (!c) return;
+  c.open(true);
+  c.chat.say("Jest 17:40, żona właśnie zgłosiła zaginięcie. Co meldują świadkowie i zespoły? Napisz albo stuknij przykład poniżej, np. „Turystka widziała go o 14:20 przy Czarnym Stawie”.");
+}
 card.addEventListener("click", (e) => {
   const b = e.target.closest("[data-a]"); if (!b) return;
   const k = b.dataset.a;
   if (k === "next") go(tour.i + 1);
   else if (k === "back") go(tour.i - 1);
   else if (k === "close") stop();
-  else if (k === "live") { stop(); app().setTime("live"); }
+  else if (k === "begin") begin();
   else if (k === "share") { stop(); $("shareBtn") && $("shareBtn").click(); }
   else if (k === "help") { stop(); openHelp(); }
 });
