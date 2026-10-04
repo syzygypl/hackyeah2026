@@ -38,7 +38,7 @@ async function loadList() {
       <div class="small">${esc(x.who)}</div>
       <div class="meta">przejęcie ${esc(x.pickupClock)} · ${Math.round(x.budgetMin / 60)} h na decyzje · ${x.teams} zespołów</div>
       <button class="primary" data-id="${esc(x.id)}">Odprawa</button></div>`).join("") || `<p class="mute">Brak ćwiczeń na serwerze.</p>`;
-  } catch (e) { $("exList").innerHTML = `<p class="mute">Nie udało się wczytać ćwiczeń: ${esc(e.message)}${e.status === 401 ? " (wpisz PIN u góry)" : ""}</p>`; }
+  } catch (e) { $("exList").innerHTML = `<p class="mute">Nie udało się wczytać ćwiczeń: ${esc(e.message)}${e.status === 401 ? " (wpisz klucz akcji u góry)" : ""}</p>`; }
 }
 $("exList").onclick = (e) => { const b = e.target.closest("button[data-id]"); if (b) start(b.dataset.id); };
 
