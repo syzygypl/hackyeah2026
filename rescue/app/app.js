@@ -1214,6 +1214,15 @@ subs.push((why) => {
   if (store.role === "ratownik" && why !== "select") renderRescuer();
 });
 $("scen").onchange = () => loadScenario($("scen").value).catch((e) => toast(plErr(e), 5000));
+// "Zmień scenariusz": the Centrum map of Poland in pick mode (centrum.html?pick=1&return=<this view>) comes back here with ?sc=<chosen>;
+// mode / view / role / time travel in the return URL. The hidden #scen select stays the scenario state the rest of the shell reads.
+$("scenPick").onclick = () => {
+  const u = new URL(location.href), q = u.searchParams, sc = $("scen").value;
+  if (sc) q.set("sc", sc);
+  for (const [k, v] of [["mode", store.mode], ["view", store.view], ["role", store.role], ["time", store.time]]) if (v) q.set(k, v);
+  q.delete("key"); q.delete("step");
+  location.href = "centrum.html?pick=1&return=" + encodeURIComponent(u.pathname + u.search + u.hash);
+};
 
 window.rescueApp = { CARDS, openForm, dropTeam, addInput, setStep, selectSeg, setView, setMode, undo, teamOps: () => teamOps, frames: FRAMES };   // tests
 Object.assign(window.rescueApp, { setTime, loadScenario });   // intro.js (guided tour) drives the shell through these

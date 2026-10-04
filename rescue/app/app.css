@@ -199,6 +199,8 @@ header .logo circle{fill:var(--rl-danger)}
 .scenlbl{display:flex;align-items:center}
 .scenlbl>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 #scen{height:40px;border-radius:var(--rl-radius);font-weight:600;font-size:14px;padding:0 10px;max-width:260px}
+#scen[hidden]{display:none!important}
+#scenPick{height:40px;font-weight:600;font-size:14px;padding:0 12px;white-space:nowrap}
 .views{border:0;border-radius:12px;padding:3px;gap:2px;background:color-mix(in srgb,var(--rl-ink) 6%,transparent);overflow:visible}
 .views button{min-height:36px;padding:0 16px;border:0;border-radius:9px;background:transparent;font-weight:600;font-size:15px;color:var(--rl-ink-2)}
 .views button:not(.on):hover:not(:disabled){color:var(--rl-ink);border:0}
@@ -547,3 +549,5 @@ body.float header:has(#firstRun:not([hidden])){z-index:13}
   header #pinbox{font-size:0;gap:0}
   header #pinbox input{font-size:13px;width:60px;min-width:0}
 }
+/* phone menu (mobile.css): "Zmień scenariusz" as a full-width row like the other menu items */
+@media (max-width:600px){ body.m-menu:not(.role-ratownik) header>.scenlbl #scenPick{flex:1 1 100%;min-height:48px;font-size:16px;text-align:left;border-radius:10px;padding:0 14px} }
