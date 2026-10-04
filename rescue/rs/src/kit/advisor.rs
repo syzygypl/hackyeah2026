@@ -69,6 +69,18 @@ pub struct AdvisorCatalogueRiver {
     pub points: Vec<Vec<f64>>,
     pub towns: Vec<AdvisorCatalogueTown>,
 }
+/// A railway line (hazards.json `railways`, OSM): the polyline runs from its north end, stations/places carry the line km.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct AdvisorCatalogueRailway {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub r#ref: String,
+    pub points: Vec<Vec<f64>>,
+    #[serde(default)]
+    pub stations: Vec<AdvisorCatalogueTown>,
+}
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct AdvisorCatalogueWave {
@@ -83,6 +95,11 @@ pub struct AdvisorCatalogue {
     pub rivers: Vec<AdvisorCatalogueRiver>,
     pub wave_speed_ms: AdvisorCatalogueWave,
     pub corridor_m: f64,
+    #[serde(default)]
+    pub railways: Vec<AdvisorCatalogueRailway>,
+    /// incidents on one line within this many minutes count as one window (default 12 h)
+    #[serde(default)]
+    pub rail_window_min: Option<f64>,
 }
 impl AdvisorCatalogue {
     pub fn load(path: &str) -> Option<AdvisorCatalogue> {
@@ -98,6 +115,7 @@ pub(crate) static ADVISOR_GROUPS: &[(&str, &str, &[&str])] = &[
     ("wildfire", "ogień / dym", &["pozar", "ogien", "plomien", "spalenizn", "dym", "luna"]),
     ("storm", "wichura / burza", &["wichur", "burz", "nawalnic", "piorun", "powalon", "grad", "traba powietrzna", "szkwal"]),
     ("avalanche", "lawina / śnieg", &["lawin", "zasyp", "nawis", "snieg"]),
+    ("rail", "tory / pociąg", &["tory", "torow", "torach", "toru ", "torze", "pociag", "wykolej", "dywersj", "sabotaz", "semafor", "trakcyj", "kolejow", "szyny", "szynach", "nasyp", "ladunek", "eksploz", "toromistrz"]),
 ];
 
 /// Lowercase + diacritic fold (Foundation `.caseInsensitive, .diacriticInsensitive`); `ł` stays and is replaced by `l`.
@@ -291,6 +309,7 @@ impl Advisor {
         if let Some(cat) = catalogue {
             hyps.extend(Self::dam_hypotheses(incidents, cat));
             hyps.extend(Self::plume_hypotheses(incidents, cat));
+            hyps.extend(Self::rail_hypotheses(incidents, cat));
         }
         let ids_of = |h: &Obj| -> HashSet<String> { str_list(h.get("incidents")).into_iter().collect() };
         // generic space-time clusters, unless a sourced hypothesis already explains most of the members
@@ -355,7 +374,7 @@ impl Advisor {
         o.insert("incidents".into(), json!(incidents.len()));
         o.insert("hypotheses".into(), Value::Array(kept.into_iter().map(Value::Object).collect()));
         o.insert("summary".into(), json!(summary));
-        o.insert("method".into(), json!("Deterministyczne sygnały: korytarz rzeki poniżej zapory + zgodność czasów z falą, stożek z wiatrem od zakładu, skupienie w czasie i przestrzeni (DBSCAN 15 km / 3 h), wspólne słowa w zgłoszeniach. Wynik = suma wkładów (waga × wartość). To hipoteza do sprawdzenia, nie potwierdzenie."));
+        o.insert("method".into(), json!("Deterministyczne sygnały: korytarz rzeki poniżej zapory + zgodność czasów z falą, stożek z wiatrem od zakładu, zdarzenia przy tej samej linii kolejowej w krótkim oknie, skupienie w czasie i przestrzeni (DBSCAN 15 km / 3 h), wspólne słowa w zgłoszeniach. Wynik = suma wkładów (waga × wartość). To hipoteza do sprawdzenia, nie potwierdzenie."));
         o
     }
 
@@ -622,6 +641,192 @@ impl Advisor {
         out
     }
 
+    /// Point of a polyline at `km` from its first point.
+    fn point_at_km(line: &[Vec<f64>], km: f64) -> Vec<f64> {
+        let mut acc = 0.0;
+        for w in line.windows(2) {
+            let d = Self::dist(&w[0], &w[1]);
+            if acc + d >= km * 1000.0 && d > 0.0 {
+                let f = (km * 1000.0 - acc) / d;
+                return Self::r5(&[w[0][0] + f * (w[1][0] - w[0][0]), w[0][1] + f * (w[1][1] - w[0][1])]);
+            }
+            acc += d;
+        }
+        line.last().map(|p| Self::r5(p)).unwrap_or_default()
+    }
+
+    /// Rail: >= 2 incidents within the corridor of one railway line in the densest window (railWindowMin, 12 h) = a likely
+    /// common cause on the line (sabotage / dywersja, or a failure of the line itself). Evidence: line corridor, rail words,
+    /// distance along the line, time. No wave: the prediction names the nearest stations on both sides of the stretch.
+    fn rail_hypotheses(all: &[AdvisorIncident], cat: &AdvisorCatalogue) -> Vec<Obj> {
+        let mut out: Vec<Obj> = vec![];
+        let window = cat.rail_window_min.unwrap_or(720.0) as i64;
+        for rail in &cat.railways {
+            if rail.points.len() < 2 {
+                continue;
+            }
+            let proj: HashMap<String, (f64, f64)> = all.iter().map(|i| (i.sc.clone(), Self::project(&rail.points, &i.at))).collect();
+            let near: Vec<AdvisorIncident> = all.iter().filter(|i| proj[&i.sc].0 <= cat.corridor_m).cloned().collect();
+            let linked = Self::densest(&near, window);
+            if linked.len() < 2 {
+                continue;
+            }
+            let n = linked.len() as f64;
+            let mut by_km: Vec<&AdvisorIncident> = linked.iter().collect();
+            by_km.sort_by(|x, y| proj[&x.sc].1.partial_cmp(&proj[&y.sc].1).unwrap_or(std::cmp::Ordering::Equal));
+            let ids: Vec<String> = by_km.iter().map(|i| i.sc.clone()).collect();
+            let kmin = proj[&ids[0]].1;
+            let kmax = proj[&ids[ids.len() - 1]].1;
+            let span_km = kmax - kmin;
+            let min_minute = linked.iter().map(|i| i.minute).min().unwrap();
+            let max_minute = linked.iter().map(|i| i.minute).max().unwrap();
+            let span = max_minute - min_minute;
+            let with_rail: Vec<&AdvisorIncident> = by_km.iter().copied().filter(|i| !Self::terms(i, "rail").is_empty()).collect();
+            let mut counts: HashMap<String, i64> = HashMap::new();
+            for i in &linked {
+                for t in Self::terms(i, "rail") {
+                    *counts.entry(t.trim().to_string()).or_insert(0) += 1;
+                }
+            }
+            let mut cs: Vec<(String, i64)> = counts.into_iter().collect();
+            cs.sort_by(|x, y| y.1.cmp(&x.1).then_with(|| x.0.cmp(&y.0)));
+            let align = 1f64.min((n - 1.0) / 2.0);
+            let kw = with_rail.len() as f64 / n;
+            let compact = 0f64.max(1f64.min(1.0 - (span_km - 5.0) / 25.0));
+            let conc = 0f64.max(1f64.min(1.0 - (span - 120) as f64 / 600.0));
+            let dmax = linked.iter().map(|i| proj[&i.sc].0).fold(0.0, f64::max);
+            let ev = vec![
+                Ev {
+                    id: "E1",
+                    kind: "rail",
+                    label: "Ta sama linia kolejowa",
+                    text: format!(
+                        "{} zgłosze{} do {} m od toru: {}, km {}-{} linii (najdalej {} m od toru)",
+                        linked.len(),
+                        if linked.len() < 5 { "nia" } else { "ń" },
+                        cat.corridor_m.round() as i64,
+                        rail.name,
+                        Self::pl(kmin, 1),
+                        Self::pl(kmax, 1),
+                        dmax.round() as i64
+                    ),
+                    weight: 0.35,
+                    value: align,
+                    incidents: ids.clone(),
+                },
+                Ev {
+                    id: "E2",
+                    kind: "keywords",
+                    label: "Wspólne słowa w zgłoszeniach",
+                    text: if with_rail.is_empty() {
+                        "Żadne zgłoszenie nie mówi o torach, pociągu ani uszkodzeniu linii".to_string()
+                    } else {
+                        format!("Sygnały kolejowe w {}/{} zgłoszeniach: ", with_rail.len(), linked.len())
+                            + &cs.iter().take(5).map(|(k, v)| format!("\"{k}\" ×{v}")).collect::<Vec<_>>().join(", ")
+                    },
+                    weight: 0.35,
+                    value: kw,
+                    incidents: with_rail.iter().map(|i| i.sc.clone()).collect(),
+                },
+                Ev {
+                    id: "E3",
+                    kind: "compact",
+                    label: "Blisko siebie na linii",
+                    text: format!("Odcinek {} km wzdłuż toru", Self::pl(span_km, 1)),
+                    weight: 0.15,
+                    value: compact,
+                    incidents: ids.clone(),
+                },
+                Ev {
+                    id: "E4",
+                    kind: "time",
+                    label: "Skupienie w czasie",
+                    text: format!("Wszystkie w ciągu {} ({}-{})", Self::dur(span), Self::clock(min_minute), Self::clock(max_minute)),
+                    weight: 0.15,
+                    value: conc,
+                    incidents: ids.clone(),
+                },
+            ];
+            let score = 0.97f64.min(sum(ev.iter().map(|e| e.weight * e.value)));
+            // the nearest stations / places on both sides of the stretch (trains to stop, access for the teams)
+            let before: Vec<&AdvisorCatalogueTown> = rail.stations.iter().filter(|s| s.km < kmin - 0.3).collect();
+            let after: Vec<&AdvisorCatalogueTown> = rail.stations.iter().filter(|s| s.km > kmax + 0.3).collect();
+            let near_st: Vec<&AdvisorCatalogueTown> = before.iter().rev().take(2).rev().chain(after.iter().take(2)).copied().collect();
+            let st_list = near_st.iter().map(|s| format!("{} (km {})", s.name, Self::pl(s.km, 1))).collect::<Vec<_>>().join(", ");
+            // where traffic is stopped: the nearest railway station / halt on each side (a place when the catalogue has none)
+            let is_st = |s: &&&AdvisorCatalogueTown| matches!(s.kind.as_deref(), Some("station") | Some("halt"));
+            let from_st = before.iter().rev().find(is_st).or(before.last()).map(|s| s.name.clone()).unwrap_or_else(|| "początku linii".into());
+            let to_st = after.iter().find(is_st).or(after.first()).map(|s| s.name.clone()).unwrap_or_else(|| "końca linii".into());
+            let lo = 0f64.max(kmin - 5.0);
+            let hi = kmax + 5.0;
+            let section: Vec<Vec<f64>> = {
+                let mut acc = 0.0;
+                let mut v: Vec<Vec<f64>> = vec![];
+                for w in rail.points.windows(2) {
+                    let d = Self::dist(&w[0], &w[1]) / 1000.0;
+                    if acc + d >= lo && acc <= hi {
+                        if v.is_empty() {
+                            v.push(w[0].clone());
+                        }
+                        v.push(w[1].clone());
+                    }
+                    acc += d;
+                }
+                v
+            };
+            let at = Self::point_at_km(&rail.points, (kmin + kmax) / 2.0);
+            let excluded = Self::excluded(all, &linked, |i| {
+                let p = proj[&i.sc];
+                let w = if Self::terms(i, "rail").is_empty() { "brak sygnałów kolejowych w zgłoszeniu" } else { "zgłoszenie mówi o kolei, ale poza oknem czasu" };
+                if p.0 > cat.corridor_m {
+                    return format!("{} km od toru; {}", Self::pl(p.0 / 1000.0, 1), w);
+                }
+                format!("przy torze, ale poza oknem {} h; {}", window / 60, w)
+            });
+            let mut h = Obj::new();
+            h.insert("kind".into(), json!("rail"));
+            h.insert("kindLabel".into(), json!("dywersja / awaria na linii kolejowej"));
+            h.insert("rank".into(), json!(0.0));
+            h.insert("title".into(), json!(format!("{}: wspólna przyczyna na torze (km {}-{})", rail.name, Self::pl(kmin, 1), Self::pl(kmax, 1))));
+            h.insert("score".into(), json!(Self::r2(score)));
+            h.insert("level".into(), json!(Self::level(score)));
+            h.insert("source".into(), json!({"id": rail.id, "kind": "rail", "name": rail.name, "at": at, "ref": rail.r#ref}));
+            h.insert("incidents".into(), json!(ids));
+            h.insert("evidence".into(), Value::Array(ev.iter().map(Self::ev_json).collect()));
+            h.insert("explain".into(), json!(Self::explain(&ev, score)));
+            h.insert(
+                "predicted".into(),
+                json!({"text": format!("Najbliższe stacje i miejscowości przy odcinku: {}", if st_list.is_empty() { "brak w katalogu".to_string() } else { st_list.clone() }),
+                       "towns": [], "stations": near_st.iter().map(|s| json!({"name": s.name, "kind": s.kind.clone().unwrap_or_default(), "at": s.at, "km": s.km})).collect::<Vec<_>>(),
+                       "from": format!("ostatnie zgłoszenie {}", Self::clock(max_minute))}),
+            );
+            // `river` / `riverAhead`: the line and the stretch, so the current Centrum map draws them; `rail` / `railSection` = the same, named
+            h.insert("geometry".into(), json!({"rail": rail.points, "railSection": section, "river": rail.points, "riverAhead": section, "source": at}));
+            h.insert("excluded".into(), Value::Array(excluded));
+            h.insert(
+                "actions".into(),
+                json!([
+                    {"priority": 1, "safety": true, "text": format!("Bezpieczeństwo zespołów: wstrzymaj ruch pociągów na linii {} między {} a {} (dyżurny ruchu PKP PLK) zanim ktokolwiek wejdzie na tory; zespoły z dala od torów i nasypu, możliwe kolejne uszkodzenia lub ładunki.", rail.r#ref, from_st, to_st)},
+                    {"priority": 2, "text": "Powiadom Policję i SOK: miejsca zdarzeń jako możliwe miejsca przestępstwa - nie ruszać śladów na torze, zabezpieczyć dojścia."},
+                    {"priority": 3, "text": format!("Sprawdź cały odcinek km {}-{} (drezyna / patrol SOK, dron z kamerą termowizyjną): czy są kolejne uszkodzenia toru.", Self::pl(lo, 1), Self::pl(hi, 1))},
+                    {"priority": 4, "text": format!("Przełącz na tryb zdarzenia masowego: jedno dowodzenie dla {} akcji, wspólna pula zespołów; poszukiwania osób prowadź równolegle, z dala od torów.", linked.len())},
+                    {"priority": 5, "text": "Poproś Policję o zatrzymanie i spisanie osób widzianych przy torach (świadkowie, podejrzani)."},
+                ]),
+            );
+            h.insert(
+                "questions".into(),
+                json!([
+                    format!("Czy dyżurny ruchu potwierdza wstrzymanie pociągów między {} a {}?", from_st, to_st),
+                    "Czy na innych odcinkach linii zgłoszono uszkodzenia toru, sieci trakcyjnej albo sygnalizacji?",
+                    "Czy ktoś widział osoby lub pojazdy przy torach przed zdarzeniami?",
+                    "Czy zaginione osoby mogły odejść od toru w stronę lasu lub drogi?",
+                ]),
+            );
+            out.push(h);
+        }
+        out
+    }
+
     fn plume_hypotheses(all: &[AdvisorIncident], cat: &AdvisorCatalogue) -> Vec<Obj> {
         let mut out: Vec<Obj> = vec![];
         for src in cat.sources.iter().filter(|s| s.kind == "industrial") {
@@ -863,6 +1068,7 @@ impl Advisor {
                 "wildfire" => "pożar terenu",
                 "storm" => "front burzowy / wichura",
                 "avalanche" => "cykl lawinowy",
+                "rail" => "zdarzenia na kolei (linia nieznana)",
                 _ => "nieznane wspólne źródło",
             };
             let lat = sum(mem.iter().map(|i| i.at[0])) / n;

@@ -36,10 +36,15 @@ public enum Advisor {
         public struct Town: Codable, Sendable { public let name: String, at: [Double], km: Double; public var kind: String? }
         public struct River: Codable, Sendable { public let id: String, name: String, source: String, points: [[Double]], towns: [Town] }
         public struct Wave: Codable, Sendable { public let min: Double, `default`: Double, max: Double }
+        /// A railway line (hazards.json `railways`, OSM): the polyline runs from its north end, stations/places carry the line km.
+        public struct Railway: Codable, Sendable { public let id: String, name: String, points: [[Double]]; public var ref: String?; public var stations: [Town]? }
         public let sources: [Source]
         public let rivers: [River]
         public let waveSpeedMs: Wave
         public let corridorM: Double
+        public var railways: [Railway]?
+        /// incidents on one line within this many minutes count as one window (default 12 h)
+        public var railWindowMin: Double?
         public static func load(_ path: String) -> Catalogue? {
             (try? Data(contentsOf: URL(fileURLWithPath: path))).flatMap { try? JSONDecoder().decode(Catalogue.self, from: $0) }
         }
@@ -68,6 +73,7 @@ public enum Advisor {
         ("wildfire", "ogień / dym", ["pozar", "ogien", "plomien", "spalenizn", "dym", "luna"]),
         ("storm", "wichura / burza", ["wichur", "burz", "nawalnic", "piorun", "powalon", "grad", "traba powietrzna", "szkwal"]),
         ("avalanche", "lawina / śnieg", ["lawin", "zasyp", "nawis", "snieg"]),
+        ("rail", "tory / pociąg", ["tory", "torow", "torach", "toru ", "torze", "pociag", "wykolej", "dywersj", "sabotaz", "semafor", "trakcyj", "kolejow", "szyny", "szynach", "nasyp", "ladunek", "eksploz", "toromistrz"]),
     ]
     static func fold(_ s: String) -> String { s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "pl_PL")).replacingOccurrences(of: "ł", with: "l") }
     static func terms(_ i: Incident, _ kind: String) -> [String] {
@@ -129,6 +135,7 @@ public enum Advisor {
         if let cat = catalogue {
             hyps += damHypotheses(incidents, cat)
             hyps += plumeHypotheses(incidents, cat)
+            hyps += railHypotheses(incidents, cat)
         }
         // generic space-time clusters, unless a sourced hypothesis already explains most of the members
         for h in clusterHypotheses(incidents) {
@@ -154,7 +161,7 @@ public enum Advisor {
         return ["schema": "rescue-advisor/1", "incidents": incidents.count, "hypotheses": kept,
                 "summary": quiet ? "Brak wspólnego źródła: zdarzenia nie układają się w skupisko, wzdłuż rzeki ani w smudze." :
                     "\(kept.count) hipotez\(kept.count == 1 ? "a" : "y") wspólnego źródła; najwyższa: \(kept[0]["title"] as? String ?? "") (\(pl(kept[0]["score"] as? Double ?? 0, 2)))",
-                "method": "Deterministyczne sygnały: korytarz rzeki poniżej zapory + zgodność czasów z falą, stożek z wiatrem od zakładu, skupienie w czasie i przestrzeni (DBSCAN 15 km / 3 h), wspólne słowa w zgłoszeniach. Wynik = suma wkładów (waga × wartość). To hipoteza do sprawdzenia, nie potwierdzenie."]
+                "method": "Deterministyczne sygnały: korytarz rzeki poniżej zapory + zgodność czasów z falą, stożek z wiatrem od zakładu, zdarzenia przy tej samej linii kolejowej w krótkim oknie, skupienie w czasie i przestrzeni (DBSCAN 15 km / 3 h), wspólne słowa w zgłoszeniach. Wynik = suma wkładów (waga × wartość). To hipoteza do sprawdzenia, nie potwierdzenie."]
     }
 
     static func level(_ s: Double) -> String { s >= 0.7 ? "alarm" : s >= 0.5 ? "ostrzezenie" : "obserwacja" }
@@ -253,6 +260,102 @@ public enum Advisor {
         return out
     }
 
+    /// Point of a polyline at `km` from its first point.
+    static func pointAtKm(_ line: [[Double]], _ km: Double) -> [Double] {
+        var acc = 0.0
+        for k in 1..<line.count {
+            let d = dist(line[k - 1], line[k])
+            if acc + d >= km * 1000 && d > 0 {
+                let f = (km * 1000 - acc) / d, a = line[k - 1], b = line[k]
+                return r5([a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])])
+            }
+            acc += d
+        }
+        return line.last.map { r5($0) } ?? []
+    }
+
+    /// Rail: >= 2 incidents within the corridor of one railway line in the densest window (railWindowMin, 12 h) = a likely
+    /// common cause on the line (sabotage / dywersja, or a failure of the line itself). Evidence: line corridor, rail words,
+    /// distance along the line, time. No wave: the prediction names the nearest stations on both sides of the stretch.
+    static func railHypotheses(_ all: [Incident], _ cat: Catalogue) -> [[String: Any]] {
+        var out: [[String: Any]] = []
+        let window = Int(cat.railWindowMin ?? 720)
+        for rail in cat.railways ?? [] where rail.points.count >= 2 {
+            let proj = Dictionary(uniqueKeysWithValues: all.map { ($0.sc, project(rail.points, $0.at)) })
+            let near = all.filter { proj[$0.sc]!.distM <= cat.corridorM }
+            let linked = densest(near, window: window)
+            guard linked.count >= 2 else { continue }
+            let n = Double(linked.count)
+            let byKm = linked.sorted { proj[$0.sc]!.km < proj[$1.sc]!.km }
+            let ids = byKm.map(\.sc)
+            let kmin = proj[ids.first!]!.km, kmax = proj[ids.last!]!.km, spanKm = kmax - kmin
+            let t0 = linked.map(\.minute).min()!, t1 = linked.map(\.minute).max()!, span = t1 - t0
+            let withRail = byKm.filter { !terms($0, "rail").isEmpty }
+            var counts: [String: Int] = [:]
+            for i in linked { for t in terms(i, "rail") { counts[t.trimmingCharacters(in: .whitespaces), default: 0] += 1 } }
+            let align = min(1, (n - 1) / 2), kw = Double(withRail.count) / n
+            let compact = max(0, min(1, 1 - (spanKm - 5) / 25)), conc = max(0, min(1, 1 - Double(span - 120) / 600))
+            let dmax = linked.map { proj[$0.sc]!.distM }.max() ?? 0
+            let ev = [
+                Ev(id: "E1", kind: "rail", label: "Ta sama linia kolejowa", text: "\(linked.count) zgłosze\(linked.count < 5 ? "nia" : "ń") do \(Int(cat.corridorM.rounded())) m od toru: \(rail.name), km \(pl(kmin))-\(pl(kmax)) linii (najdalej \(Int(dmax.rounded())) m od toru)", weight: 0.35, value: align, incidents: ids),
+                Ev(id: "E2", kind: "keywords", label: "Wspólne słowa w zgłoszeniach", text: withRail.isEmpty ? "Żadne zgłoszenie nie mówi o torach, pociągu ani uszkodzeniu linii" :
+                    "Sygnały kolejowe w \(withRail.count)/\(linked.count) zgłoszeniach: " + counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(5).map { "\"\($0.key)\" ×\($0.value)" }.joined(separator: ", "), weight: 0.35, value: kw, incidents: withRail.map(\.sc)),
+                Ev(id: "E3", kind: "compact", label: "Blisko siebie na linii", text: "Odcinek \(pl(spanKm)) km wzdłuż toru", weight: 0.15, value: compact, incidents: ids),
+                Ev(id: "E4", kind: "time", label: "Skupienie w czasie", text: "Wszystkie w ciągu \(dur(span)) (\(clock(t0))-\(clock(t1)))", weight: 0.15, value: conc, incidents: ids),
+            ]
+            let score = min(0.97, ev.map { $0.weight * $0.value }.reduce(0, +))
+            // the nearest stations / places on both sides of the stretch (trains to stop, access for the teams)
+            let st = rail.stations ?? []
+            let before = st.filter { $0.km < kmin - 0.3 }, after = st.filter { $0.km > kmax + 0.3 }
+            let nearSt = Array(before.suffix(2)) + Array(after.prefix(2))
+            let stList = nearSt.map { "\($0.name) (km \(pl($0.km)))" }.joined(separator: ", ")
+            // where traffic is stopped: the nearest railway station / halt on each side (a place when the catalogue has none)
+            let isSt = { (t: Catalogue.Town) in t.kind == "station" || t.kind == "halt" }
+            let fromSt = (before.last(where: isSt) ?? before.last)?.name ?? "początku linii"
+            let toSt = (after.first(where: isSt) ?? after.first)?.name ?? "końca linii"
+            let lo = max(0, kmin - 5), hi = kmax + 5
+            var section: [[Double]] = [], acc = 0.0
+            for k in 1..<rail.points.count {
+                let d = dist(rail.points[k - 1], rail.points[k]) / 1000
+                if acc + d >= lo && acc <= hi { if section.isEmpty { section.append(rail.points[k - 1]) }; section.append(rail.points[k]) }
+                acc += d
+            }
+            let at = pointAtKm(rail.points, (kmin + kmax) / 2)
+            out.append([
+                "kind": "rail", "kindLabel": "dywersja / awaria na linii kolejowej", "rank": 0.0,
+                "title": "\(rail.name): wspólna przyczyna na torze (km \(pl(kmin))-\(pl(kmax)))", "score": r2(score), "level": level(score),
+                "source": ["id": rail.id, "kind": "rail", "name": rail.name, "at": at, "ref": rail.ref ?? ""],
+                "incidents": ids, "evidence": ev.map(evJSON),
+                "explain": ev.map { "\($0.id) \(pl($0.weight, 2))×\(pl($0.value, 2))" }.joined(separator: " + ") + " = \(pl(score, 2))",
+                "predicted": ["text": "Najbliższe stacje i miejscowości przy odcinku: \(stList.isEmpty ? "brak w katalogu" : stList)", "towns": [[String: Any]](),
+                              "stations": nearSt.map { ["name": $0.name, "kind": $0.kind ?? "", "at": $0.at, "km": $0.km] as [String: Any] },
+                              "from": "ostatnie zgłoszenie \(clock(t1))"],
+                // `river` / `riverAhead`: the line and the stretch, so the current Centrum map draws them; `rail` / `railSection` = the same, named
+                "geometry": ["rail": rail.points, "railSection": section, "river": rail.points, "riverAhead": section, "source": at],
+                "excluded": excluded(all, linked: linked) { i in
+                    let p = proj[i.sc]!
+                    let w = terms(i, "rail").isEmpty ? "brak sygnałów kolejowych w zgłoszeniu" : "zgłoszenie mówi o kolei, ale poza oknem czasu"
+                    if p.distM > cat.corridorM { return "\(pl(p.distM / 1000)) km od toru; \(w)" }
+                    return "przy torze, ale poza oknem \(window / 60) h; \(w)"
+                },
+                "actions": [
+                    ["priority": 1, "safety": true, "text": "Bezpieczeństwo zespołów: wstrzymaj ruch pociągów na linii \(rail.ref ?? "") między \(fromSt) a \(toSt) (dyżurny ruchu PKP PLK) zanim ktokolwiek wejdzie na tory; zespoły z dala od torów i nasypu, możliwe kolejne uszkodzenia lub ładunki."],
+                    ["priority": 2, "text": "Powiadom Policję i SOK: miejsca zdarzeń jako możliwe miejsca przestępstwa - nie ruszać śladów na torze, zabezpieczyć dojścia."],
+                    ["priority": 3, "text": "Sprawdź cały odcinek km \(pl(lo))-\(pl(hi)) (drezyna / patrol SOK, dron z kamerą termowizyjną): czy są kolejne uszkodzenia toru."],
+                    ["priority": 4, "text": "Przełącz na tryb zdarzenia masowego: jedno dowodzenie dla \(linked.count) akcji, wspólna pula zespołów; poszukiwania osób prowadź równolegle, z dala od torów."],
+                    ["priority": 5, "text": "Poproś Policję o zatrzymanie i spisanie osób widzianych przy torach (świadkowie, podejrzani)."],
+                ],
+                "questions": [
+                    "Czy dyżurny ruchu potwierdza wstrzymanie pociągów między \(fromSt) a \(toSt)?",
+                    "Czy na innych odcinkach linii zgłoszono uszkodzenia toru, sieci trakcyjnej albo sygnalizacji?",
+                    "Czy ktoś widział osoby lub pojazdy przy torach przed zdarzeniami?",
+                    "Czy zaginione osoby mogły odejść od toru w stronę lasu lub drogi?",
+                ],
+            ])
+        }
+        return out
+    }
+
     static func plumeHypotheses(_ all: [Incident], _ cat: Catalogue) -> [[String: Any]] {
         var out: [[String: Any]] = []
         for src in cat.sources where src.kind == "industrial" {
@@ -337,7 +440,7 @@ public enum Advisor {
                 Ev(id: "E3", kind: "compact", label: "Zwartość", text: "Średnia odległość między zgłoszeniami \(pl(dn > 0 ? dsum / dn / 1000 : 0)) km", weight: 0.3, value: compact, incidents: mem.map(\.sc)),
             ]
             let score = min(0.75, ev.map { $0.weight * $0.value }.reduce(0, +))
-            let label = ["flood": "wezbranie / powódź (źródło nieznane)", "plume": "skażenie powietrza (źródło nieznane)", "wildfire": "pożar terenu", "storm": "front burzowy / wichura", "avalanche": "cykl lawinowy", "cluster": "nieznane wspólne źródło"][kind]!
+            let label = ["flood": "wezbranie / powódź (źródło nieznane)", "plume": "skażenie powietrza (źródło nieznane)", "wildfire": "pożar terenu", "storm": "front burzowy / wichura", "avalanche": "cykl lawinowy", "rail": "zdarzenia na kolei (linia nieznana)", "cluster": "nieznane wspólne źródło"][kind]!
             let lat = mem.map { $0.at[0] }.reduce(0, +) / n, lon = mem.map { $0.at[1] }.reduce(0, +) / n
             out.append([
                 "kind": kind, "kindLabel": label, "rank": 0.0, "title": "Skupisko zdarzeń: \(label)", "score": r2(score), "level": level(score),
