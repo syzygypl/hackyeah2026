@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rescue Locator</title>
 <link rel="icon" href="data:,">
+<script>/* perf: the run starts downloading with the HTML, not after the module graph (~300 KB of MapLibre); app.js PRE_RUN takes it. Same rules as app.js initTime() */
+try{(function(){var q=new URLSearchParams(location.search),sc=q.get("sc")||"zawrat";if(!/^[\w-]+$/.test(sc)||/blind|^studio$/i.test(sc))return;var t=q.get("time");
+if(t!=="live"&&t!=="hist"){if(q.get("key")||q.get("role")==="ratownik")t="live";else if(q.get("step")!=null)t="hist";else{try{t=localStorage.getItem("rescue-app-time")}catch(e){}if(t!=="live"&&t!=="hist")t="hist"}}
+var u="/api/run/"+sc+(t==="hist"?"?live=0":""),h={},pin="";try{pin=(localStorage.getItem("rescue-pin")||"").replace(/^"(.*)"$/,"$1")}catch(e){}
+if(pin&&["127.0.0.1","localhost","[::1]","::1"].indexOf(location.hostname)<0)h["X-Rescue-Pin"]=pin;
+window.__preRun={u:u,p:fetch(u,{headers:h,cache:"no-cache"}).then(function(r){return r.ok?r.text():null}).catch(function(){return null})}})()}catch(e){}</script>
 <link rel="stylesheet" href="../web/vendor/maplibre-gl.css">
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="dock.css">

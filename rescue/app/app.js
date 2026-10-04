@@ -33,7 +33,9 @@ const tryJSON = async (path) => { try { return await api(path); } catch (e) { re
 // perf: the run of ?sc= (default zawrat) is requested right away, next to the module graph, the basemap and /api/scenarios
 // (boot used to wait for all three first); the first loadScenario takes it when the URL matches, otherwise it is dropped
 let PRE_RUN = (() => { const sc = new URLSearchParams(location.search).get("sc") || "zawrat"; if (!/^[\w-]+$/.test(sc) || /blind|^studio$/i.test(sc)) return null;
-  const u = "/api/run/" + sc + (initTime() === "hist" ? "?live=0" : ""), p = api(u); p.catch(() => {}); return { u, p }; })();
+  const u = "/api/run/" + sc + (initTime() === "hist" ? "?live=0" : ""), E = window.__preRun;   // E: started by index.html with the HTML
+  const p = E && E.u === u ? E.p.then((text) => { if (!text) return api(u); window.__rescueRunText = { url: new URL(u, location.href).href, text }; return JSON.parse(text); }) : api(u);
+  p.catch(() => {}); return { u, p }; })();
 async function preRun(u) { const P = PRE_RUN; PRE_RUN = null; if (!P || P.u !== u) return null; try { return await P.p; } catch (e) { return null; } }
 // friendly Polish text for any error (network errors from fetch come as TypeError "Failed to fetch")
 function plErr(e) {
