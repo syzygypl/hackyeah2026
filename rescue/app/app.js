@@ -1290,6 +1290,15 @@ async function openAt(sc, clock) {
   else if (toHist && store.backend === "api") { try { await loadScenario(sc); } catch (e) { toast(plErr(e)); } }
   renderLiveHead();
   const T = tlDoc(), m = clock && T ? tlMinOfClock(T, clock) : null; if (m != null) setMinute(m);
+  focusWhenReady(sc, store.step);
+}
+// after a switch the 2D view is a new frame (double buffer): zoom onto the notified event once that frame is the shown one and
+// ready, else the message lands in the old view (focusEvent: the area the event changed; a report / setup step keeps the full fit)
+function focusWhenReady(sc, k, t0 = Date.now()) {
+  if (store.scenario !== sc || store.step !== k || Date.now() - t0 > 30000) return;   // the operator moved on meanwhile
+  const F = FRAMES["2da"];
+  if (F.next || !F.ready || !String(F.src || "").includes("sc=" + encodeURIComponent(sc))) { setTimeout(() => focusWhenReady(sc, k, t0), 300); return; }
+  setTimeout(() => { if (store.scenario === sc && store.step === k) focusEvent(k); }, 400);   // after the view's own first fit
 }
 addEventListener("popstate", (e) => {
   const sc = (e.state && e.state.sc) || new URLSearchParams(location.search).get("sc") || (store.hasApi ? "zawrat" : null);
@@ -1314,7 +1323,7 @@ async function boot() {
     try { history.replaceState({ ...(history.state || {}), sc: store.scenario }, ""); } catch (e) {}   // Back to the first scenario finds its sc
     setMode(m, q.get("view"));
     if (q.get("step") != null && Number.isFinite(+q.get("step"))) setStep(+q.get("step") + 1); // ?step= is 0-based, like the views
-    if (q.get("t") && tlDoc()) { const tm = tlMinOfClock(tlDoc(), q.get("t")); if (tm != null) setMinute(tm); }   // ?t=HH:MM (Centrum timeline, AI Mateusza #1): Historia at that clock
+    if (q.get("t") && tlDoc()) { const tm = tlMinOfClock(tlDoc(), q.get("t")); if (tm != null) { setMinute(tm); focusWhenReady(store.scenario, store.step); } }   // ?t=HH:MM (Centrum timeline / bell, AI Mateusza #1): Historia at that clock, zoomed on that event
     initRescuer({ store, api, map, maplibregl, toast, curStep, selectSeg: (id, from) => selectSeg(id, from), onTeam: setRescuerFrame });
     try { const a = await api("/story/assign"); store.manual = a.assignments || []; } catch (e) {}
     let role = q.get("role"); if (!role) { try { role = localStorage.getItem("rescue-app-role"); } catch (e) {} }
