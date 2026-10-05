@@ -1824,7 +1824,7 @@ function drawTop(ranked) {
     const g = segs.get(sg.id); if (!g) return;
     // as in 2D: top 3 outlined white 3.2 px, chip "#1 Name - 21%" with the rank in red
     drapeRuns(ringLL(g.polygon), 0.02, { color: '#ffffff', width: 3.2, opacity: 0.95 }, dyn.top);
-    const again = srch.has(sg.id) ? `<span class="again">${podS.has(sg.id) && podS.get(sg.id) < 0.5 ? 'sprawdzony (słabo)' : 'przeszukany'} - nadal wysoko, sprawdzić ponownie</span>` : '';
+    const again = srch.has(sg.id) ? `<span class="again" title="Przeszukany, a nadal w top 3: przeszukanie nie wykluczyło sektora">${podS.has(sg.id) && podS.get(sg.id) < 0.5 ? 'sprawdzony (słabo)' : 'przeszukany'}, sprawdzić znów</span>` : '';
     const l = label(`<b class="rk">#${k + 1}</b> ${esc(sg.name)}${again}`, 'top3', v3(g.center[0], g.center[1], 0.14));
     l.userData.glow = ['#fff0c8', k ? 100 : 130]; dyn.top.add(l);
   });

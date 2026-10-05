@@ -452,7 +452,7 @@
       const nm = top || S.fullNames || g.id === S.selected ? esc(g.name) : esc(g.id);
       const asg = (M.R.steps[step].assignments || []).filter((a) => a.segmentId === g.id).map((a) => { const r = (M.R.steps[step].resources || []).find((x) => x.id === a.resourceId); return resLabel(r) || a.resourceId; });
       // R2-6 follow-up: a searched sector still in the top 3 says why it is there (no numbers on the map, POD in the title)
-      const extra = (sr ? `<span class="srch">${srWord(sr)}${top ? ' - nadal wysoko, sprawdzić ponownie' : ''}</span>` : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');   // POD in the tooltip (review b0858be)
+      const extra = (sr ? `<span class="srch">${srWord(sr)}${top ? ', sprawdzić znów' : ''}</span>` : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');   // POD in the tooltip (review b0858be)
       chips.push({ key: 'seg:' + g.id, at: g.center, cls: 'chip seg' + (top ? ' top top' + r : '') + (sr ? ' searched' : '') + (g.id === S.selected ? ' sel' : ''),
         html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}${r ? `: #${r} z ${M.segList.length} w rankingu` : ''}, obszar ${nf(g.areaPct, 1)}%${sr ? `, ${srWord(sr)}${sr.pod != null ? ' (POD ' + pct(sr.pod) + ')' : ''}${top ? ' - nadal w top 3: przeszukanie nie wykluczyło sektora, sprawdzić ponownie' : ''}` : ''}`, seg: g.id });
     }
@@ -1011,7 +1011,7 @@
     $('#rankmode').textContent = S.disabled.size && M.hints.some((h) => h.k <= S.step && S.disabled.has(h.id)) ? 'przeliczony w przeglądarce' : 'silnik, krok ' + (S.step + 1);
     $('#ranking tbody').innerHTML = st.map((s, j) => {
       const top = j < 3, sr = searched[s.id];
-      const tags = (sr ? `<span class="tag-s"${sr.pod != null ? ` title="POD ${pct(sr.pod)}"` : ''}>${srWord(sr)}${top ? ' - sprawdzić ponownie' : ''}</span>` : '') + (S.showTruth && s.id === truth ? '<span class="tag-t">odnaleziony</span>' : '');
+      const tags = (sr ? `<span class="tag-s"${sr.pod != null || top ? ` title="${sr.pod != null ? 'POD ' + pct(sr.pod) : ''}${top ? (sr.pod != null ? ', a ' : '') + 'nadal w top 3: przeszukanie nie wykluczyło sektora' : ''}"` : ''}>${srWord(sr)}${top ? ', sprawdzić znów' : ''}</span>` : '') + (S.showTruth && s.id === truth ? '<span class="tag-t">odnaleziony</span>' : '');
       const task = top ? `<div class="task">${esc(taskFor(s.name))}</div>` : '';
       return `<tr class="${top ? 'top' : ''}${s.id === S.selected ? ' sel' : ''}" data-seg="${esc(s.id)}">
         <td class="rk">${top ? `<span class="badge">${j + 1}</span>` : j + 1}</td>
