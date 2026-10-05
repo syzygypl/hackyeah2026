@@ -670,10 +670,23 @@ fn inv_unit_sc(t: &InvTeam, q: Option<&str>) -> Option<String> {
 async fn inv_unit_doc(t: &InvTeam, sc: Option<&str>, tl: Option<&Timeline>, at_min: Option<i64>, live_min: Option<i64>, params: &Obj, events: &[InvEvent], file: Option<&HashMap<String, Obj>>, pre: Option<&mut InvPre>) -> Obj {
     let fu = file.and_then(|f| f.get(&t.id));
     let kind = if t.kind.is_empty() { fu.and_then(|u| gs(u, "kind")).unwrap_or("").to_string() } else { t.kind.clone() };
-    let unit = fu.cloned().unwrap_or_default();
+    let mut unit = fu.cloned().unwrap_or_default();
+    // sens-funkcji #9: a shared id (heli, drone, dog, gopr-a...) is a different unit per region - with a scenario, its byHome
+    // variant (name, base, crew of THAT scenario, e.g. heli = Śmigłowiec TOPR on Zawrat) replaces the top-level one, like /app
+    let mut name = t.name.clone();
+    if let Some(Value::Object(v)) = sc.and_then(|s| unit.get("byHome").and_then(|b| b.get(s))).cloned() {
+        if let Some(n) = v.get("name").and_then(|x| x.as_str()) {
+            name = n.to_string();
+        }
+        for k in ["base", "crew"] {
+            if let Some(x) = v.get(k).filter(|x| !x.is_null()) {
+                unit.insert(k.into(), x.clone());
+            }
+        }
+    }
     let mut o = Map::new();
     o.insert("id".into(), json!(t.id));
-    o.insert("name".into(), json!(t.name));
+    o.insert("name".into(), json!(name));
     o.insert("kind".into(), json!(kind));
     o.insert("inventory".into(), json!(fu.is_some()));
     o.insert("sc".into(), or_null(t.sc.clone()));
