@@ -248,7 +248,7 @@ function render() {
 }
 function countsPaint() {
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
-  const nSim = simOn() ? sim.view.filter((i) => i.state === "live").length : null;   // sens-funkcji #7: Symulacja 24/7 on - "N trwa (1 LIVE z terenu)", matches the cards (LIVE = real feed only)
+  const liveSc = new Set(incidents.filter((x) => x.live && !x.found).map((x) => x.sc)), nSim = simOn() ? sim.view.filter((i) => i.state === "live" && !liveSc.has(i.sc)).length : null;   // R2-13: a sim occurrence of a scenario with a real LIVE action is not counted twice   // sens-funkcji #7: Symulacja 24/7 on - "N trwa (1 LIVE z terenu)", matches the cards (LIVE = real feed only)
   $("counts").innerHTML = `${nSim != null ? `<b>${nSim + nLive} trwa</b>${nLive ? ` (<b style="color:var(--rl-danger)">${nLive} na żywo</b> z terenu)` : ""}` : `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} na żywo</b>` : ""}`}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !busyOf(t, busyScs())).length}/${teams.length}`;
 }
 function renderCards() {
@@ -1398,11 +1398,11 @@ function simPaint() {
     if (meta[r.i.sc]) simFetch(r.i.sc, r.c5);
     else if (!sim.mwait?.[r.i.sc]) { (sim.mwait ||= {})[r.i.sc] = 1; loadMeta(r.i.sc).then((md) => { if (md) { sim.cardSig = ""; simPaint(); } else simFetch(r.i.sc, r.c5); }); }
   }
-  const liveSc = new Set(incidents.filter((x) => x.live && !x.found).map((x) => x.sc));   // R2-13: a sim occurrence on the terrain of a real live action says so
+  const liveSc = new Set(incidents.filter((x) => x.live && !x.found).map((x) => x.sc));   // R2-13: a sim occurrence of a scenario with a real LIVE action is skipped (the LIVE card is the action); the simrel note stays as fallback
   const sig = JSON.stringify([[...liveSc], rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d, !!meta[r.i.sc]]), tl.cur == null, teams.length, simLocal]);   // #7: meta (state line) and the roster (team count) repaint too
   if (sig === sim.cardSig) return; sim.cardSig = sig;
   countsPaint();   // sens-funkcji #7: header "N trwa" follows the sim cards
-  const live = rows.filter((r) => r.i.state === "live"), ended = rows.filter((r) => r.i.state !== "live");
+  const live = rows.filter((r) => r.i.state === "live" && !liveSc.has(r.i.sc)), ended = rows.filter((r) => r.i.state !== "live");
   const hm = (ms) => { const m = Math.floor(sim.lf.warsaw(ms).min); return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); };
   // sens-funkcji #7: the card tells the state, one clock (wall, Europe/Warsaw): "trwa 0:07 · zespoły 3 · ostatnie: <event> 01:01 ·
   // w drodze: dron (01:20)" (teams = scenario resources ready by now, w drodze = the next one not there yet); the scenario clock only
