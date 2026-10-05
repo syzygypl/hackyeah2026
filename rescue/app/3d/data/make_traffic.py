@@ -15,8 +15,8 @@ another kept road shares its node, or it lies outside the cut). Closed park road
 road above Palenica Bialczanska has no access tag on its first 1.2 km); public roads through a park (Zakopane - Lysa
 Polana, the Slovak 3078) are through routes and stay, and so does a public road up to a car park loop.
 Forest and fire-access roads (T3, "Dojazd pożarowy L-8" at Ostre): in Polish OSM they are often highway=unclassified with no
-access tag. Dropped: any minor road named dojazd pożarowy / droga pożarowa / ppoż; an unclassified road named leśn... (a
-residential "Leśna" street stays public) or numbered L-n (forest-service fire roads); and an unclassified road with no name and
+access tag. Dropped: any minor road named dojazd pożarowy / droga pożarowa / ppoż; an unclassified road named droga/dukt/trakt leśn...
+(a "Leśna" street or a hamlet like "Pasy Leśne" stays public) or numbered L-n (forest-service fire roads); and an unclassified road with no name and
 no ref that runs at least half
 its points through forest (the forest polygons of <sc>-osm3d.json) when it is unpaved (surface / tracktype) or a dead end
 (pruned repeatedly, like the park dead ends). Named or numbered through roads in a forest stay.
@@ -33,6 +33,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 RESCUE = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter",
             "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]
+OVERPASS = os.environ["OVERPASS_URLS"].split(",") if os.environ.get("OVERPASS_URLS") else OVERPASS   # e.g. a mirror first when the main one 504s
 CACHE = os.environ.get("OSM3D_CACHE", "/tmp/osm3d-cache")
 CLS = {"motorway": "major", "trunk": "major", "primary": "major", "secondary": "major", "motorway_link": "major", "trunk_link": "major",
        "primary_link": "major", "secondary_link": "major", "tertiary": "minor", "tertiary_link": "minor", "unclassified": "minor",
@@ -132,7 +133,7 @@ def inside(rings, la, lo):
 
 
 FIRE = re.compile(r"dojazd\s+po[zż]arow|drog[aię]\s+po[zż]arow|\bppo[zż]", re.I)
-FORESTNAME = re.compile(r"le[sś]n", re.I)
+FORESTNAME = re.compile(r"\b(droga|dukt|trakt)\s+le[sś]n|\ble[sś]na\s+droga", re.I)   # not "Leśna" streets or hamlets like "Pasy Leśne"
 FIREREF = re.compile(r"^L-?\d+[a-z]?$", re.I)   # forest-service numbering of fire-access roads (L-4, L-8 at Ostre)
 UNPAVED = {"unpaved", "gravel", "fine_gravel", "ground", "dirt", "earth", "grass", "compacted", "sand", "mud", "pebblestone", "woodchips"}
 
