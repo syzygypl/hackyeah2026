@@ -1891,10 +1891,12 @@ const LEGEND_DIFF = `<div class="lg-title">Trudność terenu (silnik)</div><div 
 if (EMB === 'scene') {
   $('sceneLegend').hidden = false; $('sceneLegend').innerHTML = LEGEND_HEAT;
   // control box like 2D #mapctl: segmented group, checkbox row, full-width button; it drives the regular HUD buttons
+  // sens-funkcji R2-7: the blind test is a game - not next to a live action where a person is really missing; only with ?dev=1 (here or in /app) or in a blind replay
+  const GAME_OK = Q.get('dev') === '1' || /blind/.test(SC) || (() => { try { return new URLSearchParams(top.location.search).get('dev') === '1'; } catch { return false; } })();
   const ctl = document.createElement('div'); ctl.id = 'sceneCtl'; ctl.className = 'floating';
-  ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top">Lider</button><button data-b="btn-rot">Obrót</button><button data-b="btn-walk" title="Spacer: kliknij w teren i idź z widokiem z oczu (Esc kończy)">Spacer</button></div>
+  ctl.innerHTML = `<div class="seg-switch"><button data-b="btn-cine">Kino</button><button data-b="btn-top" title="Przelot do sektora nr 1 w kolejności">Sektor #1</button><button data-b="btn-rot">Obrót</button><button data-b="btn-walk" title="Spacer: kliknij w teren i idź z widokiem z oczu (Esc kończy)">Spacer</button></div>
     <div class="ctl-row"><label class="chk"><input type="checkbox" data-b="btn-diff"> trudność</label><label class="chk"><input type="checkbox" data-b="btn-trees" checked> las</label><label class="chk"><input type="checkbox" data-b="btn-traffic" checked> ruch</label><label class="chk"><input type="checkbox" data-b="btn-fog" checked> pogoda</label><label class="chk" hidden><input type="checkbox" data-b="btn-ortho"> zdjęcie</label></div>
-    <button class="full" data-b="btn-all">Cały obszar</button><button class="full" data-b="btn-game">Test na ślepo</button>`;
+    <button class="full" data-b="btn-all">Cały obszar</button>${GAME_OK ? '<button class="full" data-b="btn-game">Test na ślepo</button>' : ''}`;
   document.body.appendChild(ctl);
   ctl.addEventListener('click', (e) => { const t = e.target.closest('[data-b]'); if (!t) return; $(t.dataset.b).click(); syncCtl(); });
   if ($('btn-diff').hidden) ctl.querySelector('[data-b="btn-diff"]').closest('label').hidden = true;
@@ -1911,7 +1913,7 @@ if (EMB === 'scene') {
   // panel in /app - foldPanel from ../dock.js: a strip "<title> <chip> <pin>", hover / focus / tap opens, held 3 s, Esc closes, pin
   // keeps it open (localStorage). Width and anchor stay the same in both states, so frameScene's reserved right margin (it reads
   // only the box width) and the insets do not change. Kino keeps the control box's own look (shot switch only, style3d.css).
-  const ctlMode = () => document.body.classList.contains('cinema') ? 'Kino' : (WALK?.on || WALK?.armed) ? 'Spacer' : document.querySelector('#timeline3dCtl button.on') ? 'FPP' : $('btn-rot').classList.contains('on') ? 'Obrót' : 'Swobodny';
+  const ctlMode = () => document.body.classList.contains('cinema') ? 'Kino' : (WALK?.on || WALK?.armed) ? 'Spacer' : document.querySelector('#timeline3dCtl button.on') ? 'Oczami zespołu' : $('btn-rot').classList.contains('on') ? 'Obrót' : 'Swobodny';
   import('../dock.js').then((m) => {
     const f = m.foldPanel(ctl, { title: 'Sterowanie 3D', key: 'rl3dCtlPin', sum: ctlMode });
     if (f) { setInterval(f.sync, 500); ctl.addEventListener('click', () => setTimeout(f.sync, 0)); }
@@ -2442,7 +2444,7 @@ async function finish(found) {
     <div class="res ${found ? 'ok' : 'fail'}">${found
       ? `Silnik znalazł osobę w <b>${G.patrols.length}</b> patrolach (${area.toFixed(1)}% obszaru).`
       : `Nie znaleziono w ${G.patrols.length} patrolach.`}
-      Naiwnie (od IPP, segment po segmencie): <b>${naive ?? '>200'}</b> patroli.<br>
+      Od ostatniego znanego punktu (IPP), sektor po sektorze: <b>${naive ?? '>200'}</b> patroli.<br>
       Segment kryjówki (${esc(segs.get(G.seg).name)}) był <b>#${rank0}</b> z ${G.start.length} w rankingu przed pierwszym patrolem.</div>
     <p>Miejsce: <code>${G.target[0].toFixed(5)}, ${G.target[1].toFixed(5)}</code> · sól: <code>${G.salt}</code><br>
       SHA-256 zgodny ze zobowiązaniem: <b>${verify === G.commit ? 'tak' : 'NIE'}</b></p>

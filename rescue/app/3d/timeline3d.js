@@ -61,7 +61,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
   let drawnMinute = null;
   let target = null, shown = null, from = null, blend = 1, lastFrame = null, held = null, lastSetAt = 0, request = 0, fpp = null, savedCamera = null, selected = null, visible = true;
   const panel = document.createElement('div'); panel.id = 'timeline3dCtl'; panel.className = 'floating';
-  panel.innerHTML = `<div class="tl3d-title">Perspektywa jednostki</div><select aria-label="Jednostka dla kamery FPP">${actors.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)}</option>`).join('')}</select><button class="btn full" type="button" title="Kamera na wysokości oczu; Esc wraca do mapy">FPP</button>${onWindow ? '<button class="btn full tl3d-win" type="button" title="Widok z oczu jednostki w osobnym oknie (np. na drugim monitorze); mapa zostaje tutaj">Okno</button>' : ''}<div class="tl3d-key">● ślad GPS · - - ślad szacowany<br>okrąg: dokładność · obrys: pole widzenia</div><div class="tl3d-wasd" hidden>W / S: idź · A / D: obróć · Shift: szybciej</div><div class="tl3d-clock" aria-live="polite"></div>`;
+  panel.innerHTML = `<div class="tl3d-title">Perspektywa jednostki</div><select aria-label="Jednostka dla kamery FPP">${actors.map((a) => `<option value="${esc(a.id)}">${esc(a.name || a.id)}</option>`).join('')}</select><button class="btn full" type="button" title="Kamera na wysokości oczu; Esc wraca do mapy">Oczami zespołu</button>${onWindow && (() => { try { return Math.max(innerWidth, top.innerWidth) >= 900; } catch { return innerWidth >= 900; } })() ? '<button class="btn full tl3d-win" type="button" title="Widok z oczu jednostki w osobnym oknie (np. na drugim monitorze); mapa zostaje tutaj">Okno</button>' : ''}<div class="tl3d-key">● ślad GPS · - - ślad szacowany<br>okrąg: dokładność · obrys: pole widzenia</div><div class="tl3d-wasd" hidden>W / S: idź · A / D: obróć · Shift: szybciej</div><div class="tl3d-clock" aria-live="polite"></div>`;
   (document.getElementById('sceneCtl') || document.body).appendChild(panel);
   const select = panel.querySelector('select'), button = panel.querySelector('button'), status = panel.querySelector('.tl3d-clock');
   let want = null; // lockFpp: the unit the window follows
@@ -87,7 +87,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
     fpp = null; controls.enabled = true;
     if (savedCamera) { camera.position.copy(savedCamera.position); controls.target.copy(savedCamera.target);
       camera.near = savedCamera.near; camera.updateProjectionMatrix(); controls.update(); }
-    savedCamera = null; button.classList.remove('on'); button.textContent = 'FPP'; trail.visible = area.visible = visible; onCamera(false); wake();
+    savedCamera = null; button.classList.remove('on'); button.textContent = 'Oczami zespołu'; trail.visible = area.visible = visible; onCamera(false); wake();
   }
   function startFpp(id) {
     if (lockFpp && id) want = id;
