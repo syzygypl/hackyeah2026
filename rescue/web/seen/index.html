@@ -62,6 +62,11 @@
   .queued { display: inline-block; padding: 4px 10px; border-radius: 999px; background: var(--rl-warn); color: var(--rl-ink); font-size: var(--rl-fs-s); font-weight: 600; }
   .privacy { margin-top: var(--rl-sp-5); font-size: var(--rl-fs-s); color: var(--rl-mute); border-top: 1px solid var(--rl-line); padding-top: var(--rl-sp-3); }
   .call { display: block; text-align: center; margin-top: var(--rl-sp-2); font-weight: 700; color: var(--rl-accent); text-decoration: none; padding: var(--rl-sp-3); }
+  /* sens-funkcji R2-10: 112 first, both choices the same size; the second one in dark so the two read as a choice, not primary + footnote */
+  #intro .primary { margin: var(--rl-sp-3) 0; font-size: var(--rl-fs-l); line-height: 1.2; padding: var(--rl-sp-2) var(--rl-sp-3); }
+  a.primary { display: grid; place-items: center; text-align: center; text-decoration: none; border-radius: var(--rl-radius); }
+  #seen { background: var(--rl-chrome); color: var(--rl-on-chrome); }
+  .wear { margin: var(--rl-sp-3) var(--rl-sp-4) 0; font-weight: 700; font-size: var(--rl-fs-l); color: var(--rl-ink); }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -74,13 +79,14 @@
       <div><h1 id="name">Wczytuję…</h1><div class="meta" id="meta"></div></div>
     </div>
     <div class="last" id="last"></div>
+    <div class="wear" id="wear" hidden></div>
     <div class="desc" id="desc"></div>
     <div class="tips">Jeśli widzisz tę osobę teraz: zostań w pobliżu, nie goń jej, zadzwoń <b>112</b>, a potem wyślij zgłoszenie.</div>
   </div>
 
   <div id="intro">
-    <button class="primary" id="seen" type="button">Widziałem tę osobę</button>
-    <a class="call" href="tel:112">Zadzwoń 112</a>
+    <a class="primary" href="tel:112">Widzę tę osobę teraz - dzwonię 112</a>
+    <button class="primary" id="seen" type="button">Widziałem wcześniej - wyślij miejsce</button>
   </div>
 
   <form id="form" hidden>
@@ -151,8 +157,11 @@
   $("name").textContent = name;
   $("avatar").textContent = name.split(/\s+/).slice(0, 2).map(w => w[0] || "").join("").toUpperCase() || "?";
   $("meta").textContent = [s.age ? `${s.age} lat` : "", s.category === "dementia" ? "może być zdezorientowany" : ""].filter(Boolean).join(" · ");
-  const date = sc?.date ? sc.date.split("-").reverse().join(".") : "";
-  $("last").innerHTML = s.lastContact ? `Ostatnio widziany: <b>${date ? date + ", " : ""}ok. ${s.lastContact}</b>` : "";
+  // R2-10: no calendar date (the scenario's 22.07 read as an old, stale appeal), the alert is about today
+  $("last").innerHTML = s.lastContact ? `Ostatnio widziany: <b>dziś ok. ${s.lastContact}</b>` : "";
+  // R2-10: clothing in bold above the story - what a passer-by compares in 3 s ("w kapciach i jasnej koszuli")
+  const wear = (/\bw ([^,.;]*(?:koszul|kurtk|kapci|spodni|bluz|płaszcz|czapk|swetr|but|kamizel|sukien)[^,.;]*)/i.exec(s.note || "") || [])[1];
+  if (wear) { $("wear").textContent = "W " + wear; $("wear").hidden = false; }
   $("desc").textContent = s.note || "";
   document.title = `Widziałem - ${name}`;
   const who = s.age >= 60 ? "starszą osobę" : "osobę";
