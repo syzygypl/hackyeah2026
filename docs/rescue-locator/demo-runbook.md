@@ -1,6 +1,6 @@
 # Rescue Locator - runbook pokazu na żywo (3 min)
 
-Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze-funkcje.md`](najmocniejsze-funkcje.md) (kolejność), [`pitch.md`](pitch.md) (liczby i odpowiedzi), [`demo-review.md`](demo-review.md) (znane problemy), `rescue/app/CONTRACT.md`, `rescue/README.md`. Stan kodu: `6f1ff16` (2026-10-05, po rundzie 3 `sens-funkcji.md`). Wszystkie URL-e niżej sprawdzone GET-em (200) 2026-10-04 (`docs/rescue-locator/fact-check.md`).
+Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze-funkcje.md`](najmocniejsze-funkcje.md) (kolejność), [`pitch.md`](pitch.md) (liczby i odpowiedzi), [`demo-review.md`](demo-review.md) (znane problemy), `rescue/app/CONTRACT.md`, `rescue/README.md`. Stan kodu: `076e66e` (2026-10-05, po rundzie 3 `sens-funkcji.md`). Wszystkie URL-e niżej sprawdzone GET-em (200) 2026-10-04 (`docs/rescue-locator/fact-check.md`).
 
 ## 1. Przygotowanie (T-30 min)
 
@@ -15,7 +15,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 | Operator, Historia od początku | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=hist&step=0 |
 | Operator, Na żywo (pokaz: z `&demo=1` widać ⏮ ⏭ "Następne zdarzenie"; bez niego oś kończy się na "teraz") | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=live&demo=1 |
 | Centrum | https://rescue-locator.vercel.app/app/centrum.html |
-| Centrum: Tryb pokazu (cała doba), potem przycisk Dzień w Centrum | https://rescue-locator.vercel.app/app/centrum.html?demo=1 (albo przycisk **Tryb pokazu** obok Na żywo). Tryb pokazu przełącza oś na **Grafik 24/7 (tryb pokazu)** - całą dobę zamiast doby do teraz. **Dzień w Centrum** to osobny, drugi przycisk w tym samym rzędzie. |
+| Centrum: Tryb pokazu (cała doba), potem przycisk Dzień w Centrum | https://rescue-locator.vercel.app/app/centrum.html?demo=1 (albo przycisk **Tryb pokazu** obok Na żywo). Tryb pokazu przełącza oś na **Grafik 24/7 (tryb pokazu)** - całą dobę zamiast doby do teraz. **Dzień w Centrum** to osobny, drugi przycisk w tym samym rzędzie. Tryb pokazu trzyma się tylko w tej karcie przeglądarki (od R3-7): kartę Centrum na pokaz otwieraj linkiem z `?demo=1`, każde inne wejście (nowa karta, zwykły link) jest zwykłe - doba do teraz. |
 | Ratownik (bez klucza, tylko podgląd) | https://rescue-locator.vercel.app/web/patrol/?sc=zawrat&team=topr-a |
 | Widziałem (mieszkańcy, Kraków) | https://rescue-locator.vercel.app/web/seen/ |
 | Porównanie (jedna relacja zmienia top 3) | https://rescue-locator.vercel.app/app/porownanie.html |
@@ -33,7 +33,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 2. [ ] Na żywo, Zawrat: **Wyślij zespół** -> Patrol TOPR A -> S7. Telefon 1 w ciągu ~15 s pokazuje "S7". Od tej chwili telefon TOPR A mówi S7 (razem ze śmigłowcem). **Bez tego przydziału** telefon TOPR A, zakładka Zespoły w `/app` i Odprawa zgodnie mówią "S3, przeszukuje S3", a S7 jest w planie tylko dla śmigłowca - jury zobaczy pieszy patrol w S3 i telefon niezgodny z pokazem. Odprawy po przydziale nie drukujemy na pokazie (pokazuje stan przed przydziałem, S3).
 3. [ ] Karty rozgrzane (niżej), Historia otwarta z `&step=0`, telefon na danych komórkowych, "Nie przeszkadzać" włączone.
 4. [ ] Od teraz nikt z zespołu nie pisze na produkcję.
-5. [ ] **Centrum: Zawrat jest kartą *Na żywo z terenu*** (czerwona, "Na żywo"), nie ma karty SYMULACJA Zawrat (od `6f1ff16` nie ma jej nigdy), a Połonina Wetlińska zniknęła z Na żywo. Działa dopiero po p. 1 i 2: karta "Na żywo" = akcja ma zdarzenie w feedzie (`rs/src/server/incidents.rs`), więc dopiero przydział TOPR A robi z Zawratu akcję na żywo. Jeśli Zawrat nie jest kartą Na żywo: powtórz p. 1 i 2. Sprawdzenie bez klucza: https://rescue-locator.vercel.app/api/incidents - `zawrat` ma `"live": true`, nic innego nie ma `"live": true`.
+5. [ ] **Centrum: Zawrat jest kartą *Na żywo z terenu*** (czerwona, "Na żywo"), nie ma karty SYMULACJA Zawrat (od `076e66e` nie ma jej nigdy), a Połonina Wetlińska zniknęła z Na żywo. Działa dopiero po p. 1 i 2: karta "Na żywo" = akcja ma zdarzenie w feedzie (`rs/src/server/incidents.rs`), więc dopiero przydział TOPR A robi z Zawratu akcję na żywo. Jeśli Zawrat nie jest kartą Na żywo: powtórz p. 1 i 2. Sprawdzenie bez klucza: https://rescue-locator.vercel.app/api/incidents - `zawrat` ma `"live": true`, nic innego nie ma `"live": true`.
 
 Czasy (serwer Rust `545fe02` lokalnie, pomiar AI Marcina 04:59, tabela w `qa-demo-path.md` "Ścieżki zapisu - Rust lokalnie"; na produkcji dochodzi sieć): meldunek u operatora **~1-2 s**, Potwierdź wszystkie -> "Wszystko potwierdzone" 0,5 s, ZNALEZIONO w Centrum **~7 s**, u operatora od razu. Czeka się tylko na telefon (odpytuje co 15 s): przydział ~10-15 s, potwierdzenie i "Akcja zakończona" **~20-25 s**. Na te chwile masz zdania w tabeli niżej.
 
@@ -47,7 +47,7 @@ Czasy (serwer Rust `545fe02` lokalnie, pomiar AI Marcina 04:59, tabela w `qa-dem
 
 **Zawsze jawne `sc=zawrat`.** Na produkcji bez resetu akcja LIVE w Centrum to inny scenariusz (2026-10-05 04:00: nadal Połonina Wetlińska, ostatnie zdarzenie sprzed ~31 h, Zawrat `live: false`) - dlatego człowiek z kluczem robi **Wyczyść akcję + TOPR A -> S7 jak najwcześniej**, nie dopiero w T-10, żeby jury z linkiem nie trafiło na Połoninę, a aplikacja bez `sc=` pamięta ostatni scenariusz i tryb. Historia bez `&step=0` otwiera się na **końcu** nagrania (20:03 ZNALEZIONO): użyj URL-a z tabeli albo kliknij ⏮ w doku przed pokazem.
 
-**Rozgrzanie (pierwsze wejście jest wolniejsze: mapa ok. 4-8 s, lista akcji `/api/incidents` < 1 s; serwer Rust, `perf-transitions.md` Runda 3, `wydajnosc.md` Runda 2).** Otwórz i zostaw w kartach: (1) operator Zawrat w **Historia**, (2) Centrum, (3) operator `?sc=sniardwy`, (4) `?sc=krakow-nowa-huta`. Na telefonie: ekran ratownika + karta z Widziałem.
+**Rozgrzanie (pierwsze wejście jest wolniejsze: mapa ok. 4-8 s, lista akcji `/api/incidents` < 1 s; serwer Rust, `perf-transitions.md` Runda 3, `wydajnosc.md` Runda 2).** Otwórz i zostaw w kartach: (1) operator Zawrat w **Historia**, (2) Centrum z `?demo=1` (Tryb pokazu), (3) operator `?sc=sniardwy`, (4) `?sc=krakow-nowa-huta`. Na telefonie: ekran ratownika + karta z Widziałem.
 
 **Ekran.** Chrome w pełnym ekranie (Ctrl+Cmd+F), zoom 100% (pasek mieści się w 1 wierszu od 1280 px; jeśli się łamie: 90%). Zakładki zakładek ukryte, inne karty zamknięte. macOS: Centrum sterowania -> **Skupienie -> Nie przeszkadzać**; na telefonach też. Jasność telefonu max, blokada ekranu wyłączona.
 

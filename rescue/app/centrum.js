@@ -787,7 +787,7 @@ const tl = { mode: null, auto: true, cur: null, speed: 1, play: 0, items: [], by
 // sens-funkcji #6: a real dispatcher does not know the future. Default: two buttons, "Na żywo" + "Doba" (Grafik 24/7 with Symulacja on,
 // czas rzeczywisty with it off), and Doba ends at NOW (only what was reported so far). "Tryb pokazu" (button, ?demo=1, remembered)
 // brings back the whole day incl. not-yet-reported occurrences and the other axes (Dzień w Centrum = the demo layout, od zgłoszenia).
-try { tl.show = new URLSearchParams(location.search).get("demo") === "1" || localStorage.getItem("rescue-centrum-show") === "1"; } catch (e) {}
+try { tl.show = new URLSearchParams(location.search).get("demo") === "1" || sessionStorage.getItem("rescue-centrum-show") === "1"; } catch (e) {}   // R3-7: Tryb pokazu lives in this tab only (sessionStorage) - a later plain centrum.html is Doba do teraz again (#6)
 function tlButtons() {
   const el = $("tl"); if (!el) return;
   let on = false; try { on = !!sim.on; } catch (e) {} const b = (m) => el.querySelector(`[data-mode="${m}"]`), set = (x, hid, txt) => { if (!x) return; if (x.hidden !== hid) x.hidden = hid; if (txt && x.textContent !== txt) x.textContent = txt; };
@@ -1075,7 +1075,7 @@ function tlInit() {
   $("tlPlay").onclick = tlPlay;
   $("tlSpeed").onclick = () => tlSpeed(1);
   $("tlLive").onclick = () => { tlStop(); tlSet(null); };
-  $("tlShow").onclick = () => { tl.show = !tl.show; try { localStorage.setItem("rescue-centrum-show", tl.show ? "1" : "0"); } catch (e) {} tl.auto = true; tlStop(); tl.cur = null; tl.built = ""; tlBuild(); tlApply(); };
+  $("tlShow").onclick = () => { tl.show = !tl.show; try { sessionStorage.setItem("rescue-centrum-show", tl.show ? "1" : "0"); } catch (e) {} tl.auto = true; tlStop(); tl.cur = null; tl.built = ""; tlBuild(); tlApply(); };
   el.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => { if (tl.mode === b.dataset.mode) return; tl.auto = false; tl.mode = b.dataset.mode; tlStop(); tl.cur = null; tlBuild(); tlApply(); });
   // scrub: press / drag anywhere over the tracks column (the mini strip, the axis or the Gantt rows)
   const body = $("tlBody"), vAt = (e) => { const r = $("tlMini").querySelector(".trk").getBoundingClientRect(); return tl.lo + (tl.hi - tl.lo) * Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)); };
