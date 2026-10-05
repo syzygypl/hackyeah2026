@@ -28,7 +28,9 @@
   html, body { margin: 0; height: 100%; background: var(--rl-bg); color: var(--rl-ink); font: 16px/1.3 var(--rl-font); }
   body { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); height: 100dvh; overflow: hidden; }
   header { z-index: 5; background: var(--rl-panel); border-bottom: 1px solid var(--rl-line); padding: 8px 10px; padding-top: max(8px, env(safe-area-inset-top));
-           display: flex; align-items: center; gap: 8px; }
+           display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ctx { flex-basis: 100%; margin-top: -4px; font-size: 12px; color: var(--rl-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ctx:empty, body.embed .ctx { display: none; }
   header h1 { font-size: 16px; font-weight: 700; margin: 0; color: var(--rl-ink); white-space: nowrap; }
   header select { font: inherit; font-size: 15px; font-weight: 600; min-height: 44px; padding: 0 10px; border-radius: var(--rl-radius); border: 1px solid var(--rl-line-strong); background: var(--rl-card); color: var(--rl-ink); flex: 1; min-width: 0; }
   .net { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: var(--rl-panel-2); color: var(--rl-ok); white-space: nowrap; border: 1px solid var(--rl-line); }
@@ -107,6 +109,7 @@
   <select id="team" aria-label="Zespół"></select>
   <span class="net" id="net">łączność…</span>
   <button class="theme" id="theme" aria-label="Jasny / ciemny ekran" title="Jasny / ciemny ekran">☀</button>
+  <div class="ctx" id="ctx"></div>
 </header>
 <div id="map" role="img" aria-label="Mapa przydzielonego segmentu"></div>
 <section id="sheet">
@@ -182,6 +185,8 @@
   if (!rr || !rr.ok) { document.body.innerHTML = `<p>${rr && (rr.status === 401 || rr.status === 403) ? "Podaj klucz akcji (zapytaj kierownika akcji) i odśwież stronę." : "Brak danych akcji - sprawdź połączenie i odśwież."}</p>`; await new Promise(() => {}); }
   run = await rr.json();
   step = [...run.steps].reverse().find(s => (s.assignments || []).length) || run.steps[run.steps.length - 1];   // last step that still has a plan (the final one may be "akcja zamknięta")
+  // sens-funkcji R3-10: which action and from what time this screen is (place as on the Centrum card)
+  { const t = String(run.incident || SCN || "").replace(/\s*\(scenariusz fikcyjny\)\s*/i, "").trim(), i = t.indexOf(" - "); $("ctx").textContent = `${i > 0 ? t.slice(i + 3) : t}${step.t ? " · stan " + step.t : ""}`; }
   const teams = (step.resources || []).filter(r => r.type !== "drone");
   $("team").innerHTML = teams.map(r => `<option value="${esc(r.id)}" title="${esc(r.name)}">${esc(String(r.name ?? "").split(" (")[0])}</option>`).join("");
   // sens-funkcji R3-4: a generic link (no team=) never silently becomes the first team: ask "Który zespół?" once, keep it on the phone
