@@ -367,7 +367,7 @@ def suite(srv, B, live, llm, tmp):
 
     # ---------------- frontends
     print("frontends")
-    pages = ["/app/", "/app/?role=operator", "/app/?role=ratownik&team=topr-a", "/web/", "/app/3d/?embed=scene", "/web/patrol/", "/out/ops.html", "/out/field.html", "/"]
+    pages = ["/app/", "/app/?role=operator", "/web/patrol/?sc=zawrat&team=topr-a", "/web/", "/app/3d/?embed=scene", "/web/patrol/", "/out/ops.html", "/out/field.html", "/"]
     for page in pages:
         @check("frontend", "load " + page)
         def _(page=page):

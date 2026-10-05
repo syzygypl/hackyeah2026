@@ -132,9 +132,9 @@ def main():
         check("response_time_in_bell", bool(kp) and "mediana" in kp and "potw." in kp, kp or "")
         nb = c.js("(()=>{const b=document.querySelector('.lfpanel .lfnotify');return b?[b.checked, Notification.permission]:null})()")
         check("system_notify_box_off_by_default", bool(nb) and nb[0] is False, str(nb))
-        # the rescuer phone: no bell, no toasts
+        # the rescuer phone (/web/patrol/, sens-funkcji R2-11): no bell, no toasts
         c.js("localStorage.removeItem('rescue-live-acks')")
-        open_page(c, f"{srv.base}/app/?role=ratownik&sc=zawrat&simAt={at}", 1440, 900, False)
+        open_page(c, f"{srv.base}/web/patrol/?sc=zawrat&team=topr-a&simAt={at}", 1440, 900, False)
         time.sleep(4)
         vis = c.js("[...document.querySelectorAll('.lfbell,.lftoast')].filter(x=>x.offsetParent!==null||getComputedStyle(x).position==='fixed'&&x.getClientRects().length).length")
         check("no_bell_for_rescuer", vis == 0, f"visible {vis}")

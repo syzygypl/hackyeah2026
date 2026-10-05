@@ -126,6 +126,8 @@
   </section>
   <textarea id="free" rows="2" placeholder="własnymi słowami, np. przeszukaliśmy żleb do progu, nic, widoczność 20 m" style="margin-top:10px"></textarea>
   <div class="row"><button type="button" class="b-send" id="sendFree">Wyślij meldunek</button></div>
+  <div class="row"><button type="button" class="b-ghost" id="sharePos" aria-pressed="false">Udostępnij pozycję</button></div>
+  <div class="muted" id="sharePosSt" style="font-size:13px"></div>
   <p class="muted" style="margin:8px 0 12px">Meldunek czyta model AI na serwerze akcji (bez modelu: reguły). Bez zasięgu czeka w kolejce na telefonie.</p>
   <h2>Wysłane</h2><div class="log" id="log"></div>
   <div class="row"><button value="close" class="b-ghost">Zamknij</button></div>
@@ -140,8 +142,10 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const qs = new URLSearchParams(location.search);
+  // sens-funkcji R2-11: this is the one rescuer screen; the QR / share link carries the key (?key=): keep it on the phone, drop it from the address bar
+  if (qs.get("key")) { try { localStorage.setItem("rescue-pin", qs.get("key").trim()); } catch {} qs.delete("key"); try { history.replaceState(null, "", location.pathname + (qs.toString() ? "?" + qs : "")); } catch {} }
   const API = qs.get("api") || (location.protocol.startsWith("http") ? location.origin : "http://127.0.0.1:8780");   // the rescue-server that serves this page
-  const RUN = qs.get("run") || "../../out/run.json";
+  const RUN = qs.get("run") || (qs.get("sc") ? API + "/api/run/" + encodeURIComponent(qs.get("sc")) : "../../out/run.json");   // ?sc= alone (start, karty zadań, /app redirect) = that action live
   const SCN = (RUN.match(/\/api\/run\/([\w-]+)/) || [])[1] || qs.get("sc") || undefined;   // this phone's incident (its reports go only there)
   const EMBED = qs.get("embed") === "1";
   if (EMBED) document.body.classList.add("embed");
@@ -519,6 +523,21 @@
     window.__lastPos = `${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}`;
     me = [p.coords.longitude, p.coords.latitude]; renderDir();
   }, () => {}, { enableHighAccuracy: true });
+  // "Udostępnij pozycję" (was in /app role ratownik, sens-funkcji R2-11): POST /api/positions/<sc> every 10 s while on; remembered on this phone
+  let shareOn = !EMBED && store.get("rescue-share-pos", false), shareAt = 0;
+  const shareUI = (msg) => { $("sharePos").textContent = shareOn ? "Udostępniasz pozycję (wyłącz)" : "Udostępnij pozycję"; $("sharePos").setAttribute("aria-pressed", String(shareOn));
+    $("sharePosSt").textContent = msg || (shareOn ? (me ? (shareAt ? "wysłano " + Math.round((Date.now() - shareAt) / 1000) + " s temu" : "wysyłam…") : "czekam na GPS…") : ""); };
+  async function sharePos() {
+    if (!shareOn || !me || Date.now() - shareAt < 10000) return shareUI();
+    try {
+      const r = await fetch(API + "/api/positions/" + encodeURIComponent(SC), { method: "POST", headers: headers(), body: JSON.stringify({ unit: team, lat: +me[1].toFixed(6), lon: +me[0].toFixed(6), ts: Date.now(), source: qs.get("me") ? "manual" : "gps" }), signal: AbortSignal.timeout(8000) });
+      if (r.status === 401 || r.status === 403) { shareOn = false; store.set("rescue-share-pos", false); return shareUI("Udostępnianie pozycji wymaga klucza ratownika - zeskanuj kod QR od kierownika akcji."); }
+      if (r.ok) shareAt = Date.now();
+    } catch {}
+    shareUI();
+  }
+  $("sharePos").onclick = () => { shareOn = !shareOn; store.set("rescue-share-pos", shareOn); shareAt = 0; if (shareOn) toast("Pozycja zespołu jest wysyłana do kierownika akcji"); sharePos(); };
+  setInterval(sharePos, 2000); shareUI();
   if (qs.get("me")) { me = qs.get("me").split(",").map(Number).reverse(); renderDir(); }   // ?me=lat,lon for demos without GPS
 </script>
 <script>

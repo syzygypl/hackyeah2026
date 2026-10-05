@@ -866,6 +866,8 @@ async function assignTeam(resourceId, segmentId) {
 }
 // ---------- roles: ratownik (phone, own task + patrol reports) / operator (all modes). ?role= or remembered; picker on first open
 function setRole(r) {
+  // sens-funkcji R2-11: the rescuer phone is /web/patrol/ (same team, same action); /app stays the operator's screen
+  if (r === "ratownik") { const o = new URLSearchParams({ sc: store.scenario && store.scenario !== "studio" ? store.scenario : "zawrat" }); if (myTeam()) o.set("team", myTeam()); location.href = "../web/patrol/?" + o; return; }
   if (r === "ratownik" && store.time !== "live") setTime("live");
   store.role = r; try { localStorage.setItem("rescue-app-role", r); } catch (e) {}
   document.body.classList.toggle("role-ratownik", r === "ratownik"); document.body.classList.toggle("role-operator", r === "operator");
@@ -1459,9 +1461,9 @@ boot();
     const qrP = qrLib();
     let field = ""; if (PIN) { try { field = (await api("/api/join")).fieldKey || ""; } catch (e) {} }
     await qrP;
-    const rescuer = (() => { const u = new URL(link("ratownik", false)); if (field) u.searchParams.set("key", field); return u.toString(); })();
+    const rescuer = (() => { const u = new URL("/web/patrol/", location.origin), sc = $("scen").value; if (sc && sc !== "studio") u.searchParams.set("sc", sc); if (field) u.searchParams.set("key", field); return u.toString(); })();   // R2-11: the rescuer screen
     $("shareBody").innerHTML = (PIN && field ? "" : `<p class="help">Na tym urządzeniu nie ma klucza operatora, więc linki są tylko do podglądu. Wpisz klucz powyżej albo otwórz link operatora.</p>`)
-      + row("Ratownik (telefon)", "Zeskanuj telefonem: rola ratownik, ta akcja. Klucz ratownika: tylko meldunki i ślady.", rescuer)
+      + row("Ratownik (telefon)", "Zeskanuj telefonem: ekran ratownika tej akcji (zespół wybiera się u góry). Klucz ratownika: tylko meldunki, ślady i pozycja.", rescuer)
       + row("Operator (drugi komputer)", "Pełny dostęp: przydziały, Studio, Centrum, czyszczenie akcji. Nie pokazuj na rzutniku.", link("operator", !!field))
       + row("Podgląd (jury, bez zapisu)", "Widzi mapę i plan na żywo, nie może niczego zmienić.", link("", false));
     $("keySlot").append($("pinbox"));   // sens-funkcji #15: the key box sits in Udostępnij while it is open, back in the bar (rescuer 401, phone menu) on close

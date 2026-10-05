@@ -16,7 +16,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 | Operator, Na żywo (pokaz: z `&demo=1` widać ⏮ ⏭ "Następne zdarzenie"; bez niego oś kończy się na "teraz") | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=live&demo=1 |
 | Centrum | https://rescue-locator.vercel.app/app/centrum.html |
 | Centrum, oś całej doby i Dzień w Centrum (Tryb pokazu) | https://rescue-locator.vercel.app/app/centrum.html?demo=1 (albo przycisk **Tryb pokazu** obok Na żywo; bez niego oś pokazuje dobę tylko do teraz) |
-| Ratownik (bez klucza, tylko podgląd) | https://rescue-locator.vercel.app/app/?role=ratownik |
+| Ratownik (bez klucza, tylko podgląd) | https://rescue-locator.vercel.app/web/patrol/?sc=zawrat&team=topr-a |
 | Widziałem (mieszkańcy, Kraków) | https://rescue-locator.vercel.app/web/seen/ |
 | Porównanie (jedna relacja zmienia top 3) | https://rescue-locator.vercel.app/app/porownanie.html |
 | Odprawa (A4 dla kierownika) | https://rescue-locator.vercel.app/app/odprawa.html?sc=zawrat |
@@ -54,7 +54,7 @@ Czasy (serwer Rust `545fe02` lokalnie, pomiar AI Marcina 04:59, tabela w `qa-dem
 ```sh
 cd rescue && swift build && swift run rescue-server          # http://127.0.0.1:8780/app/ - z loopback bez klucza
 swift run rescue-server 8780 --host 0.0.0.0 --pin 4821       # gdy telefon ma się podłączyć: TYLKO przez nasz hotspot
-ipconfig getifaddr en0                                       # IP laptopa; telefon: http://<IP>:8780/app/?role=ratownik&sc=zawrat, poda PIN raz
+ipconfig getifaddr en0                                       # IP laptopa; telefon: http://<IP>:8780/web/patrol/?sc=zawrat&team=topr-a, poda PIN raz
 ```
 `swift build` zrób przed pokazem (kilka minut). Lokalnie meldunki czyta Ollama, jeśli działa, inaczej reguły. Nigdy nie wystawiaj serwera na Wi-Fi hali; po pokazie Ctrl-C.
 
@@ -66,7 +66,7 @@ cd rescue && docker build -f Dockerfile.vercel -t rescue-rs:local .
 IP=$(ipconfig getifaddr en0)
 docker run -d --name rescue-fallback -p $IP:8780:80 -e RESCUE_DIR=/rescue -e RESCUE_PIN="$RESCUE_PIN" \
   -v "$PWD":/rescue:ro rescue-rs:local /app/rescue-server 80 --host 0.0.0.0
-echo "operator: http://$IP:8780/app/?sc=zawrat&key=<klucz>  telefon: http://$IP:8780/app/?role=ratownik&sc=zawrat&key=<klucz>"
+echo "operator: http://$IP:8780/app/?sc=zawrat&key=<klucz>  telefon: http://$IP:8780/web/patrol/?sc=zawrat&team=topr-a&key=<klucz>"
 docker rm -f rescue-fallback   # po pokazie
 ```
 Otwieraj przez **IP laptopa, nie 127.0.0.1**: na 127.0.0.1 aplikacja uważa się za loopback i nie wysyła klucza, a serwer w kontenerze widzi ruch z sieci Dockera - każdy zapis (Plan, potwierdzenia, meldunki) dostaje 401. Klucz wystarczy raz w linku `?key=` (zostaje w przeglądarce).
@@ -75,7 +75,7 @@ Lista kontrolna (2 min, przed pokazem):
 2. `/app/?sc=zawrat` - mapa 2D, w doku "stan na HH:MM".
 3. Plan: przeciągnij Świadka na mapę -> Dodaj -> toast "Dodano".
 4. Centrum `?sim=1` - Potwierdź w dzwonku; w drugiej przeglądarce to zgłoszenie jest już potwierdzone.
-5. Telefon na hotspocie: widok ratownika -> Udostępnij pozycję -> kropka zespołu u operatora w Na żywo.
+5. Telefon na hotspocie: widok ratownika (/web/patrol/) -> "Pogoda · status · meldunek" -> Udostępnij pozycję -> kropka zespołu u operatora w Na żywo.
 
 ## 2. Pokaz 3 min
 

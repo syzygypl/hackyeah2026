@@ -90,6 +90,10 @@ table{border-collapse:collapse;width:100%}
 body.karty .sheet{display:none}
 body.karty .cards{display:block;width:210mm;margin:16px auto}
 .tcard{background:#fff;box-shadow:var(--rl-shadow);height:148.5mm;padding:7mm 10mm 5mm;display:flex;flex-direction:column;gap:2mm;font-size:11.5px;line-height:1.3;border-bottom:1px dashed var(--rl-mute);break-inside:avoid;overflow:hidden}
+.tcard header{display:grid;grid-template-columns:1fr auto;gap:4mm;align-items:start}
+.tc-phone{display:flex;gap:2mm;align-items:center;max-width:62mm;font-size:9.5px;line-height:1.25;color:var(--rl-ink-2);text-decoration:none}
+.tc-phone .mono{font-family:var(--rl-mono);word-break:break-all;color:var(--rl-ink)}
+.tc-qr{flex:0 0 17mm;width:17mm;height:17mm}.tc-qr svg{width:100%;height:100%;display:block}.tc-qr:empty{display:none}
 .tcard header h2{font:700 18px/1.2 var(--rl-font);letter-spacing:0;text-transform:none;color:var(--rl-ink);margin:2px 0 0}
 .tcard .cs{font:600 11px var(--rl-mono);color:var(--rl-mute);border:1px solid var(--rl-line-strong);border-radius:4px;padding:0 5px;vertical-align:middle}
 .tc-body{display:grid;grid-template-columns:78mm 1fr;gap:4mm;min-height:0}
@@ -109,6 +113,7 @@ body.karty .cards{display:block;width:210mm;margin:16px auto}
   body.karty .cards{width:auto;margin:0}
   .tcard{height:auto;padding:14px;margin-bottom:12px;box-shadow:none;border-bottom:2px dashed var(--rl-line-strong)}
   .tc-body{grid-template-columns:1fr}.tc-map{max-height:none}
+  .tcard header{grid-template-columns:1fr}.tc-phone{max-width:none}
 }
 @media print{body.karty .cards{margin:0}.tcard{box-shadow:none}}
 @page{size:A4 portrait;margin:0}

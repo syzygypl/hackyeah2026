@@ -121,9 +121,12 @@
       const u = units[a.resourceId] || {}, tr = Math.round(a.travelMin ?? a.etaMin), sw = sweepEnd(a);
       const rank = top.findIndex((x) => x.id === a.segmentId) + 1;
       const flags = notes(st, a.resourceId, a.safety, warns).map((x) => `<li class="${x.red ? "red" : ""}">${esc(x.t)}</li>`);
+      // sens-funkcji R2-11: the team's phone screen (/web/patrol/) as QR + short link, no key on paper (the phone asks for it once)
+      const pu = new URL(`../web/patrol/?sc=${encodeURIComponent(SC)}&team=${encodeURIComponent(a.resourceId)}`, location.href).href;
       return `<article class="tcard">
-        <header><span class="od-kicker">Karta zadania ${i + 1}/${st.assignments.length}</span><h2>${esc(short(resName(st, a.resourceId)))}${u.callsign ? ` <span class="cs">${esc(u.callsign)}</span>` : ""}</h2>
-          <div class="mute">${esc(title)} · ${esc(run.date || "")} ${esc(st.t)} · ${live ? "na żywo" : "nagranie"}</div></header>
+        <header><div><span class="od-kicker">Karta zadania ${i + 1}/${st.assignments.length}</span><h2>${esc(short(resName(st, a.resourceId)))}${u.callsign ? ` <span class="cs">${esc(u.callsign)}</span>` : ""}</h2>
+          <div class="mute">${esc(title)} · ${esc(run.date || "")} ${esc(st.t)} · ${live ? "na żywo" : "nagranie"}</div></div>
+          <a class="tc-phone" href="${esc(pu)}"><span class="tc-qr" data-u="${esc(pu)}"></span><span>Na telefonie:<br><span class="mono">${esc(pu.replace(/^https?:\/\//, ""))}</span></span></a></header>
         <div class="tc-body">
           <canvas class="tc-map" data-i="${i}" role="img" aria-label="Sektor ${esc(a.segmentId)} na schemacie"></canvas>
           <div class="tc-info">
@@ -141,6 +144,10 @@
         <footer>Dane fikcyjne / narzędzie pomocnicze - decyzję podejmuje kierownik akcji.</footer>
       </article>`;
     }).join("") || `<p class="mute">Brak przydziałów w tej chwili.</p>`;
+    if (document.body.classList.contains("karty") && el.querySelector(".tc-qr")) {   // QR from the app's vendor lib, only for the cards view
+      const fill = () => el.querySelectorAll(".tc-qr").forEach((x) => { try { const q = qrcode(0, "M"); q.addData(x.dataset.u); q.make(); x.innerHTML = q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }); } catch (e) {} });
+      if (window.qrcode) fill(); else { const sc = document.createElement("script"); sc.src = "vendor/qrcode.min.js"; sc.onload = fill; document.head.appendChild(sc); }
+    }
     el.querySelectorAll("canvas.tc-map").forEach((cv) => {
       const a = st.assignments[+cv.dataset.i], seg = st.segments.find((x) => x.id === a.segmentId);
       if (!seg || !seg.polygon) return;
