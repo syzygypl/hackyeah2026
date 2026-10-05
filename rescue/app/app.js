@@ -1770,12 +1770,14 @@ subs.push((why) => {
     const rows = ids.map((id) => {
       const r = res.find((x) => x.id === id) || {}, u = teamUnits.find((x) => x.id === id) || {}, m = man.find((x) => x.resourceId === id), a = (S.assignments || []).find((x) => x.resourceId === id);
       const seg = (m && m.segmentId) || r.currentSegment || u.segmentId || (a && a.segmentId) || "", sn = (segs.find((g) => g.id === seg) || {}).name || (a && a.segmentName) || "";
-      const st = /zamknięta/.test(r.reason || "") ? "po akcji" : /^w drodze/.test(r.reason || "") ? "w drodze" : r.currentSegment || m || u.sc ? "w terenie" : r.available === false ? "niedostępny" : "wolny";
+      // R3-5: availability wins over "w terenie" - a grounded drone is "uziemiony", a unit that is only "dostępny" / bound to the action is "gotowy w bazie"
+      const st = /zamknięta/.test(r.reason || "") ? "po akcji" : /^w drodze/.test(r.reason || "") ? "w drodze" : /^uziemiony/.test(r.reason || "") ? "uziemiony"
+        : m ? "w terenie" : /^(dostępny|gotowy|wolny)/.test(r.reason || "") ? "gotowy w bazie" : r.currentSegment ? "w terenie" : r.available === false ? "niedostępny" : u.sc ? "gotowy w bazie" : "wolny";
       const task = m ? `zadanie: ${seg} ${sn} (operator)` : r.reason && st !== "wolny" ? r.reason : seg ? `zadanie: ${seg} ${sn}${a ? " (plan)" : ""}` : r.reason || "bez zadania";
       const f = (k) => (u.feeds || []).filter((x) => k.includes(x.kind) && x.lastAt && !later(x.lastAt)).map((x) => x.lastAt).sort().pop();
       const rep = f(["reports", "radio", "clues"]), gps = f(["gps", "collar"]), [w, lv] = word(u);
       return `<div class="trow" data-id="${esc(id)}" tabindex="0" title="${esc(r.name || u.name || id)} - kliknij: dziennik i ślad na mapie${esc((u.warnings || []).map((x) => "\n" + x.text).join(""))}">`
-        + `<div class="row"><b>${esc(shortName(r.name || u.name || id))}</b><span class="mute">${esc(KL[u.kind] || "")}</span><span style="flex:1"></span><span class="tst ${st === "w terenie" ? "on" : st === "w drodze" ? "go" : st === "niedostępny" ? "off" : ""}">${st}</span></div>`
+        + `<div class="row"><b>${esc(shortName(r.name || u.name || id))}</b><span class="mute">${esc(KL[u.kind] || "")}</span><span style="flex:1"></span><span class="tst ${st === "w terenie" ? "on" : st === "w drodze" ? "go" : st === "niedostępny" || st === "uziemiony" ? "off" : ""}">${st}</span></div>`
         + `<div class="help">${esc(task)}</div>`
         + `<div class="help">${rep ? "meldunek " + esc(rep) : "brak meldunków"}${gps ? " · GPS " + esc(gps) : ""}${w ? ` · <span class="ah ${lv}">${esc(w)}</span>` : ""}</div></div>`; });
     box.innerHTML = (rows.join("") || `<div class="help">Ta akcja nie ma jeszcze zespołów.</div>`)
