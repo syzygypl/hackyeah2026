@@ -93,8 +93,8 @@
     for (const r of st.resources || []) {
       if (seen.has(r.id)) continue;
       const flags = notes(st, r.id, [], warns).map((x) => `<span class="flag ${x.red ? "red" : ""}">${esc(x.t)}</span>`);
-      const what = done(st, r) ? `zakończone (${esc(r.currentSegment || "")} do ${esc(r.busyUntil)}), wolny` : esc(r.reason || (r.available ? "w odwodzie" : "niedostępny"));
-      rows.push(`<tr class="busy"><td><b>${esc(short(r.name))}</b></td><td>${r.currentSegment && !done(st, r) ? `<b>${esc(r.currentSegment)}</b>` : "-"}</td><td>${what}</td><td>${flags.join(" ") || '<span class="mute">-</span>'}</td></tr>`);
+      const what = done(st, r) ? `zakończone (${esc(r.currentSegment || "")} do ${esc(r.busyUntil)}), wolny` : esc(longEnd(st, r) ? String(r.reason).replace(/\s+do \d\d:\d\d\b/, "") + " - długo, rozważ podział sektora" : r.reason || (r.available ? "w odwodzie" : "niedostępny"));
+      rows.push(`<tr class="busy"><td><b>${esc(short(r.name))}</b></td><td>${r.currentSegment && !done(st, r) && !grounded(r) ? `<b>${esc(r.currentSegment)}</b>` : "-"}</td><td>${what}</td><td>${flags.join(" ") || '<span class="mute">-</span>'}</td></tr>`);
     }
     $("teams").innerHTML = rows.join("") || `<tr><td colspan="4" class="mute">Brak zespołów w tej akcji.</td></tr>`;
 
@@ -115,16 +115,23 @@
     const units = {}; for (const u of (inv && inv.units) || []) units[u.id] = u;
     const el = $("cards"); if (!el) return;
     const title = String(run.incident || SC).replace(/\s*\(scenariusz fikcyjny\)\s*$/, "");
-    el.innerHTML = st.assignments.map((a, i) => {
+    // sens-funkcji R3-3: a card per team in the field, not only per new assignment - a team already in its sector (Patrol TOPR A,
+    // the demo phone) is not in st.assignments, it only has resources[].currentSegment; grounded / unavailable units get no card
+    const res = (id) => (st.resources || []).find((r) => r.id === id) || {};
+    const tasks = st.assignments.filter((a) => !grounded(res(a.resourceId))).concat((st.resources || [])
+      .filter((r) => !st.assignments.some((a) => a.resourceId === r.id) && r.currentSegment && !done(st, r) && !grounded(r) && /przeszuk|w drodze/.test(r.reason || ""))
+      .map((r) => ({ resourceId: r.id, segmentId: r.currentSegment, segmentName: (st.segments.find((x) => x.id === r.currentSegment) || {}).name || "", cont: r })));
+    const off = (st.resources || []).filter((r) => !tasks.some((a) => a.resourceId === r.id) && !done(st, r));
+    el.innerHTML = tasks.map((a, i) => {
       const seg = st.segments.find((x) => x.id === a.segmentId) || {}, poly = (seg.polygon || []).slice(0, -1);
       const lat = poly.reduce((s2, q) => s2 + q[1], 0) / (poly.length || 1), lon = poly.reduce((s2, q) => s2 + q[0], 0) / (poly.length || 1);
-      const u = units[a.resourceId] || {}, tr = Math.round(a.travelMin ?? a.etaMin), sw = sweepEnd(a);
+      const u = units[a.resourceId] || {}, tr = Math.round(a.travelMin ?? a.etaMin ?? 0), sw = sweepEnd(a), c = a.cont;
       const rank = top.findIndex((x) => x.id === a.segmentId) + 1;
       const flags = notes(st, a.resourceId, a.safety, warns).map((x) => `<li class="${x.red ? "red" : ""}">${esc(x.t)}</li>`);
       // sens-funkcji R2-11: the team's phone screen (/web/patrol/) as QR + short link, no key on paper (the phone asks for it once)
       const pu = new URL(`../web/patrol/?sc=${encodeURIComponent(SC)}&team=${encodeURIComponent(a.resourceId)}`, location.href).href;
       return `<article class="tcard">
-        <header><div><span class="od-kicker">Karta zadania ${i + 1}/${st.assignments.length}</span><h2>${esc(short(resName(st, a.resourceId)))}${u.callsign ? ` <span class="cs">${esc(u.callsign)}</span>` : ""}</h2>
+        <header><div><span class="od-kicker">Karta zadania ${i + 1}/${tasks.length}</span><h2>${esc(short(resName(st, a.resourceId)))}${u.callsign ? ` <span class="cs">${esc(u.callsign)}</span>` : ""}</h2>
           <div class="mute">${esc(title)} · ${esc(run.date || "")} ${esc(st.t)} · ${live ? "na żywo" : "nagranie"}</div></div>
           <a class="tc-phone" href="${esc(pu)}"><span class="tc-qr" data-u="${esc(pu)}"></span><span>Na telefonie:<br><span class="mono">${esc(pu.replace(/^https?:\/\//, ""))}</span></span></a></header>
         <div class="tc-body">
@@ -133,8 +140,10 @@
             <p class="tc-seg"><b>${esc(a.segmentId)}</b> ${esc(a.segmentName)}${rank ? ` <span class="rkb">${rank}. w kolejności</span>` : ""}</p>
             <p class="mono">środek sektora: ${lat.toFixed(5)} N, ${lon.toFixed(5)} E</p>
             <p>Sektor: ${(+seg.areaPct || 0).toFixed(1).replace(".", ",")}% obszaru</p>
-            <table class="tc-t"><tr><th>Wyjście</th><td>${esc(st.t)}</td></tr><tr><th>Na miejscu ok.</th><td>${hm(now + tr)} (dojście ${tr} min)</td></tr>
-              <tr><th>Koniec przeszukania ok.</th><td>${hm(now + tr + sw)} (${sweepTxt(a)})</td></tr><tr><th>Skuteczność (POD)</th><td>${a.pod != null ? "ok. " + Math.round(a.pod * 100) + "%" : "-"}</td></tr>
+            <table class="tc-t">${c ? `<tr><th>Zadanie</th><td>kontynuuje ${esc(a.segmentId)}, meldunek po sektorze</td></tr><tr><th>${/przeszuk/.test(c.reason) ? "W sektorze od" : "Na miejscu ok."}</th><td>${esc(c.arriveAt || "-")}</td></tr>
+              <tr><th>Koniec przeszukania</th><td>${longEnd(st, c) ? "przeszukanie długie - rozważ podział sektora" : `ok. ${esc(c.busyUntil || "-")}`}</td></tr>`
+              : `<tr><th>Wyjście</th><td>${esc(st.t)}</td></tr><tr><th>Na miejscu ok.</th><td>${hm(now + tr)} (dojście ${tr} min)</td></tr>
+              <tr><th>Koniec przeszukania${tr + sw > 120 ? "" : " ok."}</th><td>${tr + sw > 120 ? `${sweepTxt(a)} - długie, rozważ podział sektora` : `${hm(now + tr + sw)} (${sweepTxt(a)})`}</td></tr>`}<tr><th>Skuteczność (POD)</th><td>${a.pod != null ? "ok. " + Math.round(a.pod * 100) + "%" : "-"}</td></tr>
               <tr><th>Meldunek co</th><td>30 min i po sektorze</td></tr></table>
             ${u.crew && u.crew.length ? `<p class="small">Skład (dane fikcyjne): ${esc(u.crew.map((c) => String(c.name).replace(/\s*\(fikcyjn\w*\)/g, "")).join(", "))}</p>` : ""}
           </div>
@@ -143,13 +152,13 @@
         <div class="tc-report"><h3>Meldunek zwrotny</h3><span>☐ przeszukane, nic</span><span>☐ częściowo</span><span>☐ ślad / znaleziono</span><span>godz. ______</span><span>kanał ______</span><span>uwagi: ____________________________</span></div>
         <footer>Dane fikcyjne / narzędzie pomocnicze - decyzję podejmuje kierownik akcji.</footer>
       </article>`;
-    }).join("") || `<p class="mute">Brak przydziałów w tej chwili.</p>`;
+    }).join("") + (off.length ? `<p class="mute tc-off">Bez karty (w bazie / niedostępne): ${off.map((r) => esc(short(r.name) + (r.reason ? " - " + r.reason : ""))).join("; ")}.</p>` : "") || `<p class="mute">Brak przydziałów w tej chwili.</p>`;
     if (document.body.classList.contains("karty") && el.querySelector(".tc-qr")) {   // QR from the app's vendor lib, only for the cards view
       const fill = () => el.querySelectorAll(".tc-qr").forEach((x) => { try { const q = qrcode(0, "M"); q.addData(x.dataset.u); q.make(); x.innerHTML = q.createSvgTag({ cellSize: 2, margin: 0, scalable: true }); } catch (e) {} });
       if (window.qrcode) fill(); else { const sc = document.createElement("script"); sc.src = "vendor/qrcode.min.js"; sc.onload = fill; document.head.appendChild(sc); }
     }
     el.querySelectorAll("canvas.tc-map").forEach((cv) => {
-      const a = st.assignments[+cv.dataset.i], seg = st.segments.find((x) => x.id === a.segmentId);
+      const a = tasks[+cv.dataset.i], seg = st.segments.find((x) => x.id === a.segmentId);
       if (!seg || !seg.polygon) return;
       const lons = seg.polygon.map((q) => q[0]), lats = seg.polygon.map((q) => q[1]);
       let v = { west: Math.min(...lons), east: Math.max(...lons), south: Math.min(...lats), north: Math.max(...lats) };
@@ -181,6 +190,9 @@
   const sweepTxt = (a) => (a.sweepMin || 0) < 5 ? "przelot nad sektorem, poniżej 5 min" : `przeszukanie ${Math.round(a.sweepMin)} min`;
   const sweepEnd = (a) => Math.max(5, Math.round(a.sweepMin || 0));
   // a busy team whose task already ended at this moment (busyUntilMinute <= step minute) is listed as finished, not as working
+  // sens-funkcji R3-3: grounded / unavailable and not working a sector (Dron "uziemiony: wiatr ..."); a busy-until more than 2 h after the state is not a plausible clock
+  const grounded = (r) => /^uziemion|niedostęp/.test(r.reason || "") || (r.available === false && !/przeszuk|w drodze/.test(r.reason || ""));
+  const longEnd = (st, r) => r.busyUntilMinute != null && r.busyUntilMinute - st.minute > 120;
   const done = (st, r) => r.busyUntilMinute != null && r.busyUntilMinute <= st.minute;
   const resName = (st, id) => ((st.resources || []).find((r) => r.id === id) || {}).name || id;
   const catPL = (c) => ({ hiker: "turysta pieszy", child: "dziecko", dementia: "osoba z demencją", hunter: "grzybiarz / myśliwy", water: "na wodzie", skier: "narciarz" })[c] || c;
