@@ -65,7 +65,7 @@ PROBE = r"""(() => {
     const d = $('frame3d').contentWindow.document;
     const ls = [...d.querySelectorAll('.lbl3d.top3')];
     out.ready3d = ls.length > 0;
-    out.d3 = [1, 2, 3].map((k) => { const el = ls.find((x) => { const r = x.querySelector('.rk'); return r && r.textContent.trim() === '#' + k; }); return el ? strip(el, '.rk') : null; });
+    out.d3 = [1, 2, 3].map((k) => { const el = ls.find((x) => { const r = x.querySelector('.rk'); return r && r.textContent.trim() === '#' + k; }); return el ? strip(el, '.rk,.again') : null; });
   } catch (e) { out.err3d = String(e); }
   return out;
 })()"""
