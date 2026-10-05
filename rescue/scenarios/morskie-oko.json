@@ -55,15 +55,15 @@
     { "provider": "WeatherConditions", "at": "13:55", "title": "Warunki: slonecznie, 22C, wiatr 2 m/s, dobra widocznosc", "detail": "Dobre warunki do przeszukania, ale tlum turystow utrudnia nasluchiwanie wolan.", "visibilityM": 8000, "windMs": 2, "tempC": 22, "precip": "none", "dark": false, "ice": false },
     { "provider": "TripPlan", "at": "13:58", "title": "Relacja rodzica: zabawa przy kamieniach nad wyplywem potoku", "detail": "\"Siedzielismy na plazy piknikowej, poszla popatrzec na kaczki przy wyplywie potoku, potem zniknela z pola widzenia na chwile.\"", "points": [[49.1995, 20.0700], [49.1990, 20.0680], [49.2015, 20.0713], [49.2020, 20.0700], [49.2030, 20.0725]], "radiusM": 150 },
     { "provider": "Cell112Fix", "at": "14:05", "title": "CPR 112: brak wlasnego telefonu (dziecko), pomijamy", "detail": "Dziecko nie ma telefonu - brak lokalizacji sieciowej, polegamy na swiadkach.", "point": [49.2015, 20.0713], "radiusM": 600 },
-    { "provider": "SegmentSearched", "at": "14:15", "title": "Patrol GOPR + obsluga schroniska: plaza piknikowa i pomost, nic", "detail": "Zespol A przeszukal brzeg wschodni i teren przy schronisku. POD 70%.", "segments": ["M1", "M5"], "pod": 0.7 },
+    { "provider": "SegmentSearched", "at": "14:15", "title": "Patrol TOPR + obsluga schroniska: plaza piknikowa i pomost, nic", "detail": "Zespol A przeszukal brzeg wschodni i teren przy schronisku. POD 70%.", "segments": ["M1", "M5"], "pod": 0.7 },
     { "provider": "Clue", "at": "14:22", "title": "Slad: mala klapka znaleziona przy lesie nad wyplywem potoku", "detail": "Turysta znalazl dzieciecy klapek przy sciezce w lesie, zgodny z opisem obuwia.", "point": [49.2030, 20.0725], "radiusM": 150 },
-    { "provider": "SegmentSearched", "at": "14:35", "title": "Patrol GOPR: brzeg zachodni i sciezka widokowa, nic", "detail": "Zespol B przeszukal brzeg zachodni i gorna sciezke. POD 65%.", "segments": ["M2", "M4"], "pod": 0.65 },
+    { "provider": "SegmentSearched", "at": "14:35", "title": "Patrol TOPR: brzeg zachodni i sciezka widokowa, nic", "detail": "Zespol B przeszukal brzeg zachodni i gorna sciezke. POD 65%.", "segments": ["M2", "M4"], "pod": 0.65 },
     { "provider": "DronePassEmpty", "at": "14:45", "title": "Dron: przelot nad otwartym terenem brzegu, nic", "detail": "Dron widzi tylko otwarty teren, pod drzewami las zasloniety. POD 60% (ograniczone pod drzewostanem).", "segments": ["M1", "M2", "M4"], "pod": 0.6 },
     { "provider": "Clue", "at": "14:58", "title": "Meldunek: pies ratowniczy zaznaczyl w zagajniku, dziecko znalezione", "detail": "Pies zaznaczyl w gestym zagajniku przy wyplywie potoku, dziecko przestraszone ale bezpieczne. Zgloszone przez patrol, nie GPS.", "point": [49.2030, 20.0725], "radiusM": 30 }
   ],
   "resources": [
-    { "id": "gopr-a", "name": "Patrol GOPR A (schronisko)", "type": "ground", "base": [49.2015, 20.0713], "readyAt": "14:00" },
-    { "id": "gopr-b", "name": "Patrol GOPR B (parking Palenica)", "type": "ground", "base": [49.2297, 20.0999], "readyAt": "14:20" },
+    { "id": "gopr-a", "name": "Patrol TOPR A (schronisko)", "type": "ground", "base": [49.2015, 20.0713], "readyAt": "14:00" },
+    { "id": "gopr-b", "name": "Patrol TOPR B (parking Palenica)", "type": "ground", "base": [49.2297, 20.0999], "readyAt": "14:20" },
     { "id": "dog", "name": "Zespol z psem tropiacym", "type": "dog", "base": [49.2015, 20.0713], "readyAt": "14:10" },
     { "id": "drone", "name": "Dron termowizyjny", "type": "drone", "base": [49.2015, 20.0713], "readyAt": "14:30" },
     { "id": "heli", "name": "Smiglowiec TOPR", "type": "heli", "base": [49.293, 19.964], "readyAt": "14:15" }

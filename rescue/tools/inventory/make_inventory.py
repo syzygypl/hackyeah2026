@@ -83,6 +83,8 @@ def home_variant(uid, kind, h):
     crew = crew_for(uid, kind, h["name"])
     if op and kind in ("pies", "dron", "lodz", "nurkowie", "smiglowiec"):
         crew = [dict(c, role=f"{c['role']} ({op})") for c in crew]
+    if op == "TOPR":   # Tatras: gopr-a / gopr-b ids are TOPR patrols there, label the crew TOPR too (display only)
+        crew = [dict(c, name=c["name"].replace("GOPR-", "TOPR-")) for c in crew]
     return {"name": h["name"], "readyAt": h.get("readyAt"), "base": base_of(h["name"]), "operator": op, "crew": crew}
 
 

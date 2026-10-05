@@ -94,7 +94,7 @@
  "resources": [
   {
    "id": "gopr-a",
-   "name": "Patrol GOPR A (schronisko)",
+   "name": "Patrol TOPR A (schronisko)",
    "type": "ground",
    "base": [
     49.2015,
@@ -104,7 +104,7 @@
   },
   {
    "id": "gopr-b",
-   "name": "Patrol GOPR B (parking Palenica)",
+   "name": "Patrol TOPR B (parking Palenica)",
    "type": "ground",
    "base": [
     49.2297,

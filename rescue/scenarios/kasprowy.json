@@ -55,13 +55,13 @@
     { "provider": "TripPlan", "at": "14:55", "title": "Plan od partnera: zjazd poza trasa w strone Goryczkowej", "detail": "\"Mial zjechac poza wyznaczona trasa w strone zachodniego zbocza Goryczkowej Czuby i wrocic kolejka z Kuznic.\"", "points": [[49.2324, 19.9814], [49.2367, 19.9760], [49.2390, 19.9700], [49.2400, 19.9650]], "radiusM": 250 },
     { "provider": "Cell112Fix", "at": "15:10", "title": "CPR 112: ostatni sektor BTS 13:15", "detail": "Lokalizacja sieciowa operatora, promien bledu ok. 1.3 km.", "point": [49.2324, 19.9814], "radiusM": 1300 },
     { "provider": "WeatherConditions", "at": "15:30", "title": "Zmrok, -9C, wiatr rosnie do 15 m/s", "detail": "Smiglowiec uziemiony (wiatr i whiteout), dron uziemiony (wiatr >12 m/s).", "tempC": -9, "windMs": 15, "dark": true, "ice": true },
-    { "provider": "SegmentSearched", "at": "15:50", "title": "Patrol GOPR: grzbiet Goryczkowej Czuby, nic", "detail": "Zespol A sprawdzil grzbiet i gorna czesc stoku. POD 65%.", "segments": ["K2"], "pod": 0.65 },
-    { "provider": "SegmentSearched", "at": "16:20", "title": "Patrol GOPR: Hala Gasienicowa i okolice Murowanca, nic", "detail": "Zespol B sprawdzil hale i szlak do schroniska. POD 75%.", "segments": ["K5", "K6"], "pod": 0.75 },
+    { "provider": "SegmentSearched", "at": "15:50", "title": "Patrol TOPR: grzbiet Goryczkowej Czuby, nic", "detail": "Zespol A sprawdzil grzbiet i gorna czesc stoku. POD 65%.", "segments": ["K2"], "pod": 0.65 },
+    { "provider": "SegmentSearched", "at": "16:20", "title": "Patrol TOPR: Hala Gasienicowa i okolice Murowanca, nic", "detail": "Zespol B sprawdzil hale i szlak do schroniska. POD 75%.", "segments": ["K5", "K6"], "pod": 0.75 },
     { "provider": "RatunekPing", "at": "16:45", "title": "Ratunek: ping GPS, dokladnosc 40 m", "detail": "Telefon zlapal zasieg na chwile w przerwie miedzy opadami, aplikacja wyslala pozycje.", "point": [49.2385, 19.9690], "radiusM": 40 }
   ],
   "resources": [
-    { "id": "gopr-a", "name": "Patrol GOPR A (4 os.)", "type": "ground", "base": [49.2516, 19.9793], "readyAt": "15:20" },
-    { "id": "gopr-b", "name": "Patrol GOPR B (stacja gorna)", "type": "ground", "base": [49.2324, 19.9814], "readyAt": "15:00" },
+    { "id": "gopr-a", "name": "Patrol TOPR A (4 os.)", "type": "ground", "base": [49.2516, 19.9793], "readyAt": "15:20" },
+    { "id": "gopr-b", "name": "Patrol TOPR B (stacja gorna)", "type": "ground", "base": [49.2324, 19.9814], "readyAt": "15:00" },
     { "id": "dog", "name": "Zespol z psem lawinowym", "type": "dog", "base": [49.2516, 19.9793], "readyAt": "15:40" },
     { "id": "drone", "name": "Dron termowizyjny", "type": "drone", "base": [49.2324, 19.9814], "readyAt": "15:15" },
     { "id": "heli", "name": "Smiglowiec TOPR", "type": "heli", "base": [49.293, 19.964], "readyAt": "14:55" }

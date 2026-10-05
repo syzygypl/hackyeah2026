@@ -1814,49 +1814,49 @@
      ]
     },
     "kasprowy": {
-     "name": "Patrol GOPR A (4 os.)",
+     "name": "Patrol TOPR A (4 os.)",
      "readyAt": "15:20",
      "base": "baza wg scenariusza",
-     "operator": "GOPR",
+     "operator": "TOPR",
      "crew": [
       {
-       "name": "GOPR-A-1 (fikcyjny)",
+       "name": "TOPR-A-1 (fikcyjny)",
        "role": "kierownik patrolu"
       },
       {
-       "name": "GOPR-A-2 (fikcyjny)",
+       "name": "TOPR-A-2 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-A-3 (fikcyjny)",
+       "name": "TOPR-A-3 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-A-4 (fikcyjny)",
+       "name": "TOPR-A-4 (fikcyjny)",
        "role": "ratownik"
       }
      ]
     },
     "morskie-oko": {
-     "name": "Patrol GOPR A (schronisko)",
+     "name": "Patrol TOPR A (schronisko)",
      "readyAt": "14:00",
      "base": "schronisko",
-     "operator": "GOPR",
+     "operator": "TOPR",
      "crew": [
       {
-       "name": "GOPR-A-1 (fikcyjny)",
+       "name": "TOPR-A-1 (fikcyjny)",
        "role": "kierownik patrolu"
       },
       {
-       "name": "GOPR-A-2 (fikcyjny)",
+       "name": "TOPR-A-2 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-A-3 (fikcyjny)",
+       "name": "TOPR-A-3 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-A-4 (fikcyjny)",
+       "name": "TOPR-A-4 (fikcyjny)",
        "role": "ratownik"
       }
      ]
@@ -1957,49 +1957,49 @@
      ]
     },
     "kasprowy": {
-     "name": "Patrol GOPR B (stacja gorna)",
+     "name": "Patrol TOPR B (stacja gorna)",
      "readyAt": "15:00",
      "base": "stacja gorna",
-     "operator": "GOPR",
+     "operator": "TOPR",
      "crew": [
       {
-       "name": "GOPR-B-1 (fikcyjny)",
+       "name": "TOPR-B-1 (fikcyjny)",
        "role": "kierownik patrolu"
       },
       {
-       "name": "GOPR-B-2 (fikcyjny)",
+       "name": "TOPR-B-2 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-B-3 (fikcyjny)",
+       "name": "TOPR-B-3 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-B-4 (fikcyjny)",
+       "name": "TOPR-B-4 (fikcyjny)",
        "role": "ratownik"
       }
      ]
     },
     "morskie-oko": {
-     "name": "Patrol GOPR B (parking Palenica)",
+     "name": "Patrol TOPR B (parking Palenica)",
      "readyAt": "14:20",
      "base": "parking Palenica",
-     "operator": "GOPR",
+     "operator": "TOPR",
      "crew": [
       {
-       "name": "GOPR-B-1 (fikcyjny)",
+       "name": "TOPR-B-1 (fikcyjny)",
        "role": "kierownik patrolu"
       },
       {
-       "name": "GOPR-B-2 (fikcyjny)",
+       "name": "TOPR-B-2 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-B-3 (fikcyjny)",
+       "name": "TOPR-B-3 (fikcyjny)",
        "role": "ratownik"
       },
       {
-       "name": "GOPR-B-4 (fikcyjny)",
+       "name": "TOPR-B-4 (fikcyjny)",
        "role": "ratownik"
       }
      ]
@@ -6586,7 +6586,7 @@
   {
    "id": "psp-boat",
    "kind": "lodz",
-   "name": "Łódź PSP JRG Pisz",
+   "name": "Łódź PSP JRG Pisz 1",
    "base": "baza wg scenariusza",
    "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
    "callsign": "PSP-434",
@@ -6630,7 +6630,7 @@
    ],
    "byHome": {
     "sniardwy": {
-     "name": "Łódź PSP JRG Pisz",
+     "name": "Łódź PSP JRG Pisz 1",
      "readyAt": "17:20",
      "base": "baza wg scenariusza",
      "operator": "PSP",
@@ -7381,7 +7381,7 @@
   {
    "id": "psp-pisz-lodz",
    "kind": "lodz",
-   "name": "Łódź PSP JRG Pisz",
+   "name": "Łódź PSP JRG Pisz 2",
    "base": "baza wg scenariusza",
    "model": "łódź ratownicza z silnikiem zaburtowym (fikcyjny egz.)",
    "callsign": "PSP-929",
@@ -7425,7 +7425,7 @@
    ],
    "byHome": {
     "mazury-burza-sniardwy": {
-     "name": "Łódź PSP JRG Pisz",
+     "name": "Łódź PSP JRG Pisz 2",
      "readyAt": "16:20",
      "base": "baza wg scenariusza",
      "operator": "PSP",

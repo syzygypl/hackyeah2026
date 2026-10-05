@@ -417,7 +417,7 @@ export const EXAMPLES = {
 };
 EXAMPLES["morskie-oko"] = [
   "Turysta widział dziewczynkę o 14:20 przy wypływie potoku, szła w stronę schroniska",
-  "Patrol GOPR A przeszukał brzeg wschodni jeziora, nic",
+  "Patrol TOPR A przeszukał brzeg wschodni jeziora, nic",
   "Znaleziono różową czapkę na brzegu zachodnim jeziora",
   "Słychać płacz koło M7 10 min temu",
   "Dron przeleciał nad M7 i M8, nic",

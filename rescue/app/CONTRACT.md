@@ -209,7 +209,7 @@ Blind-test scenarios are never listed. Runs are cached per (sc, live version), s
 
 ### Shared team roster across incidents
 
-- `GET /api/teams` -> `[{ "id": "gopr-a", "name": "Patrol GOPR A", "kind": "pieszy", "base": [lat, lon], "sc": "kasprowy" | null, "segmentId": "S3" | null, "status": "wolny" | "w drodze" | "w akcji", "home": ["bieszczady-wetlinska", "kasprowy", ...] }]`
+- `GET /api/teams` -> `[{ "id": "gopr-a", "name": "Patrol TOPR A", "kind": "pieszy", "base": [lat, lon], "sc": "kasprowy" | null, "segmentId": "S3" | null, "status": "wolny" | "w drodze" | "w akcji", "home": ["bieszczady-wetlinska", "kasprowy", ...] }]`
   - seeded from the `resources` of all scenario files, deduped by `id` (first file wins for name/base); `home` = scenarios whose file defines the team.
   - `kind` from the resource type: ground -> pieszy, dog -> pies, drone -> dron, heli -> smiglowiec, boat -> lodz, diver -> nurkowie (other types pass through).
   - `status`: `wolny` = not attached (`sc: null`); `w drodze` = attached to an incident, no segment yet; `w akcji` = attached and assigned to a segment of that incident.
