@@ -213,7 +213,7 @@ body.narrow2d .chip .srch, body.narrow2d .chip .asg { font-size: 10px; }
 .lg-note { color: var(--mute); font-size: 11px; margin-top: 3px; }
 .lg-keys { display: flex; gap: 12px; margin-top: 4px; color: var(--ink-2); }
 .lg-keys .k { display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 4px; }
-.k.ln-seg { border-top: 3px solid #fff; } .k.ln-srch { border-top: 2px dashed #b9c9da; }
+.k.ln-seg { border-top: 3px solid #fff; } .k.ln-srch { border-top: 2px dashed #b9c9da; } .k.ln-srch.weak { border-top: 1px dashed #b9c9da; opacity: .6; }
 .lg-diff { display: grid; grid-template-columns: repeat(2, auto); gap: 3px 12px; }
 .lg-diff span { display: flex; gap: 6px; align-items: center; }
 .lg-diff .lg-sw { width: 14px; }

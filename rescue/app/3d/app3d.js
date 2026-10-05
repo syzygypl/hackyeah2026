@@ -1788,6 +1788,9 @@ function drawSignal(e, isCur) {
 
 // ---------- step state ----------
 let STEP = -1, TL3D = null, WALK = null;
+// sens-funkcji R2-6: cumulative POD per searched sector (1 - Π(1 - pod)); below 0.5 the outline is fainter ("sprawdzony (słabo)",
+// as 2D web/app.js WEAK_POD and Odprawa's cumPod >= 0.5); no pod in the event = not graded
+const podUpTo = (i) => { const m = new Map(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step) && e.pod > 0) (e.segments || []).forEach((id) => m.set(id, 1 - (1 - (m.get(id) || 0)) * (1 - e.pod))); }); return m; };
 const searchedUpTo = (i) => { const s = new Set(); EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) (e.segments || []).forEach((id) => s.add(id)); }); return s; };
 // evidence id = step's hintId (string) or step index; '*' with on:true restores all
 const stepOfEvidence = (id) => (Number.isInteger(id) ? id : R.steps.findIndex((s) => s.hintId === id));
@@ -1835,7 +1838,8 @@ function setStep(i, animate = true, fromTime = false) {
   drawTop(ranked);
   disposeGroup(dyn.searched);
   const searched = searchedUpTo(i);
-  for (const id of searched) { const g = segs.get(id); if (g) drapeRuns(ringLL(g.polygon), 0.018, { color: '#555b61', width: 1.8, opacity: 0.9, dashed: true, dash: 0.035, gap: 0.03 }, dyn.searched); }
+  const podS = podUpTo(i);
+  for (const id of searched) { const g = segs.get(id), weak = podS.has(id) && podS.get(id) < 0.5; if (g) drapeRuns(ringLL(g.polygon), 0.018, { color: '#555b61', width: weak ? 1.2 : 1.8, opacity: weak ? 0.55 : 0.9, dashed: true, dash: weak ? 0.02 : 0.035, gap: weak ? 0.04 : 0.03 }, dyn.searched); }
   disposeGroup(dyn.signals);
   EVENTS.forEach((e) => { if (e.step >= 0 && e.step <= i && !OFF.has(e.step)) drawSignal(e, e.step === i); });
   drawTeams(s);
@@ -1885,7 +1889,7 @@ function drawTeams(s) {
 // ---------- legend (shared scale) ----------
 const LEGEND_HEAT = `<div class="lg-title" title="Waga mapy w komórce 100 x 100 m względem średniej: 1× = średnio ${nf(100 / (R.rows * R.cols), 3)}% na komórkę (${STOPS.map((x) => x.label).join(' · ')}); poniżej 0,5× bez koloru">Waga mapy <span class="lg-sub" style="cursor:help">ⓘ</span></div><i class="ramp" style="background:${gradientCSS()}"></i>
     <div class="stops"><span>niska</span><span>średnia</span><span>wysoka</span></div>
-    <div class="lg-keys"><span><i class="k-top"></i>top 3</span><span><i class="k-srch"></i>przeszukany</span></div>`;
+    <div class="lg-keys"><span><i class="k-top"></i>top 3</span><span><i class="k-srch"></i>przeszukany</span><span title="Skumulowane POD sektora poniżej 50%: przeszukanie słabe, sektor może wymagać ponownego"><i class="k-srch weak"></i>sprawdzony (słabo)</span></div>`;
 const LEGEND_DIFF = `<div class="lg-title">Trudność terenu (silnik)</div><div class="lg-diff">${(R.difficultyClasses || []).map((c) => `<span><i style="background:${DIFF_COLORS[c.id] || '#000'}"></i>${esc(c.label)}</span>`).join('')}</div>`;
 // embed=scene: legend box top-left and controls top-right, laid out like the 2D screen's #legend / #mapctl
 if (EMB === 'scene') {

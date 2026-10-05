@@ -247,6 +247,11 @@
     return M.segList.map((g, j) => ({ id: g.id, name: g.name, poa: sp[j], areaPct: g.areaPct, density: g.areaPct > 0 ? sp[j] / (g.areaPct / 100) : 0 }))
       .sort((a, b) => b.poa - a.poa);
   }
+  // sens-funkcji R2-6: two grades of a searched sector by its cumulative POD (1 - Π(1 - pod), as the engine's segmentHistory cumPod):
+  // below 0.5 "sprawdzony (słabo)", from 0.5 "przeszukany" - the same cut as Odprawa's hatching of searched sectors (app/odprawa.js,
+  // cumPod >= 0.5). pod 0 = no POD given in the report (the engine then assumes 0.7, see M.prog), so it stays "przeszukany".
+  // Labels only: the ranking / top 3 do not read this.
+  const WEAK_POD = 0.5, weakSr = (sr) => !!sr && sr.pod > 0 && sr.pod < WEAK_POD, srWord = (sr) => (weakSr(sr) ? 'sprawdzony (słabo)' : 'przeszukany');
   function searchedState(step) {
     const out = {};
     for (const h of S.M.hints) {
@@ -421,7 +426,8 @@
     }
     for (const id of Object.keys(searched)) {
       const g = M.segs.get(id); if (!g || !g.polygon) continue;
-      f.push(poly(g.polygon, { color: '#b9c9da', width: 2, opacity: 0.95, dash: 1, fill: '#9fb3c8', fillOpacity: 0.2 }));
+      const weak = weakSr(searched[id]);   // R2-6: a weak search is a fainter outline and wash, so it does not read as closed
+      f.push(poly(g.polygon, { color: '#b9c9da', width: weak ? 1.4 : 2, opacity: weak ? 0.6 : 0.95, dash: 1, fill: '#9fb3c8', fillOpacity: weak ? 0.06 : 0.2 }));
     }
     // IPP
     const ipp = M.R.ipp;
@@ -443,9 +449,9 @@
       // no POA % on the map (as the app panels, 7a56e92): a juror reads it as a chance - rank for the top 3, the name/id for the rest
       const nm = top || S.fullNames || g.id === S.selected ? esc(g.name) : esc(g.id);
       const asg = (M.R.steps[step].assignments || []).filter((a) => a.segmentId === g.id).map((a) => { const r = (M.R.steps[step].resources || []).find((x) => x.id === a.resourceId); return resLabel(r) || a.resourceId; });
-      const extra = (sr ? '<span class="srch">przeszukany</span>' : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');   // POD in the tooltip (review b0858be)
+      const extra = (sr ? `<span class="srch">${srWord(sr)}</span>` : '') + (asg.length ? `<span class="asg">${esc(asg.join(', '))}</span>` : '');   // POD in the tooltip (review b0858be)
       chips.push({ key: 'seg:' + g.id, at: g.center, cls: 'chip seg' + (top ? ' top top' + r : '') + (sr ? ' searched' : '') + (g.id === S.selected ? ' sel' : ''),
-        html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}${r ? `: #${r} z ${M.segList.length} w rankingu` : ''}, obszar ${nf(g.areaPct, 1)}%${sr ? `, przeszukany${sr.pod != null ? ' (POD ' + pct(sr.pod) + ')' : ''}` : ''}`, seg: g.id });
+        html: (top ? `<b class="rk">#${r}</b> ` : '') + nm + extra, title: `${g.id} ${g.name}${r ? `: #${r} z ${M.segList.length} w rankingu` : ''}, obszar ${nf(g.areaPct, 1)}%${sr ? `, ${srWord(sr)}${sr.pod != null ? ' (POD ' + pct(sr.pod) + ')' : ''}` : ''}`, seg: g.id });
     }
     return { fc: FC(f), chips, weather };
   }
@@ -1002,7 +1008,7 @@
     $('#rankmode').textContent = S.disabled.size && M.hints.some((h) => h.k <= S.step && S.disabled.has(h.id)) ? 'przeliczony w przeglądarce' : 'silnik, krok ' + (S.step + 1);
     $('#ranking tbody').innerHTML = st.map((s, j) => {
       const top = j < 3, sr = searched[s.id];
-      const tags = (sr ? `<span class="tag-s"${sr.pod != null ? ` title="POD ${pct(sr.pod)}"` : ''}>przeszukany</span>` : '') + (S.showTruth && s.id === truth ? '<span class="tag-t">odnaleziony</span>' : '');
+      const tags = (sr ? `<span class="tag-s"${sr.pod != null ? ` title="POD ${pct(sr.pod)}"` : ''}>${srWord(sr)}</span>` : '') + (S.showTruth && s.id === truth ? '<span class="tag-t">odnaleziony</span>' : '');
       const task = top ? `<div class="task">${esc(taskFor(s.name))}</div>` : '';
       return `<tr class="${top ? 'top' : ''}${s.id === S.selected ? ' sel' : ''}" data-seg="${esc(s.id)}">
         <td class="rk">${top ? `<span class="badge">${j + 1}</span>` : j + 1}</td>
@@ -1120,7 +1126,7 @@
     $('#legend').title = `Waga mapy w komórce 100 x 100 m względem średniej: 1× = średnio ${pct(1 / S.M.N, 3)} na komórkę (${SCALE.STOPS.map((x) => x.label).join(' · ')}); poniżej 0,5× bez koloru`;   // sens-funkcji #13: niska / średnia / wysoka like the phone, multipliers in the (i) title
     $('#legend').innerHTML = `<div class="lg-title">Waga mapy <span class="lg-sub" style="cursor:help">ⓘ</span></div><div class="lg-ramp" style="background:${SCALE.gradientCSS()}"></div>
       <div class="lg-stops"><span>niska</span><span>średnia</span><span>wysoka</span></div>
-      <div class="lg-keys"><span><i class="k ln-seg"></i>top 3</span><span><i class="k ln-srch"></i>przeszukany</span></div>`;
+      <div class="lg-keys"><span><i class="k ln-seg"></i>top 3</span><span><i class="k ln-srch"></i>przeszukany</span><span title="Skumulowane POD sektora poniżej 50%: przeszukanie słabe, sektor może wymagać ponownego"><i class="k ln-srch weak"></i>sprawdzony (słabo)</span></div>`;
   }
 
   function renderBaseSwitch() {
