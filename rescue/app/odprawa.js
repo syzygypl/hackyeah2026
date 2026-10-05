@@ -58,7 +58,7 @@
     const title = String(run.incident || SC).replace(/\s*\(scenariusz fikcyjny\)\s*$/, "");
     document.title = `Odprawa ${st.t} - ${title}`;
     $("incident").textContent = title;
-    $("meta").innerHTML = `<b>${esc(run.date || "")}, godz. ${esc(st.t)}</b> · ${live ? "akcja na żywo" : "nagranie (Historia)"} · ${esc(SC)} · stan po: ${esc(st.label)}`;
+    $("meta").innerHTML = `<b>${esc(run.date || "")}, godz. ${esc(st.t)}</b> · ${live ? "akcja na żywo" : "nagranie (Historia)"} · stan po: ${esc(st.label)}`;
 
     const sub = (scen && scen.subject) || {};
     $("person").innerHTML = `<b>${esc(sub.name || "brak danych")}</b>${sub.age ? `, ${esc(sub.age)} lat` : ""}${sub.category ? ` <span class="mute">(${esc(catPL(sub.category))})</span>` : ""}<br>${esc(sub.note || "")}`;
@@ -73,7 +73,7 @@
       : cur < s.set ? `do zachodu <b>${dur(s.set - cur)}</b> (zachód ${hm(s.set)}, zmrok ${hm(s.dusk)})`
       : `po zachodzie (${hm(s.set)}), ciemno do wschodu <b>${hm(s.rise)}</b> (${dur(s.rise + 1440 - cur)})`;
     const wx = [w.tempC != null ? `${w.tempC}°C` : "", w.windMs != null ? `wiatr ${w.windMs} m/s` : "", w.visibilityM != null ? `widzialność ${w.visibilityM} m` : "", w.precip && w.precip !== "none" ? precipPL(w.precip) : "", w.ice ? "oblodzenie" : ""].filter(Boolean).join(", ");
-    $("weather").innerHTML = `${wx || "brak danych"}<br>Światło: ${light}` + (w.survival ? `<br><span class="warn ${w.survival.level === "wysoki" || w.survival.level === "krytyczny" ? "red" : ""}">${esc(String(w.survival.text || "").replace(/(\d)\.(\d)(?= h\b)/g, "$1,$2"))}</span>` : "") + (w.note ? `<br><span class="mute od-weather-note">${esc(w.note)}</span>` : "");
+    $("weather").innerHTML = `${wx || "brak danych"}<br>Światło: ${light}` + (w.survival ? `<br><span class="warn ${w.survival.level === "wysoki" || w.survival.level === "krytyczny" ? "red" : ""}">${esc(hypo(String(w.survival.text || "").replace(/(\d)\.(\d)(?= h\b)/g, "$1,$2")))}</span>` : "") + (w.note ? `<br><span class="mute od-weather-note">${esc(w.note)}</span>` : "");
 
     const top = st.segments.slice(0, 3), area = top.reduce((a, x) => a + (+x.areaPct || 0), 0);
     $("topNote").textContent = `· top 3 to ${pct(area)} obszaru`;
@@ -103,7 +103,8 @@
     const list = ev.length ? ev : run.steps.filter((x) => x.minute <= st.minute && !skip.has(x.kind)).slice(-3);
     $("events").innerHTML = (ev.length ? "" : `<li class="mute">Brak nowych zdarzeń w ostatniej godzinie. Ostatnie:</li>`) + list.map((x) => `<li><span class="mono">${esc(x.t)}</span> ${esc(x.label)}</li>`).join("");
 
-    $("src").textContent = `Źródło: silnik Rescue Locator, ${live ? "GET /api/run (na żywo)" : "nagranie scenariusza"}, krok ${run.steps.indexOf(st) + 1}/${run.steps.length}, wydruk ${new Date().toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })}.`;
+    // sens-funkcji R2-8: no API path / step counter on the printed sheet
+    $("src").textContent = `Stan na ${st.t}${live ? " (na żywo)" : " (nagranie)"}, wydruk ${new Date().toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}, Rescue Locator.`;
     drawMap(run, st, top);
     fit();
     cards(run, st, top, now, warns, inv, live);
@@ -131,12 +132,12 @@
             <p>Sektor: ${(+seg.areaPct || 0).toFixed(1).replace(".", ",")}% obszaru</p>
             <table class="tc-t"><tr><th>Wyjście</th><td>${esc(st.t)}</td></tr><tr><th>Na miejscu ok.</th><td>${hm(now + tr)} (dojście ${tr} min)</td></tr>
               <tr><th>Koniec przeszukania ok.</th><td>${hm(now + tr + sw)} (${sweepTxt(a)})</td></tr><tr><th>Skuteczność (POD)</th><td>${a.pod != null ? "ok. " + Math.round(a.pod * 100) + "%" : "-"}</td></tr>
-              <tr><th>Meldunek co</th><td>30 min i po sektorze</td></tr><tr><th>Kanał</th><td class="write"></td></tr></table>
-            ${u.crew && u.crew.length ? `<p class="small">Skład: ${esc(u.crew.map((c) => c.name).join(", "))}</p>` : ""}
+              <tr><th>Meldunek co</th><td>30 min i po sektorze</td></tr></table>
+            ${u.crew && u.crew.length ? `<p class="small">Skład (dane fikcyjne): ${esc(u.crew.map((c) => String(c.name).replace(/\s*\(fikcyjn\w*\)/g, "")).join(", "))}</p>` : ""}
           </div>
         </div>
         ${flags.length ? `<div class="tc-safety"><h3>Bezpieczeństwo i warunki</h3><ul>${flags.join("")}</ul></div>` : ""}
-        <div class="tc-report"><h3>Meldunek zwrotny</h3><span>☐ przeszukane, nic</span><span>☐ częściowo</span><span>☐ ślad / znaleziono</span><span>godz. ______</span><span>uwagi: ____________________________</span></div>
+        <div class="tc-report"><h3>Meldunek zwrotny</h3><span>☐ przeszukane, nic</span><span>☐ częściowo</span><span>☐ ślad / znaleziono</span><span>godz. ______</span><span>kanał ______</span><span>uwagi: ____________________________</span></div>
         <footer>Dane fikcyjne / narzędzie pomocnicze - decyzję podejmuje kierownik akcji.</footer>
       </article>`;
     }).join("") || `<p class="mute">Brak przydziałów w tej chwili.</p>`;
@@ -163,7 +164,8 @@
   function notes(st, id, safety, warns) {
     const r = (st.resources || []).find((x) => x.id === id) || {}, out = [];
     for (const x of safety || []) out.push({ t: x, red: true });
-    for (const w of warns[id] || []) out.push({ t: w.text, red: w.level === "red" });
+    // R2-8: dog work as words like Zasoby (unitcard.js, #24), not "przerwa za 1 min"
+    for (const w of warns[id] || []) out.push({ t: w.code === "dogwork" ? (w.level === "red" ? "Pies: wymaga odpoczynku teraz" : "Pies: przerwa wkrótce") : w.text, red: w.level === "red" });
     const m = /\(([^)]+)\)/.exec(r.reason || ""); if (m && !/doszedł|dyżurk|przekierow/.test(m[1])) out.push({ t: "warunki: " + m[1] });
     const wn = st.weather && st.weather.note; if (wn && (r.type === "heli" || r.type === "drone") && /dron|śmigłow|lot|NVG/i.test(wn)) out.push({ t: wn.replace(/^Widzialność \d+ m\.\s*/, "") });
     return out;
@@ -175,6 +177,8 @@
   const done = (st, r) => r.busyUntilMinute != null && r.busyUntilMinute <= st.minute;
   const resName = (st, id) => ((st.resources || []).find((r) => r.id === id) || {}).name || id;
   const catPL = (c) => ({ hiker: "turysta pieszy", child: "dziecko", dementia: "osoba z demencją", hunter: "grzybiarz / myśliwy", water: "na wodzie", skier: "narciarz" })[c] || c;
+  // R2-8: the engine says "ryzyko hipotermii wysoki"; risk (ryzyko) is neuter
+  const hypo = (t) => t.replace(/ryzyko hipotermii (krytyczny|wysoki|podwyższony|niski)\b/, (m, l) => "ryzyko hipotermii " + ({ krytyczny: "krytyczne", wysoki: "wysokie", "podwyższony": "podwyższone", niski: "niskie" })[l]);
   const precipPL = (p) => ({ rain: "deszcz", snow: "śnieg", drizzle: "mżawka" })[p] || p;
 
   // whole area (briefing) or one sector zoomed (task card: view = padded sector bbox, focus = its id, outlined in navy)

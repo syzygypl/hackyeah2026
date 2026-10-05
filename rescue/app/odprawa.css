@@ -122,3 +122,4 @@ body.karty .cards{display:block;width:210mm;margin:16px auto}
 /* blank fields to fill in by hand: a dotted writing line, no box (review b0858be) */
 td.write{position:relative}td.write::after{content:"";position:absolute;left:1.4mm;right:2mm;bottom:1.2mm;border-bottom:1px dotted var(--rl-ink-2)}
 .od-radio tr:has(td.write) th,.od-radio tr:has(td.write) td,.tc-t tr:has(td.write) th,.tc-t tr:has(td.write) td{border-bottom:0}
+.od-bar label{max-width:100%;min-width:0}.od-bar select{min-width:0;max-width:100%;flex:1 1 auto;text-overflow:ellipsis}
