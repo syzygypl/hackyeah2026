@@ -72,7 +72,7 @@ def main():
         pc, ce = browser(tmp, "ce", 1440, 900); procs.append(pc)
         pp, ph = browser(tmp, "ph", 390, 844, True); procs.append(pp)
         op.call("Page.navigate", {"url": f"{B}/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=live"})
-        ce.call("Page.navigate", {"url": f"{B}/app/centrum.html"})
+        ce.call("Page.navigate", {"url": f"{B}/app/centrum.html?sim=0"})   # sim 24/7 on groups cards as Na zywo z terenu / Nagrania (0a19ce8)
         ph.call("Page.navigate", {"url": f"{B}/web/patrol/?team=topr-a&sc=zawrat&run=/api/run/zawrat&me=49.216,20.018"})
         v, _ = wait(op, "!document.getElementById('liveSend').disabled && document.querySelectorAll('#segs .seg').length>=3", 90)
         check("operator live ready", bool(v))
