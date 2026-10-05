@@ -65,7 +65,7 @@
   .b-done { background: var(--rl-ok); color: var(--rl-on-ok); } .b-part { background: var(--rl-card); color: var(--rl-ok); border: 2px solid var(--rl-ok); }
   .b-clue { background: var(--rl-danger); color: var(--rl-on-danger); grid-column: span 2; font-size: 21px; min-height: 72px; letter-spacing: .5px; }
   .b-more { background: var(--rl-card); color: var(--rl-ink); border: 1px solid var(--rl-line); grid-column: span 2; min-height: 48px; font-size: 16px; font-weight: 700; }
-  .b-wx { background: var(--rl-accent); color: var(--rl-on-accent); } .b-status { background: var(--rl-card); color: var(--rl-accent); border: 2px solid var(--rl-accent); }
+  .b-wx { background: var(--rl-card); color: var(--rl-accent); border: 2px solid var(--rl-accent); } .b-status { background: var(--rl-card); color: var(--rl-accent); border: 2px solid var(--rl-accent); }
   .sub { font-size: 12px; font-weight: 500; display: block; opacity: .9; margin-top: 2px; }
   textarea, input[type=text] { width: 100%; font: inherit; font-size: 17px; padding: 12px; border-radius: 12px; border: 1px solid var(--rl-line-strong); background: var(--rl-card); color: var(--rl-ink); }
   .row { display: flex; gap: 8px; margin-top: 8px; }
@@ -123,6 +123,7 @@
 
 <dialog id="more"><form method="dialog">
   <h2>Meldunek</h2>
+  <div class="muted" style="font-size:13px;margin:0 0 4px">Szybko:</div>
   <section class="grid">
     <button type="button" class="b-wx" data-act="wx">Pogoda</button>
     <button type="button" class="b-status" data-act="status">Status zespołu</button>
