@@ -87,7 +87,7 @@ def main():
             top = lambda r: [s["id"] for s in r["steps"][-1]["segments"][:3]]   # noqa: E731
             before = top(run)
             st, e, _ = P("/api/clue/weight", {"sc": SC, "clueId": a["id"], "weight": 0.5}, pin=FIELD)
-            check("field_key_cannot_weight", st == 401, f"{st} {e}")
+            check("field_key_cannot_weight", st == 403, f"{st} {e}")
             st, e, _ = P("/api/clue/weight", {"sc": SC, "clueId": a["id"], "weight": 0.5, "by": "ratownik"})
             check("ratownik_cannot_weight", st == 403, f"{st}")
             st, e, _ = P("/api/clue/weight", {"sc": SC, "clueId": a["id"], "weight": 1.7})
