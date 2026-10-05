@@ -321,7 +321,7 @@ impl SearchPlanner {
             "niski"
         };
         let pr = if c.precip == "none" { "" } else if c.precip == "rain" { ", deszcz" } else { ", śnieg" };
-        let txt = format!("{:.1} h od ostatniego kontaktu, {:.0}°C, wiatr {:.0} m/s{}: ryzyko hipotermii {}", h, c.temp_c, c.wind_ms, pr, level);
+        let txt = format!("{:.1} h od ostatniego kontaktu, {:.0}°C, wiatr {:.0} m/s{}: ryzyko hipotermii {}", h, c.temp_c, c.wind_ms, pr, ryzyko_neut(level));
         SearchPlannerSurvival { hours_out: h, level: level.into(), text: txt }
     }
 
@@ -372,7 +372,7 @@ impl SearchPlanner {
             "krytyczny"
         };
         let w = if why.is_empty() { String::new() } else { format!(", {}", why.join(", ")) };
-        let txt = format!("{:.1} h od ostatniego kontaktu, teraz {:.0}°C, minimum nocy {:.0}°C{}: ryzyko hipotermii {}", h, c.temp_c, t_min, w, level);
+        let txt = format!("{:.1} h od ostatniego kontaktu, teraz {:.0}°C, minimum nocy {:.0}°C{}: ryzyko hipotermii {}", h, c.temp_c, t_min, w, ryzyko_neut(level));
         SearchPlannerSurvival { hours_out: h, level: level.into(), text: txt }
     }
 
@@ -1051,5 +1051,15 @@ impl SearchPlanner {
     }
     pub fn pos_at(t: f64, curve: &[(f64, f64)]) -> f64 {
         curve.iter().rev().find(|x| x.0 <= t).map(|x| x.1).unwrap_or(0.0)
+    }
+}
+
+/// "ryzyko" is neuter: the text says "wysokie", the level key stays "wysoki".
+fn ryzyko_neut(level: &str) -> &'static str {
+    match level {
+        "krytyczny" => "krytyczne",
+        "wysoki" => "wysokie",
+        "podwyższony" => "podwyższone",
+        _ => "niskie",
     }
 }

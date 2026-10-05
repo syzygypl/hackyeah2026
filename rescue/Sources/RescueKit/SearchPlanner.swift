@@ -101,6 +101,11 @@ public enum SearchPlanner {
         return (true, r.type == "heli" && c.dark ? "dostępny (lot nocny z NVG)" : "dostępny")
     }
 
+    /// "ryzyko" is neuter: the text says "wysokie", the level key stays "wysoki".
+    static func ryzykoNeut(_ l: String) -> String {
+        ["krytyczny": "krytyczne", "wysoki": "wysokie", "podwyższony": "podwyższone"][l] ?? "niskie"
+    }
+
     public static func survival(_ s: Scenario, minute: Int, _ c: LocationHint.Conditions) -> Survival {
         if s.has("hypothermiaModel") { return survivalModel(s, minute: minute, c) }
         let last = s.minutePast(s.subject.lastContact ?? s.startClock)
@@ -112,7 +117,7 @@ public enum SearchPlanner {
         else if c.tempC < 8 || c.dark { level = "podwyższony" }
         else { level = "niski" }
         let txt = String(format: "%.1f h od ostatniego kontaktu, %.0f°C, wiatr %.0f m/s%@: ryzyko hipotermii %@",
-                         h, c.tempC, c.windMs, c.precip == "none" ? "" : c.precip == "rain" ? ", deszcz" : ", śnieg", level)
+                         h, c.tempC, c.windMs, c.precip == "none" ? "" : c.precip == "rain" ? ", deszcz" : ", śnieg", ryzykoNeut(level))
         return Survival(hoursOut: h, level: level, text: txt)
     }
 
@@ -134,7 +139,7 @@ public enum SearchPlanner {
         if s.subject.posture == "unresponsive" { score += 0.5; why.append("nieruchoma") }
         let level = score < 1 ? "niski" : score < 2 ? "podwyższony" : score < 3 ? "wysoki" : "krytyczny"
         let txt = String(format: "%.1f h od ostatniego kontaktu, teraz %.0f°C, minimum nocy %.0f°C%@: ryzyko hipotermii %@",
-                         h, c.tempC, tMin, why.isEmpty ? "" : ", " + why.joined(separator: ", "), level)
+                         h, c.tempC, tMin, why.isEmpty ? "" : ", " + why.joined(separator: ", "), ryzykoNeut(level))
         return Survival(hoursOut: h, level: level, text: txt)
     }
 
