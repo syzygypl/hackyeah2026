@@ -1385,7 +1385,7 @@ async function boot() {
     if (!store.scenList.length) throw new Error("Brak scenariuszy na serwerze.");
     renderPalette();
     let m = "akcja"; try { m = localStorage.getItem("rescue-app-mode") || "akcja"; } catch (e) {}
-    const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode"); if (m === "plan" || m === "cojesli") m = "edycja";   // sens-funkcji #11: Plan is now "Co jeśli", old ?mode=plan links still open it
+    const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode"); if ((m === "plan" || m === "cojesli") && !matchMedia("(max-width:600px)").matches) m = "edycja";   // sens-funkcji #11: Plan is now "Co jeśli", old ?mode=plan links still open it
     const want = q.get("sc") || (store.hasApi ? "zawrat" : null);
     if (want && store.scenList.some((s) => s.id === want)) $("scen").value = want;
     window.__boot?.step("Silnik - mapa poszukiwań…");   // boot loader (index.html): what is loading now
