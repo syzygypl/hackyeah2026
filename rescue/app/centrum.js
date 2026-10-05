@@ -116,7 +116,8 @@ async function pollLive() {
   if (has.live === false && Date.now() < liveRetry) return;
   try {
     const f = await api("/api/live?since=" + liveSeq); has.live = true;
-    for (const e of f.events || []) if (e.sc) liveBySc[e.sc] = { seq: e.seq, t: e.t };
+    if ((f.seq || 0) < liveSeq) { for (const k in liveBySc) liveBySc[k].zn = false; liveSeq = 0; }   // R3-8: Wyczyść akcję (feed back to seq 0) forgets old ZNALEZIONO
+    for (const e of f.events || []) if (e.sc) liveBySc[e.sc] = { seq: e.seq, t: e.t, zn: (liveBySc[e.sc] && liveBySc[e.sc].zn) || /ZNALEZIONO/.test(e.title || "") };   // R3-8: zn = the feed announced a find
     liveSeq = Math.max(liveSeq, f.seq || 0);
   } catch (e) { has.live = false; liveRetry = Date.now() + 60000; }
 }
@@ -222,8 +223,12 @@ function pathOf(x) {
   const r = regOf(x), s = short(x), t = x.title ? x.title.charAt(0).toUpperCase() + x.title.slice(1) : "";
   return pathText(r, !t || s.includes(" - ") ? s : t + (r && s === r.rejon ? "" : " · " + s));   // "Wizna - auto w Narwi" already says what
 }
-const modeOf = (x) => x.found ? "found" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident
-const BADGE = { live: "Na żywo", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE" };
+// R3-8: a "live" action with no event for > 6 h, or whose feed already said ZNALEZIONO, is not "Na żywo": grey badge, not counted
+const STALE_MS = 6 * 3600000, feedFound = (x) => !!(liveBySc[x.sc] && liveBySc[x.sc].zn);
+const isStale = (x) => x.live && !x.found && (feedFound(x) || (!!x.lastEventAt && Date.now() - new Date(x.lastEventAt) > STALE_MS));
+const staleTxt = (x) => feedFound(x) ? "ZNALEZIONO (feed)" : `bez zmian od ${Math.round((Date.now() - new Date(x.lastEventAt)) / 3600000)} h`;
+const modeOf = (x) => x.found ? "found" : isStale(x) ? "stale" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident
+const BADGE = { live: "Na żywo", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE", stale: "bez zmian" };
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); };
 // sens-funkcji R2-13: wall clock as "6 h temu" (one clock with the sim cards), the hour only in title
 const agoTxt = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return isNaN(m) ? "" : m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 2880 ? `${Math.round(m / 60)} h temu` : `${Math.round(m / 1440)} dni temu`; };
@@ -247,8 +252,8 @@ function render() {
   $("counts").title = "Źródło danych: " + (has.incidents ? "GET /api/incidents" : "GET /api/scenarios + /api/run/<sc> (zapas)") + " · zespoły: " + (has.teams ? "GET /api/teams" : "makieta w przeglądarce");
 }
 function countsPaint() {
-  const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
-  const liveSc = new Set(incidents.filter((x) => x.live && !x.found).map((x) => x.sc)), nSim = simOn() ? sim.view.filter((i) => i.state === "live" && !liveSc.has(i.sc)).length : null;   // R2-13: a sim occurrence of a scenario with a real LIVE action is not counted twice   // sens-funkcji #7: Symulacja 24/7 on - "N trwa (1 LIVE z terenu)", matches the cards (LIVE = real feed only)
+  const nLive = incidents.filter((x) => x.live && !x.found && !isStale(x)).length, nEnded = incidents.filter((x) => x.found).length;
+  const liveSc = new Set(incidents.filter((x) => x.live && !x.found && !isStale(x)).map((x) => x.sc)), nSim = simOn() ? sim.view.filter((i) => i.state === "live" && !liveSc.has(i.sc)).length : null;   // R2-13: a sim occurrence of a scenario with a real LIVE action is not counted twice   // sens-funkcji #7: Symulacja 24/7 on - "N trwa (1 LIVE z terenu)", matches the cards (LIVE = real feed only)
   $("counts").innerHTML = `${nSim != null ? `<b>${nSim + nLive} trwa</b>${nLive ? ` (<b style="color:var(--rl-danger)">${nLive} na żywo</b> z terenu)` : ""}` : `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} na żywo</b>` : ""}`}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !busyOf(t, busyScs())).length}/${teams.length}`;
 }
 function renderCards() {
@@ -261,7 +266,7 @@ function renderCards() {
     const simTwin = m === "live" && simOn() && sim.view.some((i) => i.sc === x.sc && i.state === "live") ? `<div class="simrel">Na tym terenie trwa też ćwiczenie (karta SYMULACJA wyżej) - to osobne zdarzenie.</div>` : "";
     const rf = x.replayFound && !x.found ? `<span class="mute" title="Plik scenariusza kończy się odnalezieniem; tu pokazujemy moment przed nim">odtworzenie z odnalezieniem</span>` : "";
     return `<article class="card ${m} ${hl === x.sc ? "hl" : ""} ${sel === x.sc ? "sel" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
-      <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="when mono">${when}</span></div>
+      <div class="ctop"><span class="badge ${m}">${m === "stale" ? staleTxt(x) : BADGE[m]}</span><span class="when mono">${when}</span></div>
       ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${openURL(x.sc)}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>${simTwin}
       ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw${x.top3.every((s) => s.areaPct != null) ? ` · top 3 to ${areaTxt(x.top3.reduce((a, s) => a + (+s.areaPct || 0), 0))} obszaru` : ""}</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span>${s.areaPct != null ? `<span class="mute">${areaTxt(s.areaPct)} obszaru</span>` : ""}</div>`).join("")}</div>`
         : `<div class="loading">${x.pending ? "Liczę mapę..." : "Brak mapy dla tej akcji."}</div>`}
@@ -1200,7 +1205,7 @@ let pickStudio = false, pickFocused = false, pickCur = new URLSearchParams(locat
 function renderPick() {
   if (!incidents.length) return;
   const pos = (adv && adv.positions) || {}, cur = pickCur;
-  const stOf = (x) => x.found ? "ended" : x.live ? "live" : (pos[x.sc] && PK_ST[pos[x.sc].status] && pos[x.sc].status) || "replay";   // incidents first (fresher), advisor positions.status as fallback
+  const stOf = (x) => x.found ? "ended" : x.live && !isStale(x) ? "live" : (pos[x.sc] && PK_ST[pos[x.sc].status] && pos[x.sc].status) || "replay";   // incidents first (fresher), advisor positions.status as fallback
   const timeOf = (x) => (pos[x.sc] && pos[x.sc].time) || (x.lastEventAt ? hhmm(x.lastEventAt) : x.lastClock || "");
   const linked = advLinked();
   const item = (x) => { const st = stOf(x), me = x.sc === cur;
@@ -1401,7 +1406,7 @@ function simPaint() {
     if (meta[r.i.sc]) simFetch(r.i.sc, r.c5);
     else if (!sim.mwait?.[r.i.sc]) { (sim.mwait ||= {})[r.i.sc] = 1; loadMeta(r.i.sc).then((md) => { if (md) { sim.cardSig = ""; simPaint(); } else simFetch(r.i.sc, r.c5); }); }
   }
-  const liveSc = new Set(incidents.filter((x) => x.live && !x.found).map((x) => x.sc));   // R2-13: a sim occurrence of a scenario with a real LIVE action is skipped (the LIVE card is the action); the simrel note stays as fallback
+  const liveSc = new Set(incidents.filter((x) => x.live && !x.found && !isStale(x)).map((x) => x.sc));   // R2-13: a sim occurrence of a scenario with a real LIVE action is skipped (the LIVE card is the action); the simrel note stays as fallback
   const sig = JSON.stringify([[...liveSc], rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d, !!meta[r.i.sc]]), tl.cur == null, teams.length, simLocal]);   // #7: meta (state line) and the roster (team count) repaint too
   if (sig === sim.cardSig) return; sim.cardSig = sig;
   countsPaint();   // sens-funkcji #7: header "N trwa" follows the sim cards
