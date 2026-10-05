@@ -6,6 +6,7 @@ import { offlineStyle, loadBasemap, ZAWRAT_BOUNDS, regionFor } from "../web/base
 import { EV_COL, evKind, shortEv, evGroups, groupOf, grpKind, marksHTML, tipHTML, focusTarget, focusUnion, hoverHold, foldPanel } from "./dock.js";   // compact dock, shared with Ćwiczenia
 import { paintGrid, legendHTML } from "./scale.js";
 import { showValidation } from "./validation.js";
+import { REJONY, MAP_DETAIL, regionOf } from "./regions.js";   // sens-funkcji #17: place names for "+ Nowa akcja"
 import { initRescuer, render as renderRescuer, pollTask, myTeam, startGps } from "./rescuer.js";   // shared heat scale (decision S2), same as 3D
 
 const $ = (id) => document.getElementById(id);
@@ -1411,36 +1412,93 @@ boot();
   async function loadPlaces() {
     if (places) return places;
     const ids = (store.scenList || []).filter((s) => s.api).map((s) => s.id);
+    const pretty = (id) => id.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());   // never a raw slug like "lawina-wolowiec"
     places = (await Promise.all(ids.map(async (id) => {
-      try { const sc = await (await fetch(`../scenarios/${id}.json`, { cache: "no-cache" })).json(); return sc.ipp && sc.ipp.at ? { id, name: sc.incident ? sc.incident.split(" - ").slice(1).join(" - ").replace(/\s*\(.*?\)\s*$/, "") || id : id, at: sc.ipp.at } : null; }
+      try { const sc = await (await fetch(`../scenarios/${id}.json`, { cache: "no-cache" })).json(); return sc.ipp && sc.ipp.at ? { id, name: sc.incident ? sc.incident.split(" - ").slice(1).join(" - ").replace(/\s*\(.*?\)\s*$/, "") || pretty(id) : pretty(id), at: sc.ipp.at } : null; }
       catch (e) { return null; }
     }))).filter(Boolean);
     return places;
+  }
+  // sens-funkcji #17: the place is a point (map click, a place name, or coordinates); scenarios are only "podobne akcje w pobliżu"
+  const kmTo = (a, b) => Math.hypot((b[1] - a[1]) * Math.cos((a[0] + b[0]) / 2 * Math.PI / 180) * 111.32, (b[0] - a[0]) * 110.57);
+  const norm = (t) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l");
+  const NAMES = [...REJONY.map((r) => ({ name: r[0], at: [r[1], r[2]], z: 8.5 })),
+    ...MAP_DETAIL.places.features.map((f) => ({ name: f.properties.name, at: [f.geometry.coordinates[1], f.geometry.coordinates[0]], z: 9 })),
+    ...MAP_DETAIL.areas.features.map((f) => ({ name: f.properties.name, at: [f.geometry.coordinates[1], f.geometry.coordinates[0]], z: 8.5 }))];
+  let pt = null, ptLabel = "", naMap = null, naMarker = null;
+  function setPt(ll, label, zoom) {
+    pt = ll; ptLabel = label || "";
+    $("naLatLon").value = `${ll[0].toFixed(4)}, ${ll[1].toFixed(4)}`;
+    if (naMap) {
+      if (!naMarker) naMarker = new maplibregl.Marker({ color: "#d1352b" }).setLngLat([ll[1], ll[0]]).addTo(naMap); else naMarker.setLngLat([ll[1], ll[0]]);
+      if (zoom) naMap.easeTo({ center: [ll[1], ll[0]], zoom: Math.max(naMap.getZoom(), zoom) });
+    }
+    const near = (places || []).map((p) => ({ ...p, d: kmTo(ll, p.at) })).sort((x, y) => x.d - y.d).slice(0, 3);
+    $("naNear").innerHTML = near.length ? `<span>Podobne akcje w pobliżu:</span>` + near.map((p) => `<button type="button" data-id="${esc(p.id)}" title="Ustaw punkt na miejscu tej akcji">${esc(p.name)} · ${p.d < 10 ? p.d.toFixed(1) : Math.round(p.d)} km</button>`).join("") : "";
+  }
+  $("naNear").onclick = (ev) => { const b = ev.target.closest("button[data-id]"); const p = b && places.find((x) => x.id === b.dataset.id); if (p) { $("naPlace").value = p.name; setPt(p.at, p.name, 9); } };
+  function suggest() {
+    const q = norm($("naPlace").value.trim());
+    if (q.length < 2) { $("naSugg").innerHTML = ""; return; }
+    const all = [...(places || []).map((p) => ({ name: p.name, at: p.at, z: 9, sc: 1 })), ...NAMES];
+    const seen = new Set(), hit = all.filter((x) => norm(x.name).includes(q) && !seen.has(x.name) && seen.add(x.name))
+      .sort((x, y) => (norm(y.name).startsWith(q) - norm(x.name).startsWith(q))).slice(0, 6);
+    $("naSugg").innerHTML = hit.length ? hit.map((x, i) => `<button type="button" role="option" data-i="${i}">${esc(x.name)}${x.sc ? " · akcja" : ""}</button>`).join("")
+      : `<span class="help">Nie znam tej nazwy - kliknij miejsce na mapie albo wpisz współrzędne.</span>`;
+    suggest.hit = hit;
+  }
+  $("naPlace").oninput = suggest;
+  $("naPlace").onkeydown = (ev) => { if (ev.key === "Enter") { ev.preventDefault(); const x = suggest.hit && suggest.hit[0]; if (x) { $("naPlace").value = x.name; $("naSugg").innerHTML = ""; setPt(x.at, x.name, x.z); } } };
+  $("naSugg").onclick = (ev) => { const b = ev.target.closest("button[data-i]"); const x = b && suggest.hit[+b.dataset.i]; if (!x) return; $("naPlace").value = x.name; $("naSugg").innerHTML = ""; setPt(x.at, x.name, x.z); };
+  $("naLatLon").onchange = () => { const ll = $("naLatLon").value.split(/[,\s;]+/).map(Number).filter((x) => !isNaN(x)); if (ll.length === 2) setPt(ll, "", 11); };
+  async function initNaMap() {
+    if (naMap) { naMap.resize(); return; }
+    const cv = (n) => getComputedStyle(document.body).getPropertyValue(n).trim() || "#888";
+    const pl = await fetch("poland.json").then((r) => r.json()).catch(() => ({ type: "FeatureCollection", features: [] }));
+    const base = offlineStyle();
+    naMap = new maplibregl.Map({ container: "naMap", center: [19.4, 52.0], zoom: 4.6, minZoom: 4, attributionControl: { compact: true, customAttribution: "Granica: Natural Earth" },
+      style: { version: 8, glyphs: base.glyphs, sources: { pl: { type: "geojson", data: pl }, r: { type: "geojson", data: MAP_DETAIL.rivers }, p: { type: "geojson", data: MAP_DETAIL.places },
+        sc: { type: "geojson", data: { type: "FeatureCollection", features: (places || []).map((p) => ({ type: "Feature", properties: { name: p.name }, geometry: { type: "Point", coordinates: [p.at[1], p.at[0]] } })) } } },
+        layers: [{ id: "bg", type: "background", paint: { "background-color": cv("--rl-bg") } },
+          { id: "pl", type: "fill", source: "pl", paint: { "fill-color": cv("--rl-card"), "fill-opacity": 0.9 } },
+          { id: "pll", type: "line", source: "pl", paint: { "line-color": cv("--rl-line-strong"), "line-width": 1.2 } },
+          { id: "r", type: "line", source: "r", paint: { "line-color": "#5b8db8", "line-opacity": 0.6, "line-width": 1.2 } },
+          { id: "sc", type: "circle", source: "sc", paint: { "circle-radius": 4, "circle-color": cv("--rl-accent"), "circle-opacity": 0.6 } },
+          { id: "sc-l", type: "symbol", source: "sc", minzoom: 8, layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Italic"], "text-size": 10, "text-anchor": "top", "text-offset": [0, 0.6], "text-max-width": 10 },
+            paint: { "text-color": cv("--rl-accent"), "text-halo-color": cv("--rl-bg"), "text-halo-width": 1.2 } },
+          { id: "p", type: "circle", source: "p", filter: ["any", ["==", ["get", "rank"], 1], [">=", ["zoom"], 7]], paint: { "circle-radius": 2.2, "circle-color": cv("--rl-ink") } },
+          { id: "pl-l", type: "symbol", source: "p", filter: ["any", ["==", ["get", "rank"], 1], [">=", ["zoom"], 7]], layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Medium"], "text-size": 10.5, "text-anchor": "left", "text-offset": [0.5, 0] },
+            paint: { "text-color": cv("--rl-ink"), "text-halo-color": cv("--rl-bg"), "text-halo-width": 1.2 } }] } });
+    naMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    naMap.on("click", (e) => { const ll = [+e.lngLat.lat.toFixed(5), +e.lngLat.lng.toFixed(5)], r = regionOf(ll);
+      $("naPlace").value = r && r.rejon ? `${r.rejon} (punkt z mapy)` : "punkt z mapy"; $("naSugg").innerHTML = ""; setPt(ll, r && r.rejon ? r.rejon : "", 0); });
+    if (pt) setPt(pt, ptLabel, 0);
   }
   $("newActionBtn").onclick = async () => {
     if (!store.hasStudio) { toast("Nowa akcja wymaga serwera akcji: swift run rescue-server"); return; }
     const now = new Date();
     $("naReport").value = hhmm(now); $("naLast").value = hhmm(new Date(now - 2 * 3600e3));
-    const ps = await loadPlaces();
-    $("naWhere").innerHTML = ps.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+    await loadPlaces();
     $("newAction").showModal();
+    initNaMap();
   };
   $("naCat").onclick = (ev) => { const b = ev.target.closest("button"); if (!b) return; $("naCat").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); };
   $("newAction").addEventListener("close", async () => {
     if ($("newAction").returnValue !== "ok") return;
     const cat = $("naCat").querySelector("button.on")?.dataset.v || "hiker";
     const ll = $("naLatLon").value.split(/[,\s;]+/).map(Number).filter((x) => !isNaN(x));
-    const place = places.find((p) => p.id === $("naWhere").value);
-    const ipp = ll.length === 2 ? ll : place ? place.at : null;
-    if (!ipp) { toast("Podaj miejsce zaginięcia"); return; }
+    const ipp = ll.length === 2 ? ll : null;
+    if (!ipp) { toast("Podaj miejsce zaginięcia: kliknij na mapie albo wpisz nazwę"); return; }
     const who = $("naWho").value.trim(), start = $("naReport").value || hhmm(new Date()), last = $("naLast").value;
-    const where = ll.length === 2 ? `${ipp[0].toFixed(4)}, ${ipp[1].toFixed(4)}` : place.name;
+    const r = regionOf(ipp), label = ptLabel || (r && r.rejon) || "";
+    const where = `${label ? label + ", " : ""}${ipp[0].toFixed(4)}, ${ipp[1].toFixed(4)}`;
     const incident = `Akcja: ${who || LABEL[cat]} - ${where}${last ? `, ostatni kontakt ${last}` : ""} (zgłoszenie ${start})`;
+    const zw = (places || []).find((p) => p.id === "zawrat");   // the hand-made Zawrat template only when the point is Zawrat itself
     teamOps = [];
-    await run(() => api("/story/new", { template: !ll.length && place && place.id === "zawrat" ? "zawrat" : undefined, ipp, category: cat, startClock: start, incident }), "Nowa akcja: " + where);
+    await run(() => api("/story/new", { template: zw && kmTo(ipp, zw.at) < 0.2 ? "zawrat" : undefined, ipp, category: cat, startClock: start, incident }), "Nowa akcja: " + where);
     try { await loadScenario("studio"); } catch (e) {}
     setMode("edycja");
-    $("naWho").value = ""; $("naLatLon").value = "";
+    $("naWho").value = ""; $("naLatLon").value = ""; $("naPlace").value = ""; $("naNear").innerHTML = ""; pt = null; ptLabel = "";
   });
 }
 

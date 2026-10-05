@@ -92,9 +92,12 @@ window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&
   </div>
   <label for="naWho">Opis osoby</label>
   <input id="naWho" placeholder="np. Anna K., 34 lata, czerwona kurtka, bez telefonu" autocomplete="off">
-  <label for="naWhere">Miejsce zaginięcia (ostatnio widziany)</label>
-  <select id="naWhere"></select>
+  <label for="naPlace">Miejsce zaginięcia (ostatnio widziany)</label>
+  <input id="naPlace" placeholder="wpisz miejscowość, pasmo, dolinę - albo kliknij na mapie" autocomplete="off" role="combobox" aria-controls="naSugg" aria-autocomplete="list">
+  <div id="naSugg" role="listbox"></div>
+  <div id="naMap" aria-label="Mapa: kliknij miejsce, gdzie ostatnio widziano osobę"></div>
   <input id="naLatLon" placeholder="albo współrzędne: 49.2310, 20.0120" inputmode="decimal" autocomplete="off">
+  <div id="naNear" class="help"></div>
   <div class="na-row">
     <span><label for="naLast">Ostatni kontakt</label><input id="naLast" type="time"></span>
     <span><label for="naReport">Zgłoszenie</label><input id="naReport" type="time"></span>

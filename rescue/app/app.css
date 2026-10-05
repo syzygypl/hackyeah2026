@@ -390,6 +390,12 @@ body.role-ratownik #newActionBtn{display:none}
 #newAction label{display:block;margin:12px 0 4px;font-size:var(--rl-fs-s);color:var(--rl-mute);text-transform:uppercase;letter-spacing:.5px}
 #newAction input,#newAction select{width:100%;box-sizing:border-box;min-height:42px;padding:8px 10px;border:1px solid var(--rl-line-strong);border-radius:var(--rl-radius);background:var(--rl-card);color:var(--rl-ink);font:inherit}
 #newAction #naLatLon{margin-top:6px}
+#naSugg{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}#naSugg:empty{display:none}
+#naSugg button,#naNear button{min-height:34px;padding:0 10px;border-radius:17px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);font:inherit;font-size:var(--rl-fs-s)}
+#naMap{height:210px;margin-top:6px;border-radius:var(--rl-radius);border:1px solid var(--rl-line-strong);overflow:hidden;cursor:crosshair}
+#naMap .maplibregl-canvas{cursor:crosshair}
+#naNear{margin-top:6px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}#naNear:empty{display:none}
+@media (max-width:600px){#naMap{height:170px}}
 .na-chips{display:flex;flex-wrap:wrap;gap:6px}
 .na-chips button{min-height:38px;padding:0 12px;border-radius:19px;border:1px solid var(--rl-line-strong);background:var(--rl-card);color:var(--rl-ink);font:inherit}
 .na-chips button.on{background:var(--rl-accent);border-color:var(--rl-accent);color:var(--rl-on-accent)}
