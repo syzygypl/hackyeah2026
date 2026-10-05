@@ -94,6 +94,9 @@
   body.embed header h1, body.embed header select { display: none; }
   /* inside the app (role Ratownik) the shell already has the title and team picker: float the two small controls over the map */
   body.embed header { position: absolute; top: 8px; right: 54px; z-index: 6; background: none; border: 0; padding: 0; gap: 6px; }
+  body.pick #actions, body.pick #last { display: none; }
+  .pick-list { display: grid; gap: 10px; margin-top: 10px; }
+  .b-pick { background: var(--rl-card); color: var(--rl-ink); border: 2px solid var(--rl-accent); min-height: 60px; }
   body.embed { grid-template-rows: minmax(0, 1fr) auto; }
   @media (min-width: 700px) { #sheet { max-width: 640px; width: 100%; margin: -18px auto 0; } }
 </style>
@@ -180,8 +183,11 @@
   step = [...run.steps].reverse().find(s => (s.assignments || []).length) || run.steps[run.steps.length - 1];   // last step that still has a plan (the final one may be "akcja zamknięta")
   const teams = (step.resources || []).filter(r => r.type !== "drone");
   $("team").innerHTML = teams.map(r => `<option value="${esc(r.id)}" title="${esc(r.name)}">${esc(String(r.name ?? "").split(" (")[0])}</option>`).join("");
-  team = qs.get("team") || store.get(TKEY, null) || teams[0]?.id;
-  $("team").value = team;
+  // sens-funkcji R3-4: a generic link (no team=) never silently becomes the first team: ask "Który zespół?" once, keep it on the phone
+  const saved = store.get(TKEY, null);
+  team = qs.get("team") || (teams.some(t => t.id === saved) ? saved : null) || (EMBED ? teams[0]?.id : null);
+  if (!team) $("team").insertAdjacentHTML("afterbegin", `<option value="" disabled>Który zespół?</option>`);
+  $("team").value = team || "";
   $("team").onchange = e => { team = e.target.value; store.set(TKEY, team); renderTask(); };
 
   const segById = Object.fromEntries(step.segments.map(s => [s.id, s]));
@@ -216,7 +222,12 @@
 
   function renderTask() {
     const a = assignment(), r = teams.find(t => t.id === team);
-    if (!a) {
+    document.body.classList.toggle("pick", !team);
+    if (!team) {
+      $("task").innerHTML = `<div class="task-label">Który zespół?</div><div class="muted">Wybierz swój zespół - telefon go zapamięta (zmiana: lista u góry).</div>
+        <div class="pick-list">${teams.map(t => `<button type="button" class="b-pick" data-team="${esc(t.id)}" title="${esc(t.name)}">${esc(String(t.name ?? "").split(" (")[0])}</button>`).join("")}</div>`;
+      $("task").querySelectorAll(".b-pick").forEach(b => b.onclick = () => { team = b.dataset.team; store.set(TKEY, team); $("team").value = team; $("team").querySelector('option[value=""]')?.remove(); renderTask(); });
+    } else if (!a) {
       $("task").innerHTML = `<div class="task-label">Przydział</div><div class="task-seg">Czekaj na zadanie</div><div class="muted">${esc(r?.reason || "Kierownik akcji jeszcze nie przydzielił sektora.")}</div>`;
     } else {
       const flags = (a.safety || []).map(f => `<span class="flag">⚠ ${esc(f)}</span>`).join("");
