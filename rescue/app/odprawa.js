@@ -42,7 +42,7 @@
   }
 
   function picker(scs, t) {
-    $("sc").innerHTML = (scs.length ? scs : [{ name: SC }]).map((s) => `<option value="${esc(s.name)}"${s.name === SC ? " selected" : ""}>${esc(s.incident ? String(s.incident).slice(0, 70) : s.name)}</option>`).join("");
+    $("sc").innerHTML = (scs.length ? scs : [{ name: SC }]).map((s) => `<option value="${esc(s.name)}"${s.name === SC ? " selected" : ""}>${esc(s.incident ? String(s.incident).replace(/\s*\(scenariusz fikcyjny\)\s*$/, "").slice(0, 70) : s.name)}</option>`).join("");
     $("t").value = T || t;
     // a new scenario opens live; a changed hour opens the recording at that hour (?t=)
     $("sc").onchange = () => { location.search = new URLSearchParams({ sc: $("sc").value }); };
