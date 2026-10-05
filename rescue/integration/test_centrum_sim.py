@@ -169,11 +169,11 @@ def main():
         check("scrub_moves_sim_clock", bool(h) and re.search(r"O \d\d:\d\d", h.upper()) is not None, (h or "").replace("\n", " ")[:80])
         c.js("document.getElementById('tlLive').click()")
         # calls: an incoming call inside a running occurrence is its own note (Zgłoszenie), filter works
-        zw = next(x for x in es if x["sc"] == "zawrat" and 30 < mins(x["start"]) < 1380)
+        zw = next(x for x in es if x["sc"] == "kasprowy" and 30 < mins(x["start"]) < 1380)   # R3-6: Centrum has no 24/7 occurrences of zawrat (demo main action); kasprowy: CPR 112 at 15:10, start 14:50
         open_page(c, f"{srv.base}/app/centrum.html?dyzurny=0&simAt={hhmm(mins(zw['start']) + 26)}", 1440, 900, False)
         c.until("document.querySelector('.lfbell')?1:0", 30)
         c.js("document.querySelector('.lfbell').click();document.querySelector('.lffil [data-f=call]').click()")
-        call = c.until(f"(()=>{{const i=document.querySelector('.lfi.t-call[data-key^=\"{zw['id']}#1805\"]');return i?i.innerText:''}})()", 20)
+        call = c.until(f"(()=>{{const i=document.querySelector('.lfi.t-call[data-key^=\"{zw['id']}#1510\"]');return i?i.innerText:''}})()", 20)
         check("call_note", bool(call) and "CPR" in call and "Zgłoszenie".upper() in call.upper(), (call or "").replace("\n", " | ")[:120])
         only = c.js("[...document.querySelectorAll('.lflist .lfi')].every(x=>x.classList.contains('t-call'))")
         check("filter_calls_only", only is True)
