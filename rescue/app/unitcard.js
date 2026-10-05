@@ -35,13 +35,16 @@ export function unitCard(u, opts) {
   const WORD = { fatigue: "Zmęczenie (szacunek): wymaga zmiany", dogwork: "Pies: przerwa wkrótce" };   // #24: the server text with the number goes to title
   const warns = (u.warnings || []).map((w) => { const t = w.code === "dogwork" && w.level === "red" ? "Pies: wymaga odpoczynku teraz" : WORD[w.code]; return t ? `<div class="warn ${esc(w.level)}" title="${esc(w.text)}">${esc(t)}</div>` : `<div class="warn ${esc(w.level)}">${esc(w.text)}</div>`; }).join("");
   const plan = !u.sc && u.atSc && (u.home || []).includes(u.atSc);   // untouched incident: the team works there from its scenario file
-  const status = plan ? "w planie" : u.status;
+  const status = plan ? "w akcji" : u.status;
   const st = plan ? "akcja" : u.status === "wolny" ? "wolny" : u.status === "w akcji" ? "akcja" : "";
-  const where = u.sc ? `${esc(u.sc)}${u.segmentId ? " · " + esc(u.segmentId) : ""}` : (u.atSc ? `w planie ${esc(u.atSc)} (ze scenariusza)` : (u.home || []).length ? "baza w: " + esc(u.home.slice(0, 3).join(", ")) : "");
+  // sens-funkcji R2-3: actions and bases read as places (opts.scName: slug -> "Zawrat - turysta", Zasoby), not "w planie w planie zawrat (ze scenariusza)"
+  const nm = (sc) => String((o.scName || ((x) => x))(sc)), place = (sc) => nm(sc).split(" - ")[0];
+  const where = u.sc ? `: ${esc(place(u.sc))}${u.segmentId ? " · " + esc(u.segmentId) : ""}` : (u.atSc ? (plan ? `: ${esc(place(u.atSc))}` : ` · w planie: ${esc(nm(u.atSc))}`) : (u.home || []).length ? " · baza: " + esc([...new Set(u.home.map(place))].slice(0, 3).join(", ")) : "");
+  const base = u.base && u.base !== "baza wg scenariusza" ? u.base : "";
   const spares = (u.spares || []).map((s) => `${esc(s.item)} × ${esc(s.qty)}`).join(", ");
   return `<article class="unit ${esc(u.level)}" data-id="${esc(u.id)}" data-sc="${esc(u.atSc || u.sc || "")}" tabindex="0" title="${esc(o.title ?? "Kliknij: dziennik i źródła danych")}">
     <div class="u-top"><h3>${esc(u.name)}</h3>${u.callsign ? `<span class="id" title="Kryptonim ${esc(u.callsign)} (id w systemie: ${esc(u.id)})">${esc(u.callsign)}</span>` : ""}</div>
-    <div class="u-sub">${esc(KIND_LABEL[kind] || kind)} · <span class="st ${st}">${esc(status)}</span> ${where}${u.base ? ` · ${esc(u.base)}` : ""}</div>
+    <div class="u-sub">${esc(KIND_LABEL[kind] || kind)} · <span class="st ${st}">${esc(status)}</span>${where}${base ? ` · ${esc(base)}` : ""}</div>
     ${warns}${bars.join("")}
     ${crew ? `<div class="crew">Załoga: ${crew}${dog}</div>` : ""}
     ${spares || u.model ? `<div class="facts">${u.model ? esc(u.model) : ""}${spares ? `${u.model ? " · " : ""}zapas: ${spares}` : ""}</div>` : ""}
