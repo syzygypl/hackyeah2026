@@ -6,7 +6,11 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
 let PIN = ""; try { PIN = (localStorage.getItem("rescue-pin") || "").replace(/^"(.*)"$/, "$1"); } catch (e) {}
-if (!LOOPBACK) { $("pinbox").hidden = false; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} loadList(); }; }
+if (!LOOPBACK) { $("keyLock").hidden = false; $("keyLock").onclick = () => { const b = $("pinbox"); b.hidden = !b.hidden; $("keyLock").setAttribute("aria-expanded", String(!b.hidden)); if (!b.hidden) $("pin").focus(); }; $("pin").value = PIN; $("pin").onchange = () => { PIN = $("pin").value.trim(); try { localStorage.setItem("rescue-pin", PIN); } catch (e) {} keyProbe(); loadList(); }; }
+// sens-funkcji R2-5 (as #15 in Zasoby / Centrum): no key field in the bar - a lock (open = this device may change, colour = role from GET /api/key) opens a small key box
+const KEY_TXT = { operator: "Klucz kierownika akcji: możesz zmieniać.", field: "Klucz ratownika: tylko meldunki i ślady.", wrong: "Nieprawidłowy klucz: tylko podgląd.", none: "Brak klucza: tylko podgląd." };
+async function keyProbe() { if (LOOPBACK) return; const sent = PIN; let role = null; try { const r = await fetch("/api/key", { headers: sent ? { "X-Rescue-Pin": sent } : {}, cache: "no-store" }); if (r.ok) role = (await r.json()).role; } catch (e) {} if (sent !== PIN) return; const B = document.body.classList; B.remove("key-operator", "key-field", "key-wrong", "key-none"); if (!KEY_TXT[role]) return; B.add("key-" + role); $("keyLock").title = KEY_TXT[role] + " Kliknij, aby wpisać klucz."; $("pinbox").querySelector(".kstate").textContent = KEY_TXT[role]; }
+keyProbe();
 
 async function api(path, body) {
   const h = { "Content-Type": "application/json" }; if (!LOOPBACK && PIN) h["X-Rescue-Pin"] = PIN;
@@ -37,8 +41,8 @@ async function loadList() {
       <span class="tag">${esc(x.kind)}</span><h4>${esc(x.place)}</h4>
       <div class="small">${esc(x.who)}</div>
       <div class="meta">przejęcie ${esc(x.pickupClock)} · ${Math.round(x.budgetMin / 60)} h na decyzje · ${x.teams} zespołów</div>
-      <button class="primary" data-id="${esc(x.id)}">Odprawa</button></div>`).join("") || `<p class="mute">Brak ćwiczeń na serwerze.</p>`;
-  } catch (e) { $("exList").innerHTML = `<p class="mute">Nie udało się wczytać ćwiczeń: ${esc(e.message)}${e.status === 401 ? " (wpisz klucz akcji u góry)" : ""}</p>`; }
+      <button class="primary" data-id="${esc(x.id)}">Przejmij akcję</button></div>`).join("") || `<p class="mute">Brak ćwiczeń na serwerze.</p>`;
+  } catch (e) { $("exList").innerHTML = `<p class="mute">Nie udało się wczytać ćwiczeń: ${esc(e.message)}${e.status === 401 ? " (kliknij kłódkę u góry i wpisz klucz akcji)" : ""}</p>`; }
 }
 $("exList").onclick = (e) => { const b = e.target.closest("button[data-id]"); if (b) start(b.dataset.id); };
 
@@ -260,7 +264,7 @@ $("pEnd").onclick = () => { if (G.st.over || confirm("Zakończyć teraz? Ćwicze
 
 // ---------- 4. score
 const PARTS = { found: ["Znalezienie i czas", 50], coverage: ["Pokrycie mapy", 15], decisions: ["Jakość decyzji", 25], safety: ["Bezpieczeństwo", 10] };
-const POL = { engine: "Plan silnika", expert: "Prosty ekspert (ostatni ślad)", naive: "Naiwnie (najbliżej IPP)" };
+const POL = { engine: "Plan silnika", expert: "Od ostatniego śladu", naive: "Od ostatniego znanego punktu (IPP)" };   // R2-5: neutral strategy names, not a jab at people
 function resLine(x) { return x.found ? `znaleziono ${esc(x.foundAt)} (po ${x.timeToFind} min)` : `nie znaleziono, pokrycie mapy ${Math.round((x.coverage || 0) * 100)}%`; }
 async function showScore() {
   show("scrScore");
@@ -292,7 +296,7 @@ function renderVs(sc) {
   const rows = [["me", "Ty", sc], ...Object.keys(POL).map((k) => [k, POL[k], sc.vs[k]])].filter((r) => r[2]);
   $("sVs").innerHTML = rows.map(([k, l, x]) => `<div class="vs${k === "me" ? " me" : ""}"><span class="lbl">${l}</span><span class="bar"><i style="width:${x.total}%"></i></span>
     <span class="n">${x.total}</span><span class="res">${resLine(x)}</span></div>`).join("");
-  $("sVsNote").textContent = "Te same zespoły, ten sam czas i ten sam los (rzut kością zależy od zespołu, sektora i chwili). Plan silnika z definicji dostaje pełne punkty za decyzje - porównuj go po znalezieniu i czasie.";
+  $("sVsNote").textContent = "Strategie porównawcze to proste reguły, nie ocena ludzi. Te same zespoły, ten sam czas i ten sam los (rzut kością zależy od zespołu, sektora i chwili). Plan silnika z definicji dostaje pełne punkty za decyzje - porównuj go po znalezieniu i czasie.";
 }
 async function pollVs(sid) {
   for (let i = 0; i < 40 && !$("scrScore").hidden; i++) {
