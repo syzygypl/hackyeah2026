@@ -996,13 +996,17 @@ function tlFeedApply(c) {
 // top 3 at the cursor on the cards of running incidents: one frame per incident and 5 minutes (GET /api/run/<sc>?t=HH:MM),
 // cached, at most 2 requests at once, one new request per 1.5 s while playing. Until it lands the last answer stays up.
 const t3 = { cache: {}, busy: 0, last: 0 };
+// zapora-* have no server timeline ("no timeline for <sc>", 404 at every ?t=): once an sc 404s before any frame came back, stop asking (clean console)
+const tlNone = new Set(), tlOk = new Set();
+const tlMiss = (sc, e) => { if (e && e.status === 404 && !tlOk.has(sc)) tlNone.add(sc); };
 function tl3Clock(it, c) { const s0 = toMin(it.start), o = Math.max(0, Math.min(it.end ?? it.last, Math.round((c - tlBase(it)) / 5) * 5)), m = (s0 + o) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
 function tl3Fetch(sc, clk, key) {
+  if (tlNone.has(sc)) { t3.cache[key] = "err"; if (!tl.play) setTimeout(tlApply, 0); return; }
   if (t3.busy >= 2 || (tl.play && performance.now() - t3.last < 1500)) return;
   t3.busy++; t3.last = performance.now(); t3.cache[key] = null;
   api(`/api/run/${encodeURIComponent(sc)}?t=${encodeURIComponent(clk)}`)
-    .then((f) => { t3.cache[key] = (f.segments || []).slice().sort((a, b) => (b.poa || 0) - (a.poa || 0)).slice(0, 3).map((s) => ({ id: s.id, name: s.name })); })
-    .catch(() => { t3.cache[key] = "err"; })
+    .then((f) => { tlOk.add(sc); t3.cache[key] = (f.segments || []).slice().sort((a, b) => (b.poa || 0) - (a.poa || 0)).slice(0, 3).map((s) => ({ id: s.id, name: s.name })); })
+    .catch((e) => { tlMiss(sc, e); t3.cache[key] = "err"; })
     .finally(() => { t3.busy--; if (!tl.play) tlApply(); });
 }
 function tl3Apply(card, it, c, s) {
@@ -1460,12 +1464,13 @@ function simLastOff(sc, b) {
 function simClock5(i, s0) { const b = toMin(s0), m = (b + Math.floor(Math.min(Math.max(0, i.elapsedMin), simLastOff(i.sc, b)) / 5) * 5) % 1440; return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60); }
 function simFetch(sc, clk) {
   const key = sc + "|" + clk;
+  if (tlNone.has(sc) && !(key in sim.frames)) { sim.frames[key] = "err"; sim.cardSig = ""; if (!tl.play) setTimeout(simPaint, 0); return; }
   if (sim.fbusy >= 2 || key in sim.frames || (tl.play && performance.now() - (sim.flast || 0) < 1500)) return;
   sim.flast = performance.now();
   sim.fbusy++; sim.frames[key] = undefined;
   api(`/api/run/${encodeURIComponent(sc)}?t=${encodeURIComponent(clk)}`)
-    .then((f) => { sim.frames[key] = (f.segments || []).slice().sort((a, b) => (b.poa || 0) - (a.poa || 0)).slice(0, 3).map((s) => ({ id: s.id, name: s.name })); })
-    .catch(() => { sim.frames[key] = "err"; })
+    .then((f) => { tlOk.add(sc); sim.frames[key] = (f.segments || []).slice().sort((a, b) => (b.poa || 0) - (a.poa || 0)).slice(0, 3).map((s) => ({ id: s.id, name: s.name })); })
+    .catch((e) => { tlMiss(sc, e); sim.frames[key] = "err"; })
     .finally(() => { sim.fbusy--; sim.cardSig = ""; if (!tl.play) simPaint(); });
 }
 // timeline "Grafik 24/7": 0..1440 min of today, one row per scenario, a bar per occurrence (the one from yesterday that runs past

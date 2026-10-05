@@ -1503,8 +1503,9 @@
   async function loadBasemapStyle(useML) {
     if (CFG.basemap === 'none' || !useML) return null;
     const dir = basemapDir();
+    let mod = null;
     try {
-      const mod = await basemapModule();
+      mod = await basemapModule();
       if (mod) {
         const file = SC.basemapFile && (!CUSTOM_RUN || Q.get('sc') === SC.id) ? SC.basemapFile : undefined;   // regional PMTiles outside the Tatras (?sc= also with ?run=)
         const fileFor = file || (mod.regionFor && S.M && S.M.bbox ? (mod.regionFor(S.M.bbox) || {}).file : undefined);   // Studio / new action: pick the region from the run's bbox
@@ -1513,7 +1514,8 @@
         const style = mod.offlineStyle(fileFor ? { flavor: CFG.flavor, file: fileFor, hillshade } : { flavor: CFG.flavor, hillshade });
         if (style && style.layers) { S.basemapSrc = dir + 'basemap.js'; return style; }
       }
-    } catch (e) { warn('basemap.js: ' + e.message); }
+    } catch (e) { warn('basemap.js: ' + e.message); mod = mod || 'failed'; }
+    if (mod && !CFG.basemap.endsWith('.json')) return null;   // basemap.js is there but failed: no style.json next to it (a 404 on prod), relief from the DEM instead
     const styleURL = CFG.basemap.endsWith('.json') ? CFG.basemap : dir + 'style.json';
     const style = await fetchJSON(styleURL, true);
     if (!style || !style.layers) return null;
