@@ -10,6 +10,7 @@ import { initRescuer, render as renderRescuer, pollTask, myTeam, startGps } from
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const shortName = (n) => String(n ?? "").split(" (")[0];   // sens-funkcji R2-4: one team, one name - the note after " (" goes to title
 const pct = (p) => Math.round((p || 0) * 100) + "%";
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
 const DEMO_ADV = new URLSearchParams(location.search).get("demo") === "1";   // sens-funkcji R2-1: the ⏮ ⏭ advance box (and what comes next) only in the demo, ?demo=1 - a live incident has no future
@@ -258,12 +259,12 @@ function renderPanels() {
   $("segs").innerHTML = segRows.map((s) => { const k = SEGS.indexOf(s);
     const a = segTeam(S, s.id), h = S.segmentHistory && S.segmentHistory[s.id];   // R2-6: searched and still in the top 3 - say why (POD only in the title)
     const again = h && k < 3 ? ` <span class="mute" style="font-size:13px" title="Przeszukany (POD ${Math.round(100 * (h.cumPod || 0))}%), a nadal w top 3: przeszukanie nie wykluczyło sektora">· ${(h.cumPod || 0) > 0 && h.cumPod < 0.5 ? "sprawdzony (słabo)" : "przeszukany"}, sprawdzić ponownie</span>` : "";
-    return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p"><span class="mute" style="font-size:13px">${(+s.areaPct).toFixed(1).replace(".", ",")}% obszaru</span>${again}</div><i class="segbar" style="--w:${Math.min(100, s.poa * 100 / Math.max(t3[0].poa, 1e-9) * 0.9).toFixed(0)}%"></i>${a ? `<div class="segteam"><span class="tk">${esc((a.name || "?")[0])}</span>${esc(a.name)}</div>` : ""}</div>`; }).join("");
+    return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p"><span class="mute" style="font-size:13px">${(+s.areaPct).toFixed(1).replace(".", ",")}% obszaru</span>${again}</div><i class="segbar" style="--w:${Math.min(100, s.poa * 100 / Math.max(t3[0].poa, 1e-9) * 0.9).toFixed(0)}%"></i>${a ? `<div class="segteam"><span class="tk">${esc((a.name || "?")[0])}</span><span title="${esc(a.name)}">${esc(shortName(a.name))}</span></div>` : ""}</div>`; }).join("");
   const W = S.weather || {}; $("surv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
   const by = {}; (S.assignments || []).forEach((a) => by[a.resourceId] = a);
   (store.manual || []).forEach((m) => by[m.resourceId] = { ...(by[m.resourceId] && by[m.resourceId].segmentId === m.segmentId ? by[m.resourceId] : { travelMin: NaN, expectedFind: NaN, safety: [] }), ...m, reason: "Przydział operatora" + (m.at ? " o " + m.at : "") });
   $("teams").innerHTML = (S.resources || []).map((r) => { const a = by[r.id];
-    return `<div class="box team ${r.available ? "" : "off"}"><div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b><span class="pill ${r.available ? "" : "off"}">${r.available ? (a ? "przydział" : "wolny") : "niedostępny"}</span></div>
+    return `<div class="box team ${r.available ? "" : "off"}"><div class="row" style="justify-content:space-between"><b title="${esc(r.name)}">${esc(shortName(r.name))}</b><span class="pill ${r.available ? "" : "off"}">${r.available ? (a ? "przydział" : "wolny") : "niedostępny"}</span></div>
       ${r.available ? "" : `<div class="help">${esc(r.reason)}</div>`}
       ${a ? `<div>→ <b class="seglink" data-seg="${esc(a.segmentId)}" style="cursor:pointer">${esc(a.segmentId)} ${esc(a.segmentName)}</b>${a.by === "operator" ? ` <span class="pill">operator</span>` : ""}</div>${(a.safety || []).map((f) => `<div class="flag">! ${esc(f)}</div>`).join("")}
       <details><summary>Szczegóły</summary>${isFinite(a.travelMin) ? `<div>Dojście ok. ${Math.round(a.travelMin)} min.</div>` : ""}<div>${esc(a.reason || `Skuteczność przeszukania ${pct(a.pod)}, przeszukanie ok. ${Math.round(a.sweepMin || 0)} min.`)}</div></details>` : ""}</div>`; }).join("") || `<div class="help">Ten scenariusz nie ma jeszcze zespołów.</div>`;
@@ -344,7 +345,7 @@ async function pollAlerts() {
   if (!alertBase) alertBase = { ...rej };
   for (const [k, v] of Object.entries(rej)) { const d = v - (alertBase[k] || 0); if (d > 0) A.push([d > 5 ? "bad" : "", `${k === "pin" ? "Próby zmian bez klucza akcji" : "Odrzucone żądania (" + k + ")"}: ${d} od otwarcia strony`]); }
   if (M.some((m) => m.n === "rescue_llm_up" && m.v === 0)) A.push(["", "Model AI jest wyłączony - meldunki są odczytywane regułami"]);
-  const S = curStep(); (S?.assignments || []).forEach((a) => { const nm = ((S.resources || []).find((r) => r.id === a.resourceId) || {}).name || a.resourceName || a.resourceId; (a.safety || []).forEach((f) => A.push(["", `${nm}: ${f}`])); });
+  const S = curStep(); (S?.assignments || []).forEach((a) => { const nm = ((S.resources || []).find((r) => r.id === a.resourceId) || {}).name || a.resourceName || a.resourceId; (a.safety || []).forEach((f) => A.push(["", `${shortName(nm)}: ${f}`])); });
   if (own === null) A.push(["ok", "Brak połączenia z serwerem akcji - nie widać zespołów w terenie"]);
   $("alerts").innerHTML = (A.length ? A : [["ok", "Wszystko w porządku - brak alertów"]]).map(([c, t]) => `<div class="alert ${c}">${esc(t)}</div>`).join("");
 }
@@ -510,7 +511,7 @@ function arm(a) {
   if (!a) return hint();
   if (store.mode !== "edycja") setMode("edycja");
   document.querySelector(`.card[data-k="${a.kind === "team" ? "t:" + a.res.id : a.card.key}"]`)?.classList.add("armed");
-  hint(a.kind === "team" ? `Kliknij <b>sektor</b> na mapie dla: ${esc(a.res.name)} (Esc - anuluj)` : `Kliknij mapę, żeby dodać: <b>${esc(a.card.label)}</b> (Esc - anuluj)`);
+  hint(a.kind === "team" ? `Kliknij <b>sektor</b> na mapie dla: ${esc(shortName(a.res.name))} (Esc - anuluj)` : `Kliknij mapę, żeby dodać: <b>${esc(a.card.label)}</b> (Esc - anuluj)`);
 }
 function renderPalette() {
   const have = new Set(store.mods.map((m) => m.name));
@@ -526,7 +527,7 @@ function renderTokens() {
   const S = curStep(); if (!S || !store.editable) return;
   const busy = new Set(teamOps.map((o) => o.res.id));
   $("tokens").innerHTML = (S.resources || []).map((r) => { const off = !r.available, b = busy.has(r.id);
-    return `<div class="card ${off ? "off" : ""} ${b ? "busy" : ""}" data-k="t:${esc(r.id)}" tabindex="0" role="button" title="${esc(off ? "Niedostępny: " + r.reason : b ? "Zespół już w akcji na mapie" : "Przeciągnij na sektor albo kliknij, potem kliknij sektor")}"><span class="dot" style="background:${off ? "#555" : "#f2b134"}"></span><span>${esc(r.name)}<span class="sub">${esc(off ? r.reason : b ? "w akcji" : "gotowy, " + S.t)}</span></span></div>`; }).join("") || `<div class="help">Brak zespołów.</div>`;
+    return `<div class="card ${off ? "off" : ""} ${b ? "busy" : ""}" data-k="t:${esc(r.id)}" tabindex="0" role="button" title="${esc(off ? "Niedostępny: " + r.reason : b ? "Zespół już w akcji na mapie" : "Przeciągnij na sektor albo kliknij, potem kliknij sektor")}"><span class="dot" style="background:${off ? "#555" : "#f2b134"}"></span><span title="${esc(r.name)}">${esc(shortName(r.name))}<span class="sub">${esc(off ? r.reason : b ? "w akcji" : "gotowy, " + S.t)}</span></span></div>`; }).join("") || `<div class="help">Brak zespołów.</div>`;
   for (const el of $("tokens").children) {
     const r = (S.resources || []).find((x) => "t:" + x.id === el.dataset.k); if (!r || !r.available || busy.has(r.id)) continue;
     draggable(el, () => r.name, (x, y) => { const ll = mapLL(x, y); if (ll) dropTeam(r, ll); });
@@ -618,7 +619,7 @@ function renderTeams() {
   tokMarkers.forEach((m) => m.remove()); tokMarkers = [];
   teamOps.forEach((o) => {
     const el = document.createElement("div"); el.className = "tok";
-    el.innerHTML = `<b>${esc(o.res.name)}</b>${esc(o.segId)} ${esc(o.segName)} · od ${esc(o.at)} · POD ${pct(o.pod)}<div class="row"><button class="nic">nic</button><button class="found">ZNALEZIONO</button><button class="x" title="Odwołaj zespół">x</button></div>`;
+    el.innerHTML = `<b title="${esc(o.res.name)}">${esc(shortName(o.res.name))}</b>${esc(o.segId)} ${esc(o.segName)} · od ${esc(o.at)} · POD ${pct(o.pod)}<div class="row"><button class="nic">nic</button><button class="found">ZNALEZIONO</button><button class="x" title="Odwołaj zespół">x</button></div>`;
     el.querySelector(".nic").onclick = async () => {
       const d = await addInput({ provider: o.res.type === "drone" ? "DronePassEmpty" : "SegmentSearched", at: addMin(o.at, o.sweep), segments: [o.segId], pod: o.pod, title: `${o.res.name}: ${o.segId} przeszukany, nic` });
       if (d && d.added && d.added.events.length) { teamOps.splice(teamOps.indexOf(o), 1); renderTeams(); renderTokens(); }
@@ -996,7 +997,7 @@ async function pollFeed() {
   const teams = {}; M.filter((m) => m.n === "rescue_client_last_report_timestamp_seconds").forEach((m) => { const k = m.lab.team || m.lab.client_id; teams[k] = Math.max(teams[k] || 0, m.v); });
   const res = (curStep()?.resources || []), man = store.manual || [];
   $("teamFeed").innerHTML = `<div class="vgrid">${res.map((r) => { const last = teams[r.id], age = last ? now - last : null, a = man.find((x) => x.resourceId === r.id) || (curStep()?.assignments || []).find((x) => x.resourceId === r.id);
-      return `<div class="vcard"><div class="row" style="justify-content:space-between"><b>${esc(r.name)}</b>${age == null ? `<span class="pill off">brak meldunków</span>` : age > thr ? `<span class="pill off">CISZA ${Math.round(age / 60)} min</span>` : `<span class="pill">${Math.round(age / 60)} min temu</span>`}</div>
+      return `<div class="vcard"><div class="row" style="justify-content:space-between"><b title="${esc(r.name)}">${esc(shortName(r.name))}</b>${age == null ? `<span class="pill off">brak meldunków</span>` : age > thr ? `<span class="pill off">CISZA ${Math.round(age / 60)} min</span>` : `<span class="pill">${Math.round(age / 60)} min temu</span>`}</div>
         <div class="help">${a ? `zadanie: ${esc(a.segmentId)} ${esc(a.segmentName || "")}${a.by === "operator" ? " (operator)" : " (plan)"}` : r.available ? "bez zadania" : esc(r.reason)}</div></div>`; }).join("")}</div>
     <h2>Meldunki z terenu (${ev.length})</h2>
     ${ev.slice().reverse().slice(0, 60).map((e, k) => `<div class="box"><div class="row" style="justify-content:space-between"><b>${esc(e.at || (e.t || "").slice(11, 16))}</b><span class="mute">${esc(e.parsedBy || "")}</span></div>
@@ -1756,7 +1757,7 @@ subs.push((why) => {
         const plan = !u.sc && (u.home || []).includes(store.scenario), seg = u.segmentId || (asg.find((a) => a.resourceId === u.id) || {}).segmentId;
         const status = (plan ? "w planie" : u.status) + (seg ? " " + seg : "");
         return `<div class="arow" data-id="${esc(u.id)}" tabindex="0" title="${esc(u.name)} - kliknij: dziennik, źródła danych i ślad na mapie${esc((u.warnings || []).map((w) => "\n" + w.text).join(""))}">`
-          + `<span class="ak">${esc(AK[u.kind] || "?")}</span><span class="an">${esc(u.name)}</span><span class="as">${esc(status)}</span>`
+          + `<span class="ak">${esc(AK[u.kind] || "?")}</span><span class="an">${esc(shortName(u.name))}</span><span class="as">${esc(status)}</span>`
           + `<span class="ah ${lv}" title="${esc(tip)}">${esc(v)}</span><span class="ad ${esc(gps.status)}" title="GPS: ${gps.status === "live" ? "na żywo" : gps.status === "stale" ? "nieaktualny" : "brak"}${gps.lastAt ? ", " + esc(gps.lastAt) : ""}"></span></div>`;
       }).join("") || `<div class="help">Brak zespołów przy tej akcji.</div>`;
       const red = units.filter((u) => u.level === "red").length, amber = units.filter((u) => u.level === "amber").length;

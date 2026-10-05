@@ -233,7 +233,7 @@ export function createTimeline3D({ THREE, run, scene, camera, controls, v3, eyeA
         a.machine.setHeading(d1.x - d0.x, d1.z - d0.z, d0.distanceTo(d1) > 1e-5);
         a.machine.tick(dt);
       }
-      const short = (a.name || a.id).split(' (')[0].replace(/^Patrol /, '').replace('Zespół z psem', 'Pies').replace('Dron termowizyjny', 'Dron').replace('Śmigłowiec ', '');
+      const short = String(a.name || a.id).split(' (')[0].replace(/^Patrol /, '').replace('Zespół z psem', 'Pies').replace('Dron termowizyjny', 'Dron').replace(/^Śmigłowiec\b.*$/, 'Śmigłowiec');   // R2-4: same label as the 2D map (web/app.js mapShort)
       const text = esc(short);
       if (a.tag.element.innerHTML !== text) a.tag.element.innerHTML = text;
       a.tag.element.title = `${a.name || a.id} · ${p.est ? 'szacunek' : 'GPS'} · dokładność ±${nf(p.accM, 0)} m · pokaż ślad i dziennik`;

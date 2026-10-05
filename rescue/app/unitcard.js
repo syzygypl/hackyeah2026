@@ -43,7 +43,7 @@ export function unitCard(u, opts) {
   const base = u.base && u.base !== "baza wg scenariusza" ? u.base : "";
   const spares = (u.spares || []).map((s) => `${esc(s.item)} × ${esc(s.qty)}`).join(", ");
   return `<article class="unit ${esc(u.level)}" data-id="${esc(u.id)}" data-sc="${esc(u.atSc || u.sc || "")}" tabindex="0" title="${esc(o.title ?? "Kliknij: dziennik i źródła danych")}">
-    <div class="u-top"><h3>${esc(u.name)}</h3>${u.callsign ? `<span class="id" title="Kryptonim ${esc(u.callsign)} (id w systemie: ${esc(u.id)})">${esc(u.callsign)}</span>` : ""}</div>
+    <div class="u-top"><h3 title="${esc(u.name)}">${esc(String(u.name ?? "").split(" (")[0])}</h3>${u.callsign ? `<span class="id" title="Kryptonim ${esc(u.callsign)} (id w systemie: ${esc(u.id)})">${esc(u.callsign)}</span>` : ""}</div>
     <div class="u-sub">${esc(KIND_LABEL[kind] || kind)} · <span class="st ${st}">${esc(status)}</span>${where}${base ? ` · ${esc(base)}` : ""}</div>
     ${warns}${bars.join("")}
     ${crew ? `<div class="crew">Załoga: ${crew}${dog}</div>` : ""}

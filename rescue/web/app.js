@@ -6,6 +6,8 @@
 'use strict';
 (function () {
   const $ = (s) => document.querySelector(s);
+  // sens-funkcji R2-4: one map label per team, the same in 2D and 3D (timeline3d.js): "Patrol TOPR B (dyżurka Murowaniec)" -> "TOPR B", dog -> "Pies"
+  const mapShort = (n) => String(n || '').split(' (')[0].replace(/^Patrol /, '').replace('Zespół z psem', 'Pies').replace('Dron termowizyjny', 'Dron').replace(/^Śmigłowiec\b.*$/, 'Śmigłowiec');
   const Q = new URLSearchParams(location.search);
   // ?pin= is NOT supported (it would land in browser history): PIN is typed into the page, kept in localStorage.
   if (Q.has('pin')) { Q.delete('pin'); try { history.replaceState(null, '', location.pathname + (Q.toString() ? '?' + Q : '') + location.hash); } catch (e) { /* ignore */ } }
@@ -892,7 +894,7 @@
       feats.push(pt([cur.lon, cur.lat], { k: 'pos', color: col, id: a.id }));
       // demo review 5: name only on the map (labels covered #1-#3 and IPP); GPS / estimate and the accuracy in the tooltip, the
       // accuracy circle and the legend show it on the map
-      labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col, html: `<b>${esc(String(a.name || a.id).split(' (')[0])}</b>${a.kind === 'osoba' ? ` szacunek ±${nf(cur.acc / 1000, 1)} km` : ''}`,
+      labels.push({ id: a.id, at: [cur.lon, cur.lat], color: col, html: `<b>${esc(a.kind === 'osoba' ? String(a.name || a.id).split(' (')[0] : mapShort(a.name || a.id))}</b>${a.kind === 'osoba' ? ` szacunek ±${nf(cur.acc / 1000, 1)} km` : ''}`,
         title: `${String(a.name || a.id)}: ${cur.est ? 'pozycja szacowana' : 'GPS'}, dokładność ±${Math.round(cur.acc)} m` });
     }
     S.view.setTimeline(FC(feats), labels);
@@ -1026,7 +1028,7 @@
 
   const RES_SHORT = { ground: 'Patrol', dog: 'Pies', drone: 'Dron', heli: 'Śmigłowiec', boat: 'Łódź', diver: 'Nurek' };
   // map chip: the kind plus the team's letter / number when its name ends with one ("Patrol GOPR B" -> "Patrol B"), so two patrols differ
-  const resLabel = (r) => { const s = RES_SHORT[r && r.type]; if (!s) return null; const tail = String(r.name || '').replace(/\s*\(.*\)\s*$/, '').trim().split(/\s+/).pop(); return /^[A-Z0-9]{1,2}$/.test(tail) ? `${s} ${tail}` : s; };
+  const resLabel = (r) => { const s = RES_SHORT[r && r.type]; if (!s) return null; const m = mapShort(r.name); if (m && m.length <= 14) return m; const tail = String(r.name || '').replace(/\s*\(.*\)\s*$/, '').trim().split(/\s+/).pop(); return /^[A-Z0-9]{1,2}$/.test(tail) ? `${s} ${tail}` : s; };
   const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')} min` : `${Math.round(m)} min`);
   function renderPlan() {
     const st = S.M.R.steps[S.step], A = st.assignments, Rs = st.resources;
