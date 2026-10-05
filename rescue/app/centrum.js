@@ -183,6 +183,12 @@ const kmTo = (a, b) => { const R = 6371, r = Math.PI / 180, dl = (b[0] - a[0]) *
 const kmTxt = (d) => (d < 10 ? d.toFixed(1).replace(".", ",") : Math.round(d)) + " km";
 const regKey = (ll) => { const r = ll && regionOf(ll); return r ? `${r.woj} → ${r.rejon}` : "inne"; };
 const chipName = (id) => { const t = teams.find((x) => x.id === id), n = t ? t.name.split(" - ")[0].replace(/\s*\(.*?\)/g, "").trim() : id; return n.length > 22 ? n.slice(0, 21) + "…" : n; };   // "OSP Wizna - patrol brzegu" -> "OSP Wizna"
+// kind fit (sens-funkcji #1 round 2): water incidents want boats / divers, land ones walkers / dogs; drone and helicopter fit both
+// (water regex as the sim card's "brakuje: łódź" line, plus lake / sea names of our scenarios)
+const WATER_RE = /\brzek|jezior|kajak|zalew|tonie|utonię|Narw|Wisł|Śniardw|Bełdan|Tałt|Mikołaj|Morzyc|Mamr|Dunaj|morz|plaż|Bałt|\bwod|\bSan(em|ie|u)?\b|wędkarz|pływ|szkwał/i;
+const isWater = (sc) => { const md = meta[sc] || {}, x = incidents.find((i) => i.sc === sc) || {}, d = (() => { try { return sim.info[sc] || {}; } catch (e) { return {}; } })();
+  return WATER_RE.test(`${sc} ${md.incident || ""} ${x.title || ""} ${x.place || ""} ${d.name || ""} ${d.place || ""}`); };
+const kindFits = (k, sc) => (isWater(sc) ? ["lodz", "nurkowie", "dron", "smiglowiec"] : ["pieszy", "pies", "dron", "smiglowiec"]).includes(k);
 const simLocal = {};   // team id -> sc: dropped on a 24/7 simulation card (virtual, never POSTed, gone on reload)
 const busyOf = (t, b) => t.sc || (simLocal[t.id] && b.has(simLocal[t.id]) ? simLocal[t.id] : null) || (t.home || []).find((h) => b.has(h)) || null;
 const kindLabel = (k) => ({ pieszy: "pieszy", pies: "pies", dron: "dron", smiglowiec: "śmigłowiec", lodz: "łódź", nurkowie: "nurkowie" }[k] || k || "zespół");
@@ -272,13 +278,14 @@ function renderCards() {
 function renderTeams() {
   if ($("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT") return;   // do not rebuild under an open select
   const list = sortIncidents(incidents);
-  const opt = (x, cur, d) => `<option value="${esc(x.sc)}" ${cur === x.sc ? "selected" : ""}>${esc(short(x))}${d != null ? " · " + kmTxt(d) : ""}</option>`;
+  const opt = (x, cur, d, bad) => `<option value="${esc(x.sc)}" ${cur === x.sc ? "selected" : ""}>${esc(short(x))}${d != null ? " · " + kmTxt(d) : ""}${bad ? " (nie ten typ)" : ""}</option>`;
   const opts = (cur, t) => {   // sens-funkcji #1: actions near the team's base first (its region), the rest under "inne regiony"
     const o = `<option value="" ${!cur ? "selected" : ""}>wolny</option>`;
     if (!t || !t.base) return o + list.map((x) => opt(x, cur)).join("");
-    const ds = list.map((x) => ({ x, d: meta[x.sc] && meta[x.sc].ipp ? kmTo(t.base, meta[x.sc].ipp) : Infinity })).sort((a, b) => a.d - b.d);
+    const ds = list.map((x) => ({ x, d: meta[x.sc] && meta[x.sc].ipp ? kmTo(t.base, meta[x.sc].ipp) : Infinity, bad: !kindFits(t.kind, x.sc) })).sort((a, b) => a.d - b.d);
     const nearX = ds.filter((q, k) => q.d <= 150 || (k < 3 && q.d < Infinity)), rest = ds.filter((q) => !nearX.includes(q));
-    return o + `<optgroup label="Najbliżej bazy">${nearX.map((q) => opt(q.x, cur, q.d)).join("")}</optgroup>` + (rest.length ? `<optgroup label="Inne regiony (daleko)">${rest.map((q) => opt(q.x, cur, q.d < Infinity ? q.d : null)).join("")}</optgroup>` : "");
+    nearX.sort((a, b) => a.bad - b.bad || a.d - b.d);   // fitting kind first, then km
+    return o + `<optgroup label="Najbliżej bazy">${nearX.map((q) => opt(q.x, cur, q.d, q.bad)).join("")}</optgroup>` + (rest.length ? `<optgroup label="Inne regiony (daleko)">${rest.map((q) => opt(q.x, cur, q.d < Infinity ? q.d : null, q.bad)).join("")}</optgroup>` : "");
   };
   const row = (t) => `<div class="team" draggable="true" data-team="${esc(t.id)}" title="${esc(t.name)}${t.home && t.home.length ? " · baza w: " + esc(t.home.join(", ")) : ""}">
       <span class="ic">${icon(t.kind)}</span><span class="nm">${esc(t.name)}</span>
@@ -296,14 +303,14 @@ function renderTeams() {
   for (const t of teams) { const k = regKey(t.base), g = regs[k] ||= { free: [], busy: 0 }; if (busyOf(t, bz)) g.busy++; else g.free.push(t); }
   const selIpp = sel && meta[sel] && meta[sel].ipp, selReg = selIpp ? regKey(selIpp) : null;
   const reserve = `<section class="grp" data-drop=""><h3>Rezerwa <span class="cnt">${free.length} wolne / ${teams.length}</span></h3>`
-    + Object.keys(regs).sort((a, b) => (b === selReg) - (a === selReg) || a.localeCompare(b, "pl")).map((k) => `<details class="reg" data-det="reg:${esc(k)}"${openDet.has("reg:" + k) || k === selReg ? " open" : ""}><summary>${esc(k)} <span class="cnt">${regs[k].free.length} wolne · ${regs[k].busy} w akcji</span></summary>${regs[k].free.map(row).join("") || `<div class="help">Wszystkie zespoły regionu w akcji.</div>`}</details>`).join("") + `</section>`;
+    + Object.keys(regs).sort((a, b) => (b === selReg) - (a === selReg) || (regs[b].busy > 0) - (regs[a].busy > 0) || a.localeCompare(b, "pl")).map((k) => `<details class="reg" data-det="reg:${esc(k)}"${openDet.has("reg:" + k) || k === selReg ? " open" : ""}><summary>${esc(k)} <span class="cnt">${regs[k].free.length} wolne · ${regs[k].busy} w akcji</span></summary>${regs[k].free.map(row).join("") || `<div class="help">Wszystkie zespoły regionu w akcji.</div>`}</details>`).join("") + `</section>`;
   // clicked card: the 5 nearest free teams (straight line from their base to the action's IPP)
   const selX = sel && (incidents.find((i) => i.sc === sel) || { sc: sel, place: sel, title: "" });
-  const near = selIpp ? free.filter((t) => t.base).map((t) => ({ t, d: kmTo(t.base, selIpp) })).sort((a, b) => a.d - b.d).slice(0, 5) : [];
+  const near = selIpp ? free.filter((t) => t.base && kindFits(t.kind, sel)).map((t) => ({ t, d: kmTo(t.base, selIpp) })).sort((a, b) => a.d - b.d).slice(0, 5) : [];   // only fitting kinds (water: łódź / nurkowie / dron / śmigłowiec)
   const nearHTML = selIpp ? `<section class="grp near" id="near" data-drop="${esc(selSim ? "sim:" + sel : sel)}"><h3>Najbliżej tej akcji: ${esc(short(selX))}${selSim ? ' <span class="simtag">symulacja</span>' : ""}</h3>`
     + (near.map(({ t, d }) => `<div class="team nrow" draggable="true" data-team="${esc(t.id)}" title="${esc(t.name)} · baza ${esc(regKey(t.base))}"><span class="ic">${icon(t.kind)}</span><span class="nm">${esc(t.name)}</span>
       <span class="meta"><span>${esc(kindLabel(t.kind))}</span><span class="km mono">${kmTxt(d)}</span><button type="button" class="nsend" data-team="${esc(t.id)}" title="${selSim ? "Symulacja: przydział tylko w tej przeglądarce" : "Przydziel do tej akcji"}">Wyślij</button></span></div>`).join("") || `<div class="help">Brak wolnych zespołów.</div>`)
-    + `<div class="help">Odległość w linii prostej od bazy zespołu. Kliknij kartę ponownie, aby zamknąć.</div></section>` : "";
+    + `<div class="help">${isWater(sel) ? "Akcja na wodzie: łodzie, nurkowie, drony, śmigłowce" : "Akcja na lądzie: piesi, psy, drony, śmigłowce"}. Odległość w linii prostej od bazy zespołu. Kliknij kartę ponownie, aby zamknąć.</div></section>` : "";
   $("teams").innerHTML = (nearHTML + reserve + busy.map((x) => grp(x.sc, esc(short(x)), teams.filter((t) => t.sc === x.sc), modeOf(x) === "live" ? ' <span class="badge live">LIVE</span>' : "")).join("")
     + (field.length ? `<section class="grp tfield"><h3>W akcji (symulacja 24/7) <span class="cnt">${field.reduce((a, g) => a + g.ts.length, 0)}</span></h3>`
       + field.map((g) => `<details data-sc="${esc(g.sc)}" data-det="sc:${esc(g.sc)}"${sel === g.sc || openDet.has("sc:" + g.sc) ? " open" : ""}><summary>${esc(short(g.x))} <span class="cnt">${g.ts.length}</span></summary>${g.ts.map(fieldRow).join("")}</details>`).join("") + `</section>` : ""))
