@@ -1764,12 +1764,15 @@ subs.push((why) => {
     const box = $("teamTab"); if (!box || !tt()) return;
     const S = curStep() || {}, res = S.resources || [], man = store.manual || [], segs = S.segments || [];
     const ids = [...res.map((r) => r.id), ...teamUnits.map((u) => u.id).filter((id) => !res.some((r) => r.id === id))];
+    // R3-12: in Historia the inventory snaps to its next step (17:40 -> 17:50) - skip GPS / report times after the minute on the axis
+    const cut = liveOn() ? "" : atNow(), mn = (x) => { const [h, m] = String(x).split(":").map(Number); return h * 60 + m; };
+    const later = (x) => { if (!cut || !/^\d\d:\d\d/.test(x)) return false; const d = (mn(x) - mn(cut) + 1440) % 1440; return d > 0 && d < 720; };
     const rows = ids.map((id) => {
       const r = res.find((x) => x.id === id) || {}, u = teamUnits.find((x) => x.id === id) || {}, m = man.find((x) => x.resourceId === id), a = (S.assignments || []).find((x) => x.resourceId === id);
       const seg = (m && m.segmentId) || r.currentSegment || u.segmentId || (a && a.segmentId) || "", sn = (segs.find((g) => g.id === seg) || {}).name || (a && a.segmentName) || "";
       const st = /zamknięta/.test(r.reason || "") ? "po akcji" : /^w drodze/.test(r.reason || "") ? "w drodze" : r.currentSegment || m || u.sc ? "w terenie" : r.available === false ? "niedostępny" : "wolny";
       const task = m ? `zadanie: ${seg} ${sn} (operator)` : r.reason && st !== "wolny" ? r.reason : seg ? `zadanie: ${seg} ${sn}${a ? " (plan)" : ""}` : r.reason || "bez zadania";
-      const f = (k) => (u.feeds || []).filter((x) => k.includes(x.kind) && x.lastAt).map((x) => x.lastAt).sort().pop();
+      const f = (k) => (u.feeds || []).filter((x) => k.includes(x.kind) && x.lastAt && !later(x.lastAt)).map((x) => x.lastAt).sort().pop();
       const rep = f(["reports", "radio", "clues"]), gps = f(["gps", "collar"]), [w, lv] = word(u);
       return `<div class="trow" data-id="${esc(id)}" tabindex="0" title="${esc(r.name || u.name || id)} - kliknij: dziennik i ślad na mapie${esc((u.warnings || []).map((x) => "\n" + x.text).join(""))}">`
         + `<div class="row"><b>${esc(shortName(r.name || u.name || id))}</b><span class="mute">${esc(KL[u.kind] || "")}</span><span style="flex:1"></span><span class="tst ${st === "w terenie" ? "on" : st === "w drodze" ? "go" : st === "niedostępny" ? "off" : ""}">${st}</span></div>`

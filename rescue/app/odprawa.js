@@ -41,8 +41,28 @@
     render(run, scen, st, inv, start);
   }
 
+  // sens-funkcji R3-12: the Akcja options by place, grouped by rejon - the table copied from zasoby.js (33f8d7d, R2-3), no "(scenariusz fikcyjny)"
+  const SCN = { zawrat: ["Tatry", "Zawrat - turysta"], kasprowy: ["Tatry", "Kasprowy Wierch - skiturowiec"], "morskie-oko": ["Tatry", "Morskie Oko - dziecko"],
+    "lawina-wolowiec": ["Tatry", "Wołowiec - lawina"], "kajak-pieniny": ["Pieniny", "Dunajec - kajakarz"], "dywersja-poprad": ["Beskid Sądecki", "Rytro - wykolejenie pociągu"],
+    "dywersja-poprad-2": ["Beskid Sądecki", "Głębokie - uszkodzony tor"], "paralotniarz-beskidy": ["Beskid Śląski", "Skrzyczne - paralotniarz"],
+    "bieszczady-wetlinska": ["Bieszczady", "Połonina Wetlińska - grzybiarz"], "zapora-tlo-tarnica": ["Bieszczady", "Tarnica - turysta"],
+    "zapora-huzele": ["Dolina Sanu", "Huzele - ojciec odcięty przez wodę"], "zapora-lesko": ["Dolina Sanu", "Lesko - auto porwane przez wodę"],
+    "zapora-myczkowce": ["Dolina Sanu", "Myczkowce - wędkarz"], "zapora-tlo-olszanica": ["Dolina Sanu", "Olszanica - osoba z demencją"],
+    "zapora-uherce": ["Dolina Sanu", "Uherce Mineralne - osoba odcięta"], "zapora-zaluz": ["Dolina Sanu", "Załuż - spacerowicz z psem"],
+    "karkonosze-sniezka": ["Karkonosze", "Śnieżka - turysta w zamieci"], "rodzina-dziecko-las": ["Karkonosze", "Karpacz - dziecko w lesie"],
+    sniardwy: ["Mazury", "Śniardwy - żeglarz"], "mazury-burza-sniardwy": ["Mazury", "Śniardwy - wywrotka Omegi"], "mazury-burza-beldany": ["Mazury", "Bełdany - windsurfer"],
+    "mazury-burza-mikolajki": ["Mazury", "Jezioro Mikołajskie - motorówka"], "mazury-burza-talty": ["Mazury", "Jezioro Tałty - kajakarz"],
+    "los-augustow": ["Puszcza Augustowska", "Augustów - łoś na DW 664"], "pozar-biebrza": ["Biebrza", "Biebrza - pożar"], "auto-w-rzece-wizna": ["Dolina Narwi", "Wizna - auto w Narwi"],
+    "grzybiarz-puszcza-notecka": ["Puszcza Notecka", "Puszcza Notecka - grzybiarz"], miedzyzdroje: ["Wolin", "Międzyzdroje - pływak"],
+    morzycko: ["Pojezierze Myśliborskie", "Morzycko - kajakarz"], "tragedia-w-moryniu": ["Pojezierze Myśliborskie", "Moryń - kajakarz"],
+    "krakow-nowa-huta": ["Kraków", "Nowa Huta - senior"], "senior-demencja-lodz": ["Łódź", "Łódź - senior z demencją"], "psy-wiazowna": ["Dolina Świdra", "Lipowo - dwa psy"] };
+  const INC = {};   // sc -> incident text from /api/scenarios, for a scenario missing above ("Zaginiony X - Miejsce, ..." -> "Miejsce - zaginiony X")
+  const scName = (sc) => { if (!sc) return ""; if (SCN[sc]) return SCN[sc][1]; const t = String(INC[sc] || "").replace(/\s*\(scenariusz[^)]*\)\s*/i, ""), i = t.indexOf(" - "); return i > 0 ? t.slice(i + 3).split(/[,:]/)[0].trim() + " - " + t.slice(0, i).toLowerCase() : t || sc; };
   function picker(scs, t) {
-    $("sc").innerHTML = (scs.length ? scs : [{ name: SC }]).map((s) => `<option value="${esc(s.name)}"${s.name === SC ? " selected" : ""}>${esc(s.incident ? String(s.incident).replace(/\s*\(scenariusz fikcyjny\)\s*$/, "").slice(0, 70) : s.name)}</option>`).join("");
+    const list = (scs.length ? scs : [{ name: SC }]).map((x) => { INC[x.name] = x.incident; return x.name; });
+    const groups = {}; list.forEach((n) => (groups[(SCN[n] || ["Inne"])[0]] ||= []).push(n));
+    $("sc").innerHTML = Object.keys(groups).sort((a, b) => a.localeCompare(b, "pl")).map((g) => `<optgroup label="${esc(g)}">`
+      + groups[g].sort((a, b) => scName(a).localeCompare(scName(b), "pl")).map((n) => `<option value="${esc(n)}"${n === SC ? " selected" : ""}>${esc(scName(n).slice(0, 70))}</option>`).join("") + "</optgroup>").join("");
     $("t").value = T || t;
     // a new scenario opens live; a changed hour opens the recording at that hour (?t=)
     $("sc").onchange = () => { location.search = new URLSearchParams({ sc: $("sc").value }); };

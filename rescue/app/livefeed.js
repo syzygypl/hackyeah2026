@@ -275,11 +275,11 @@ export function mountBell(host, opts = {}) {
     const d = info[n.inst.sc] || { name: n.inst.sc, place: "" }, a = acks.get(n.key), late = !a && now - n.ms > ESCALATE_MIN * 60000;
     const path = pathOf(n.inst.sc, d) || [KIND_LABEL[n.inst.kind] || n.inst.kind, d.place].filter(Boolean).join(" · ");
     const head = n.type === "new" ? d.name : (n.n > 1 ? `${n.n} zgłoszenia: ` : "") + n.title;
-    const st = n.type === "new" ? (n.inst.state === "live" ? "trwa" : "zakończona") : `${d.name} · scenariusz ${n.clock}`;
+    const st = n.type === "new" ? (n.inst.state === "live" ? "trwa" : "zakończona") : d.name;   // R3-12: only the wall clock is visible, the scenario clock in the title
     return `<div class="${cls} t-${n.type}${a ? " acked" : ""}${late ? " late" : ""}" data-key="${esc(n.key)}">`
       + `<span class="lft"><span class="lfic" title="${TYPE_LABEL[n.type]}">${ICON[n.type]}</span><span class="mono">${hm(n.ms)}</span></span>`
       + `<span class="lfn"><span class="lfty">${TYPE_LABEL[n.type]}</span><b>${esc(head)}</b><span class="lfp">${esc(path)}</span>`
-      + `<span class="lfst">${esc(st)}${a && a.virtual ? ` · potwierdził: ${esc(VD_BY)}, ${hm(Date.parse(a.at))}` : a ? ` · potwierdzone ${hm(Date.parse(a.at))}${a.by && a.by !== "operator" ? " (" + esc(a.by) + ")" : ""}` : late ? ` · bez potwierdzenia od ${Math.floor((now - n.ms) / 60000)} min` : ""}</span></span>`
+      + `<span class="lfst"${n.type !== "new" && n.clock ? ` title="godzina w scenariuszu ${esc(n.clock)}"` : ""}>${esc(st)}${a && a.virtual ? ` · potwierdził: ${esc(VD_BY)}, ${hm(Date.parse(a.at))}` : a ? ` · potwierdzone ${hm(Date.parse(a.at))}${a.by && a.by !== "operator" ? " (" + esc(a.by) + ")" : ""}` : late ? ` · bez potwierdzenia od ${Math.floor((now - n.ms) / 60000)} min` : ""}</span></span>`
       + `<span class="lfb"><button type="button" class="lfopen">Otwórz</button>${a ? "" : `<button type="button" class="lfack">Potwierdź</button>`}</span></div>`;
   }
   function wire(root) {
