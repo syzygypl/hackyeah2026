@@ -598,3 +598,24 @@ header #pinbox .kstate{display:none}
 #shareDlg #pinbox .kstate{color:var(--rl-mute);font-size:var(--rl-fs-s,12px)}
 /* sens-funkcji #2 (AI Mateusza #1): bell toasts never over "Gdzie szukać najpierw" - next to it, in the map */
 @media (min-width:901px){body.float .lftoasts{right:calc(var(--float-gap,12px) * 2 + var(--rail-r-w,360px));width:min(380px,calc(100vw - var(--rail-r-w,360px) - 64px))}}
+/* sens-funkcji #12: right panel tabs "Gdzie szukać najpierw" | "Zespoły" (app.js renderTeamTab); the fold strip keeps working above them */
+#right>#rtabs{display:flex;gap:2px;flex-wrap:wrap;margin:2px 0 6px}
+#right.fold.fold-live>#rtabs{display:flex}
+#rtabs button{appearance:none;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;padding:4px 6px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:var(--rl-mute);cursor:pointer;min-height:28px}
+#rtabs button.on{color:var(--rl-ink);border-bottom-color:var(--rl-accent)}
+#right:not(.rt-zesp)>#teamTab{display:none!important}
+#right.rt-zesp>:is(.hero,#segs,#assets,#moreInfo){display:none!important}
+.teamtab .trow{padding:6px 4px;border-bottom:1px solid var(--rl-line);cursor:pointer;border-radius:var(--rl-radius-s);font-size:var(--rl-fs-s)}
+.teamtab .trow:hover,.teamtab .trow:focus-visible{background:var(--rl-panel-2);outline:none}
+.teamtab .trow .row{gap:6px;align-items:baseline;flex-wrap:nowrap}
+.teamtab .trow .row b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.teamtab .trow .mute{font-size:var(--rl-fs-xs);white-space:nowrap}
+.teamtab .trow .help{margin:1px 0 0;overflow-wrap:anywhere}
+.teamtab .tst{flex:none;font-size:var(--rl-fs-xs);font-weight:700;padding:0 6px;border-radius:999px;border:1px solid var(--rl-line-strong);color:var(--rl-ink-2);white-space:nowrap}
+.teamtab .tst.on{background:var(--rl-ok,#2e7d32);border-color:transparent;color:var(--rl-on-ok)}
+.teamtab .tst.go{background:var(--rl-warn);border-color:var(--rl-warn);color:var(--rl-ink)}
+.teamtab .tst.off{opacity:.6}
+.teamtab .ah{font-weight:600;padding:0 4px;border-radius:5px}
+.teamtab .ah.amber{background:var(--rl-warn);color:var(--rl-ink)}
+.teamtab .ah.red{background:var(--rl-danger);color:var(--rl-on-danger)}
+.teamtab .tzas{display:inline-block;margin:8px 4px 2px;font-size:var(--rl-fs-s);font-weight:600}

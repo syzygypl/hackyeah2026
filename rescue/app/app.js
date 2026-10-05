@@ -912,8 +912,12 @@ hoverHold($("bottom"));   // hover: the cards open above the dock and stay 3 s a
 // Akcja: the right panel collapses like every overlay panel (foldPanel in dock.js: strip + pin, hover / focus / tap, 3 s hold); it
 // keeps the Top 3 (.fold-keep) and unfolds Zasoby, Na żywo and the details over the map (app.css #right.peek, no inset change).
 // The phone (<= 600 px) keeps its bottom sheet: foldPanel is a no-op there, hoverHold as before.
-for (const e of document.querySelectorAll("#right>.hero, #segs, #alerts, #liveBox")) e.classList.add("fold-keep");
-if (!foldPanel($("right"), { title: "Gdzie szukać najpierw", key: "rescue-right-pin", live: false, sum: () => document.body.classList.contains("time-live") ? "zasoby · na żywo · plan" : "zasoby · plan · ocena" })) { hoverHold($("right")); $("right").tabIndex = 0; }
+for (const e of document.querySelectorAll("#right>.hero, #segs, #alerts, #liveBox, #rtabs, #teamTab")) e.classList.add("fold-keep");
+if (!foldPanel($("right"), { title: "Szczegóły", key: "rescue-right-pin", live: false, sum: () => document.body.classList.contains("time-live") ? "zasoby · na żywo · plan" : "zasoby · plan · ocena" })) { hoverHold($("right")); $("right").tabIndex = 0; }
+// sens-funkcji #12 (MERGE): "Zespoły" tab next to "Gdzie szukać najpierw" - every team of this action in one place (rendered by loadAssets below)
+$("rtabs").onclick = (e) => { const b = e.target.closest("[data-rt]"); if (!b) return; const z = b.dataset.rt === "zesp";
+  $("right").classList.toggle("rt-zesp", z); $("rtabs").querySelectorAll("[data-rt]").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-selected", String(x === b)); });
+  if (z) window.__loadTeams?.(true); };
 function setRescuerFrame() { const t = myTeam(); setFrame("frameRescuer", patrolURL(t)); }
 $("roleBtn").onclick = () => { $("rolePick").hidden = false; };
 $("rolePick").onclick = (e) => { const b = e.target.closest("[data-role]"); if (b) setRole(b.dataset.role); };
@@ -1744,10 +1748,41 @@ subs.push((why) => {
     if (h.fatiguePct != null) return ["zmęczenie " + h.fatiguePct + "%", lv(["fatigue", "duty"]), `Zmęczenie ${h.fatiguePct}% (szacunek z trasy i czasu służby)`];
     return ["-", u.level === "ok" ? "" : u.level, "brak danych o stanie"];
   };
-  let assetsKey = "", assetsAt = 0, assetsBusy = false;
+  let assetsKey = "", assetsAt = 0, assetsBusy = false, teamUnits = [];
+  const tt = () => $("right").classList.contains("rt-zesp");
+  // sens-funkcji #12: "Zespoły" tab - the step's teams (state, task from the run) + this action's inventory units (kind, fatigue / dog word
+  // like unitcard.js #24, last report from the feeds); a row opens the same actor drawer as "Zasoby akcji"
+  const KL = { pieszy: "patrol pieszy", pies: "zespół z psem", dron: "dron", smiglowiec: "śmigłowiec", lodz: "łódź", nurkowie: "nurkowie" };
+  const word = (u) => { const h = u.health || {}, lv = (c) => { const w = (u.warnings || []).filter((x) => c.includes(x.code)); return w.some((x) => x.level === "red") ? "red" : w.length ? "amber" : ""; };
+    if (h.fault) return ["usterka", "red"];
+    if (h.batteryPct != null) return ["bateria " + h.batteryPct + "%", lv(["battery", "spares"])];
+    if (h.fuelPct != null) return ["paliwo " + h.fuelPct + "%", lv(["fuel", "duty"])];
+    if (h.workMin != null) { const l = lv(["dogwork"]); return [l === "red" ? "pies: wymaga odpoczynku" : l ? "pies: przerwa wkrótce" : h.workMin > 0 ? "pies w normie" : "pies odpoczywa", l]; }
+    if (h.fatiguePct != null) return [h.fatiguePct >= 70 ? "wymaga zmiany" : h.fatiguePct >= 40 ? "zmęczony" : "wypoczęty", lv(["fatigue", "duty"])];
+    return ["", ""]; };
+  function renderTeamTab() {
+    const box = $("teamTab"); if (!box || !tt()) return;
+    const S = curStep() || {}, res = S.resources || [], man = store.manual || [], segs = S.segments || [];
+    const ids = [...res.map((r) => r.id), ...teamUnits.map((u) => u.id).filter((id) => !res.some((r) => r.id === id))];
+    const rows = ids.map((id) => {
+      const r = res.find((x) => x.id === id) || {}, u = teamUnits.find((x) => x.id === id) || {}, m = man.find((x) => x.resourceId === id), a = (S.assignments || []).find((x) => x.resourceId === id);
+      const seg = (m && m.segmentId) || r.currentSegment || u.segmentId || (a && a.segmentId) || "", sn = (segs.find((g) => g.id === seg) || {}).name || (a && a.segmentName) || "";
+      const st = /zamknięta/.test(r.reason || "") ? "po akcji" : /^w drodze/.test(r.reason || "") ? "w drodze" : r.currentSegment || m || u.sc ? "w terenie" : r.available === false ? "niedostępny" : "wolny";
+      const task = m ? `zadanie: ${seg} ${sn} (operator)` : r.reason && st !== "wolny" ? r.reason : seg ? `zadanie: ${seg} ${sn}${a ? " (plan)" : ""}` : r.reason || "bez zadania";
+      const f = (k) => (u.feeds || []).filter((x) => k.includes(x.kind) && x.lastAt).map((x) => x.lastAt).sort().pop();
+      const rep = f(["reports", "radio", "clues"]), gps = f(["gps", "collar"]), [w, lv] = word(u);
+      return `<div class="trow" data-id="${esc(id)}" tabindex="0" title="${esc(r.name || u.name || id)} - kliknij: dziennik i ślad na mapie${esc((u.warnings || []).map((x) => "\n" + x.text).join(""))}">`
+        + `<div class="row"><b>${esc(shortName(r.name || u.name || id))}</b><span class="mute">${esc(KL[u.kind] || "")}</span><span style="flex:1"></span><span class="tst ${st === "w terenie" ? "on" : st === "w drodze" ? "go" : st === "niedostępny" ? "off" : ""}">${st}</span></div>`
+        + `<div class="help">${esc(task)}</div>`
+        + `<div class="help">${rep ? "meldunek " + esc(rep) : "brak meldunków"}${gps ? " · GPS " + esc(gps) : ""}${w ? ` · <span class="ah ${lv}">${esc(w)}</span>` : ""}</div></div>`; });
+    box.innerHTML = (rows.join("") || `<div class="help">Ta akcja nie ma jeszcze zespołów.</div>`)
+      + `<a class="tzas" href="zasoby.html?sc=${encodeURIComponent(store.scenario || "")}">Szczegóły w Zasobach →</a>`;
+    box.querySelectorAll(".trow").forEach((r) => { const go = () => { showActor(r.dataset.id); highlight(r.dataset.id); }; r.onclick = go; r.onkeydown = (e) => { if (e.key === "Enter") go(); }; });
+  }
+  window.__loadTeams = (f) => { renderTeamTab(); loadAssets(f); };
   async function loadAssets(force) {
-    const box = $("assetList"); if (!box || store.mode !== "akcja" || store.role === "ratownik" || !$("assets").open) return;
-    if (store.backend !== "api") { box.innerHTML = `<div class="help">Zasoby akcji są dla akcji z serwera (nie dla historii ze Studia).</div>`; return; }
+    const box = $("assetList"); if (!box || store.role === "ratownik" || !((store.mode === "akcja" && $("assets").open) || tt())) return;
+    if (store.backend !== "api") { box.innerHTML = `<div class="help">Zasoby akcji są dla akcji z serwera (nie dla historii ze Studia).</div>`; teamUnits = []; renderTeamTab(); return; }
     const at = liveOn() ? "" : atNow(), key = store.scenario + "|" + at;
     if (assetsBusy || (!force && key === assetsKey && Date.now() - assetsAt < 20000)) return;
     assetsBusy = true;
@@ -1756,6 +1791,7 @@ subs.push((why) => {
       assetsKey = key; assetsAt = Date.now();
       const st = curStep(), asg = (st && st.assignments) || [];
       const units = (d.units || []).filter((u) => u.atSc === store.scenario);
+      teamUnits = units; renderTeamTab();
       box.innerHTML = units.map((u) => {
         const [v, lv, tip] = chip(u), gps = (u.feeds || []).find((f) => f.kind === "gps" || f.kind === "collar") || { status: "off" };
         const plan = !u.sc && (u.home || []).includes(store.scenario), seg = u.segmentId || (asg.find((a) => a.resourceId === u.id) || {}).segmentId;
@@ -1774,7 +1810,7 @@ subs.push((why) => {
     finally { assetsBusy = false; }
   }
   $("assets") && $("assets").addEventListener("toggle", () => loadAssets(true));
-  subs.push((why) => { if (why === "load" || why === "run" || why === "mode" || why === "step") setTimeout(() => loadAssets(why !== "step"), 300); });
+  subs.push((why) => { if (why === "load") teamUnits = []; renderTeamTab(); if (why === "load" || why === "run" || why === "mode" || why === "step") setTimeout(() => loadAssets(why !== "step"), 300); });
   setInterval(() => { if (!document.hidden) loadAssets(false); }, 4000);   // scrubbed minute changed, or 20 s old -> refetch
   setTimeout(() => loadAssets(true), 1500);
 }

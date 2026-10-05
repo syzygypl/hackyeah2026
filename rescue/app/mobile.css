@@ -80,7 +80,7 @@
   body:not(.role-ratownik) #right>#mMore{order:4;flex:none;min-height:44px;margin-top:10px;font-size:15px;font-weight:600;border-radius:10px}
   @media (prefers-reduced-motion:reduce){body:not(.role-ratownik) #right,body:not(.role-ratownik) #bottom,body:not(.role-ratownik) #mPeek .mp-chev{transition:none!important}}
   body:not(.role-ratownik) #right>h2:first-of-type{order:1;margin:2px 0 6px}
-  body:not(.role-ratownik) #right>#segs{order:2}
+  body:not(.role-ratownik) #right>#segs,body:not(.role-ratownik) #right>#teamTab{order:2}
   body:not(.role-ratownik) #right>#liveBox{order:3}
   body:not(.role-ratownik) #right>.hero,body:not(.role-ratownik) #right>#assets,body:not(.role-ratownik) #right>#moreInfo{display:none!important}
   body:not(.role-ratownik):not(.m-sheet-full) #right>#alerts{display:none}
