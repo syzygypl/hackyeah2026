@@ -258,7 +258,7 @@ function renderPanels() {
   const segRows = [...t3]; const sel = SEGS.find((s) => s.id === store.selSeg); if (sel && !t3.includes(sel)) segRows.push(sel);
   $("segs").innerHTML = segRows.map((s) => { const k = SEGS.indexOf(s);
     const a = segTeam(S, s.id), h = S.segmentHistory && S.segmentHistory[s.id];   // R2-6: searched and still in the top 3 - say why (POD only in the title)
-    const again = h && k < 3 ? ` <span class="mute" style="font-size:13px" title="Przeszukany (POD ${Math.round(100 * (h.cumPod || 0))}%), a nadal w top 3: przeszukanie nie wykluczyło sektora">· ${(h.cumPod || 0) > 0 && h.cumPod < 0.5 ? "sprawdzony (słabo)" : "przeszukany"}, sprawdzić ponownie</span>` : "";
+    const again = h && k < 3 ? `<span class="mute" style="font-size:13px;display:block" title="Przeszukany (POD ${Math.round(100 * (h.cumPod || 0))}%), a nadal w top 3: przeszukanie nie wykluczyło sektora">${(h.cumPod || 0) > 0 && h.cumPod < 0.5 ? "sprawdzony (słabo)" : "przeszukany"}, sprawdzić znów</span>` : "";
     return `<div class="box seg ${s.id === store.selSeg ? "sel" : ""}" data-seg="${esc(s.id)}"><span class="rank">${k + 1}</span><b>${esc(s.id)} ${esc(s.name)}</b><div class="p"><span class="mute" style="font-size:13px">${(+s.areaPct).toFixed(1).replace(".", ",")}% obszaru</span>${again}</div><i class="segbar" style="--w:${Math.min(100, s.poa * 100 / Math.max(t3[0].poa, 1e-9) * 0.9).toFixed(0)}%"></i>${a ? `<div class="segteam"><span class="tk">${esc((a.name || "?")[0])}</span><span title="${esc(a.name)}">${esc(shortName(a.name))}</span></div>` : ""}</div>`; }).join("");
   const W = S.weather || {}; $("surv").textContent = W.survival ? "Hipotermia: " + W.survival.text : "";
   const by = {}; (S.assignments || []).forEach((a) => by[a.resourceId] = a);
@@ -345,7 +345,7 @@ async function pollAlerts() {
   if (!alertBase) alertBase = { ...rej };
   for (const [k, v] of Object.entries(rej)) { const d = v - (alertBase[k] || 0); if (d > 0) A.push([d > 5 ? "bad" : "", `${k === "pin" ? "Próby zmian bez klucza akcji" : "Odrzucone żądania (" + k + ")"}: ${d} od otwarcia strony`]); }
   if (M.some((m) => m.n === "rescue_llm_up" && m.v === 0)) A.push(["", "Model AI jest wyłączony - meldunki są odczytywane regułami"]);
-  const S = curStep(); (S?.assignments || []).forEach((a) => { const nm = ((S.resources || []).find((r) => r.id === a.resourceId) || {}).name || a.resourceName || a.resourceId; (a.safety || []).forEach((f) => A.push(["", `${shortName(nm)}: ${f}`])); });
+  const S = curStep(); (S?.assignments || []).forEach((a) => { const nm = ((S.resources || []).find((r) => r.id === a.resourceId) || {}).name || a.resourceName || a.resourceId; (a.safety || []).forEach((f) => A.push(["", `${shortName(nm)} - ${f}`])); });
   if (own === null) A.push(["ok", "Brak połączenia z serwerem akcji - nie widać zespołów w terenie"]);
   $("alerts").innerHTML = (A.length ? A : [["ok", "Wszystko w porządku - brak alertów"]]).map(([c, t]) => `<div class="alert ${c}">${esc(t)}</div>`).join("");
 }
@@ -1657,10 +1657,12 @@ subs.push((why) => {
     return [`Waga ${pl(wAt(c))} - ${c.typeLabel}, ${c.sourceLabel}`, ...(c.why || []),
       `= ${pl(c.factors.reliability)} × ${pl(c.factors.accuracy)} × ${pl(c.factors.recency)} × ${pl(c.factors.corroboration)}${c.override != null ? " → ręcznie " + pl(c.override) : ""}`].join("\n");
   }
+  // sens-funkcji R2-12: a bare 0-1 number read as "88% pewności" - show a word, the number stays in title. >= 0.6 silna, >= 0.3 średnia, below słaba
+  const wWord = (w) => w >= 0.6 ? "silna" : w >= 0.3 ? "średnia" : "słaba";
   function chip(c) {
     const w = wAt(c), ed = canEdit() && c.id;
     return `<div class="cw${c.applied ? "" : " info"}${c.override != null ? " man" : ""}" data-cw="${esc(c.id)}" title="${esc(tip(c))}">`
-      + `<span class="cwl">waga</span><i class="cwb"><i style="width:${Math.round(w * 100)}%"></i></i><b>${pl(w)}</b>`
+      + `<span class="cwl">waga</span><i class="cwb"><i style="width:${Math.round(w * 100)}%"></i></i><b title="waga ${pl(w)}">${wWord(w)}</b>`
       + (c.override != null ? `<span class="cwm">ręcznie</span>` : c.applied ? "" : `<span class="cwm">info</span>`)
       + (ed ? `<button type="button" data-d="-0.1" title="Mniejsza waga (operator)">−</button><button type="button" data-d="0.1" title="Większa waga (operator)">+</button>`
         + (c.override != null ? `<button type="button" data-auto="1" title="Wróć do wagi wyliczonej">auto</button>` : "") : "") + `</div>`;
