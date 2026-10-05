@@ -175,7 +175,7 @@
   run = await rr.json();
   step = [...run.steps].reverse().find(s => (s.assignments || []).length) || run.steps[run.steps.length - 1];   // last step that still has a plan (the final one may be "akcja zamknięta")
   const teams = (step.resources || []).filter(r => r.type !== "drone");
-  $("team").innerHTML = teams.map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join("");
+  $("team").innerHTML = teams.map(r => `<option value="${esc(r.id)}" title="${esc(r.name)}">${esc(String(r.name ?? "").split(" (")[0])}</option>`).join("");
   team = qs.get("team") || store.get(TKEY, null) || teams[0]?.id;
   $("team").value = team;
   $("team").onchange = e => { team = e.target.value; store.set(TKEY, team); renderTask(); };
