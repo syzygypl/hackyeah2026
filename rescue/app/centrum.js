@@ -1338,6 +1338,9 @@ function simNowAt() {   // the virtual clock: the timeline cursor in Grafik 24/7
   if (tl.mode !== "sim" || tl.cur == null) return n;
   return sim.lf.msAt(sim.lf.warsaw(n).day, tl.cur);
 }
+// R3-6: the demo's main action (Zawrat, a real incident record) gets no 24/7 simulation card / Gantt bar / dot - another start time,
+// #1 and team count than /app would read as the same action; other scenarios are covered by the LIVE skip of R2-13
+const SIM_SKIP = new Set(["zawrat"]);
 function simView() {   // occurrences running at the virtual clock + ended within SIM_FADE_MIN
   if (!simOn()) return [];
   const ms = simNowAt();
@@ -1357,7 +1360,7 @@ async function simInit() {
   $("clock").before(host);
   const box = document.createElement("div"); box.id = "simCards"; $("cards").before(box);
   $("simTog").onclick = () => { lf.setSimEnabled(!sim.on); if (new URLSearchParams(location.search).has("sim")) { const u = new URL(location.href); u.searchParams.delete("sim"); history.replaceState(null, "", u); location.reload(); return; } simApply(); };
-  try { const s = await lf.loadSchedule(); sim.entries = s.entries; sim.source = s.source; } catch (e) { console.warn("[centrum] schedule", e); }
+  try { const s = await lf.loadSchedule(); sim.entries = s.entries.filter((e) => !SIM_SKIP.has(e.sc)); sim.source = s.source; } catch (e) { console.warn("[centrum] schedule", e); }
   sim.bell = lf.mountBell(host, { openURL: (i, clock) => histURL(i.sc, clock), extraNotes: advNotes, toastSince: lf.virtualDispatcher() ? lf.nowMs() - 60000 : undefined });   // sens-funkcji #5: no backlog toasts on load (the virtual dispatcher acks the rest); advNotes: Doradca ALARM in the bell (#1)
   simApply();
   setInterval(simTick, 5000);
