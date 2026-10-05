@@ -881,7 +881,9 @@ function setRole(r) {
 }
 // first-run hint: one line, dismissible, remembered per role
 const HINTS = {
-  operator: "Wybierz akcję u góry. Akcja pokazuje mapę i plan, Plan pozwala dodawać dowody przeciągając je na mapę.",
+  // sens-funkcji R2-9: where you are and what to look at (the action is already picked), not "Wybierz akcję u góry"
+  operator: () => { const nm = (STATIC[store.scenario] && STATIC[store.scenario].name.replace(/\s*\(.*\)$/, "").split(" - ")[0]) || scenTitle().split(" - ")[0] || "", at = innerWidth <= 600 ? "Na dole" : "Po prawej";
+    return store.time === "live" ? `To akcja ${nm} na żywo. ${at}: gdzie szukać najpierw. Meldunek zespołu lub relację świadka wpisz w Czacie.` : `To nagrana historia akcji ${nm}. ${at}: gdzie szukać najpierw.`; },
   ratownik: "Wybierz swój zespół. Zadanie i mapa są u góry, meldunki wysyłasz dużymi przyciskami na dole.",
 };
 function showFirstRun(role) {
@@ -889,8 +891,15 @@ function showFirstRun(role) {
   if (seen || !HINTS[role]) { el.hidden = true; return; }
   // header line for the operator; on the phone the header is reduced, so the hint goes above the task card
   if (role === "ratownik") $("rescuer").insertBefore(el, $("rescuer").firstChild); else $("status").before(el);
-  el.hidden = false; $("firstRunText").textContent = HINTS[role];
-  $("firstRunOk").onclick = () => { el.hidden = true; try { localStorage.setItem("rescue-app-hint-" + role, "1"); } catch (e) {} };
+  el.hidden = false; $("firstRunText").textContent = typeof HINTS[role] === "function" ? HINTS[role]() : HINTS[role];
+  const done = () => { el.hidden = true; try { localStorage.setItem("rescue-app-hint-" + role, "1"); } catch (e) {} removeEventListener("pointerdown", done, true); removeEventListener("blur", frameClick); };
+  const frameClick = () => setTimeout(() => { if (document.activeElement && document.activeElement.tagName === "IFRAME") done(); }, 0);
+  $("firstRunOk").onclick = done;
+  setTimeout(() => { addEventListener("pointerdown", done, true); addEventListener("blur", frameClick);
+    document.querySelectorAll("iframe").forEach((f) => { const on = () => { try { f.contentWindow.addEventListener("pointerdown", done, true); } catch (e) {} }; on(); f.addEventListener("load", on); }); }, 0);   // R2-9: any click (also into the 2D / 3D frames, which blur this window) dismisses it
+}
+function refreshFirstRun() {   // R2-9: the action name and Na żywo / Historia are known only once the run is in
+  if (store.role === "operator" && !$("firstRun").hidden) $("firstRunText").textContent = HINTS.operator();
 }
 // Akcja: the event cards hide behind "Sygnały" so the dock is one line; Plan always shows them
 $("sigBtn").onclick = () => { const on = document.body.classList.toggle("signals"); $("sigBtn").setAttribute("aria-pressed", on); setTimeout(pushInsets, 50); };
@@ -1074,6 +1083,7 @@ function renderLiveHead() {
     el.title = tip;
     $(t).textContent = scenTitle(); $(t).title = (D() && D().incident) || "";
   }
+  refreshFirstRun();
   const plan = store.mode === "edycja" || store.backend === "studio";
   $("tmode").hidden = plan;
   $("tmode").querySelectorAll("button").forEach((b) => {
