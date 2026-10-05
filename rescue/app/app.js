@@ -362,11 +362,21 @@ function renderEvents() {
         <div class="ops"><button data-op="up" ${k === 0 ? "disabled" : ""}>&lt;</button><button data-op="down" ${k === items.length - 1 ? "disabled" : ""}>&gt;</button><button data-op="delete">usuń</button></div></div>`; }).join("") || `<div class="help">Historia jest pusta. ${store.mode === "edycja" ? "Przeciągnij dowód z lewej strony na mapę." : "Dodaj zdarzenia w trybie Edycja."}</div>`;
     wireEvents();
   } else {
-    $("events").innerHTML = R.steps.map((s, k) => `<div class="ev ${k + 1 === store.step ? "cur" : k + 1 > store.step ? "future" : ""} ${s.hintId && evOff.has(s.hintId) ? "evoff" : ""}" data-step="${k + 1}"><div class="src">${s.hintId ? evToggle(s.hintId) : ""}${esc(s.t)} · ${esc(srcPl(s.source))}</div><div class="t">${esc(s.label)}</div></div>`).join("");
+    // sens-funkcji R2-12: clues and reports first (newest on the left), background (teren / trudność / pogoda / Koester) folded into one
+    // card at the end of the past ones; weather = one card with the current state; future steps after it as before
+    const cardOf = (s, k) => `<div class="ev ${k + 1 === store.step ? "cur" : k + 1 > store.step ? "future" : ""} ${s.hintId && evOff.has(s.hintId) ? "evoff" : ""}" data-step="${k + 1}"><div class="src">${s.hintId ? evToggle(s.hintId) : ""}${esc(s.t)} · ${esc(srcPl(s.source))}</div><div class="t">${esc(s.label)}</div></div>`;
+    const ks = R.steps.map((s, k) => k), isBg = (k) => EV_BG.has(R.steps[k].source), isW = (k) => /^Weather/.test(R.steps[k].source || "");
+    const past = ks.filter((k) => k + 1 <= store.step), fut = ks.filter((k) => k + 1 > store.step && !isBg(k));
+    const bg = past.filter(isBg), wNow = bg.filter(isW).pop(), bgShow = bg.filter((k) => !isW(k) || k === wNow);
+    const bgCard = bg.length ? `<div class="ev evbg${evBgOpen ? " open" : ""}" data-bg="1" title="${evBgOpen ? "Zwiń tło" : "Pokaż tło akcji: teren, trudność, pogoda, statystyka"}"><div class="src">${evBgOpen ? "▾" : "▸"} tło akcji (${bgShow.length})</div><div class="t">Tło: teren, trudność, pogoda, statystyka</div>${wNow != null ? `<div class="note">Pogoda teraz (${esc(R.steps[wNow].t)}): ${esc(R.steps[wNow].label.replace(/^[^:]{0,14}:\s*/, ""))}</div>` : ""}</div>` : "";
+    $("events").innerHTML = past.filter((k) => !isBg(k)).reverse().map((k) => cardOf(R.steps[k], k)).join("") + bgCard
+      + (evBgOpen ? bgShow.map((k) => cardOf(R.steps[k], k)).join("") : "") + fut.map((k) => cardOf(R.steps[k], k)).join("");
   }
 }
 // evidence on/off ("uwzględnij"): the embedded views recompute the map in the browser (contract: {type:'evidence', id, on}, '*' = all)
 const evOff = new Set();
+const EV_BG = new Set(["Terrain", "TerrainDifficulty", "WeatherConditions", "Weather", "KoesterRings"]);   // R2-12: background, folded in Sygnały
+let evBgOpen = false;
 // Sygnały cards: the engine's provider names in plain Polish (demo review b0858be pt 1 - the jury watches this panel in step 2)
 const SRC_PL = { Terrain: "Teren", TerrainDifficulty: "Trudność terenu", WeatherConditions: "Pogoda", Weather: "Pogoda", KoesterRings: "Statystyka zaginięć",
   TripPlan: "Plan wycieczki", TrailheadCar: "Auto na parkingu", Cell112Fix: "Lokalizacja 112", SegmentSearched: "Przeszukany sektor", DronePassEmpty: "Przelot drona bez wyniku",
@@ -390,6 +400,7 @@ for (const ev of ["pointerup", "pointercancel", "change"]) $("slider").addEventL
 $("events").onclick = async (e) => {
   if (suppressClick) return;
   const b = e.target.closest("button"), card = e.target.closest(".ev"); if (!card) return;
+  if (card.dataset.bg) { evBgOpen = !evBgOpen; return renderEvents(); }   // R2-12: the folded background card
   if (card.dataset.step) return goEvent(+card.dataset.step);
   if (b) { await run(() => api("/story/edit", { id: card.dataset.id, op: b.dataset.op }), b.dataset.op === "delete" ? "Usunięto zdarzenie" : "Zamieniono kolejność (czas)"); return; }
   // select evidence: jump to its step and fly to it
