@@ -39,7 +39,7 @@ export function unitCard(u, opts) {
   const st = plan ? "akcja" : u.status === "wolny" ? "wolny" : u.status === "w akcji" ? "akcja" : "";
   // sens-funkcji R2-3: actions and bases read as places (opts.scName: slug -> "Zawrat - turysta", Zasoby), not "w planie w planie zawrat (ze scenariusza)"
   const nm = (sc) => String((o.scName || ((x) => x))(sc)), place = (sc) => nm(sc).split(" - ")[0];
-  const where = u.sc ? `: ${esc(place(u.sc))}${u.segmentId ? " · " + esc(u.segmentId) : ""}` : (u.atSc ? (plan ? `: ${esc(place(u.atSc))}` : ` · w planie: ${esc(nm(u.atSc))}`) : (u.home || []).length ? " · baza: " + esc([...new Set(u.home.map(place))].slice(0, 3).join(", ")) : "");
+  const where = u.sc ? `: ${esc(place(u.sc))}${u.segmentId ? " · " + esc(u.segmentId) : ""}` : (u.atSc ? (plan ? `: ${esc(place(u.atSc))}` : ` · w planie: ${esc(nm(u.atSc))}`) : (u.home || []).length ? ((h) => ` · baza: <span title="${esc(h.join(", "))}">${esc(h[0])}${h.length > 1 ? ` +${h.length - 1}` : ""}</span>`)([...new Set(u.home.map(place))]) : "");   // R2-3: a pooled unit lists one base, the rest in title
   const base = u.base && u.base !== "baza wg scenariusza" ? u.base : "";
   const spares = (u.spares || []).map((s) => `${esc(s.item)} × ${esc(s.qty)}`).join(", ");
   return `<article class="unit ${esc(u.level)}" data-id="${esc(u.id)}" data-sc="${esc(u.atSc || u.sc || "")}" tabindex="0" title="${esc(o.title ?? "Kliknij: dziennik i źródła danych")}">
