@@ -210,7 +210,7 @@ help.innerHTML = `<div class="hp-head"><h2>Instrukcja</h2><span style="flex:1"><
   </ul>
   <h3>Na żywo czy Historia</h3>
   <ul>
-    <li><b>Na żywo</b> (czerwona ramka): akcja teraz. Ślady, wysyłanie zespołów, potwierdzanie meldunków, nowe akcje. „Następne zdarzenie” przesuwa akcję dla wszystkich podłączonych.</li>
+    <li><b>Na żywo</b> (czerwona ramka): akcja teraz. Ślady, wysyłanie zespołów, potwierdzanie meldunków, nowe akcje. W pokazie (adres z ?demo=1) „Następne zdarzenie” przesuwa akcję dla wszystkich podłączonych.</li>
     <li><b>Historia</b> (granatowa ramka): nagrany przebieg. Przesuwasz oś czasu albo naciskasz ▶; niczego nie zmieniasz na serwerze.</li>
   </ul>
   <h3>Role</h3>

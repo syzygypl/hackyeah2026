@@ -12,6 +12,7 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pct = (p) => Math.round((p || 0) * 100) + "%";
 const LOOPBACK = ["127.0.0.1", "localhost", "[::1]", "::1"].includes(location.hostname);
+const DEMO_ADV = new URLSearchParams(location.search).get("demo") === "1";   // sens-funkcji R2-1: the ⏮ ⏭ advance box (and what comes next) only in the demo, ?demo=1 - a live incident has no future
 const JOINED = !!new URLSearchParams(location.search).get("key");   // opened from a join link / QR: that is a live action
 // action key (write access): arrives once in the join link / QR (?key=), is kept on this device and removed from the address bar
 { const k = new URLSearchParams(location.search).get("key"); if (k) { try { localStorage.setItem("rescue-pin", k.trim()); } catch (e) {} const u = new URL(location.href); u.searchParams.delete("key"); history.replaceState(null, "", u); } }
@@ -1096,10 +1097,10 @@ function renderLiveHead() {
   const on = liveOn();
   // Na żywo: no replay; the operator moves the incident on for everyone (POST /api/advance), the server's liveCursor says what is next
   $("slider").hidden = on; $("play").hidden = on; $("speed").hidden = on; $("histStart").hidden = on; $("stepPrev").hidden = on;
-  $("backLive").hidden = on || plan || store.backend !== "api" || store.role === "ratownik"; $("advBox").hidden = !on || store.role === "ratownik";
+  $("backLive").hidden = on || plan || store.backend !== "api" || store.role === "ratownik"; $("advBox").hidden = !on || store.role === "ratownik" || !DEMO_ADV;
   const lc = D() && D().liveCursor, nx = lc && lc.next;
   $("advNext").disabled = !!advance.busy || !liveNow() || !nx; $("advStart").disabled = !!advance.busy || !liveNow();
-  $("advNextT").textContent = advance.busy ? advance.busy : !lc ? "" : nx ? `dalej ${nx.at} · ${shortEv(nx.title, evKind({ label: nx.title }))}` : "koniec nagranej akcji";
+  $("advNextT").textContent = advance.busy ? advance.busy : !lc ? "" : nx ? `⏭ następne zdarzenie ${nx.at}` : "koniec nagranej akcji";
   $("advNextT").title = nx ? `Następne zdarzenie: ${nx.at} ${nx.title}` : "";
   $("tlabel").textContent = plan ? "Historia" : on ? "Na żywo · teraz" : "Historia";
   renderDock();

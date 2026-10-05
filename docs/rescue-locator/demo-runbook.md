@@ -13,7 +13,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 | Co | URL |
 |---|---|
 | Operator, Historia od początku | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=hist&step=0 |
-| Operator, Na żywo | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=live |
+| Operator, Na żywo (pokaz: z `&demo=1` widać ⏮ ⏭ "Następne zdarzenie"; bez niego oś kończy się na "teraz") | https://rescue-locator.vercel.app/app/?sc=zawrat&role=operator&mode=akcja&view=2d&time=live&demo=1 |
 | Centrum | https://rescue-locator.vercel.app/app/centrum.html |
 | Centrum, oś całej doby i Dzień w Centrum (Tryb pokazu) | https://rescue-locator.vercel.app/app/centrum.html?demo=1 (albo przycisk **Tryb pokazu** obok Na żywo; bez niego oś pokazuje dobę tylko do teraz) |
 | Ratownik (bez klucza, tylko podgląd) | https://rescue-locator.vercel.app/app/?role=ratownik |
@@ -101,7 +101,7 @@ Krok 2 na produkcji (`4973b34`, z 33a6ad6): odznaczenie wskazówki w **Sygnałac
 
 Nie pokazujemy: procentów POA jako szansy, trybu Walidacja, oceny LLM, Monitoringu, "+ Nowa akcja" (patrz `najmocniejsze-funkcje.md`, "Czego NIE pokazywać").
 
-Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kolejną próbą: **Wyczyść akcję** i ponownie przydział TOPR A -> S7. Zapas: na laptopie, Na żywo, **Następne zdarzenie ▶** (Zawrat: następne to 20:03 ZNALEZIONO ze śmigłowca) też kończy akcję.
+Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kolejną próbą: **Wyczyść akcję** i ponownie przydział TOPR A -> S7. Zapas: na laptopie, Na żywo (link z `&demo=1`), **Następne zdarzenie ▶** (Zawrat: następne to 20:03 ZNALEZIONO ze śmigłowca) też kończy akcję.
 
 ## 3. Co może pójść źle
 
@@ -115,7 +115,7 @@ Uwaga do kroku 5: ZNALEZIONO z telefonu kończy Zawrat dla wszystkich. Przed kol
 | Strzałka kierunku "nie tak" | Od c0ee99f strzałka obraca się wg kompasu telefonu (na iPhonie najpierw "Włącz kompas"). Bez kompasu pokazuje "▲N · północ u góry": trzymaj telefon północą do góry. Na pokazie bez GPS: ?me=lat,lon, a kierunek: ?heading=NN. |
 | Model AI nie odpowiada (`/health` bez `llm-openai`, offline) | Meldunki czytają reguły (~15 ms), etykieta pokazuje "reguły"; pisz krótko: "S8 pusto", "znaleziony w S7". |
 | ACK nie dochodzi na telefon | Telefon sprawdza co 15 s - mów dalej i wróć; zapis widać i tak na laptopie ("Wszystko potwierdzone"). |
-| Zawrat nie przechodzi do Zakończone | Odśwież Centrum (Cmd+R); dalej nic: na laptopie Na żywo -> **Następne zdarzenie ▶** (20:03). |
+| Zawrat nie przechodzi do Zakończone | Odśwież Centrum (Cmd+R); dalej nic: na laptopie Na żywo (link z `&demo=1`) -> **Następne zdarzenie ▶** (20:03). |
 | Widziałem: "w kolejce" | Telefon nie ma klucza (strona dziedziczy klucz z QR Ratownik na tym samym telefonie) - pomiń krok, powiedz zdanie. |
 
 ## 4. Pytania jury - krótkie odpowiedzi
