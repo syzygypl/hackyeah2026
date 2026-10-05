@@ -932,7 +932,7 @@ export function mountAppChat() {
     evGroups(R).forEach((g, j) => { const el = tm.children[j]; if (!el) return; const c = g.ks.some((k) => /^Czat \d/.test(R.steps[k - 1].label || "")); el.classList.toggle("chat", c); if (c) el.title = "Zdarzenie z czatu"; });
   };
   { const tm = document.getElementById("tlMarks"); if (tm) new MutationObserver(markDock).observe(tm, { childList: true }); }
-  const mode = () => { const m = host.mode(); dr.querySelector(".ch-mode").textContent = m === "live" ? "NA ŻYWO" : m === "studio" ? "PLAN" : "HISTORIA"; dr.querySelector(".ch-mode").className = "ch-mode m-" + m; };
+  const mode = () => { const m = host.mode(); dr.querySelector(".ch-mode").textContent = m === "live" ? "NA ŻYWO" : m === "studio" ? "CO JEŚLI" : "HISTORIA"; dr.querySelector(".ch-mode").className = "ch-mode m-" + m; };
   const open = (on) => { dr.classList.toggle("open", on); btn.classList.toggle("on", on); mode(); if (on) { chat.prefetch(); setTimeout(() => dr.querySelector("textarea").focus(), 200); } try { sessionStorage.setItem("rescue-chat-open", on ? "1" : ""); } catch (e) {} };
   btn.onclick = () => open(!dr.classList.contains("open"));
   dr.querySelector(".ch-x").onclick = () => open(false);

@@ -90,7 +90,7 @@ async function detect() {
   store.hasApi = !!a; store.hasStudio = !!(m && m.modules); store.mods = m ? m.modules : [];
   let list = [];
   if (a) for (const s of (Array.isArray(a) ? a : a.scenarios || [])) { const id = typeof s === "string" ? s : s.id || s.name; if (id && !/blind/i.test(id) && !(id === "morzycko" && new URLSearchParams(location.search).get("sc") !== "morzycko")) list.push({ id, name: (s.incident ? id + " - " + s.incident : id).slice(0, 70), api: true, run: s.run || "/api/run/" + id, assessment: s.assessment || "/api/assessment/" + id }); }
-  if (store.hasStudio) list.push({ id: "studio", name: "Studio (edycja na żywo)" });
+  if (store.hasStudio) list.push({ id: "studio", name: "Co jeśli (piaskownica)" });
   // blind test round 1 replay (the 3D view shows the hider's story and the true spot at the end); only when its run is there
   // not on the demo list (demo review d1510b2 pt 6); still reachable with ?sc=blind-01-replay (3D README, blind test reveal)
   if (blindOk && new URLSearchParams(location.search).get("sc") === "blind-01-replay") list.push({ id: "blind-01-replay", name: STATIC["blind-01-replay"].name, static: true });
@@ -482,6 +482,7 @@ const curClock = () => (curStep() || {}).t || startClock();
 function inPoly(pt, poly) { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
 function segAt(lng, lat) { const S = curStep(); return S ? S.segments.find((s) => s.polygon && inPoly([lng, lat], s.polygon)) : null; }
 function mapLL(x, y) { const r = $("map").getBoundingClientRect(); if (!r.width || x < r.left || x > r.right || y < r.top || y > r.bottom) return null; const ll = map.unproject([x - r.left, y - r.top]); return { lng: ll.lng, lat: ll.lat, px: [x - r.left, y - r.top] }; }
+const WHATIF = "Co jeśli - piaskownica: zmień wskazówki i zespoły i zobacz, jak zmienia się mapa. Akcja na żywo się nie zmienia.";
 const HINT = "Przeciągnij <b>dowód</b> na mapę, przeciągnij <b>zespół</b> na sektor. Pinezki można przesuwać.";
 function hint(html) { $("hint").innerHTML = store.editable && store.mode === "edycja" ? (html || HINT) : ""; }
 function draggable(el, label, onDrop, onMove) {
@@ -664,7 +665,7 @@ addEventListener("keydown", (e) => {
   if (e.key === "Escape") { arm(null); closePop(); }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.target.closest("input,textarea,select")) { e.preventDefault(); undo(); }
 });
-$("newZ").onclick = () => { teamOps = []; return run(() => api("/story/new", { template: "zawrat", category: "hiker", startClock: "17:40" }), "Nowa historia: Zawrat"); };
+$("newZ").onclick = () => { teamOps = []; return run(() => api("/story/new", { template: "zawrat", category: "hiker", startClock: "17:40" }), "Co jeśli - nowa wersja: Zawrat"); };
 $("save").onclick = async () => {
   try { const r = await api("/story/save", { name: $("sname").value || "studio-story" });
     if (r.error) return toast("Nie zapisano: " + r.error, 4000);
@@ -930,7 +931,7 @@ addEventListener("message", (e) => {
 // ---------- modes (top tabs) and views inside a mode
 const MODES = {
   akcja: { label: "Akcja", views: [["2d", "2D"], ["3d", "3D"]].concat(/[?&](split|dev)=1\b/.test(location.search) ? [["split", "2D + 3D"]] : []) },   // sens-funkcji #18: 2D + 3D only with ?split=1 / ?dev=1
-  edycja: { label: "Plan", views: [["map", "Mapa"], ["split", "Mapa + 3D"]] },
+  edycja: { label: "Co jeśli", views: [["map", "Mapa"], ["split", "Mapa + 3D"]] },
   teren: { label: "Teren", views: [["przeglad", "Przegląd zespołów"], ["patrol", "Telefon patrolu"], ["field", "Meldunek"]] },
   monitoring: { label: "Monitoring", views: [] },
   walidacja: { label: "Walidacja", views: [] },
@@ -938,7 +939,7 @@ const MODES = {
 const lastView = {};
 // three top tabs (redesign): Akcja, Plan (= edycja), Więcej (Teren / Monitoring / Walidacja as sub-tabs in #more)
 const DEV = new URLSearchParams(location.search).get("dev") === "1";   // sens-funkcji #14: Monitoring / Walidacja are our tools, only with ?dev=1
-const TABS = [["akcja", "Akcja"], ["edycja", "Plan"], ["wiecej", "Więcej"]], MORE = DEV ? ["teren", "monitoring", "walidacja"] : ["teren"];
+const TABS = [["akcja", "Akcja"], ["edycja", "Co jeśli"], ["wiecej", "Więcej"]], MORE = DEV ? ["teren", "monitoring", "walidacja"] : ["teren"];
 let lastMore = "teren";
 $("modes").innerHTML = TABS.map(([k, l]) => `<button data-mode="${k}" role="tab">${l}</button>`).join("");
 $("modes").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) setMode(b.dataset.mode === "wiecej" ? lastMore : b.dataset.mode); };
@@ -947,6 +948,7 @@ $("more").onclick = (e) => { const b = e.target.closest("[data-mode]"); if (b) s
 $("views").onclick = (e) => { const b = e.target.closest("[data-view]"); if (b) setView(b.dataset.view); };
 function setMode(m, v) {
   if (!MODES[m] || (!DEV && (m === "monitoring" || m === "walidacja"))) m = "akcja";
+  if (m === "edycja" && store.mode !== "edycja") setTimeout(() => toast(WHATIF, 6000), 0);   // sens-funkcji #11: say what this mode is
   store.mode = m;
   document.body.className = document.body.className.replace(/\bmode-\w+/g, "").trim() + " mode-" + m;
   if (MORE.includes(m)) lastMore = m;
@@ -1021,7 +1023,7 @@ function scenTitle() {
   const R = D(); if (!R) return "";
   const inc = String(R.incident || "").replace(/\s*\(scenariusz[^)]*\)\s*$/i, ""), parts = inc.split(" - ");
   const what = parts[0] ? parts[0][0].toLowerCase() + parts[0].slice(1) : "";
-  if (store.backend === "studio") return "Studio" + (what ? " - " + what : "");
+  if (store.backend === "studio") return "Co jeśli" + (what ? " - " + what.replace(/^nowa historia\b.*$/, "nowa wersja") : "");   // sens-funkcji #11: not "Studio - nowa historia"
   const place = (STATIC[store.scenario] && STATIC[store.scenario].name.replace(/\s*\(.*\)$/, "").split(" - ")[0]) || (parts[1] || store.scenario || "");
   return what ? `${place} - ${what}` : place;
 }
@@ -1085,11 +1087,11 @@ document.addEventListener("click", (e) => {
 }, true);
 function renderLiveHead() {
   const mode = store.mode === "edycja" || store.backend === "studio" ? "PLAN" : liveOn() ? "LIVE" : "HISTORIA";
-  const tip = { LIVE: live.ok ? "Akcja na żywo: zmiany z terenu i od operatora przeliczają mapę co kilka sekund" : "Na żywo - brak połączenia z serwerem akcji", PLAN: "Plan / edycja historii - nie akcja na żywo", HISTORIA: "Nagrana historia akcji - bez zdarzeń na żywo" }[mode];
+  const tip = { LIVE: live.ok ? "Akcja na żywo: zmiany z terenu i od operatora przeliczają mapę co kilka sekund" : "Na żywo - brak połączenia z serwerem akcji", PLAN: "Co jeśli - piaskownica: zmiany nie trafiają do akcji na żywo", HISTORIA: "Nagrana historia akcji - bez zdarzeń na żywo" }[mode];
   for (const [b, t] of [["modeBadge", "scenTitle"], ["rModeBadge", "rScenTitle"]]) {
     const el = $(b); if (!el) continue;
     el.className = "lbadge " + mode.toLowerCase() + (mode === "LIVE" && live.ok ? " atend" : "");
-    el.innerHTML = `<i></i>${mode}`;
+    el.innerHTML = `<i></i>${mode === "PLAN" ? "CO JEŚLI" : mode}`;
     el.title = tip;
     $(t).textContent = scenTitle(); $(t).title = (D() && D().incident) || "";
   }
@@ -1383,7 +1385,7 @@ async function boot() {
     if (!store.scenList.length) throw new Error("Brak scenariuszy na serwerze.");
     renderPalette();
     let m = "akcja"; try { m = localStorage.getItem("rescue-app-mode") || "akcja"; } catch (e) {}
-    const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode");
+    const q = new URLSearchParams(location.search); if (q.get("mode")) m = q.get("mode"); if (m === "plan" || m === "cojesli") m = "edycja";   // sens-funkcji #11: Plan is now "Co jeśli", old ?mode=plan links still open it
     const want = q.get("sc") || (store.hasApi ? "zawrat" : null);
     if (want && store.scenList.some((s) => s.id === want)) $("scen").value = want;
     window.__boot?.step("Silnik - mapa poszukiwań…");   // boot loader (index.html): what is loading now

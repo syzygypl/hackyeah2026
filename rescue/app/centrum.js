@@ -228,7 +228,7 @@ const STALE_MS = 6 * 3600000, feedFound = (x) => !!(liveBySc[x.sc] && liveBySc[x
 const isStale = (x) => x.live && !x.found && (feedFound(x) || (!!x.lastEventAt && Date.now() - new Date(x.lastEventAt) > STALE_MS));
 const staleTxt = (x) => feedFound(x) ? "ZNALEZIONO (feed)" : `bez zmian od ${Math.round((Date.now() - new Date(x.lastEventAt)) / 3600000)} h`;
 const modeOf = (x) => x.found ? "found" : isStale(x) ? "stale" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident
-const BADGE = { live: "Na żywo", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE", stale: "bez zmian" };
+const BADGE = { live: "Na żywo", found: "ZNALEZIONO", plan: "CO JEŚLI", replay: "ODTWORZENIE", stale: "bez zmian" };
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); };
 // sens-funkcji R2-13: wall clock as "6 h temu" (one clock with the sim cards), the hour only in title
 const agoTxt = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return isNaN(m) ? "" : m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 2880 ? `${Math.round(m / 60)} h temu` : `${Math.round(m / 1440)} dni temu`; };
@@ -1223,7 +1223,7 @@ function renderPick() {
   }
   const rest = all.filter((x) => !used.has(x.sc));
   html += (used.size ? `<h3 class="pkr">Pozostałe <span class="cnt">${rest.length}</span></h3>` : "") + rest.map(item).join("");
-  if (pickStudio) html += `<h3 class="pkr">Inne</h3><a class="pk" href="${esc(pickURL("studio"))}" data-sc="studio"><span class="badge plan">PLAN</span><span class="pkt"></span><span class="pkn"><b>Studio</b><span>edycja na żywo</span></span></a>`;
+  if (pickStudio) html += `<h3 class="pkr">Inne</h3><a class="pk" href="${esc(pickURL("studio"))}" data-sc="studio"><span class="badge plan">CO JEŚLI</span><span class="pkt"></span><span class="pkn"><b>Co jeśli</b><span>piaskownica</span></span></a>`;
   const f = document.activeElement && document.activeElement.closest && document.activeElement.closest("#cards .pk"), fsc = f && f.dataset.sc;
   $("cards").innerHTML = html;
   $("cards").querySelectorAll(".pk").forEach((el) => {

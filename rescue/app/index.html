@@ -60,7 +60,7 @@ window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&
   <span class="scenlbl"><select id="scen" hidden tabindex="-1" aria-hidden="true"></select><button id="scenPick" type="button" title="Wybierz akcję na mapie Polski: wszystkie akcje, powiązane przez Doradcę razem">Zmień akcję</button></span>
   <span id="modes" class="views modes" role="tablist" aria-label="Tryb"></span>
   <span id="more" class="views more" role="tablist" aria-label="Więcej" style="display:none"></span>
-  <span class="edit-only edit-mode"><button id="newZ" title="Nowa historia na terenie Zawratu">Nowa historia</button>
+  <span class="edit-only edit-mode"><button id="newZ" title="Nowa wersja na terenie Zawratu">Nowa wersja</button>
   <button id="undo" title="Cofnij ostatnią zmianę (Ctrl+Z)">Cofnij</button></span>
   <span style="flex:1"></span>
   <span class="edit-only edit-mode"><input id="sname" placeholder="nazwa-historii" size="14"><button id="save">Zapisz</button></span>
@@ -102,7 +102,7 @@ window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&
     <span><label for="naLast">Ostatni kontakt</label><input id="naLast" type="time"></span>
     <span><label for="naReport">Zgłoszenie</label><input id="naReport" type="time"></span>
   </div>
-  <p class="help" id="naNote">Mapa liczy się od razu. Potem w trybie Plan dodajesz dowody (świadek, telefon, ślad) i przydzielasz zespoły.</p>
+  <p class="help" id="naNote">Mapa liczy się od razu. Potem w trybie Co jeśli dodajesz dowody (świadek, telefon, ślad) i przydzielasz zespoły.</p>
   <div class="na-row na-act"><button value="cancel" formnovalidate>Anuluj</button><button id="naGo" value="ok" class="primary">Utwórz akcję</button></div>
 </form></dialog>
 <aside id="left">
@@ -112,7 +112,7 @@ window.__boot={step:function(s){var x=document.getElementById("bootStep");if(x&&
     <h2>Zespoły - przeciągnij na sektor</h2>
     <div id="tokens" class="grid2"></div>
   </div>
-  <div id="readonly" class="note" style="display:none">Podgląd scenariusza (tylko odczyt). Edycja: wybierz „Studio (edycja na żywo)”.</div>
+  <div id="readonly" class="note" style="display:none">Podgląd scenariusza (tylko odczyt). Edycja: wybierz „Co jeśli (piaskownica)”.</div>
 </aside>
 <main id="center">
   <div id="map"><div id="toast"></div><div id="hint"></div><div id="legend"></div></div>

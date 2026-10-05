@@ -37,7 +37,7 @@ Dla każdego z zespołu, do przeczytania pod stresem. Źródła: [`najmocniejsze
 
 Czasy (serwer Rust `545fe02` lokalnie, pomiar AI Marcina 04:59, tabela w `qa-demo-path.md` "Ścieżki zapisu - Rust lokalnie"; na produkcji dochodzi sieć): meldunek u operatora **~1-2 s**, Potwierdź wszystkie -> "Wszystko potwierdzone" 0,5 s, ZNALEZIONO w Centrum **~7 s**, u operatora od razu. Czeka się tylko na telefon (odpytuje co 15 s): przydział ~10-15 s, potwierdzenie i "Akcja zakończona" **~20-25 s**. Na te chwile masz zdania w tabeli niżej.
 
-**Czyszczenie stanu (obowiązkowo po każdej próbie i 10 min przed pokazem).** Mechanizm: `POST /api/reset` (klucz operatora). Czyści meldunki, ślady, feed LIVE, przydziały, potwierdzenia (ACK), kursor "Następne zdarzenie", pulę zespołów i listę akcji zakończonych, a także bieżącą historię Studio (Plan). **Nie** usuwa zapisanych historii Studio (`scn:*`).
+**Czyszczenie stanu (obowiązkowo po każdej próbie i 10 min przed pokazem).** Mechanizm: `POST /api/reset` (klucz operatora). Czyści meldunki, ślady, feed LIVE, przydziały, potwierdzenia (ACK), kursor "Następne zdarzenie", pulę zespołów i listę akcji zakończonych, a także bieżącą historię Studio (tryb "Co jeśli", dawniej Plan). **Nie** usuwa zapisanych historii Studio (`scn:*`).
 - Przycisk: **Udostępnij -> Wyczyść akcję -> OK** (działa tylko z kluczem operatora na urządzeniu).
 - Albo z terminala: `curl -X POST https://rescue-locator.vercel.app/api/reset -H 'Content-Type: application/json' -H "X-Rescue-Pin: $RESCUE_PIN" -d '{}'` -> `{"reset":true}`.
 - Sprawdź: https://rescue-locator.vercel.app/api/incidents - wszystkie `"ended": false`; https://rescue-locator.vercel.app/api/live - `"seq": 0`. Zawrat na żywo stoi na 19:45.
@@ -70,11 +70,11 @@ docker run -d --name rescue-fallback -p $IP:8780:80 -e RESCUE_DIR=/rescue -e RES
 echo "operator: http://$IP:8780/app/?sc=zawrat&key=<klucz>  telefon: http://$IP:8780/web/patrol/?sc=zawrat&team=topr-a&key=<klucz>"
 docker rm -f rescue-fallback   # po pokazie
 ```
-Otwieraj przez **IP laptopa, nie 127.0.0.1**: na 127.0.0.1 aplikacja uważa się za loopback i nie wysyła klucza, a serwer w kontenerze widzi ruch z sieci Dockera - każdy zapis (Plan, potwierdzenia, meldunki) dostaje 401. Klucz wystarczy raz w linku `?key=` (zostaje w przeglądarce).
+Otwieraj przez **IP laptopa, nie 127.0.0.1**: na 127.0.0.1 aplikacja uważa się za loopback i nie wysyła klucza, a serwer w kontenerze widzi ruch z sieci Dockera - każdy zapis (Co jeśli, potwierdzenia, meldunki) dostaje 401. Klucz wystarczy raz w linku `?key=` (zostaje w przeglądarce).
 Lista kontrolna (2 min, przed pokazem):
 1. `curl -s http://$IP:8780/api/schedule | head -c 80` zwraca JSON z `"schema"`.
 2. `/app/?sc=zawrat` - mapa 2D, w doku "stan na HH:MM".
-3. Plan: przeciągnij Świadka na mapę -> Dodaj -> toast "Dodano".
+3. Co jeśli (dawniej Plan, piaskownica): przeciągnij Świadka na mapę -> Dodaj -> toast "Dodano".
 4. Centrum `?sim=1` - Potwierdź w dzwonku; w drugiej przeglądarce to zgłoszenie jest już potwierdzone.
 5. Telefon na hotspocie: widok ratownika (/web/patrol/) -> "Pogoda · status · meldunek" -> Udostępnij pozycję -> kropka zespołu u operatora w Na żywo.
 

@@ -196,7 +196,7 @@ help.innerHTML = `<div class="hp-head"><h2>Instrukcja</h2><span style="flex:1"><
     <li><b>Mapa</b> (2D lub 3D): mapa ciepła na prawdziwym terenie, podzielona na sektory.</li>
     <li><b>Gdzie szukać najpierw</b> (prawy panel): trzy pierwsze sektory, jaka to część obszaru i który zespół tam idzie. Pod „Szczegóły”: plan zespołów i postęp akcji.</li>
     <li><b>Oś czasu</b> (na dole): godzina i kolejne zdarzenia. „Sygnały” otwiera listę wskazówek.</li>
-    <li><b>Góra</b>: Na żywo / Historia, zmiana akcji, tryby Akcja, Plan, Więcej, „Udostępnij” i „Centrum”.</li>
+    <li><b>Góra</b>: Na żywo / Historia, zmiana akcji, tryby Akcja, Co jeśli, Więcej, „Udostępnij” i „Centrum”.</li>
   </ul>
   <h3>Jak czytać wagę mapy</h3>
   <p>Cieplejszy kolor to większa waga. Legenda mówi, ile razy dane miejsce waży więcej niż średnia komórka (od 0,5x do 25x i więcej). Waga mapy służy do ustalenia kolejności przeszukiwania; nie czytaj jej jako szansy znalezienia. Patrz na kolejność sektorów i na to, jaką część obszaru zajmują.</p>
@@ -205,7 +205,7 @@ help.innerHTML = `<div class="hp-head"><h2>Instrukcja</h2><span style="flex:1"><
   <ul>
     <li><b>Na żywo</b>: w panelu „Na żywo” kliknij „+ Ślad”, potem miejsce na mapie; wybierz rodzaj (odzież, ślad, świadek, sygnał telefonu, znalezisko) i dopisz opis. Mapa przelicza się dla wszystkich.</li>
     <li><b>Z terenu</b>: ratownik wysyła meldunek z telefonu zwykłym zdaniem, np. „S6 pusto, widoczność 50 m”. Pojawia się w panelu „Na żywo”, potwierdzasz go ✓.</li>
-    <li><b>Plan</b>: przeciągnij wskazówkę z lewej listy na mapę, a zespół na sektor.</li>
+    <li><b>Co jeśli</b> (piaskownica, akcja na żywo się nie zmienia): przeciągnij wskazówkę z lewej listy na mapę, a zespół na sektor.</li>
     <li><b>Co wnosi jedna wskazówka</b>: otwórz „Sygnały” i odznacz ją; mapa przeliczy się bez niej.</li>
   </ul>
   <h3>Na żywo czy Historia</h3>
