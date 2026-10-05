@@ -36,7 +36,7 @@ a{color:var(--rl-accent)}
 
 /* below the buttons: what you will see (real screenshots, deep links), how it works, footer */
 .st-h{font-size:var(--rl-fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--rl-mute);margin:0 0 10px}
-.st-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.st-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
 .st-card{display:flex;flex-direction:column;gap:4px;background:var(--rl-panel-solid);border:1px solid var(--rl-line);border-radius:var(--rl-radius-l);overflow:hidden;color:var(--rl-ink);text-decoration:none;padding-bottom:14px;transition:border-color .15s,transform .15s}
 .st-card:hover{border-color:var(--rl-accent);transform:translateY(-2px)}
 .st-card:focus-visible{outline:3px solid var(--rl-accent);outline-offset:3px}
