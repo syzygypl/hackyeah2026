@@ -223,15 +223,18 @@ function pathOf(x) {
   return pathText(r, !t || s.includes(" - ") ? s : t + (r && s === r.rejon ? "" : " · " + s));   // "Wizna - auto w Narwi" already says what
 }
 const modeOf = (x) => x.found ? "found" : x.live ? "live" : x.mode === "plan" ? "plan" : "replay";   // a live find ends the incident
-const BADGE = { live: "LIVE", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE" };
+const BADGE = { live: "Na żywo", found: "ZNALEZIONO", plan: "PLAN", replay: "ODTWORZENIE" };
 const hhmm = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }); };
+// sens-funkcji R2-13: wall clock as "6 h temu" (one clock with the sim cards), the hour only in title
+const agoTxt = (iso) => { const m = Math.round((Date.now() - new Date(iso)) / 60000); return isNaN(m) ? "" : m < 1 ? "przed chwilą" : m < 60 ? `${m} min temu` : m < 2880 ? `${Math.round(m / 60)} h temu` : `${Math.round(m / 1440)} dni temu`; };
+let recOpen = false;   // R2-13: the folded "Nagrania" list keeps its open state across re-renders
 function sortIncidents(a) {
   return a.slice().sort((x, y) => (y.live - x.live) || String(y.lastEventAt || "").localeCompare(String(x.lastEventAt || "")) || (x.found - y.found) || x.place.localeCompare(y.place, "pl"));
 }
 let shown = "";   // what the cards / roster / markers were last built from: a poll that brings nothing new touches no DOM
 function render() {
   const bz = busyScs();
-  const sig = JSON.stringify([incidents, teams, [...bz].sort(), sel, selSim, simLocal, Object.keys(meta).filter((k) => meta[k]).length, has.incidents, has.teams]);
+  const sig = JSON.stringify([incidents, teams, [...bz].sort(), sel, selSim, simLocal, Object.keys(meta).filter((k) => meta[k]).length, has.incidents, has.teams, simOn() ? [...new Set(sim.view.filter((i) => i.state === "live").map((i) => i.sc))].sort() : 0]);   // R2-13: sim on/off folds the recordings
   if (sig === shown) return;
   const selectOpen = $("teams").contains(document.activeElement) && document.activeElement.tagName === "SELECT";   // renderTeams skips then: build again next poll
   if (!dragging) { renderCards(); renderTeams(); if (!selectOpen) shown = sig; }
@@ -246,7 +249,7 @@ function render() {
 function countsPaint() {
   const nLive = incidents.filter((x) => x.live && !x.found).length, nEnded = incidents.filter((x) => x.found).length;
   const nSim = simOn() ? sim.view.filter((i) => i.state === "live").length : null;   // sens-funkcji #7: Symulacja 24/7 on - "N trwa (1 LIVE z terenu)", matches the cards (LIVE = real feed only)
-  $("counts").innerHTML = `${nSim != null ? `<b>${nSim + nLive} trwa</b>${nLive ? ` (<b style="color:var(--rl-danger)">${nLive} LIVE</b> z terenu)` : ""}` : `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} LIVE</b>` : ""}`}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !busyOf(t, busyScs())).length}/${teams.length}`;
+  $("counts").innerHTML = `${nSim != null ? `<b>${nSim + nLive} trwa</b>${nLive ? ` (<b style="color:var(--rl-danger)">${nLive} na żywo</b> z terenu)` : ""}` : `${akcje(incidents.length)}${nLive ? ` · <b style="color:var(--rl-danger)">${nLive} na żywo</b>` : ""}`}${nEnded ? ` · zakończone: ${nEnded}` : ""} · zespoły wolne: ${teams.filter((t) => !busyOf(t, busyScs())).length}/${teams.length}`;
 }
 function renderCards() {
   if (PICK) return renderPick();
@@ -254,11 +257,12 @@ function renderCards() {
   const all = sortIncidents(incidents), cur = all.filter((x) => !x.found), done = all.filter((x) => x.found);
   const card = (x) => {
     const m = modeOf(x), mine = teams.filter((t) => t.sc === x.sc);
-    const when = x.lastEventAt ? `ost. zdarzenie ${hhmm(x.lastEventAt)}` : x.lastClock ? `scenariusz ${esc(x.lastClock)}` : "";
+    const when = x.lastEventAt ? `<span title="ostatnie zdarzenie ${hhmm(x.lastEventAt)}">ostatnie zdarzenie ${agoTxt(x.lastEventAt)}</span>` : x.lastClock ? `<span title="Nagranie: moment ${esc(x.lastClock)} w czasie scenariusza">nagranie</span>` : "";   // R2-13: no scenario clock next to wall clocks
+    const simTwin = m === "live" && simOn() && sim.view.some((i) => i.sc === x.sc && i.state === "live") ? `<div class="simrel">Na tym terenie trwa też ćwiczenie (karta SYMULACJA wyżej) - to osobne zdarzenie.</div>` : "";
     const rf = x.replayFound && !x.found ? `<span class="mute" title="Plik scenariusza kończy się odnalezieniem; tu pokazujemy moment przed nim">odtworzenie z odnalezieniem</span>` : "";
     return `<article class="card ${m} ${hl === x.sc ? "hl" : ""} ${sel === x.sc ? "sel" : ""}" data-sc="${esc(x.sc)}" data-drop="${esc(x.sc)}">
-      <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="mute">${esc(x.sc)}</span><span class="when mono">${when}</span></div>
-      ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${openURL(x.sc)}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>
+      <div class="ctop"><span class="badge ${m}">${BADGE[m]}</span><span class="when mono">${when}</span></div>
+      ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${openURL(x.sc)}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(longText(x))}${rf ? " · " + rf : ""}</div>${simTwin}
       ${x.top3.length ? `<div class="top3"><div class="lbl">Gdzie szukać najpierw${x.top3.every((s) => s.areaPct != null) ? ` · top 3 to ${areaTxt(x.top3.reduce((a, s) => a + (+s.areaPct || 0), 0))} obszaru` : ""}</div>${x.top3.map((s, k) => `<div class="seg"><span class="rk">${k + 1}</span><span class="nm">${esc(s.segmentId)} ${esc(s.name)}</span>${s.areaPct != null ? `<span class="mute">${areaTxt(s.areaPct)} obszaru</span>` : ""}</div>`).join("")}</div>`
         : `<div class="loading">${x.pending ? "Liczę mapę..." : "Brak mapy dla tej akcji."}</div>`}
       <div class="cteams">${x.teams ? `Zespoły z sektorem: <span class="n">${x.teams.assigned}/${x.teams.total}</span>` : ""}
@@ -266,6 +270,12 @@ function renderCards() {
         <a class="odpr" href="odprawa.html?sc=${encodeURIComponent(x.sc)}" title="Odprawa kierownika akcji na jednej stronie A4">Odprawa (druk)</a></div>
       <div class="drophint">Upuść tutaj, aby dołączyć zespół do tej akcji</div></article>`;
   };
+  if (simOn() && all.length) {   // sens-funkcji R2-13: Symulacja 24/7 on - the real live actions stay on top, the recordings fold into one closed list
+    const lv = cur.filter((x) => modeOf(x) === "live"), rec = all.filter((x) => !lv.includes(x));
+    $("cards").innerHTML = (lv.length ? `<h2 class="cgrp">Na żywo z terenu <span class="cnt">${lv.length}</span></h2>${lv.map(card).join("")}` : "")
+      + (rec.length ? `<details class="recs"${recOpen ? " open" : ""}><summary class="cgrp">Nagrania <span class="cnt">${rec.length}</span><span class="mute">pokaz i ćwiczenia</span></summary>${rec.map(card).join("")}</details>` : "");
+    const d = $("cards").querySelector("details.recs"); if (d) d.ontoggle = () => { recOpen = d.open; };
+  } else
   $("cards").innerHTML = (all.length ? `<h2 class="cgrp">Trwające <span class="cnt">${cur.length}</span></h2>${cur.map(card).join("") || `<div class="help">Brak trwających akcji.</div>`}`
     + (done.length ? `<h2 class="cgrp done">Zakończone <span class="cnt">${done.length}</span></h2>${done.map(card).join("")}` : "") : `<div class="help">Brak akcji na serwerze.</div>`);
   $("cards").querySelectorAll(".card").forEach((el) => {
@@ -311,7 +321,7 @@ function renderTeams() {
     + (near.map(({ t, d }) => `<div class="team nrow" draggable="true" data-team="${esc(t.id)}" title="${esc(t.name)} · baza ${esc(regKey(t.base))}"><span class="ic">${icon(t.kind)}</span><span class="nm">${esc(t.name)}</span>
       <span class="meta"><span>${esc(kindLabel(t.kind))}</span><span class="km mono">${kmTxt(d)}</span><button type="button" class="nsend" data-team="${esc(t.id)}" title="${selSim ? "Symulacja: przydział tylko w tej przeglądarce" : "Przydziel do tej akcji"}">Wyślij</button></span></div>`).join("") || `<div class="help">Brak wolnych zespołów.</div>`)
     + `<div class="help">${isWater(sel) ? "Akcja na wodzie: łodzie, nurkowie, drony, śmigłowce" : "Akcja na lądzie: piesi, psy, drony, śmigłowce"}. Odległość w linii prostej od bazy zespołu. Kliknij kartę ponownie, aby zamknąć.</div></section>` : "";
-  $("teams").innerHTML = (nearHTML + reserve + busy.map((x) => grp(x.sc, esc(short(x)), teams.filter((t) => t.sc === x.sc), modeOf(x) === "live" ? ' <span class="badge live">LIVE</span>' : "")).join("")
+  $("teams").innerHTML = (nearHTML + reserve + busy.map((x) => grp(x.sc, esc(short(x)), teams.filter((t) => t.sc === x.sc), modeOf(x) === "live" ? ' <span class="badge live">Na żywo</span>' : "")).join("")
     + (field.length ? `<section class="grp tfield"><h3>W akcji (symulacja 24/7) <span class="cnt">${field.reduce((a, g) => a + g.ts.length, 0)}</span></h3>`
       + field.map((g) => `<details data-sc="${esc(g.sc)}" data-det="sc:${esc(g.sc)}"${sel === g.sc || openDet.has("sc:" + g.sc) ? " open" : ""}><summary>${esc(short(g.x))} <span class="cnt">${g.ts.length}</span></summary>${g.ts.map(fieldRow).join("")}</details>`).join("") + `</section>` : ""))
     || `<div class="help">Brak zespołów.</div>`;
@@ -531,7 +541,7 @@ function cluPaint(c) {
   const xs = c.scs.map((k) => incidents.find((i) => i.sc === k)).filter(Boolean);
   const rj = [...new Set(xs.map((x) => (regOf(x) || {}).rejon || short(x)))];
   el.querySelector(".lbl").textContent = (rj.length === 1 ? rj[0] : rj.slice(0, 2).join(" / ") + (rj.length > 2 ? " …" : "")) + ` · ${N}`;
-  el.title = `${N} akcji${n.live ? `, ${n.live} LIVE` : ""}${n.found ? `, ${n.found} znaleziono` : ""} (kliknij, aby przybliżyć)\n` + xs.map((x) => "• " + pathOf(x)).join("\n");
+  el.title = `${N} akcji${n.live ? `, ${n.live} trwa` : ""}${n.found ? `, ${n.found} znaleziono` : ""} (kliknij, aby przybliżyć)\n` + xs.map((x) => "• " + pathOf(x)).join("\n");
   el.setAttribute("aria-label", `Grupa ${N} akcji: ${rj.join(", ")}`);
 }
 function cluMark() {   // hl / adv ring of a group = any member's
@@ -1181,7 +1191,7 @@ function tlClockAt(it, v) {   // the scenario clock of timeline value v in this 
 // ---------- pick mode (/app "Zmień scenariusz", see PICK at the top): compact list next to the same map. Plain list first (from
 // /api/scenarios, then /api/incidents); when /api/advisor answers, incidents linked by a hypothesis move to the top as one group
 // (alarm first), ringed on the map like "linked" in Doradca. Advisor down = the plain list keeps working. Esc / Wróć = no change.
-const PK_ST = { live: "LIVE", ended: "ZAKOŃCZONA", replay: "ODTWORZENIE" };
+const PK_ST = { live: "Na żywo", ended: "ZAKOŃCZONA", replay: "ODTWORZENIE" };
 let pickStudio = false, pickFocused = false, pickCur = new URLSearchParams(location.search).get("sc") || PICK_BACK.searchParams.get("sc");
 function renderPick() {
   if (!incidents.length) return;
@@ -1384,7 +1394,8 @@ function simPaint() {
     if (meta[r.i.sc]) simFetch(r.i.sc, r.c5);
     else if (!sim.mwait?.[r.i.sc]) { (sim.mwait ||= {})[r.i.sc] = 1; loadMeta(r.i.sc).then((md) => { if (md) { sim.cardSig = ""; simPaint(); } else simFetch(r.i.sc, r.c5); }); }
   }
-  const sig = JSON.stringify([rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d, !!meta[r.i.sc]]), tl.cur == null, teams.length, simLocal]);   // #7: meta (state line) and the roster (team count) repaint too
+  const liveSc = new Set(incidents.filter((x) => x.live && !x.found).map((x) => x.sc));   // R2-13: a sim occurrence on the terrain of a real live action says so
+  const sig = JSON.stringify([[...liveSc], rows.map((r) => [r.i.key, r.i.state, tl.play ? r.c5 : r.clk, r.f === undefined ? 0 : r.f, !!r.d, !!meta[r.i.sc]]), tl.cur == null, teams.length, simLocal]);   // #7: meta (state line) and the roster (team count) repaint too
   if (sig === sim.cardSig) return; sim.cardSig = sig;
   countsPaint();   // sens-funkcji #7: header "N trwa" follows the sim cards
   const live = rows.filter((r) => r.i.state === "live"), ended = rows.filter((r) => r.i.state !== "live");
@@ -1418,6 +1429,7 @@ function simPaint() {
     return `<article class="card simc ${i.state === "live" ? "live" : "found ended"}" data-sc="${esc(i.sc)}" data-key="${esc(i.key)}"${i.state === "live" ? ` data-drop="sim:${esc(i.sc)}"` : ""}>
       <div class="ctop"><span class="badge ${i.state === "live" ? "live" : "found"}" title="${esc(sim.lf.SIM_NOTE)}">${i.state === "live" ? "SYMULACJA" : "ZAKOŃCZONA"}</span>${i.state === "live" ? "" : `<span class="simtag" title="${esc(sim.lf.SIM_NOTE)}">symulacja</span>`}<span class="when mono">zgł. ${hm(i.startMs)}</span></div>
       ${rpath(x) ? `<div class="rpath">${esc(rpath(x))} →</div>` : ""}<h3><a href="${esc(histURL(i.sc, clk))}" title="${esc(pathOf(x))}">${esc(short(x))}</a></h3><div class="sub">${esc(d ? d.name : i.sc)}${d && d.place ? " - " + esc(d.place) : ""}</div>
+      ${i.state === "live" && liveSc.has(i.sc) ? `<div class="simrel">Ćwiczenie na tym samym terenie co akcja Na żywo (karta niżej) - to nie ta sama akcja.</div>` : ""}
       <div class="simt" title="${i.state === "live" && clk ? `W scenariuszu ${esc(clk)} (mapa liczona na ${esc(r.c5 || "")})` : ""}">${i.state === "live" ? stateLine(r, el) : `zakończona ${hm(i.endMs)} · po ${i.durationMin} min`}</div>
       ${i.state !== "live" ? "" : t3 ? (t3.length ? `<div class="top3"><div class="seg" title="${esc(t3.slice(0, 3).map((s, k) => `#${k + 1} ${s.id || s.segmentId} ${s.name}`).join("\n"))}"><span class="lbl">Szukać najpierw:</span><span class="nm">#1 ${esc(t3[0].id || t3[0].segmentId)} ${esc(t3[0].name)}</span></div></div>` : `<div class="loading">Brak mapy dla tej chwili.</div>`)
         : `<div class="loading">Liczę mapę...</div>`}
@@ -1425,8 +1437,7 @@ function simPaint() {
       ${i.state === "live" ? `<div class="drophint">Upuść tutaj: symulacja, przydział nie jest zapisywany</div>` : ""}</article>`;
   };
   box.innerHTML = `<h2 class="cgrp sim">${tl.mode === "sim" && tl.cur != null ? "Trwają o " + esc(tlFmt(tl.cur)) : "Trwają teraz"} <span class="cnt">${live.length}</span><span class="simh">${esc(sim.lf.SIM_NOTE)}</span></h2>`
-    + (live.map(card).join("") || `<div class="help">Teraz nic nie trwa. Następne zgłoszenie: ${esc(simNext())}.</div>`) + ended.map(card).join("")
-    + `<h2 class="cgrp">Wszystkie scenariusze <span class="mute">nagrania</span></h2>`;
+    + (live.map(card).join("") || `<div class="help">Teraz nic nie trwa. Następne zgłoszenie: ${esc(simNext())}.</div>`) + ended.map(card).join("");   // R2-13: the recordings fold under "Nagrania" in #cards
   box.querySelectorAll(".card").forEach((el) => {
     el.onclick = (e) => { if (!e.target.closest("a")) setSel(el.dataset.sc, true); };   // sens-funkcji #1: focus, the title opens
     el.classList.toggle("sel", el.dataset.sc === sel);

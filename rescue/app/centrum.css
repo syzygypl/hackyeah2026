@@ -108,6 +108,14 @@ body.dragging .grp{border-color:var(--rl-line-strong)}
 /* current vs ended incidents + "Akcja zakończona" banner (AI Michała for AI Mateusza) */
 .cgrp{font-size:var(--rl-fs-s);text-transform:uppercase;letter-spacing:.6px;color:var(--rl-mute);margin:6px 2px 8px;display:flex;gap:6px;align-items:center}
 .cgrp.done{margin-top:16px}
+/* sens-funkcji R2-13: recordings folded under "Nagrania (N)" when Symulacja 24/7 is on */
+details.recs{margin-top:10px}
+details.recs>summary.cgrp{cursor:pointer;list-style:none;padding:6px 8px;border:1px solid var(--rl-line,var(--rl-panel-2));border-radius:8px;flex-wrap:wrap}
+details.recs>summary.cgrp::-webkit-details-marker{display:none}
+details.recs>summary.cgrp::before{content:"▸";font-size:12px}
+details.recs[open]>summary.cgrp::before{content:"▾"}
+details.recs>summary .mute{text-transform:none;letter-spacing:0;font-weight:400}
+.simrel{margin:4px 0;font-size:var(--rl-fs-xs);color:var(--rl-warn-ink)}
 .cgrp .cnt{background:var(--rl-panel-2);border-radius:10px;padding:0 7px;color:var(--rl-ink-2)}
 .card.found{opacity:.8}
 #endedBanner{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:50;max-width:min(640px,92vw);background:var(--rl-ok);color:var(--rl-on-ok);padding:12px 16px;border-radius:var(--rl-radius-l);box-shadow:var(--rl-shadow);cursor:pointer}
